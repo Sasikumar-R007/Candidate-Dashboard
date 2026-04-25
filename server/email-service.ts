@@ -287,11 +287,11 @@ export async function sendOTPEmail(data: OTPEmailData): Promise<boolean> {
     const emailContent = `
 Hi ${data.fullName},
 
-Your verification code for StaffOS is: ${data.otp}
+Your verification code for StaffOS is: **${data.otp}**
 
-This code will expire in ${data.expiresInMinutes} minutes.
+This code will expire in ${data.expiresInMinutes} minutes. For your security, please do not share this code with anyone.
 
-If you didn't request this code, please ignore this email.
+If you didn't request this code, you can safely ignore this email.
 
 Warm regards,
 Team StaffOS
@@ -304,33 +304,23 @@ Team StaffOS
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
-    .content { padding: 30px 20px; background-color: #f9f9f9; }
-    .otp-box { background-color: white; padding: 30px; margin: 20px 0; text-align: center; border: 2px dashed #4F46E5; border-radius: 8px; }
-    .otp-code { font-size: 32px; font-weight: bold; color: #4F46E5; letter-spacing: 8px; font-family: monospace; }
+    .header { background-color: #1a1a1a; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background-color: #f9f9f9; text-align: center; }
+    .otp-code { font-size: 32px; font-weight: bold; color: #4F46E5; letter-spacing: 5px; margin: 20px 0; padding: 20px; background: white; border-radius: 8px; border: 1px dashed #4F46E5; }
     .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
-    .warning { background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>StaffOS Verification Code</h1>
+      <h1>StaffOS Verification</h1>
     </div>
     <div class="content">
       <p>Hi ${data.fullName},</p>
-      
-      <p>Please use the following code to verify your account:</p>
-      
-      <div class="otp-box">
-        <div class="otp-code">${data.otp}</div>
-      </div>
-      
-      <div class="warning">
-        <strong>⚠️ Important:</strong> This code will expire in ${data.expiresInMinutes} minutes. Do not share this code with anyone.
-      </div>
-      
-      <p>If you didn't request this verification code, please ignore this email or contact our support team.</p>
+      <p>Use the following code to verify your request:</p>
+      <div class="otp-code">${data.otp}</div>
+      <p>This code will expire in <strong>${data.expiresInMinutes} minutes</strong>.</p>
+      <p>For your security, please do not share this code with anyone.</p>
       
       <div class="footer">
         <p><strong>Warm regards,<br>Team StaffOS</strong></p>
@@ -343,47 +333,25 @@ Team StaffOS
 
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
     
-    console.log(`[OTP Email] Attempting to send OTP to ${data.email} from ${senderEmail}`);
-    console.log(`[OTP Email] Resend API Key present: ${process.env.RESEND_API_KEY ? 'Yes (length: ' + process.env.RESEND_API_KEY.length + ')' : 'NO - MISSING!'}`);
+    console.log(`[OTP Email] Attempting to send OTP email to ${data.email} from ${senderEmail}`);
     
     const result = await resend.emails.send({
       from: senderEmail,
       to: data.email,
-      subject: `Your StaffOS Verification Code: ${data.otp}`,
+      subject: `StaffOS Verification Code: ${data.otp}`,
       text: emailContent,
       html: htmlContent,
     });
 
     if (result.error) {
       console.error(`[OTP Email] Resend API error:`, result.error);
-      console.error(`[OTP Email] Error type:`, typeof result.error);
-      console.error(`[OTP Email] Error details:`, JSON.stringify(result.error, null, 2));
-      
-      // Check for 403 Forbidden specifically
-      if (result.error && typeof result.error === 'object' && 'message' in result.error) {
-        const errorMsg = String(result.error.message || '');
-        if (errorMsg.includes('403') || errorMsg.includes('Forbidden') || errorMsg.includes('unauthorized')) {
-          console.error(`[OTP Email] ⚠️ 403 FORBIDDEN ERROR - This usually means:`);
-          console.error(`[OTP Email] 1. API key is invalid or incorrect`);
-          console.error(`[OTP Email] 2. API key doesn't have permission to send emails`);
-          console.error(`[OTP Email] 3. FROM_EMAIL domain is not verified in Resend`);
-          console.error(`[OTP Email] 4. API key format is wrong (should start with 're_')`);
-          console.error(`[OTP Email] Please check your RESEND_API_KEY and FROM_EMAIL in Render environment variables`);
-        }
-      }
-      
       return false;
     }
 
-    console.log(`[OTP Email] Successfully sent OTP email to ${data.email}. Email ID: ${result.data?.id || 'N/A'}`);
-    console.log(`[OTP Email] Full Resend response:`, JSON.stringify(result, null, 2));
+    console.log(`[OTP Email] Successfully sent OTP to ${data.email}. ID: ${result.data?.id}`);
     return true;
   } catch (error) {
     console.error('[OTP Email] Error sending OTP email:', error);
-    if (error instanceof Error) {
-      console.error('[OTP Email] Error message:', error.message);
-      console.error('[OTP Email] Error stack:', error.stack);
-    }
     return false;
   }
 }

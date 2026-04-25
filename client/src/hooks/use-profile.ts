@@ -6,31 +6,40 @@ export function useProfile() {
   return useQuery({
     queryKey: ['/api/profile'],
     queryFn: api.getProfile,
+    // Poll every 5 seconds only IF the AI is actively parsing (resume_uploaded)
+    // Stop polling once status is 'completed' or anything else to save server resources
+    refetchInterval: (query) => {
+      const stage = query.state.data?.registrationStage;
+      if (query.state.status === 'error') return false; 
+      // Only poll when AI is actively working in the background
+      return (stage === 'resume_uploaded') ? 5000 : false;
+    },
+    // Ensure we retry on temporary errors
+    retry: true,
+    retryDelay: 2000,
+    // Ensure we refetch on window focus to catch updates
+    refetchOnWindowFocus: true,
   });
 }
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async (data: any) => {
       const result = await api.updateProfile(data);
-      
+
       // Log activity for profile update
       try {
-        await fetch('/api/activities', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            description: 'Profile information updated',
-            type: 'profile_update'
-          }),
+        await api.logActivity({
+          description: 'Profile information updated',
+          type: 'profile_update'
         });
       } catch (error) {
         console.warn('Failed to log activity:', error);
       }
-      
+
       return result;
     },
     onSuccess: () => {
@@ -61,7 +70,7 @@ export function useJobPreferences() {
 export function useUpdateJobPreferences() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: api.updateJobPreferences,
     onSuccess: () => {
@@ -105,7 +114,7 @@ export function useJobApplications() {
 export function useUploadBanner() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: api.uploadBanner,
     onSuccess: (data) => {
@@ -129,25 +138,21 @@ export function useUploadBanner() {
 export function useUploadProfile() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async (file: File) => {
       const result = await api.uploadProfile(file);
-      
+
       // Log activity for profile picture upload
       try {
-        await fetch('/api/activities', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            description: 'Profile picture updated',
-            type: 'profile_picture_update'
-          }),
+        await api.logActivity({
+          description: 'Profile picture updated',
+          type: 'profile_picture_update'
         });
       } catch (error) {
         console.warn('Failed to log activity:', error);
       }
-      
+
       return result;
     },
     onSuccess: (data) => {
@@ -171,7 +176,7 @@ export function useUploadProfile() {
 
 export function useUploadResume() {
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: api.uploadResume,
     onSuccess: () => {

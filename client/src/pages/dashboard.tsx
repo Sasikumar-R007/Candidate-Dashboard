@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import Sidebar from '@/components/dashboard/sidebar';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import TabNavigation from '@/components/dashboard/tab-navigation';
 import ResumeTab from '@/components/dashboard/tabs/resume-tab';
-import JobPreferencesTab from '@/components/dashboard/tabs/job-preferences-tab';
+import SettingsTab from '@/components/dashboard/tabs/settings-tab';
 import ActivityTab from '@/components/dashboard/tabs/activity-tab';
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
@@ -14,6 +14,8 @@ import { MessageCircle, HelpCircle } from 'lucide-react';
 import { useCandidateAuth } from '@/contexts/auth-context';
 import { ChatDock } from '@/components/chat/chat-dock';
 
+import DashboardHeader from '@/components/dashboard/dashboard-header';
+
 export default function Dashboard() {
   const [sidebarTab, setSidebarTab] = useState('my-jobs');
   const [activeTab, setActiveTab] = useState('my-jobs');
@@ -21,6 +23,16 @@ export default function Dashboard() {
   const { data: profile, isLoading } = useProfile();
   const candidate = useCandidateAuth();
   const [chatOpen, setChatOpen] = useState(false);
+
+  // Navigation Guard: Redirect to onboarding if not completed
+  useEffect(() => {
+    // DISABLE REDIRECT FOR TESTING - Let's see if we can stay on the page
+    console.log("[GUARD] Current Status:", profile?.registrationStage);
+    
+    if (profile && profile.registrationStage && profile.registrationStage !== 'completed') {
+      console.log("[GUARD] Would have redirected, but holding for sync...");
+    }
+  }, [profile?.registrationStage]);
 
   if (isLoading) {
     return (
@@ -46,110 +58,87 @@ export default function Dashboard() {
       case 'my-jobs':
         return (
           <div className="flex flex-col flex-1 h-full">
-            {/* Header with ProfileMenu */}
-            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 relative z-30 sticky top-0">
-              <div className="flex items-center pl-4">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Dashboard
-                </h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setChatOpen(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
-                <ProfileMenu
-                  userName={candidate?.fullName || "Candidate"}
-                  userRole="Candidate"
-                  logoutEndpoint="/api/auth/candidate-logout"
-                  profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={false}
-                  onChatClick={() => setChatOpen(true)}
+            <DashboardHeader 
+              title="My Jobs" 
+              actions={
+                <ProfileMenu 
+                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
+                  candidateId={profile?.candidateId || ''}
+                  profilePicture={profile?.profilePicture}
+                  onNavigateToSettings={() => setSidebarTab('settings')}
+                  onOpenSupport={() => setChatOpen(true)}
                 />
-              </div>
-            </header>
-            {/* Main content area - Full height flex container */}
+              }
+            />
             <div className="flex-1 overflow-hidden flex">
-              <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} className="flex-1" />
+              <MyJobsTab 
+                onNavigateToJobBoard={() => setSidebarTab('job-board')} 
+                onNavigateToProfile={() => setSidebarTab('edit-view')}
+                onNavigateToSettings={() => setSidebarTab('settings')}
+                onOpenSupport={() => setChatOpen(true)}
+                className="flex-1" 
+              />
             </div>
           </div>
         );
-      case 'job-preferences':
+      case 'settings':
         return (
           <div className="flex flex-col flex-1 h-full">
-            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 relative z-30 sticky top-0">
-              <div className="flex items-center pl-4">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Job Preferences
-                </h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setChatOpen(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
-                <ProfileMenu
-                  userName={candidate?.fullName || "Candidate"}
-                  userRole="Candidate"
-                  logoutEndpoint="/api/auth/candidate-logout"
-                  profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={false}
-                  onChatClick={() => setChatOpen(true)}
+            <DashboardHeader 
+              title="Settings" 
+              actions={
+                <ProfileMenu 
+                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
+                  candidateId={profile?.candidateId || ''}
+                  profilePicture={profile?.profilePicture}
+                  onNavigateToSettings={() => setSidebarTab('settings')}
+                  onOpenSupport={() => setChatOpen(true)}
                 />
-              </div>
-            </header>
-            <div className="flex-1 overflow-y-auto">
-              <JobPreferencesTab />
+              }
+            />
+            <div className="flex-1 overflow-y-auto mt-4 px-8 pb-8">
+              <SettingsTab onOpenSupport={() => setChatOpen(true)} />
             </div>
           </div>
         );
       case 'edit-view':
         return (
-          <div className="flex flex-col flex-1 h-full">
-            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 relative z-30 sticky top-0">
-              <div className="flex items-center pl-4">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Edit Profile
-                </h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setChatOpen(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
-                <ProfileMenu
-                  userName={candidate?.fullName || "Candidate"}
-                  userRole="Candidate"
-                  logoutEndpoint="/api/auth/candidate-logout"
-                  profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={false}
-                  onChatClick={() => setChatOpen(true)}
+          <div className="flex flex-col flex-1 h-full font-poppins">
+            <DashboardHeader 
+              title="Profile" 
+              actions={
+                <ProfileMenu 
+                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
+                  candidateId={profile?.candidateId || ''}
+                  profilePicture={profile?.profilePicture}
+                  onNavigateToSettings={() => setSidebarTab('settings')}
+                  onOpenSupport={() => setChatOpen(true)}
                 />
-              </div>
-            </header>
+              }
+            />
             <div className="flex-1 overflow-y-auto">
-              <EditViewProfile profile={profile!} />
+              <EditViewProfile profile={profile!} onNavigateToJobBoard={() => setSidebarTab('job-board')} />
             </div>
           </div>
         );
       case 'job-board':
         return (
           <div className="flex flex-col flex-1 h-full">
+            <DashboardHeader 
+              title="Job Board" 
+              actions={
+                <ProfileMenu 
+                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
+                  candidateId={profile?.candidateId || ''}
+                  profilePicture={profile?.profilePicture}
+                  onNavigateToSettings={() => setSidebarTab('settings')}
+                  onOpenSupport={() => setChatOpen(true)}
+                />
+              }
+            />
             <div className="flex-1 overflow-y-auto">
               <JobBoardTab 
-                onNavigateToJobPreferences={() => setSidebarTab('job-preferences')}
+                onNavigateToSettings={() => setSidebarTab('settings')}
                 onNavigateToProfile={() => setSidebarTab('edit-view')}
               />
             </div>
@@ -158,47 +147,37 @@ export default function Dashboard() {
       default:
         return (
           <div className="flex flex-col flex-1 h-full">
-            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 relative z-30 sticky top-0">
-              <div className="flex items-center pl-4">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Dashboard
-                </h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setChatOpen(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
-                <ProfileMenu
-                  userName={candidate?.fullName || "Candidate"}
-                  userRole="Candidate"
-                  logoutEndpoint="/api/auth/candidate-logout"
-                  profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={false}
-                  onChatClick={() => setChatOpen(true)}
-                />
-              </div>
-            </header>
+            <DashboardHeader title="Dashboard" />
             <div className="flex-1 overflow-y-auto">
-              <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />
+              <MyJobsTab 
+                onNavigateToJobBoard={() => setSidebarTab('job-board')} 
+                onNavigateToProfile={() => setSidebarTab('edit-view')}
+              />
             </div>
           </div>
         );
     }
   };
 
+
   const renderDashboardTabContent = () => {
     switch (activeTab) {
       case 'my-jobs':
-        return <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />;
-      case 'job-preferences':
-        return <JobPreferencesTab />;
+        return (
+          <MyJobsTab 
+            onNavigateToJobBoard={() => setSidebarTab('job-board')} 
+            onNavigateToProfile={() => setSidebarTab('edit-view')}
+          />
+        );
+      case 'settings':
+        return <SettingsTab />;
       default:
-        return <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />;
+        return (
+          <MyJobsTab 
+            onNavigateToJobBoard={() => setSidebarTab('job-board')} 
+            onNavigateToProfile={() => setSidebarTab('edit-view')}
+          />
+        );
     }
   };
 

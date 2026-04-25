@@ -416,23 +416,7 @@ export function ProfileSettingsModal({
                   </div>
                 </div>
 
-                <Card className="border-slate-200 bg-white shadow-none">
-                  <CardContent className="space-y-3 p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-900">Password & Security</h4>
-                        <p className="text-sm text-slate-500">
-                          Password change is intentionally disabled for now until the secured backend flow is finalized.
-                        </p>
-                      </div>
-                      <Button type="button" disabled className="h-10 rounded-xl bg-slate-200 px-4 text-slate-500 hover:bg-slate-200">
-                        Change Password
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex justify-end gap-3">
+                <div className="flex justify-end gap-3 pt-4">
                   {isEditingProfile && (
                     <Button
                       type="button"

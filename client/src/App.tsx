@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,6 +13,7 @@ import EmployerLogin from "@/pages/employer-login";
 import EmployerLanding from "@/pages/employer-landing";
 import CandidateLogin from "@/pages/candidate-login";
 import CandidateRegistration from "@/pages/candidate-registration";
+import CandidateResumeUpload from "@/pages/candidate-resume-upload";
 import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -44,8 +45,13 @@ function Router() {
       <Route path="/support-login" component={SupportLogin} />
       <Route path="/candidate-login" component={CandidateLogin} />
       <Route path="/candidate-registration" component={CandidateRegistration} />
+      <Route path="/candidate/upload-resume" component={CandidateResumeUpload} />
       
-      <Route path="/candidate" component={Dashboard} />
+      <Route path="/candidate">
+        <ProtectedRoute userType="candidate">
+          <Dashboard />
+        </ProtectedRoute>
+      </Route>
       
       <Route path="/team-leader" component={TeamLeaderDashboard} />
       

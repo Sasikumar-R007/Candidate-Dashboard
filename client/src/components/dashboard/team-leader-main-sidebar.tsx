@@ -144,7 +144,7 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
             </div>
           );
         })}
-      </nav>
+    </nav>
 
         {/* Logout Button for Collapsed State */}
         <div className="border-t border-slate-700">
@@ -214,14 +214,14 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
                 <button
                   key={item.id}
                   onClick={() => handleTabClick(item.id)}
-                  className={`w-full flex items-center px-4 py-3 transition-colors relative ${
+                  className={`w-full h-12 flex items-center px-4 transition-colors relative ${
                     activeTab === item.id 
                       ? 'bg-slate-800 text-cyan-400 border-r-2 border-cyan-400' 
                       : 'hover:bg-slate-800 text-slate-400 hover:text-white'
                   }`}
                   data-testid={`button-nav-expanded-${item.id}`}
                 >
-                  <span>{item.label}</span>
+                  <span className="text-sm font-medium">{item.label}</span>
                 </button>
               );
             })}
@@ -232,11 +232,11 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
             <button
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
-              className="w-full flex items-center justify-center py-3 px-4 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+              className="w-full h-12 flex items-center px-4 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
               data-testid="button-sign-out"
             >
-              <LogOut size={16} className="mr-2" />
-              {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+              <LogOut size={16} className="mr-3" />
+              <span className="text-sm font-medium">{logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}</span>
             </button>
           </div>
         </div>

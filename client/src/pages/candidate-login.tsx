@@ -13,6 +13,7 @@ import { Link } from "wouter";
 import staffosLogo3 from "@/assets/staffos logo 3.png";
 import staffosLogo2 from "@/assets/staffos logo 2.png";
 import { useAuth } from "@/contexts/auth-context";
+import ForgotPasswordModal from "@/components/dashboard/modals/ForgotPasswordModal";
 
 interface LoginForm {
   email: string;
@@ -35,6 +36,7 @@ export default function CandidateLogin() {
   const [showOTP, setShowOTP] = useState(false);
   const [, setLocation] = useLocation();
   const { setUser } = useAuth();
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const {
     register: registerLogin,
@@ -109,7 +111,7 @@ export default function CandidateLogin() {
         });
 
         setTimeout(() => {
-          setLocation('/candidate');
+          if (response.candidate.registrationStage === 'completed') { setLocation('/candidate'); } else { setLocation('/candidate/upload-resume'); }
         }, 100);
       }
     },
@@ -572,6 +574,7 @@ export default function CandidateLogin() {
                   <div className="text-right">
                     <button
                       type="button"
+                      onClick={() => setIsForgotModalOpen(true)}
                       className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors font-poppins"
                       data-testid="button-forgot-password"
                     >
@@ -716,6 +719,12 @@ export default function CandidateLogin() {
           </div>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotModalOpen}
+        onClose={() => setIsForgotModalOpen(false)}
+        initialEmail={isLogin ? watch('email' as any) : undefined}
+      />
     </div>
   );
 }

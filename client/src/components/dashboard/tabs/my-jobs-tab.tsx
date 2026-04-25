@@ -14,8 +14,14 @@ import { MoreHorizontal, MapPin, Flame, Eye, Archive } from 'lucide-react';
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useJobApplications, useApplyJob } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
+import { useProfile, useJobPreferences } from "@/hooks/use-profile";
 import type { JobApplication } from '@shared/schema';
 import CandidateMetrics from '@/components/dashboard/candidate-metrics';
+import ProfileStrength from '@/components/dashboard/profile-strength';
+import SuggestionJobCard from '@/components/dashboard/suggestion-job-card';
+import ProfileCompletionSession from '@/components/dashboard/profile-completion-session';
+import ProfileMenu from '@/components/dashboard/profile-menu';
+import { useAuth } from '@/hooks/use-auth';
 
 // Helper function to calculate days ago from a date
 function calculateDaysAgo(date: Date | string): string {
@@ -49,6 +55,9 @@ function parseSkills(skills: string | null | undefined): string[] {
 interface MyJobsTabProps {
   className?: string;
   onNavigateToJobBoard?: () => void;
+  onNavigateToProfile?: () => void;
+  onNavigateToSettings?: () => void;
+  onOpenSupport?: () => void;
 }
 
 interface JobSuggestion {
@@ -60,6 +69,8 @@ interface JobSuggestion {
   location: string;
   workMode: string;
   skills: string[];
+  secondarySkills?: string[];
+  knowledgeSkills?: string[];
   bgColor: string;
   description: string;
   experience: string;
@@ -68,102 +79,15 @@ interface JobSuggestion {
   isHot?: boolean;
 }
 
-// Mock job suggestions data based on the design
-const jobSuggestions: JobSuggestion[] = [
-  {
-    id: '1',
-    company: 'Google',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
-    title: 'Cloud Engineer',
-    salary: '₹ 12 LPA',
-    location: 'Bengaluru',
-    workMode: 'Work from office',
-    skills: ['CI/CD', 'Docker', 'Azure'],
-    bgColor: 'bg-blue-200',
-    description: 'We are looking for a skilled Cloud Engineer to join our team and help build scalable cloud infrastructure.',
-    experience: '3-5 years',
-    type: 'Full-time',
-    background: 'bg-blue-50',
-    isHot: true
-  },
-  {
-    id: '2',
-    company: 'Unity',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Unity_Technologies_logo.svg/480px-Unity_Technologies_logo.svg.png',
-    title: 'Backend Developer',
-    salary: '₹ 12 LPA',
-    location: 'Bengaluru',
-    workMode: 'Work from office',
-    skills: ['CI/CD', 'Docker', 'Azure'],
-    bgColor: 'bg-green-200',
-    description: 'Join our backend team to develop robust and scalable server-side applications.',
-    experience: '2-4 years',
-    type: 'Full-time',
-    background: 'bg-green-50'
-  },
-  {
-    id: '3',
-    company: 'Meta',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/480px-Meta_Platforms_Inc._logo.svg.png',
-    title: 'Frontend Developer',
-    salary: '₹ 15 LPA',
-    location: 'Mumbai',
-    workMode: 'Work from office',
-    skills: ['React', 'TypeScript', 'Next.js'],
-    bgColor: 'bg-red-200',
-    description: 'Build amazing user experiences for billions of users worldwide.',
-    experience: '1-3 years',
-    type: 'Full-time',
-    background: 'bg-red-50'
-  },
-  {
-    id: '4',
-    company: 'Microsoft',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Microsoft_logo_%282012%29.svg/480px-Microsoft_logo_%282012%29.svg.png',
-    title: 'DevOps Engineer',
-    salary: '₹ 18 LPA',
-    location: 'Hyderabad',
-    workMode: 'Hybrid',
-    skills: ['Kubernetes', 'AWS', 'Terraform'],
-    bgColor: 'bg-purple-200',
-    description: 'Help us build and maintain robust infrastructure for cloud-based applications.',
-    experience: '4-6 years',
-    type: 'Full-time',
-    background: 'bg-purple-50'
-  },
-  {
-    id: '5',
-    company: 'Amazon',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/480px-Amazon_logo.svg.png',
-    title: 'Full Stack Developer',
-    salary: '₹ 20 LPA',
-    location: 'Pune',
-    workMode: 'Remote',
-    skills: ['Node.js', 'Python', 'MongoDB'],
-    bgColor: 'bg-yellow-200',
-    description: 'Build end-to-end solutions for our e-commerce platform.',
-    experience: '3-5 years',
-    type: 'Full-time',
-    background: 'bg-yellow-50'
-  },
-  {
-    id: '6',
-    company: 'Netflix',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/480px-Netflix_2015_logo.svg.png',
-    title: 'Data Scientist',
-    salary: '₹ 25 LPA',
-    location: 'Bangalore',
-    workMode: 'Work from office',
-    skills: ['Python', 'Machine Learning', 'SQL'],
-    bgColor: 'bg-red-200',
-    description: 'Analyze user behavior and content performance to improve our platform.',
-    experience: '2-4 years',
-    type: 'Full-time',
-    background: 'bg-red-50'
-  }
-];
+// Removed hardcoded jobSuggestions mock data in favor of real API data
 
-export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTabProps) {
+export default function MyJobsTab({ 
+  className, 
+  onNavigateToJobBoard, 
+  onNavigateToProfile,
+  onNavigateToSettings,
+  onOpenSupport
+}: MyJobsTabProps) {
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<JobSuggestion | null>(null);
@@ -180,11 +104,57 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   const saveJobMutation = useSaveJob();
   const removeSavedJobMutation = useRemoveSavedJob();
   const { toast } = useToast();
+  const { data: profile } = useProfile();
+  const { data: jobPreferences } = useJobPreferences();
+
+  const { data: recruiterJobs = [] } = useQuery<any[]>({
+    queryKey: ['/api/jobs'],
+  });
 
   // Create a Set of applied jobs for fast lookup
   const appliedJobs = new Set(
     jobApplications.map(app => `${app.jobTitle}-${app.company}`)
   );
+
+  // STRICT JOB MATCHING LOGIC
+  const candidateSkills = profile?.skills?.split(',').map(s => s.trim().toLowerCase()) || [];
+  
+  const jobSuggestions: JobSuggestion[] = recruiterJobs
+    .filter(job => !appliedJobs.has(`${job.role}-${job.companyName}`))
+    .filter(job => {
+      // If candidate has no skills yet, show nothing or all depending on policy
+      if (candidateSkills.length === 0) return false;
+      
+      const jobSkills = (job.primarySkills || "").toLowerCase().split(',').map((s: string) => s.trim());
+      // Match if at least 40% of candidate skills match job skills
+      const matches = candidateSkills.filter(s => jobSkills.some(js => js.includes(s) || s.includes(js)));
+      return matches.length > 0;
+    })
+    .map((job, index) => {
+      const backgroundColors = ['bg-blue-50', 'bg-green-50', 'bg-red-50', 'bg-purple-50', 'bg-yellow-50'];
+      const borderColors = ['bg-blue-200', 'bg-green-200', 'bg-red-200', 'bg-purple-200', 'bg-yellow-200'];
+      
+      return {
+        id: job.id,
+        company: job.companyName || 'Unknown',
+        logo: job.companyLogo || '/api/placeholder/60/60',
+        title: job.role || 'Unknown Title',
+        salary: job.salaryPackage || 'Not Specified',
+        location: job.location || 'Not Specified',
+        workMode: job.workMode || 'Office',
+        skills: job.primarySkills ? job.primarySkills.split(',') : [],
+        secondarySkills: job.secondarySkills ? job.secondarySkills.split(',') : [],
+        knowledgeSkills: job.knowledgeSkills ? job.knowledgeSkills.split(',') : [],
+        bgColor: borderColors[index % borderColors.length],
+        description: job.aboutCompany || 'No description available',
+        experience: job.experience || 'Not Specified',
+        type: 'Full-time',
+        background: backgroundColors[index % backgroundColors.length],
+        isHot: true,
+        applicationCount: job.applicationCount || 0,
+        postedDate: calculateDaysAgo(job.postedDate)
+      };
+    });
 
   // Create a Set of saved job keys for fast lookup
   const savedJobs = new Set(
@@ -200,7 +170,8 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
     return statusStyles[status as keyof typeof statusStyles] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  const handleViewMore = (job: JobSuggestion) => {
+  const handleApplyJob = async (job: JobSuggestion) => {
+    // Show full details modal instead of applying directly
     setSelectedJob(job);
     setShowJobModal(true);
   };
@@ -270,10 +241,6 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
     }
   };
 
-  const handleApplyJob = (job: JobSuggestion) => {
-    setPendingApplyJob(job);
-    setShowApplyConfirmation(true);
-  };
 
   const confirmApplyJob = async () => {
     if (pendingApplyJob) {
@@ -321,7 +288,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
     <>
     <div className={`flex h-full overflow-hidden ${className || ''}`}>
       {/* Main Content Area - Applied Jobs and Job Suggestions (Scrollable) */}
-      <div className="flex-1 min-w-0 overflow-y-auto bg-gray-50">
+      <div className="flex-1 min-w-0 overflow-y-auto bg-gray-50 font-poppins">
         <div className="p-6 space-y-6 max-w-full">
           {/* Applied Jobs Section */}
           <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -331,12 +298,12 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Company</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Type</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Applied On</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Applied Since</th>
+                <th className="text-left py-3 px-4 font-bold text-gray-800">Role</th>
+                <th className="text-left py-3 px-4 font-bold text-gray-800">Company</th>
+                <th className="text-left py-3 px-4 font-bold text-gray-800">Type</th>
+                <th className="text-left py-3 px-4 font-bold text-gray-800">Status</th>
+                <th className="text-left py-3 px-4 font-bold text-gray-800">Applied On</th>
+                <th className="text-left py-3 px-4 font-bold text-gray-800">Applied Since</th>
                 <th className="w-10"></th>
               </tr>
             </thead>
@@ -410,7 +377,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
               onClick={() => setShowAllJobs(true)}
               data-testid="button-see-all-applied"
             >
-              View More
+            View More
             </Button>
           </div>
         )}
@@ -418,86 +385,61 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
 
           {/* Job Suggestions Section */}
           <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
-          </div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
+            </div>
 
-          {/* Horizontal Scrollable Cards */}
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {jobSuggestions.map((job) => (
-            <Card key={job.id} className="min-w-[320px] max-w-[320px] bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-lg overflow-hidden relative flex-shrink-0">
-              <CardContent className="p-0">
-                {/* Save Button */}
-                <button
-                  onClick={() => toggleSaveJob(job)}
-                  className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-200 z-10 ${
-                    savedJobs.has(`${job.title}-${job.company}`) 
-                      ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
-                      : 'bg-white hover:bg-gray-100 border border-gray-300'
-                  }`}
-                  data-testid={`button-save-${job.id}`}
-                >
-                  <i className={`${savedJobs.has(`${job.title}-${job.company}`) ? 'fas fa-bookmark' : 'far fa-bookmark'} ${savedJobs.has(`${job.title}-${job.company}`) ? 'text-white' : 'text-gray-600'}`}></i>
-                </button>
-
-                {/* Company Logo and Title */}
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-white border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <img 
-                        src={job.logo} 
-                        alt={`${job.company} logo`}
-                        className="w-10 h-10 object-contain"
+            {/* Horizontal Scrollable Cards */}
+            <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {jobSuggestions.length > 0 ? (
+                <>
+                  {jobSuggestions.slice(0, 5).map((job) => {
+                    const jobKey = `${job.title}-${job.company}`;
+                    return (
+                      <SuggestionJobCard 
+                        key={job.id} 
+                        job={job}
+                        isApplied={appliedJobs.has(jobKey)}
+                        isSaved={savedJobs.has(jobKey)}
+                        onApply={handleApplyJob}
+                        onSave={toggleSaveJob}
                       />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-base truncate">{job.title}</h3>
-                      <p className="text-sm text-gray-600 truncate">{job.company}</p>
-                    </div>
-                  </div>
+                    );
+                  })}
                   
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-0.5 rounded">
-                      Remote
-                    </Badge>
-                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-0.5 rounded">
-                      {job.experience}
-                    </Badge>
-                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-0.5 rounded">
-                      Product
-                    </Badge>
+                  <div 
+                    onClick={handleSeeAllJobs}
+                    className="min-w-[120px] max-w-[120px] bg-gray-50 rounded-[24px] border border-gray-100 flex flex-col items-center justify-center min-h-[420px] h-full hover:bg-gray-100 transition-all cursor-pointer group shrink-0"
+                  >
+                    <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <i className="fas fa-arrow-right text-blue-600"></i>
+                    </div>
+                    <span className="text-blue-600 font-bold text-xs">View All</span>
                   </div>
+                </>
+              ) : (
+                <div className="w-full py-12 flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                    <MapPin className="w-8 h-8 text-blue-400 opacity-50" />
+                  </div>
+                  <p className="text-gray-500 font-medium mb-4 text-center">No jobs match your current skills yet.</p>
+                  <Button 
+                    onClick={handleSeeAllJobs}
+                    className="bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    View All Jobs
+                  </Button>
                 </div>
+              )}
+            </div>
 
-                {/* Job Description */}
-                <div className="p-4">
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-                    {job.description || "We're Looking for a Product Designer who can merge Creativity, Strategy, and user-centered thinking...."}
-                  </p>
-
-                  {/* Skills */}
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {job.skills.slice(0, 6).map((skill) => (
-                      <span 
-                        key={skill} 
-                        className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Footer Info */}
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
-                    <span>Applied: 1,200</span>
-                    <span>Posted on: Two days ago</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          </div>
+            {profile && (
+              <ProfileCompletionSession 
+                profile={profile} 
+                jobPreferences={jobPreferences}
+                onNavigateToProfile={onNavigateToProfile} 
+              />
+            )}
           </div>
         </div>
       </div>
@@ -678,32 +620,25 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                     <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Skills Required</h5>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded border border-green-200 dark:border-green-700">
-                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Primary Skills</h6>
+                        <h6 className="font-medium text-gray-900 dark:text-white mb-2 text-sm">Primary Skills</h6>
                         <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                          <div>Business Development</div>
-                          <div>Marketing Analysis</div>
-                          <div>Lead Generation</div>
-                          <div>International Sales</div>
-                          <div>Digital Marketing</div>
-                          <div>SEO</div>
+                          {selectedJob.skills.length > 0 ? selectedJob.skills.map((s, i) => <div key={i}>{s}</div>) : <div>Not specified</div>}
                         </div>
                       </div>
                       <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded border border-blue-200 dark:border-blue-700">
-                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Secondary Skills</h6>
+                        <h6 className="font-medium text-gray-900 dark:text-white mb-2 text-sm">Secondary Skills</h6>
                         <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                          <div>Corporate Sales</div>
-                          <div>Resource Manager</div>
-                          <div>Customer Interaction</div>
-                          <div>Customer Service</div>
-                          <div>Direct sales</div>
+                          {selectedJob.secondarySkills && selectedJob.secondarySkills.length > 0 
+                            ? selectedJob.secondarySkills.map((s, i) => <div key={i}>{s}</div>) 
+                            : <div>Not specified</div>}
                         </div>
                       </div>
                       <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded border border-yellow-200 dark:border-yellow-700">
-                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Knowledge Only</h6>
+                        <h6 className="font-medium text-gray-900 dark:text-white mb-2 text-sm">Knowledge Only</h6>
                         <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                          <div>Telecalling</div>
-                          <div>English communication</div>
-                          <div>Sales requirement</div>
+                          {selectedJob.knowledgeSkills && selectedJob.knowledgeSkills.length > 0 
+                            ? selectedJob.knowledgeSkills.map((s, i) => <div key={i}>{s}</div>) 
+                            : <div>Not specified</div>}
                         </div>
                       </div>
                     </div>

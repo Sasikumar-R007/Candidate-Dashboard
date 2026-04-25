@@ -48,6 +48,8 @@ import {
   type RequirementAssignment,
   type InsertRequirementAssignment,
   type ResumeSubmission,
+  type UserActivity,
+  type InsertUserActivity,
   type InsertResumeSubmission,
   type DailyMetricsSnapshot,
   type InsertDailyMetricsSnapshot,
@@ -122,6 +124,16 @@ function normalizeEmployee(emp: any): Employee {
 
 function normalizeCandidate(candidate: any): Candidate {
   if (!candidate) return candidate;
+  
+  // DEEP DIAGNOSTIC: Log the raw DB data to the terminal
+  if (candidate.candidate_id === 'STCA419' || candidate.candidateId === 'STCA419') {
+    console.log("[DB-RAW] Candidate Data for STCA419:", {
+      id: candidate.id,
+      stage: candidate.registration_stage,
+      dbKeys: Object.keys(candidate)
+    });
+  }
+
   return {
     ...candidate,
     candidateId: candidate.candidate_id || candidate.candidateId,
@@ -151,6 +163,7 @@ function normalizeCandidate(candidate: any): Candidate {
     isActive: candidate.is_active !== undefined ? candidate.is_active : candidate.isActive,
     isVerified: candidate.is_verified !== undefined ? candidate.is_verified : candidate.isVerified,
     phoneVerified: candidate.phone_verified !== undefined ? candidate.phone_verified : candidate.phoneVerified,
+    registrationStage: candidate.registration_stage || candidate.registrationStage,
     createdAt: candidate.created_at || candidate.createdAt,
     lastViewedAt: candidate.last_viewed_at || candidate.lastViewedAt,
   } as Candidate;
@@ -198,7 +211,7 @@ const candidateColumnCandidates = [
   "notice_period", "position", "pedigree_level", "company_level", "company_sector",
   "product_service", "product_category", "product_domain", "employment_type",
   "owner_employee_id", "owner_role", "is_active", "is_verified", "phone_verified",
-  "created_at", "last_viewed_at",
+  "registration_stage", "created_at", "last_viewed_at",
 ];
 
 const clientColumnCandidates = [
@@ -2140,5 +2153,17 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(interviewTracker)
       .where(eq(interviewTracker.id, id));
     return result.rowCount !== undefined && result.rowCount > 0;
+  }
+  async getUserActivities(role: string, limit: number = 5): Promise<UserActivity[]> {
+    return await db.select()
+      .from(userActivities)
+      .where(sql`LOWER(${userActivities.targetRole}) LIKE LOWER(${'%' + role + '%'})`)
+      .orderBy(desc(userActivities.createdAt))
+      .limit(limit);
+  }
+
+  async createUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
+    const [newActivity] = await db.insert(userActivities).values(activity).returning();
+    return newActivity;
   }
 }

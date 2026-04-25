@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, Loader2, Plus, Image } from 'lucide-react';
+import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, Loader2, Plus, Image, Search, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +53,8 @@ export default function PostJobModal({
 }: PostJobModalProps) {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [skillInputs, setSkillInputs] = useState({ primary: '', secondary: '', knowledge: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -104,9 +107,9 @@ export default function PostJobModal({
       aboutCompany: '',
       roleDefinitions: '',
       keyResponsibility: '',
-      primarySkills: [''],
-      secondarySkills: [''],
-      knowledgeOnly: [''],
+      primarySkills: [],
+      secondarySkills: [],
+      knowledgeOnly: [],
       companyLogo: ''
     });
     setLogoPreview(null);
@@ -134,7 +137,45 @@ export default function PostJobModal({
     return { min: null, max: null };
   };
 
-  const deriveLocationType = (workMode: string): string => {
+// Custom Suggestions Dropdown Component
+const SuggestionsList = ({ 
+  options, 
+  searchTerm,
+  onSelect, 
+  isVisible, 
+  onClose 
+}: { 
+  options: string[], 
+  searchTerm: string,
+  onSelect: (val: string) => void, 
+  isVisible: boolean, 
+  onClose: () => void 
+}) => {
+  const filteredOptions = options.filter(opt => 
+    opt.toLowerCase().includes((searchTerm || '').toLowerCase())
+  );
+
+  if (!isVisible || filteredOptions.length === 0) return null;
+
+  return (
+    <div className="absolute z-50 w-full top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+      {filteredOptions.map((opt) => (
+        <div
+          key={opt}
+          className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer transition-colors font-medium text-left"
+          onClick={() => {
+            onSelect(opt);
+            onClose();
+          }}
+        >
+          {opt}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const deriveLocationType = (workMode: string): string => {
     const lower = workMode.toLowerCase();
     if (lower.includes('remote')) return 'Remote';
     if (lower.includes('hybrid')) return 'Hybrid';
@@ -159,18 +200,18 @@ export default function PostJobModal({
 
     const expRange = parseExperience(formData.experience);
     const salaryRange = parseSalary(formData.salaryPackage);
-    const skillsToSubmit = [
-      ...getFilteredSkills(formData.primarySkills),
-      ...getFilteredSkills(formData.secondarySkills),
-      ...getFilteredSkills(formData.knowledgeOnly)
-    ];
-
+    
     const jobData = {
       id: formData.id,
       title: formData.role || 'Software Developer',
       company: formData.companyName,
+      companyTagline: formData.companyTagline,
+      companyType: formData.companyType,
+      market: formData.market,
+      department: formData.field || 'Engineering',
+      openings: parseInt(formData.noOfPositions) || 1,
       location: formData.location,
-      locationType: deriveLocationType(formData.workMode),
+      locationType: formData.workMode,
       experienceMin: expRange.min,
       experienceMax: expRange.max,
       salaryMin: salaryRange.min,
@@ -178,11 +219,10 @@ export default function PostJobModal({
       description: formData.aboutCompany,
       requirements: formData.roleDefinitions,
       responsibilities: formData.keyResponsibility,
-      benefits: formData.companyTagline,
-      skills: skillsToSubmit,
-      department: formData.field || 'Engineering',
-      employmentType: deriveEmploymentType(formData.employmentType),
-      openings: parseInt(formData.noOfPositions) || 1,
+      primarySkills: formData.primarySkills,
+      secondarySkills: formData.secondarySkills,
+      knowledgeOnly: formData.knowledgeOnly,
+      employmentType: formData.employmentType,
       status: 'Active',
       companyLogo: formData.companyLogo || null
     };
@@ -190,68 +230,33 @@ export default function PostJobModal({
     postJobMutation.mutate(jobData);
   };
 
-  const addPrimarySkill = () => {
-    if (formData.primarySkills.length < 5) {
-      setFormData({ ...formData, primarySkills: [...formData.primarySkills, ''] });
-    }
+  const addSkill = (type: 'primary' | 'secondary' | 'knowledge', value: string) => {
+    if (!value.trim()) return;
+    const skillList = type === 'primary' ? 'primarySkills' : type === 'secondary' ? 'secondarySkills' : 'knowledgeOnly';
+    if (formData[skillList].includes(value.trim())) return;
+    if (formData[skillList].length >= 10) return;
+    
+    setFormData({
+      ...formData,
+      [skillList]: [...formData[skillList], value.trim()]
+    });
   };
 
-  const removePrimarySkill = (index: number) => {
-    if (formData.primarySkills.length > 1) {
-      const newSkills = formData.primarySkills.filter((_, i) => i !== index);
-      setFormData({ ...formData, primarySkills: newSkills });
-    }
-  };
-
-  const updatePrimarySkill = (index: number, value: string) => {
-    const newSkills = [...formData.primarySkills];
-    newSkills[index] = value;
-    setFormData({ ...formData, primarySkills: newSkills });
-  };
-
-  const addSecondarySkill = () => {
-    if (formData.secondarySkills.length < 5) {
-      setFormData({ ...formData, secondarySkills: [...formData.secondarySkills, ''] });
-    }
-  };
-
-  const removeSecondarySkill = (index: number) => {
-    if (formData.secondarySkills.length > 1) {
-      const newSkills = formData.secondarySkills.filter((_, i) => i !== index);
-      setFormData({ ...formData, secondarySkills: newSkills });
-    }
-  };
-
-  const updateSecondarySkill = (index: number, value: string) => {
-    const newSkills = [...formData.secondarySkills];
-    newSkills[index] = value;
-    setFormData({ ...formData, secondarySkills: newSkills });
-  };
-
-  const addKnowledgeSkill = () => {
-    if (formData.knowledgeOnly.length < 5) {
-      setFormData({ ...formData, knowledgeOnly: [...formData.knowledgeOnly, ''] });
-    }
-  };
-
-  const removeKnowledgeSkill = (index: number) => {
-    if (formData.knowledgeOnly.length > 1) {
-      const newSkills = formData.knowledgeOnly.filter((_, i) => i !== index);
-      setFormData({ ...formData, knowledgeOnly: newSkills });
-    }
-  };
-
-  const updateKnowledgeSkill = (index: number, value: string) => {
-    const newSkills = [...formData.knowledgeOnly];
-    newSkills[index] = value;
-    setFormData({ ...formData, knowledgeOnly: newSkills });
+  const removeSkill = (type: 'primary' | 'secondary' | 'knowledge', index: number) => {
+    const skillList = type === 'primary' ? 'primarySkills' : type === 'secondary' ? 'secondarySkills' : 'knowledgeOnly';
+    const newSkills = formData[skillList].filter((_, i) => i !== index);
+    setFormData({ ...formData, [skillList]: newSkills });
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 500 * 1024) {
-        toast({ title: 'File too large', description: 'Please upload an image smaller than 500KB', variant: 'destructive' });
+      if (file.size > 600 * 1024) {
+        toast({ title: 'Logo too large', description: 'Maximum allowed size is 600KB. Your file is ' + Math.round(file.size / 1024) + 'KB.', variant: 'destructive' });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({ title: 'Invalid format', description: 'Please upload a proper image file (PNG, JPG, etc.)', variant: 'destructive' });
         return;
       }
       const reader = new FileReader();
@@ -296,8 +301,17 @@ export default function PostJobModal({
       {/* Post Job Modal */}
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between pr-8">
             <DialogTitle>{formData.id ? 'Edit Job' : 'Post the job'}</DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetForm}
+              className="text-gray-400 hover:text-blue-600 h-8 w-8 p-0 rounded-full transition-colors"
+              title="Reset Form"
+            >
+              <RefreshCw size={16} />
+            </Button>
           </DialogHeader>
           <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(85vh - 4rem)' }}>
             
@@ -335,10 +349,13 @@ export default function PostJobModal({
                   value={formData.companyTagline}
                   onChange={(e) => setFormData({...formData, companyTagline: e.target.value})}
                   className="pl-10 bg-gray-50 rounded-sm border pr-16 focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
-                  placeholder="Company Tagline"
+                  placeholder="Company Tagline (max 100 characters)"
                   data-testid="input-company-tagline"
+                  maxLength={100}
                 />
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">0/100</span>
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-[10px] font-medium">
+                  {formData.companyTagline?.length || 0}/100
+                </span>
               </div>
 
               {/* Row 1: Company Type, Market */}
@@ -349,10 +366,18 @@ export default function PostJobModal({
                   </div>
                   <Input
                     value={formData.companyType}
+                    onFocus={() => setActiveDropdown('companyType')}
+                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
                     onChange={(e) => setFormData({...formData, companyType: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Company Type"
-                    data-testid="input-company-type"
+                  />
+                  <SuggestionsList 
+                    isVisible={activeDropdown === 'companyType'}
+                    searchTerm={formData.companyType}
+                    options={["MNC", "Startup", "Product Based", "Service Based", "Corporate", "Mid-size"]}
+                    onSelect={(val) => setFormData({...formData, companyType: val})}
+                    onClose={() => setActiveDropdown(null)}
                   />
                 </div>
                 <div className="relative">
@@ -361,10 +386,18 @@ export default function PostJobModal({
                   </div>
                   <Input
                     value={formData.market}
+                    onFocus={() => setActiveDropdown('market')}
+                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
                     onChange={(e) => setFormData({...formData, market: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Market"
-                    data-testid="input-market"
+                  />
+                  <SuggestionsList 
+                    isVisible={activeDropdown === 'market'}
+                    searchTerm={formData.market}
+                    options={["Domestic", "International", "B2B", "B2C", "SaaS", "Fintech", "Healthcare"]}
+                    onSelect={(val) => setFormData({...formData, market: val})}
+                    onClose={() => setActiveDropdown(null)}
                   />
                 </div>
               </div>
@@ -377,10 +410,18 @@ export default function PostJobModal({
                   </div>
                   <Input
                     value={formData.field}
+                    onFocus={() => setActiveDropdown('field')}
+                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
                     onChange={(e) => setFormData({...formData, field: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Field"
-                    data-testid="input-field"
+                  />
+                  <SuggestionsList 
+                    isVisible={activeDropdown === 'field'}
+                    searchTerm={formData.field}
+                    options={["Engineering", "Marketing", "Sales", "Human Resources", "Finance", "Operations", "Design"]}
+                    onSelect={(val) => setFormData({...formData, field: val})}
+                    onClose={() => setActiveDropdown(null)}
                   />
                 </div>
                 <div className="relative">
@@ -388,6 +429,8 @@ export default function PostJobModal({
                     <Hash size={16} />
                   </div>
                   <Input
+                    type="number"
+                    min="1"
                     value={formData.noOfPositions}
                     onChange={(e) => setFormData({...formData, noOfPositions: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
@@ -416,10 +459,12 @@ export default function PostJobModal({
                     <TrendingUp size={16} />
                   </div>
                   <Input
+                    type="number"
+                    min="0"
                     value={formData.experience}
                     onChange={(e) => setFormData({...formData, experience: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
-                    placeholder="Experience *"
+                    placeholder="Experience (in years) *"
                     data-testid="input-experience"
                   />
                 </div>
@@ -433,10 +478,19 @@ export default function PostJobModal({
                   </div>
                   <Input
                     value={formData.location}
+                    onFocus={() => setActiveDropdown('location')}
+                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Location *"
                     data-testid="input-location"
+                  />
+                  <SuggestionsList 
+                    isVisible={activeDropdown === 'location'}
+                    searchTerm={formData.location}
+                    options={["Bengaluru", "Mumbai", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Remote"]}
+                    onSelect={(val) => setFormData({...formData, location: val})}
+                    onClose={() => setActiveDropdown(null)}
                   />
                 </div>
                 <div className="relative">
@@ -445,10 +499,19 @@ export default function PostJobModal({
                   </div>
                   <Input
                     value={formData.workMode}
+                    onFocus={() => setActiveDropdown('workMode')}
+                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
                     onChange={(e) => setFormData({...formData, workMode: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Work Type"
                     data-testid="input-work-type"
+                  />
+                  <SuggestionsList 
+                    isVisible={activeDropdown === 'workMode'}
+                    searchTerm={formData.workMode}
+                    options={["On-site", "Remote", "Hybrid"]}
+                    onSelect={(val) => setFormData({...formData, workMode: val})}
+                    onClose={() => setActiveDropdown(null)}
                   />
                 </div>
               </div>
@@ -461,10 +524,19 @@ export default function PostJobModal({
                   </div>
                   <Input
                     value={formData.employmentType}
+                    onFocus={() => setActiveDropdown('employmentType')}
+                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
                     onChange={(e) => setFormData({...formData, employmentType: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Employment Type"
                     data-testid="input-employment-type"
+                  />
+                  <SuggestionsList 
+                    isVisible={activeDropdown === 'employmentType'}
+                    searchTerm={formData.employmentType}
+                    options={["Full-time", "Part-time", "Contract", "Internship"]}
+                    onSelect={(val) => setFormData({...formData, employmentType: val})}
+                    onClose={() => setActiveDropdown(null)}
                   />
                 </div>
                 <div className="relative">
@@ -487,10 +559,13 @@ export default function PostJobModal({
                   value={formData.aboutCompany}
                   onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
                   className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-400"
-                  placeholder="About Company *"
+                  placeholder="About Company * (max 1000 characters)"
                   data-testid="textarea-about-company"
+                  maxLength={1000}
                 />
-                <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1000</span>
+                <span className="absolute right-3 bottom-3 text-gray-400 text-[10px] font-medium">
+                  {formData.aboutCompany?.length || 0}/1000
+                </span>
               </div>
 
               {/* Role Definitions */}
@@ -499,10 +574,13 @@ export default function PostJobModal({
                   value={formData.roleDefinitions}
                   onChange={(e) => setFormData({...formData, roleDefinitions: e.target.value})}
                   className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-400"
-                  placeholder="Role Definitions *"
+                  placeholder="Role Definitions * (max 1500 characters)"
                   data-testid="textarea-role-definitions"
+                  maxLength={1500}
                 />
-                <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1500</span>
+                <span className="absolute right-3 bottom-3 text-gray-400 text-[10px] font-medium">
+                  {formData.roleDefinitions?.length || 0}/1500
+                </span>
               </div>
 
               {/* Key Responsibility */}
@@ -511,139 +589,166 @@ export default function PostJobModal({
                   value={formData.keyResponsibility}
                   onChange={(e) => setFormData({...formData, keyResponsibility: e.target.value})}
                   className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20 placeholder:text-gray-400"
-                  placeholder="Key Responsibility *"
+                  placeholder="Key Responsibilities * (Enter as bullet points or sentences)"
                   data-testid="textarea-key-responsibility"
+                  maxLength={2000}
                 />
-                <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0-20 points</span>
+                <span className="absolute right-3 bottom-3 text-gray-400 text-[10px] font-medium">
+                  {formData.keyResponsibility?.length || 0}/2000
+                </span>
               </div>
 
               {/* Add up to 15 skills */}
-              <div>
-                <Label className="text-sm font-medium mb-3 block">Add up to 15 skills</Label>
+              <div className="space-y-6">
+                <Label className="text-sm font-bold text-gray-900 block mb-2">Add Skills</Label>
                 
                 {/* Primary Skills */}
-                <div className="mb-4">
-                  <Label className="text-xs text-gray-600 mb-2 block">Primary Skills</Label>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {formData.primarySkills.map((skill, index) => (
-                      <div key={`primary-${index}`} className="flex items-center gap-1">
-                        <Input
-                          value={skill}
-                          onChange={(e) => updatePrimarySkill(index, e.target.value)}
-                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-400"
-                          placeholder="Skill"
-                          data-testid={`input-primary-skill-${index}`}
-                        />
-                        {formData.primarySkills.length > 1 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => removePrimarySkill(index)}
-                            className="text-gray-400 h-8 w-8"
-                            data-testid={`button-remove-primary-skill-${index}`}
-                          >
-                            <X size={14} />
-                          </Button>
-                        )}
-                      </div>
+                <div className="space-y-3">
+                  <Label className="text-xs text-gray-500 font-medium block">Primary Skills</Label>
+                  <div className="flex gap-2 max-w-sm relative">
+                    <Input 
+                      value={skillInputs.primary}
+                      onFocus={() => setActiveDropdown('primarySkill')}
+                      onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                      onChange={(e) => setSkillInputs({...skillInputs, primary: e.target.value})}
+                      placeholder="Add primary skill..."
+                      className="bg-gray-50 h-9 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addSkill('primary', skillInputs.primary);
+                          setSkillInputs({...skillInputs, primary: ''});
+                        }
+                      }}
+                    />
+                    <SuggestionsList 
+                      isVisible={activeDropdown === 'primarySkill'}
+                      searchTerm={skillInputs.primary}
+                      options={["Java", "Python", "React", "Angular", "Node.js", "AWS", "SQL", "Project Management"]}
+                      onSelect={(val) => {
+                        addSkill('primary', val);
+                        setSkillInputs({...skillInputs, primary: ''});
+                      }}
+                      onClose={() => setActiveDropdown(null)}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        addSkill('primary', skillInputs.primary);
+                        setSkillInputs({...skillInputs, primary: ''});
+                      }}
+                      className="h-9 w-9 bg-blue-600 hover:bg-blue-700 shrink-0"
+                    >
+                      <Plus size={16} />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.primarySkills.filter(s => s && s.trim() !== '').map((skill, index) => (
+                      <Badge key={index} className="bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
+                        {skill}
+                        <X size={12} className="cursor-pointer hover:text-blue-900" onClick={() => removeSkill('primary', index)} />
+                      </Badge>
                     ))}
-                    {formData.primarySkills.length < 5 && (
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        onClick={addPrimarySkill}
-                        className="text-blue-500 border-blue-200 h-8 w-8"
-                        data-testid="button-add-primary-skill"
-                      >
-                        <Plus size={14} />
-                      </Button>
-                    )}
                   </div>
                 </div>
 
                 {/* Secondary Skills */}
-                <div className="mb-4">
-                  <Label className="text-xs text-gray-600 mb-2 block">Secondary Skills</Label>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {formData.secondarySkills.map((skill, index) => (
-                      <div key={`secondary-${index}`} className="flex items-center gap-1">
-                        <Input
-                          value={skill}
-                          onChange={(e) => updateSecondarySkill(index, e.target.value)}
-                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-400"
-                          placeholder="Skill"
-                          data-testid={`input-secondary-skill-${index}`}
-                        />
-                        {formData.secondarySkills.length > 1 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => removeSecondarySkill(index)}
-                            className="text-gray-400 h-8 w-8"
-                            data-testid={`button-remove-secondary-skill-${index}`}
-                          >
-                            <X size={14} />
-                          </Button>
-                        )}
-                      </div>
+                <div className="space-y-3">
+                  <Label className="text-xs text-gray-500 font-medium block">Secondary Skills</Label>
+                  <div className="flex gap-2 max-w-sm relative">
+                    <Input 
+                      value={skillInputs.secondary}
+                      onFocus={() => setActiveDropdown('secondarySkill')}
+                      onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                      onChange={(e) => setSkillInputs({...skillInputs, secondary: e.target.value})}
+                      placeholder="Add secondary skill..."
+                      className="bg-gray-50 h-9 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addSkill('secondary', skillInputs.secondary);
+                          setSkillInputs({...skillInputs, secondary: ''});
+                        }
+                      }}
+                    />
+                    <SuggestionsList 
+                      isVisible={activeDropdown === 'secondarySkill'}
+                      searchTerm={skillInputs.secondary}
+                      options={["Git", "Docker", "Jira", "TypeScript", "CSS", "HTML", "Communication"]}
+                      onSelect={(val) => {
+                        addSkill('secondary', val);
+                        setSkillInputs({...skillInputs, secondary: ''});
+                      }}
+                      onClose={() => setActiveDropdown(null)}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        addSkill('secondary', skillInputs.secondary);
+                        setSkillInputs({...skillInputs, secondary: ''});
+                      }}
+                      className="h-9 w-9 bg-indigo-600 hover:bg-indigo-700 shrink-0"
+                    >
+                      <Plus size={16} />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.secondarySkills.filter(s => s && s.trim() !== '').map((skill, index) => (
+                      <Badge key={index} className="bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
+                        {skill}
+                        <X size={12} className="cursor-pointer hover:text-indigo-900" onClick={() => removeSkill('secondary', index)} />
+                      </Badge>
                     ))}
-                    {formData.secondarySkills.length < 5 && (
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        onClick={addSecondarySkill}
-                        className="text-blue-500 border-blue-200 h-8 w-8"
-                        data-testid="button-add-secondary-skill"
-                      >
-                        <Plus size={14} />
-                      </Button>
-                    )}
                   </div>
                 </div>
 
                 {/* Knowledge Only */}
-                <div>
-                  <Label className="text-xs text-gray-600 mb-2 block">Knowledge Only</Label>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {formData.knowledgeOnly.map((skill, index) => (
-                      <div key={`knowledge-${index}`} className="flex items-center gap-1">
-                        <Input
-                          value={skill}
-                          onChange={(e) => updateKnowledgeSkill(index, e.target.value)}
-                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-400"
-                          placeholder="Skill"
-                          data-testid={`input-knowledge-skill-${index}`}
-                        />
-                        {formData.knowledgeOnly.length > 1 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => removeKnowledgeSkill(index)}
-                            className="text-gray-400 h-8 w-8"
-                            data-testid={`button-remove-knowledge-skill-${index}`}
-                          >
-                            <X size={14} />
-                          </Button>
-                        )}
-                      </div>
+                <div className="space-y-3">
+                  <Label className="text-xs text-gray-500 font-medium block">Knowledge Only</Label>
+                  <div className="flex gap-2 max-w-sm relative">
+                    <Input 
+                      value={skillInputs.knowledge}
+                      onFocus={() => setActiveDropdown('knowledgeSkill')}
+                      onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                      onChange={(e) => setSkillInputs({...skillInputs, knowledge: e.target.value})}
+                      placeholder="Add knowledge-only skill..."
+                      className="bg-gray-50 h-9 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addSkill('knowledge', skillInputs.knowledge);
+                          setSkillInputs({...skillInputs, knowledge: ''});
+                        }
+                      }}
+                    />
+                    <SuggestionsList 
+                      isVisible={activeDropdown === 'knowledgeSkill'}
+                      searchTerm={skillInputs.knowledge}
+                      options={["Machine Learning", "Blockchain", "AI", "Cybersecurity", "Data Science"]}
+                      onSelect={(val) => {
+                        addSkill('knowledge', val);
+                        setSkillInputs({...skillInputs, knowledge: ''});
+                      }}
+                      onClose={() => setActiveDropdown(null)}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        addSkill('knowledge', skillInputs.knowledge);
+                        setSkillInputs({...skillInputs, knowledge: ''});
+                      }}
+                      className="h-9 w-9 bg-gray-600 hover:bg-gray-700 shrink-0"
+                    >
+                      <Plus size={16} />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.knowledgeOnly.filter(s => s && s.trim() !== '').map((skill, index) => (
+                      <Badge key={index} className="bg-gray-50 text-gray-600 border border-gray-200 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
+                        {skill}
+                        <X size={12} className="cursor-pointer hover:text-gray-900" onClick={() => removeSkill('knowledge', index)} />
+                      </Badge>
                     ))}
-                    {formData.knowledgeOnly.length < 5 && (
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        onClick={addKnowledgeSkill}
-                        className="text-blue-500 border-blue-200 h-8 w-8"
-                        data-testid="button-add-knowledge-skill"
-                      >
-                        <Plus size={14} />
-                      </Button>
-                    )}
                   </div>
                 </div>
               </div>

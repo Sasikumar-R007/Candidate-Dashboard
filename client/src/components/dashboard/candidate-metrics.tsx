@@ -1,67 +1,81 @@
+import { useJobApplications } from "@/hooks/use-job-applications";
+
 export default function CandidateMetrics() {
-  // Mock data for demonstration - in a real app, this would come from API
+  const { data: jobApplications = [] } = useJobApplications();
+
+  // Logic to calculate real metrics
+  const appliedCount = jobApplications.length;
+  const rejectedCount = jobApplications.filter(a => a.status === 'Rejected').length;
+  const interviewCount = jobApplications.filter(a => a.status === 'Interview Scheduled' || a.status === 'Shortlisted').length;
+  
+  // TAT and Feedback set to 0 as requested for later implementation
+  const tatValue = "0"; 
+  const feedbackReceived = jobApplications.filter(a => a.status === 'Feedback Received').length || 0;
+  const pendingFeedback = jobApplications.filter(a => a.status === 'Pending Feedback').length || 0;
+
   const metrics = [
     {
       label: 'TAT',
       sublabel: 'Recruiter reply time',
-      value: '24',
-      bgColor: 'bg-white',
-      textColor: 'text-gray-800'
+      value: tatValue,
+      bgColor: 'bg-[#F2F4F7]',
+      textColor: 'text-[#344054]',
+      disabled: true
     },
     {
       label: 'JOBS',
       sublabel: 'Applied',
-      value: '24',
-      bgColor: 'bg-white',
-      textColor: 'text-gray-800'
+      value: appliedCount,
+      bgColor: 'bg-[#EFF8FF]',
+      textColor: 'text-[#175CD3]'
     },
     {
       label: 'REJECTED',
       sublabel: 'On Applications',
-      value: '14',
-      bgColor: 'bg-white',
-      textColor: 'text-orange-600'
+      value: rejectedCount,
+      bgColor: 'bg-[#F2F4F7]',
+      textColor: 'text-[#D92D20]'
     },
     {
       label: 'INTERVIEWS',
       sublabel: 'In Process',
-      value: '10',
-      bgColor: 'bg-white',
-      textColor: 'text-gray-800'
+      value: interviewCount,
+      bgColor: 'bg-[#EFF8FF]',
+      textColor: 'text-[#175CD3]'
     },
     {
       label: 'FEEDBACK',
       sublabel: 'Received',
-      value: '9',
-      bgColor: 'bg-white',
-      textColor: 'text-gray-800'
+      value: feedbackReceived,
+      bgColor: 'bg-[#F2F4F7]',
+      textColor: 'text-[#344054]'
     },
     {
       label: 'PENDING',
       sublabel: 'Feedback',
-      value: '3',
-      bgColor: 'bg-white',
-      textColor: 'text-gray-800'
+      value: pendingFeedback,
+      bgColor: 'bg-[#EFF8FF]',
+      textColor: 'text-[#175CD3]'
     }
   ];
 
   return (
     <div className="w-full">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">
+      <h2 className="text-lg font-bold text-gray-900 mb-6 font-poppins">
         Candidate Metrics
       </h2>
       <div className="space-y-3">
         {metrics.map((metric, index) => (
           <div 
             key={index}
-            className={`${metric.bgColor} p-4 rounded-lg border border-gray-200`}
-            data-testid={`metric-${metric.label.toLowerCase()}`}
+            className={`${metric.bgColor} p-4 rounded-xl border border-transparent shadow-sm hover:shadow-md transition-all cursor-default ${metric.disabled ? 'opacity-40 grayscale pointer-events-none' : ''}`}
           >
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-gray-700">
-                {metric.label} {metric.sublabel}:
+            <div className={`flex items-center justify-between ${metric.disabled ? 'select-none' : ''}`}>
+              <div>
+                <span className="text-lg font-bold text-gray-800">{metric.label}</span>
+                <span className="text-xs text-gray-500 ml-2 font-medium">{metric.sublabel}</span>
               </div>
-              <div className={`text-xl font-bold ${metric.textColor}`}>
+              <div className={`text-2xl font-bold ${metric.textColor}`}>
                 {metric.value}
               </div>
             </div>

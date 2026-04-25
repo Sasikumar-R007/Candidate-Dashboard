@@ -6,7 +6,7 @@ import fs from "fs";
 import passport from "passport";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -201,13 +201,7 @@ const loginSchema = z.object({
 
 const candidateRegistrationSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  designation: z.string().optional(),
-  age: z.string().optional(),
-  location: z.string().optional()
+  email: z.string().email("Invalid email format")
 });
 
 const candidateLoginSchema = z.object({
@@ -421,7 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/jobs/public", async (req, res) => {
     try {
       const allJobs = await storage.getAllRecruiterJobs();
-      
+
       // Filter for active jobs and sort by newest first
       const activeJobs = allJobs
         .filter(job => job.status === "Active");
@@ -774,6 +768,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Password Change Route
+  app.post("/api/auth/change-password", async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new passwords are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "New password must be at least 8 characters long" });
+      }
+
+      let user: any = null;
+      let userType: 'employee' | 'candidate' | null = null;
+
+      // Identify user type from session
+      if (req.session.employeeId) {
+        user = await storage.getEmployeeById(req.session.employeeId);
+        userType = 'employee';
+      } else if (req.session.candidateId) {
+        user = await storage.getCandidateByCandidateId(req.session.candidateId);
+        userType = 'candidate';
+      }
+
+      if (!user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Verify current password
+      if (!user.password) {
+        return res.status(400).json({ message: "Password not set for this account" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Incorrect current password" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update database
+      if (userType === 'employee') {
+        await storage.updateEmployee(user.id, { password: hashedPassword });
+      } else if (userType === 'candidate') {
+        await storage.updateCandidate(user.id, { password: hashedPassword });
+      }
+
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error) {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: "Failed to update password" });
+    }
+  });
+
   // Employee Authentication Routes
   app.post("/api/auth/employee-login", async (req, res) => {
     try {
@@ -1004,7 +1054,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if candidate already exists
       const existingCandidate = await storage.getCandidateByEmail(candidateData.email);
       if (existingCandidate) {
-        return res.status(409).json({ message: "Email already registered" });
+        if (existingCandidate.isVerified) {
+          return res.status(409).json({ message: "Email already registered. Please sign in." });
+        }
+
+        // Generate new 4-digit OTP for unverified accounts
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        await storage.storeOTP(candidateData.email, otp);
+
+        // Send OTP via email
+        await sendOTPEmail({
+          fullName: existingCandidate.fullName,
+          email: existingCandidate.email,
+          otp: otp,
+          expiresInMinutes: 10
+        });
+
+        return res.json({
+          success: true,
+          message: "A new verification code has been sent to your email.",
+          candidateId: existingCandidate.candidateId,
+          email: existingCandidate.email,
+          requiresVerification: true
+        });
       }
 
       // Generate candidate ID and create candidate
@@ -1014,6 +1086,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         candidateId,
         isActive: true,
         isVerified: false,
+        registrationStage: 'registered',
+        onboardingSource: 'manual',
         createdAt: new Date().toISOString()
       });
 
@@ -1174,13 +1248,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.resetLoginAttempts(email);
 
       // Regenerate session to prevent session fixation attacks and ensure isolation
-      req.session.regenerate((err) => {
+      req.session.regenerate(async (err) => {
         if (err) {
           console.error('Session regeneration error:', err);
           return res.status(500).json({
             message: "Internal server error",
             error: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : String(err)) : undefined
           });
+        }
+
+        // Ensure candidate has a candidateId (for legacy records)
+        if (!candidate.candidateId) {
+          const nextId = await storage.generateNextCandidateId();
+          await storage.updateCandidate(candidate.id, { candidateId: nextId });
+          candidate.candidateId = nextId;
         }
 
         // Set session after regeneration to ensure proper isolation
@@ -1274,8 +1355,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isOtpValid = await storage.verifyOTP(email, otp);
 
       if (isOtpValid) {
-        // Mark candidate as verified
-        await storage.updateCandidate(candidate.id, { isVerified: true });
+        // Mark candidate as verified and update registration stage
+        await storage.updateCandidate(candidate.id, {
+          isVerified: true,
+          registrationStage: 'verified'
+        });
 
         // Reset login attempts
         await storage.resetLoginAttempts(email);
@@ -1318,6 +1402,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('OTP verification error:', error);
       res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  app.post("/api/auth/candidate-complete-registration", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // Update candidate with password and set isVerified just in case
+      await storage.updateCandidate(candidate.id, {
+        password: password,
+        isVerified: true,
+        registrationStage: 'verified'
+      });
+
+      // Set session for the candidate
+      req.session.candidateId = candidate.candidateId;
+
+      res.json({
+        success: true,
+        message: "Registration complete! You can now upload your resume.",
+        candidateId: candidate.candidateId
+      });
+    } catch (error) {
+      console.error('Complete registration error:', error);
+      res.status(500).json({ message: "Failed to complete registration." });
+    }
+  });
+
+  app.post("/api/auth/skip-onboarding", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId;
+      console.log(`[Skip Onboarding] Request received for candidateId: ${candidateId}`);
+      
+      const candidate = await storage.getCandidateByCandidateId(candidateId!);
+      
+      if (!candidate) {
+        console.error(`[Skip Onboarding] Candidate not found for ID: ${candidateId}`);
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      console.log(`[Skip Onboarding] Updating candidate ${candidate.id} (${candidate.fullName}) to 'completed'`);
+      await storage.updateCandidate(candidate.id, {
+        registrationStage: 'completed'
+      });
+
+      res.json({ success: true, message: "Onboarding skipped" });
+    } catch (error) {
+      console.error('[Skip Onboarding] CRITICAL ERROR:', error);
+      res.status(500).json({ message: "Failed to skip onboarding" });
+    }
+  });
+
+  app.post("/api/onboarding/finalize", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId;
+      const { fullName } = req.body;
+      
+      const candidate = await storage.getCandidateByCandidateId(candidateId!);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const updateData: any = {
+        registration_stage: 'completed',
+        registrationStage: 'completed'
+      };
+
+      if (fullName) {
+        updateData.fullName = fullName;
+      }
+
+      await storage.updateCandidate(candidate.id, updateData);
+
+      res.json({ success: true, message: "Onboarding completed! Welcome aboard." });
+    } catch (error) {
+      console.error('Finalize onboarding error:', error);
+      res.status(500).json({ message: "Failed to finalize onboarding" });
     }
   });
 
@@ -1365,12 +1534,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/candidate/change-password", async (req, res) => {
+  app.post("/api/candidate/change-password", requireCandidateAuth, async (req, res) => {
     try {
-      const { email, currentPassword, newPassword } = req.body;
+      const { email, otp, newPassword } = req.body;
 
-      if (!email || !currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Email, current password and new password are required" });
+      if (!email || !otp || !newPassword) {
+        return res.status(400).json({ message: "Email, OTP and new password are required" });
       }
 
       if (newPassword.length < 6) {
@@ -1383,10 +1552,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      // Verify current password
-      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, candidate.password);
-      if (!isCurrentPasswordValid) {
-        return res.status(401).json({ message: "Current password is incorrect" });
+      // Verify OTP
+      const isOtpValid = await storage.verifyOTP(email, otp);
+      if (!isOtpValid) {
+        return res.status(401).json({ message: "Invalid or expired OTP" });
       }
 
       // Hash new password
@@ -1406,6 +1575,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Candidate password change error:', error);
       res.status(500).json({ message: "Password change failed" });
+    }
+  });
+
+  // Request OTP for sensitive actions (Password change, Delete account)
+  app.post("/api/auth/candidate-request-action-otp", requireCandidateAuth, async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ message: "Email is required" });
+
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      await storage.storeOTP(email, otp);
+
+      // For now, show in alert via frontend, but also call email service
+      await sendOTPEmail({
+        fullName: candidate.fullName,
+        email: candidate.email,
+        otp: otp,
+        expiresInMinutes: 10
+      });
+
+      res.json({ success: true, message: "Verification code sent to your email" });
+    } catch (error) {
+      console.error('Action OTP request error:', error);
+      res.status(500).json({ message: "Failed to send verification code" });
+    }
+  });
+
+  // Verify password (for account deletion)
+  app.post("/api/auth/candidate-verify-password", requireCandidateAuth, async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+      const isPasswordValid = await bcrypt.compare(password, candidate.password);
+      if (!isPasswordValid) return res.status(401).json({ message: "Incorrect password" });
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  // Delete Candidate Account
+  app.post("/api/candidate/delete-account", requireCandidateAuth, async (req, res) => {
+    try {
+      const { email, confirmCode } = req.body;
+      if (confirmCode !== 'DELETE') return res.status(400).json({ message: "Invalid confirmation code" });
+
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+      // Profile is linked to candidateId/userId
+      // We should delete applications, saved jobs, profile, and candidate record
+      // For now, use the deleteCandidate which should ideally handle cascades in DB
+      await storage.deleteCandidate(candidate.id);
+
+      req.session.destroy((err) => {
+         if (err) console.error('Session destruction error:', err);
+         res.clearCookie('connect.sid', { path: '/' });
+         res.clearCookie('staffos.sid', { path: '/' });
+         res.json({ success: true, message: "Account deleted successfully" });
+      });
+    } catch (error) {
+      console.error('Delete account error:', error);
+      res.status(500).json({ message: "Failed to delete account" });
     }
   });
 
@@ -1615,6 +1853,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get current candidate profile
   app.get("/api/profile", requireCandidateAuth, async (req, res) => {
+    // Force no-cache to ensure onboarding status is always fresh
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
@@ -1623,35 +1866,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      // Transform candidate data to match profile structure expected by frontend
+      if (!candidate.candidateId) {
+        const nextId = await storage.generateNextCandidateId();
+        await storage.updateCandidate(candidate.id, { candidateId: nextId });
+        candidate.candidateId = nextId;
+      }
+
+      const profileData = await storage.getProfile(candidate.id);
+
+      // Ensure candidateId is synced to profiles table if missing
+      if (profileData && !profileData.candidateId) {
+        await storage.updateProfile(candidate.id, { candidateId: candidate.candidateId });
+      }
+
+      // Transform merged data to match profile structure expected by frontend
+      const fullName = candidate.fullName || '';
+      const nameParts = fullName.trim().split(/\s+/);
+      
       const profile = {
         id: candidate.id,
+        candidateId: candidate.candidateId,
+        registrationStage: (candidate.resumeFile && (candidate.registrationStage === 'registered' || candidate.registrationStage === 'verified')) ? 'resume_uploaded' : candidate.registrationStage,
         userId: candidate.id,
-        firstName: candidate.fullName.split(' ')[0] || '',
-        lastName: candidate.fullName.split(' ').slice(1).join(' ') || '',
+        firstName: profileData?.firstName || nameParts[0] || '',
+        lastName: profileData?.lastName || nameParts.slice(1).join(' ') || '',
         email: candidate.email,
-        phone: candidate.phone || '',
-        title: candidate.designation || '',
-        location: candidate.location || '',
-        gender: candidate.gender || '',
+        phone: profileData?.phone || candidate.phone || '',
+        whatsapp: profileData?.whatsapp || '',
+        title: profileData?.title || candidate.designation || '',
+        location: profileData?.location || candidate.location || '',
+        gender: profileData?.gender || candidate.gender || '',
+        isVerified: candidate.isVerified,
         profilePicture: candidate.profilePicture || '',
         bannerImage: candidate.bannerImage || '',
         resumeFile: candidate.resumeFile || '',
         resumeText: candidate.resumeText || '',
         skills: candidate.skills || '',
+        currentCompany: profileData?.currentCompany || candidate.company || '',
+        currentRole: profileData?.currentRole || candidate.currentRole || '',
+        education: profileData?.education || candidate.education || '',
+        highestQualification: profileData?.highestQualification || '',
+        collegeName: profileData?.collegeName || '',
+        portfolioUrl: profileData?.portfolioUrl || candidate.portfolioUrl || '',
+        websiteUrl: profileData?.websiteUrl || candidate.websiteUrl || '',
+        linkedinUrl: profileData?.linkedinUrl || candidate.linkedinUrl || '',
+        currentLocation: profileData?.currentLocation || '',
+        preferredLocation: profileData?.preferredLocation || '',
+        dateOfBirth: profileData?.dateOfBirth || '',
+        registrationStage: (candidate.resumeFile && (candidate.registrationStage === 'registered' || candidate.registrationStage === 'verified' || candidate.registration_stage === 'registered' || candidate.registration_stage === 'verified')) ? 'resume_uploaded' : (candidate.registrationStage || 'verified'),
+        noticePeriod: profileData?.noticePeriod || candidate.noticePeriod || '',
+        pedigreeLevel: profileData?.pedigreeLevel || candidate.pedigreeLevel || '',
+        companyLevel: profileData?.companyLevel || candidate.companyLevel || '',
+        productService: profileData?.productService || '',
+        currentDomain: profileData?.currentDomain || '',
         experience: candidate.experience || '',
-        currentCompany: candidate.company || '',
-        currentRole: candidate.currentRole || '',
-        education: candidate.education || '',
-        portfolioUrl: candidate.portfolioUrl || '',
-        websiteUrl: candidate.websiteUrl || '',
-        linkedinUrl: candidate.linkedinUrl || '',
+        totalExperience: profileData?.totalExperience || candidate.experience || '',
+        educationHistory: profileData?.educationHistory || [],
+        graduationYear: profileData?.graduationYear || '',
+        salaryRange: profileData?.salaryRange || '',
+        secondaryEmail: profileData?.secondaryEmail || '',
       };
 
       res.json(profile);
-    } catch (error) {
-      console.error('Get profile error:', error);
-      res.status(500).json({ message: "Internal server error" });
+    } catch (error: any) {
+      console.error('Get profile error detailed:', {
+        message: error.message,
+        stack: error.stack,
+        candidateId: req.session.candidateId
+      });
+      res.status(500).json({ 
+        message: "Internal server error", 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+      });
     }
   });
 
@@ -1684,62 +1970,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      // Transform profile data to candidate fields
-      const updates: any = {};
+      // Prepare updates for both tables
+      const candidateUpdates: any = {};
+      const profileUpdates: any = {};
 
-      // Map profile fields to candidate fields
+      // Map incoming fields to candidate updates
       if (req.body.firstName || req.body.lastName) {
-        const firstName = req.body.firstName || candidate.fullName.split(' ')[0];
-        const lastName = req.body.lastName || candidate.fullName.split(' ').slice(1).join(' ');
-        updates.fullName = `${firstName} ${lastName}`.trim();
+        const currentFirstName = candidate.fullName.split(' ')[0];
+        const currentLastName = candidate.fullName.split(' ').slice(1).join(' ');
+        const firstName = req.body.firstName || currentFirstName;
+        const lastName = req.body.lastName || currentLastName;
+        candidateUpdates.fullName = `${firstName} ${lastName}`.trim();
+        profileUpdates.firstName = firstName;
+        profileUpdates.lastName = lastName;
       }
 
-      if (req.body.phone !== undefined) updates.phone = req.body.phone;
-      if (req.body.title !== undefined) updates.designation = req.body.title;
-      if (req.body.location !== undefined) updates.location = req.body.location;
-      if (req.body.gender !== undefined) updates.gender = req.body.gender;
-      if (req.body.skills !== undefined) updates.skills = req.body.skills;
-      if (req.body.currentCompany !== undefined) updates.company = req.body.currentCompany;
-      if (req.body.currentRole !== undefined) updates.currentRole = req.body.currentRole;
-      if (req.body.education !== undefined) updates.education = req.body.education;
-      if (req.body.profilePicture !== undefined) updates.profilePicture = req.body.profilePicture;
-      if (req.body.bannerImage !== undefined) updates.bannerImage = req.body.bannerImage;
-      if (req.body.resumeFile !== undefined) updates.resumeFile = req.body.resumeFile;
-      if (req.body.resumeText !== undefined) updates.resumeText = req.body.resumeText;
-      if (req.body.portfolioUrl !== undefined) updates.portfolioUrl = req.body.portfolioUrl;
-      if (req.body.websiteUrl !== undefined) updates.websiteUrl = req.body.websiteUrl;
-      if (req.body.linkedinUrl !== undefined) updates.linkedinUrl = req.body.linkedinUrl;
+      if (req.body.phone !== undefined) {
+        candidateUpdates.phone = req.body.phone;
+        profileUpdates.phone = req.body.phone;
+      }
+      if (req.body.title !== undefined) candidateUpdates.designation = req.body.title;
+      if (req.body.location !== undefined) candidateUpdates.location = req.body.location;
+      if (req.body.gender !== undefined) candidateUpdates.gender = req.body.gender;
+      if (req.body.skills !== undefined) {
+        candidateUpdates.skills = req.body.skills;
+        profileUpdates.skills = req.body.skills;
+      }
+      if (req.body.currentCompany !== undefined) {
+        candidateUpdates.company = req.body.currentCompany;
+        profileUpdates.currentCompany = req.body.currentCompany;
+      }
+      if (req.body.currentRole !== undefined) {
+        candidateUpdates.currentRole = req.body.currentRole;
+        profileUpdates.currentRole = req.body.currentRole;
+      }
+      if (req.body.education !== undefined) {
+        candidateUpdates.education = req.body.education;
+        profileUpdates.education = req.body.education;
+      }
+      if (req.body.profilePicture !== undefined) candidateUpdates.profilePicture = req.body.profilePicture;
+      if (req.body.bannerImage !== undefined) candidateUpdates.bannerImage = req.body.bannerImage;
+      if (req.body.resumeFile !== undefined) candidateUpdates.resumeFile = req.body.resumeFile;
+      if (req.body.resumeText !== undefined) candidateUpdates.resumeText = req.body.resumeText;
+      
+      if (req.body.whatsapp !== undefined) profileUpdates.whatsapp = req.body.whatsapp;
+      if (req.body.currentLocation !== undefined) {
+        candidateUpdates.location = req.body.currentLocation;
+        profileUpdates.currentLocation = req.body.currentLocation;
+      }
+      if (req.body.preferredLocation !== undefined) {
+        profileUpdates.preferredLocation = req.body.preferredLocation;
+      }
+      if (req.body.dateOfBirth !== undefined) profileUpdates.dateOfBirth = req.body.dateOfBirth;
+      
+      if (req.body.linkedinUrl !== undefined) {
+        candidateUpdates.linkedinUrl = req.body.linkedinUrl;
+        profileUpdates.linkedinUrl = req.body.linkedinUrl;
+      }
+      if (req.body.portfolioUrl !== undefined) {
+        candidateUpdates.portfolioUrl = req.body.portfolioUrl;
+        profileUpdates.portfolioUrl = req.body.portfolioUrl;
+      }
+      if (req.body.websiteUrl !== undefined) {
+        candidateUpdates.websiteUrl = req.body.websiteUrl;
+        profileUpdates.websiteUrl = req.body.websiteUrl;
+      }
+
+      // Add new professional fields synchronization
+      if (req.body.collegeName !== undefined) {
+        profileUpdates.collegeName = req.body.collegeName;
+      }
+      if (req.body.pedigreeLevel !== undefined) {
+        candidateUpdates.pedigreeLevel = req.body.pedigreeLevel;
+        profileUpdates.pedigreeLevel = req.body.pedigreeLevel;
+      }
+      if (req.body.companyLevel !== undefined) {
+        candidateUpdates.companyLevel = req.body.companyLevel;
+        profileUpdates.companyLevel = req.body.companyLevel;
+      }
+      if (req.body.currentDomain !== undefined) {
+        candidateUpdates.productDomain = req.body.currentDomain;
+        profileUpdates.currentDomain = req.body.currentDomain;
+      }
+      if (req.body.productService !== undefined) {
+        candidateUpdates.productService = req.body.productService;
+        profileUpdates.productService = req.body.productService;
+      }
+      if (req.body.noticePeriod !== undefined) {
+        candidateUpdates.noticePeriod = req.body.noticePeriod;
+        profileUpdates.noticePeriod = req.body.noticePeriod;
+      }
+      if (req.body.secondaryEmail !== undefined) profileUpdates.secondaryEmail = req.body.secondaryEmail;
+      if (req.body.gender !== undefined) {
+        candidateUpdates.gender = req.body.gender;
+        profileUpdates.gender = req.body.gender;
+      }
+      if (req.body.currentLocation !== undefined) profileUpdates.currentLocation = req.body.currentLocation;
+      if (req.body.preferredLocation !== undefined) profileUpdates.preferredLocation = req.body.preferredLocation;
+      if (req.body.dateOfBirth !== undefined) profileUpdates.dateOfBirth = req.body.dateOfBirth;
+      if (req.body.course !== undefined) profileUpdates.course = req.body.course;
+      if (req.body.degreeLevel !== undefined) profileUpdates.degreeLevel = req.body.degreeLevel;
+      if (req.body.highestQualification !== undefined) {
+        candidateUpdates.education = req.body.highestQualification; // Sync to candidate table
+        profileUpdates.highestQualification = req.body.highestQualification;
+      }
+      if (req.body.totalExperience !== undefined) {
+        candidateUpdates.experience = req.body.totalExperience;
+        profileUpdates.totalExperience = req.body.totalExperience;
+      }
+      if (req.body.salaryRange !== undefined) {
+        profileUpdates.salaryRange = req.body.salaryRange;
+      }
+      if (req.body.educationHistory !== undefined) {
+        profileUpdates.educationHistory = req.body.educationHistory;
+      }
+      if (req.body.graduationYear !== undefined) {
+        profileUpdates.graduationYear = req.body.graduationYear;
+      }
+
+      // Ensure STCA ID is preserved
+      profileUpdates.candidateId = candidate.candidateId;
 
       // Update candidate in storage
-      const updatedCandidate = await storage.updateCandidate(candidate.id, updates);
+      if (Object.keys(candidateUpdates).length > 0) {
+        await storage.updateCandidate(candidate.id, candidateUpdates);
+      }
 
-      if (!updatedCandidate) {
-        return res.status(404).json({ message: "Failed to update candidate" });
+      // Update or create profile in storage
+      const existingProfile = await storage.getProfile(candidate.id);
+      if (existingProfile) {
+        await storage.updateProfile(candidate.id, profileUpdates);
+      } else {
+        await storage.createProfile({ ...profileUpdates, userId: candidate.id });
+      }
+
+      // Fetch fresh merged data for response
+      const finalCandidate = await storage.getCandidateByCandidateId(candidateId);
+      const finalProfileData = await storage.getProfile(candidate.id);
+
+      if (!finalCandidate) {
+        return res.status(404).json({ message: "Failed to fetch updated candidate" });
       }
 
       // Return data in profile format expected by frontend
       const profile = {
-        id: updatedCandidate.id,
-        userId: updatedCandidate.id,
-        firstName: updatedCandidate.fullName.split(' ')[0] || '',
-        lastName: updatedCandidate.fullName.split(' ').slice(1).join(' ') || '',
-        email: updatedCandidate.email,
-        phone: updatedCandidate.phone || '',
-        title: updatedCandidate.designation || '',
-        location: updatedCandidate.location || '',
-        gender: updatedCandidate.gender || '',
-        profilePicture: updatedCandidate.profilePicture || '',
-        bannerImage: updatedCandidate.bannerImage || '',
-        resumeFile: updatedCandidate.resumeFile || '',
-        resumeText: updatedCandidate.resumeText || '',
-        skills: updatedCandidate.skills || '',
-        experience: updatedCandidate.experience || '',
-        currentCompany: updatedCandidate.company || '',
-        currentRole: updatedCandidate.currentRole || '',
-        education: updatedCandidate.education || '',
-        portfolioUrl: updatedCandidate.portfolioUrl || '',
-        websiteUrl: updatedCandidate.websiteUrl || '',
-        linkedinUrl: updatedCandidate.linkedinUrl || '',
+        id: finalCandidate.id,
+        candidateId: finalCandidate.candidateId,
+        userId: finalCandidate.id,
+        firstName: finalProfileData?.firstName || finalCandidate.fullName.split(' ')[0] || '',
+        lastName: finalProfileData?.lastName || finalCandidate.fullName.split(' ').slice(1).join(' ') || '',
+        email: finalCandidate.email,
+        phone: finalProfileData?.phone || finalCandidate.phone || '',
+        whatsapp: finalProfileData?.whatsapp || '',
+        title: finalProfileData?.title || finalCandidate.designation || '',
+        location: finalProfileData?.location || finalCandidate.location || '',
+        gender: finalProfileData?.gender || finalCandidate.gender || '',
+        profilePicture: finalCandidate.profilePicture || '',
+        bannerImage: finalCandidate.bannerImage || '',
+        resumeFile: finalCandidate.resumeFile || '',
+        resumeText: finalCandidate.resumeText || '',
+        skills: finalCandidate.skills || '',
+        currentCompany: finalProfileData?.currentCompany || finalCandidate.company || '',
+        currentRole: finalProfileData?.currentRole || finalCandidate.currentRole || '',
+        education: finalProfileData?.education || finalCandidate.education || '',
+        highestQualification: finalProfileData?.highestQualification || '',
+        collegeName: finalProfileData?.collegeName || '',
+        portfolioUrl: finalProfileData?.portfolioUrl || finalCandidate.portfolioUrl || '',
+        websiteUrl: finalProfileData?.websiteUrl || finalCandidate.websiteUrl || '',
+        linkedinUrl: finalProfileData?.linkedinUrl || finalCandidate.linkedinUrl || '',
+        currentLocation: finalProfileData?.currentLocation || '',
+        preferredLocation: finalProfileData?.preferredLocation || '',
+        dateOfBirth: finalProfileData?.dateOfBirth || '',
+        registrationStage: finalCandidate.registrationStage || 'verified',
+        noticePeriod: finalProfileData?.noticePeriod || finalCandidate.noticePeriod || '',
+        pedigreeLevel: finalProfileData?.pedigreeLevel || finalCandidate.pedigreeLevel || '',
+        companyLevel: finalProfileData?.companyLevel || finalCandidate.companyLevel || '',
+        productService: finalProfileData?.productService || '',
+        currentDomain: finalProfileData?.currentDomain || '',
+        experience: finalCandidate.experience || '',
+        totalExperience: finalProfileData?.totalExperience || finalCandidate.experience || '',
+        educationHistory: finalProfileData?.educationHistory || [],
+        graduationYear: finalProfileData?.graduationYear || '',
+        salaryRange: finalProfileData?.salaryRange || '',
+        secondaryEmail: finalProfileData?.secondaryEmail || '',
       };
 
       res.json(profile);
@@ -1749,24 +2162,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get job preferences for candidate
   app.get("/api/job-preferences", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
 
-      // Return mock job preferences for now
-      const jobPreferences = {
-        id: 'pref-1',
-        profileId: candidateId,
-        jobTitles: 'Software Engineer, Full Stack Developer',
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const profile = await storage.getProfile(candidate.id);
+      if (!profile) {
+        // Return default preferences if profile doesn't exist yet
+        return res.json({
+          jobTitles: '',
+          workMode: 'Remote',
+          employmentType: 'Full-time',
+          locations: '',
+          startDate: 'Immediate',
+        });
+      }
+
+      const jobPreferences = await storage.getJobPreferences(profile.id);
+      res.json(jobPreferences || {
+        profileId: profile.id,
+        jobTitles: '',
         workMode: 'Remote',
         employmentType: 'Full-time',
-        locations: 'Bangalore, Mumbai, Remote',
+        locations: '',
         startDate: 'Immediate',
-        instructions: ''
-      };
-
-      res.json(jobPreferences);
+      });
     } catch (error) {
       console.error('Get job preferences error:', error);
       res.status(500).json({ message: "Internal server error" });
@@ -1794,14 +2219,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update job preferences
-  app.patch("/api/job-preferences", async (req, res) => {
+  app.patch("/api/job-preferences", requireCandidateAuth, async (req, res) => {
     try {
-      const users = await storage.getUserByUsername("mathew.anderson");
-      if (!users) {
-        return res.status(404).json({ message: "User not found" });
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const profile = await storage.getProfile(users.id);
+      const profile = await storage.getProfile(candidate.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
@@ -1809,6 +2236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedPreferences = await storage.updateJobPreferences(profile.id, req.body);
       res.json(updatedPreferences);
     } catch (error) {
+      console.error('Update job preferences error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1859,36 +2287,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get activities
-  app.get("/api/activities", async (req, res) => {
+  app.get("/api/activities", requireCandidateAuth, async (req, res) => {
     try {
-      const users = await storage.getUserByUsername("mathew.anderson");
-      if (!users) {
-        return res.status(404).json({ message: "User not found" });
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const profile = await storage.getProfile(users.id);
+      // Ensure profile exists for activity association
+      let profile = await storage.getProfile(candidate.id);
       if (!profile) {
-        return res.status(404).json({ message: "Profile not found" });
+        // Auto-create profile if missing for legacy candidates
+        profile = await storage.createProfile({
+          userId: candidate.id,
+          candidateId: candidate.candidateId,
+          firstName: candidate.fullName.split(' ')[0] || '',
+          lastName: candidate.fullName.split(' ').slice(1).join(' ') || '',
+          email: candidate.email,
+          phone: candidate.phone || '',
+          title: candidate.designation || 'Candidate',
+          location: candidate.location || '',
+        });
       }
 
       const activities = await storage.getActivitiesByProfile(profile.id);
       res.json(activities);
     } catch (error) {
+      console.error('Fetch activities error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
 
   // Create activity
-  app.post("/api/activities", async (req, res) => {
+  app.post("/api/activities", requireCandidateAuth, async (req, res) => {
     try {
-      const users = await storage.getUserByUsername("mathew.anderson");
-      if (!users) {
-        return res.status(404).json({ message: "User not found" });
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found for activity logging" });
       }
 
-      const profile = await storage.getProfile(users.id);
+      let profile = await storage.getProfile(candidate.id);
       if (!profile) {
-        return res.status(404).json({ message: "Profile not found" });
+        // Auto-create profile if missing
+        profile = await storage.createProfile({
+          userId: candidate.id,
+          candidateId: candidate.candidateId,
+          firstName: candidate.fullName.split(' ')[0] || '',
+          lastName: candidate.fullName.split(' ').slice(1).join(' ') || '',
+          email: candidate.email,
+          phone: candidate.phone || '',
+          title: candidate.designation || 'Candidate',
+          location: candidate.location || '',
+        });
       }
 
       const activityData = {
@@ -1900,6 +2354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activity = await storage.createActivity(activityData);
       res.json(activity);
     } catch (error) {
+      console.error('Create activity error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1964,6 +2419,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const application = await storage.createJobApplication(applicationData);
+
+      // Increment application count for the recruiter job if applicable
+      if (validationResult.data.recruiterJobId) {
+        try {
+          const job = await storage.getRecruiterJobById(validationResult.data.recruiterJobId);
+          if (job) {
+            await storage.updateRecruiterJob(job.id, {
+              applicationCount: (job.applicationCount || 0) + 1
+            });
+          }
+        } catch (incrementError) {
+          console.error('Failed to increment job application count:', incrementError);
+          // Don't fail the application request if just the count increment fails
+        }
+      }
 
       res.status(201).json(application);
     } catch (error) {
@@ -2071,11 +2541,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : `http://${req.get('host')}`;
 
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      const filePath = path.join(process.cwd(), 'uploads', req.file.filename);
 
-      // Save resume URL to candidate profile
-      await storage.updateCandidate(candidate.id, { resumeFile: fileUrl });
+      // 1. IMMEDIATELY update registration stage and commit file URL
+      // This ensures the page transitions to 'SCANNING' state
+      await storage.updateCandidate(candidate.id, {
+        resumeFile: fileUrl,
+        registrationStage: 'resume_uploaded',
+        fullName: candidate.fullName,
+        email: candidate.email,
+        phone: candidate.phone,
+      });
+      
+      console.log(`[Initial Upload] Set stage to 'resume_uploaded' for candidate UUID: ${candidate.id}`);
 
-      res.json({ url: fileUrl });
+      // 2. IMMEDIATELY Return success to the client
+      res.json({ 
+        url: fileUrl, 
+        registrationStage: 'resume_uploaded'
+      });
+
+      // Process with AI in background
+      (async () => {
+        try {
+          console.log("File Path:", filePath);
+          console.log("File URL:", fileUrl);
+          console.log(`[Background AI] Starting parse for candidate ${candidate.candidateId} (UUID: ${candidate.id})`);
+          
+          // CRITICAL FIX: Pass mimetype instead of fileUrl
+          const parsedData = await parseResumeFile(filePath, req.file!.mimetype);
+          
+          if (parsedData && parsedData.aiParsed) {
+            const ai = parsedData.aiParsed;
+
+            // 1. Update Candidate Master Record
+            await storage.updateCandidate(candidate.id, {
+              fullName: ai.full_name || candidate.fullName,
+              phone: ai.phone || candidate.phone,
+              company: ai.company || candidate.company,
+              designation: ai.designation || null,
+              experience: ai.experience || null,
+              location: ai.location || null,
+              skills: ai.skills || null,
+              education: ai.education || null,
+              currentRole: ai.current_role || null,
+              portfolioUrl: ai.portfolio_url || null,
+              website_url: ai.website_url || null,
+              linkedin_url: ai.linkedin_url || null,
+              ctc: ai.ctc || null,
+              ectc: ai.ectc || null,
+              noticePeriod: ai.notice_period || null,
+              position: ai.position || null,
+              employmentType: ai.employment_type || null,
+              productService: ai.product_service || null,
+              productCategory: ai.product_category || null,
+              productDomain: ai.product_domain || null,
+            });
+
+            // 2. Create/Update Profile Table
+            const existingProfile = await storage.getProfile(candidate.id);
+            const nameParts = (ai.full_name || candidate.fullName).split(' ');
+            
+            // Priority Mapping: AI directly provides Degree Level and Title now
+            const highestQualification = ai.degree_level || 'Under Graduate';
+            const professionalTitle = ai.current_role || ai.designation || 'Candidate';
+
+            const profileData = {
+              candidateId: candidate.candidateId,
+              firstName: nameParts[0] || 'Unknown',
+              lastName: nameParts.slice(1).join(' ') || 'Unknown',
+              email: ai.email || candidate.email,
+              phone: ai.phone || candidate.phone || 'Unknown',
+              title: professionalTitle,
+              location: ai.location || 'Unknown',
+              mobile: ai.phone || null,
+              whatsapp: ai.phone || null,
+              primaryEmail: ai.email || null,
+              secondaryEmail: ai.secondary_email || null,
+              currentLocation: ai.location || null,
+              preferredLocation: null,
+              dateOfBirth: ai.age || null,
+              portfolioUrl: ai.portfolio_url || null,
+              websiteUrl: ai.website_url || null,
+              linkedinUrl: ai.linkedin_url || null,
+              resumeFile: fileUrl,
+              resumeText: parsedData.rawText || null,
+              highestQualification: highestQualification,
+              collegeName: ai.college || ai.university || null,
+              course: ai.course || null,
+              graduationYear: ai.graduation_year || null,
+              skills: ai.skills || null,
+              currentCompany: ai.company || null,
+              currentRole: ai.current_role || null,
+              noticePeriod: ai.notice_period || null,
+              currentDomain: ai.product_domain || null,
+            };
+
+            const savedProfile = existingProfile 
+              ? await storage.updateProfile(candidate.id, profileData)
+              : await storage.createProfile({ ...profileData, userId: candidate.id } as any);
+
+            // 3. Sync Skills Table (Convert CSV to separate rows)
+            if (savedProfile && ai.skills) {
+              const skillList = ai.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+              const skillInsertions = skillList.map((skill: string, index: number) => ({
+                profileId: savedProfile.id,
+                name: skill.charAt(0).toUpperCase() + skill.slice(1),
+                category: index < 3 ? 'primary' : 'secondary' 
+              }));
+              
+              await storage.updateSkillsByProfile(savedProfile.id, skillInsertions);
+              console.log(`[AI Parser] Synced ${skillInsertions.length} skills to profile ${savedProfile.id}`);
+            }
+
+            // 3. Final Step: Mark registration as COMPLETED
+            const updatedCandidate = await storage.updateCandidate(candidate.id, {
+              registrationStage: 'completed'
+            });
+            
+            console.log(`[Background AI] Successfully parsed and refined. Stage set to: ${updatedCandidate?.registrationStage}`);
+          }
+        } catch (error) {
+          console.error(`[Resume Background Parsing] Failed for candidate ${candidateId}:`, error);
+        }
+      })();
     } catch (error) {
       console.error('Upload error:', error);
       res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
@@ -3496,7 +4085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // Get unique candidate emails delivered for this requirement
             const deliveredEmails = new Set<string>();
-            
+
             // From submissions
             teamSubmissions
               .filter(s => s.requirementId === req.id && s.candidateEmail)
@@ -6038,8 +6627,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeRecruiters = team && team !== 'overall'
         ? teamRecruiters.filter((emp: any) => emp.is_active === true)
         : allEmployees.filter((emp: any) =>
-            (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
-          );
+          (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
+        );
       const recruiterCount = activeRecruiters.length;
       const requirementsPerRecruiter = recruiterCount > 0
         ? (totalRequirements / recruiterCount).toFixed(2)
@@ -6130,16 +6719,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const filteredRevenueMappings = selectedClient
         ? allRevenueMappings.filter((rm) => {
-            const clientNames = [
-              selectedClient.brandName,
-              selectedClient.incorporatedName,
-            ]
-              .filter(Boolean)
-              .map((name) => String(name).trim().toLowerCase());
+          const clientNames = [
+            selectedClient.brandName,
+            selectedClient.incorporatedName,
+          ]
+            .filter(Boolean)
+            .map((name) => String(name).trim().toLowerCase());
 
-            return rm.clientId === selectedClient.id ||
-              clientNames.includes(String(rm.clientName || '').trim().toLowerCase());
-          })
+          return rm.clientId === selectedClient.id ||
+            clientNames.includes(String(rm.clientName || '').trim().toLowerCase());
+        })
         : allRevenueMappings;
 
       const filteredClients = selectedClient ? allClients.filter((client) => client.id === selectedClient.id) : allClients;
@@ -6624,15 +7213,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Master data totals error:', error);
       console.error('Error stack:', error.stack);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Internal server error",
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   });
 
-  // Employer forgot password endpoint
-  app.post("/api/employer/forgot-password", async (req, res) => {
+  // Employer/Employee forgot password request
+  app.post("/api/auth/forgot-password/request", async (req, res) => {
     try {
       const { email } = req.body;
 
@@ -6640,31 +7229,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email is required" });
       }
 
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({ message: "Invalid email format" });
+      // Check if email exists in employees OR candidates
+      const [employee] = await db.select().from(employees).where(eq(employees.email, email)).limit(1);
+      const [candidate] = await db.select().from(candidates).where(eq(candidates.email, email)).limit(1);
+
+      if (!employee && !candidate) {
+        return res.status(404).json({ message: "No account found with this email address" });
       }
 
-      // Simulate sending notification to admin
-      console.log(`Password reset request for employer email: ${email}`);
-      console.log(`Admin notification: New password reset request from ${email}`);
+      const userName = employee ? employee.name : candidate.fullName;
 
-      // In a real implementation, you would:
-      // 1. Check if email exists in the employer database
-      // 2. Generate a reset token
-      // 3. Send email to admin with the request details
-      // 4. Store the reset request in database
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      res.json({
-        message: "Password reset request sent to admin",
-        details: "You will receive an email notification once your request has been processed by the admin team."
+      // Save OTP to database
+      await db.insert(passwordResets).values({
+        email,
+        otp,
+        expiresAt,
+        isVerified: false
       });
+
+      // Send OTP via email
+      const emailSent = await sendOTPEmail({
+        fullName: userName,
+        email,
+        otp,
+        expiresInMinutes: 15
+      });
+
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send verification email. Please try again." });
+      }
+
+      res.json({ message: "Verification code sent to your email" });
     } catch (error) {
-      console.error('Forgot password error:', error);
+      console.error('Forgot password request error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Verify OTP
+  app.post("/api/auth/forgot-password/verify", async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+
+      if (!email || !otp) {
+        return res.status(400).json({ message: "Email and OTP are required" });
+      }
+
+      // Find the latest unverified OTP for this email
+      const [resetRecord] = await db.select()
+        .from(passwordResets)
+        .where(and(
+          eq(passwordResets.email, email),
+          eq(passwordResets.otp, otp),
+          eq(passwordResets.isVerified, false)
+        ))
+        .orderBy(desc(passwordResets.createdAt))
+        .limit(1);
+
+      if (!resetRecord) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+
+      if (new Date() > resetRecord.expiresAt) {
+        return res.status(400).json({ message: "Verification code has expired" });
+      }
+
+      // Mark as verified
+      await db.update(passwordResets)
+        .set({ isVerified: true })
+        .where(eq(passwordResets.id, resetRecord.id));
+
+      res.json({ message: "OTP verified successfully" });
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reset Password
+  app.post("/api/auth/forgot-password/reset", async (req, res) => {
+    try {
+      const { email, otp, newPassword } = req.body;
+
+      if (!email || !otp || !newPassword) {
+        return res.status(400).json({ message: "Email, OTP, and new password are required" });
+      }
+
+      // Check if OTP was verified
+      const [resetRecord] = await db.select()
+        .from(passwordResets)
+        .where(and(
+          eq(passwordResets.email, email),
+          eq(passwordResets.otp, otp),
+          eq(passwordResets.isVerified, true)
+        ))
+        .orderBy(desc(passwordResets.createdAt))
+        .limit(1);
+
+      if (!resetRecord) {
+        return res.status(400).json({ message: "Please verify your email first" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update in employees OR candidates
+      const [employee] = await db.select().from(employees).where(eq(employees.email, email)).limit(1);
+      const [candidate] = await db.select().from(candidates).where(eq(candidates.email, email)).limit(1);
+
+      if (employee) {
+        await db.update(employees)
+          .set({ password: hashedPassword })
+          .where(eq(employees.id, employee.id));
+      } else if (candidate) {
+        // Find user by username (which is email for candidates)
+        const [candidateUser] = await db.select()
+          .from(users)
+          .where(eq(users.username, email))
+          .limit(1);
+          
+        if (candidateUser) {
+          await db.update(users)
+            .set({ password: hashedPassword })
+            .where(eq(users.id, candidateUser.id));
+        }
+      } else {
+        return res.status(404).json({ message: "Account not found" });
+      }
+
+      // Delete the reset record so it can't be used again
+      await db.delete(passwordResets).where(eq(passwordResets.id, resetRecord.id));
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error('Password reset error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -6714,12 +7416,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user-activities/:role", async (req, res) => {
     try {
       const { role } = req.params;
+      
+      // Candidates do not have internal staff activities
+      if (role === 'Candidate') {
+        return res.json([]);
+      }
+
       const limit = parseInt(req.query.limit as string) || 5;
       const activities = await storage.getUserActivities(role, limit);
       res.json(activities);
     } catch (error) {
-      console.error('Get user activities error:', error);
-      res.status(500).json({ message: "Failed to get user activities" });
+      console.error('[API] Get user activities error:', error);
+      res.status(500).json({ 
+        message: "Failed to get user activities",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
@@ -8326,22 +9037,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: status,
           sourceRequirement: sourceRequirement
             ? {
-                id: sourceRequirement.id,
-                originalId: sourceRequirement.originalId || sourceRequirement.id,
-                position: sourceRequirement.position,
-                noOfPositions: sourceRequirement.noOfPositions ?? 1,
-                splitRequirement: sourceRequirement.splitRequirement ?? false,
-                criticality: sourceRequirement.criticality,
-                toughness: sourceRequirement.toughness,
-                company: sourceRequirement.company,
-                spoc: sourceRequirement.spoc,
-                talentAdvisor: sourceRequirement.talentAdvisor || rm.talentAdvisorName || null,
-                teamLead: sourceRequirement.teamLead || rm.teamLeadName || null,
-                jdFile: sourceRequirement.jdFile || null,
-                jdText: sourceRequirement.jdText || null,
-                sourceType: sourceRequirement.sourceType || null,
-                sourceDetails: sourceRequirement.sourceDetails || null,
-              }
+              id: sourceRequirement.id,
+              originalId: sourceRequirement.originalId || sourceRequirement.id,
+              position: sourceRequirement.position,
+              noOfPositions: sourceRequirement.noOfPositions ?? 1,
+              splitRequirement: sourceRequirement.splitRequirement ?? false,
+              criticality: sourceRequirement.criticality,
+              toughness: sourceRequirement.toughness,
+              company: sourceRequirement.company,
+              spoc: sourceRequirement.spoc,
+              talentAdvisor: sourceRequirement.talentAdvisor || rm.talentAdvisorName || null,
+              teamLead: sourceRequirement.teamLead || rm.teamLeadName || null,
+              jdFile: sourceRequirement.jdFile || null,
+              jdText: sourceRequirement.jdText || null,
+              sourceType: sourceRequirement.sourceType || null,
+              sourceDetails: sourceRequirement.sourceDetails || null,
+            }
             : null,
           // Keep these for backward compatibility with other closures endpoints
           quarter: `${rm.quarter}, ${rm.year}`,
@@ -8827,6 +9538,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         title,
         company,
+        companyTagline,
+        companyType,
+        market,
         location,
         locationType,
         experienceMin,
@@ -8836,8 +9550,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description,
         requirements,
         responsibilities,
-        benefits,
-        skills,
+        primarySkills,
+        secondarySkills,
+        knowledgeOnly,
         department,
         employmentType,
         openings,
@@ -8879,31 +9594,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Prepare skills as JSON string
-      const skillsArray = Array.isArray(skills) ? skills : (skills ? skills.split(',').map((s: string) => s.trim()) : []);
-
       const jobData = {
         recruiterId,
         ownerEmployeeId: employee.id,
         ownerRole,
         companyName: company || 'Company',
-        companyTagline: benefits || null,
-        companyType: null,
+        companyTagline: companyTagline || null,
+        companyType: companyType || null,
         companyLogo: companyLogo || null,
-        market: null,
+        market: market || null,
         field: department || null,
-        noOfPositions: openings ? parseInt(openings) : 1,
+        noOfPositions: openings ? parseInt(openings as any) : 1,
         role: title || 'Job Role',
         experience: experienceText || '0-1 years',
         location: location || null,
         workMode: locationType || 'On-site',
+        employmentType: employmentType || 'Full-time',
         salaryPackage: salaryText || null,
         aboutCompany: description || null,
         roleDefinitions: requirements || null,
         keyResponsibility: responsibilities || null,
-        primarySkills: JSON.stringify(skillsArray),
-        secondarySkills: null,
-        knowledgeOnly: null,
+        primarySkills: Array.isArray(primarySkills) ? JSON.stringify(primarySkills) : (req.body.skills ? JSON.stringify(req.body.skills) : '[]'),
+        secondarySkills: Array.isArray(secondarySkills) ? JSON.stringify(secondarySkills) : '[]',
+        knowledgeOnly: Array.isArray(knowledgeOnly) ? JSON.stringify(knowledgeOnly) : '[]',
         status: status || 'Active',
         applicationCount: 0,
         createdAt: new Date().toISOString()
@@ -9309,13 +10022,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = {};
       if (reqBody.title !== undefined) updateData.role = reqBody.title;
       if (reqBody.company !== undefined) updateData.companyName = reqBody.company;
+      if (reqBody.companyTagline !== undefined) updateData.companyTagline = reqBody.companyTagline;
+      if (reqBody.companyType !== undefined) updateData.companyType = reqBody.companyType;
+      if (reqBody.market !== undefined) updateData.market = reqBody.market;
       if (reqBody.location !== undefined) updateData.location = reqBody.location;
       if (reqBody.locationType !== undefined) updateData.workMode = reqBody.locationType;
       if (reqBody.description !== undefined) updateData.aboutCompany = reqBody.description;
       if (reqBody.requirements !== undefined) updateData.roleDefinitions = reqBody.requirements;
       if (reqBody.responsibilities !== undefined) updateData.keyResponsibility = reqBody.responsibilities;
-      if (reqBody.benefits !== undefined) updateData.companyTagline = reqBody.benefits;
       if (reqBody.department !== undefined) updateData.field = reqBody.department;
+      if (reqBody.employmentType !== undefined) updateData.employmentType = reqBody.employmentType;
       if (reqBody.openings !== undefined) updateData.noOfPositions = parseInt(reqBody.openings) || 1;
       if (reqBody.companyLogo !== undefined) updateData.companyLogo = reqBody.companyLogo;
 
@@ -9331,7 +10047,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.salaryPackage = maxLPA ? `${minLPA}-${maxLPA} LPA` : `${minLPA}+ LPA`;
       }
 
-      if (reqBody.skills !== undefined) {
+      if (reqBody.primarySkills !== undefined) {
+        updateData.primarySkills = JSON.stringify(reqBody.primarySkills);
+      }
+      if (reqBody.secondarySkills !== undefined) {
+        updateData.secondarySkills = JSON.stringify(reqBody.secondarySkills);
+      }
+      if (reqBody.knowledgeOnly !== undefined) {
+        updateData.knowledgeOnly = JSON.stringify(reqBody.knowledgeOnly);
+      }
+      // Backward compatibility for 'skills'
+      if (reqBody.skills !== undefined && !reqBody.primarySkills) {
         const skillsArray = Array.isArray(reqBody.skills) ? reqBody.skills : (reqBody.skills ? reqBody.skills.split(',').map((s: string) => s.trim()) : []);
         updateData.primarySkills = JSON.stringify(skillsArray);
       }
@@ -10165,7 +10891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Get candidates error:', error);
       console.error('Error stack:', error.stack);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to get candidates",
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });

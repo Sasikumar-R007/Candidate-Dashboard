@@ -18,13 +18,8 @@ import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import ForgotPasswordModal from "@/components/dashboard/modals/ForgotPasswordModal";
 
 interface LoginForm {
   email: string;
@@ -32,10 +27,12 @@ interface LoginForm {
 }
 
 export default function EmployerLogin() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user, isLoading: isAuthLoading, isVerified, setUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   
   const {
     register,
@@ -43,26 +40,6 @@ export default function EmployerLogin() {
     formState: { errors },
     getValues,
   } = useForm<LoginForm>();
-
-  const forgotPasswordMutation = useMutation({
-    mutationFn: async (email: string) => {
-      const response = await apiRequest("POST", "/api/employer/forgot-password", { email });
-      return await response.json();
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Password Reset Request Sent",
-        description: data.details || "A password reset email will be sent to the admin. You will be notified once processed.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Request Failed",
-        description: error.message || "Failed to send password reset request. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   useEffect(() => {
     if (isAuthLoading || !isVerified) {
@@ -139,17 +116,8 @@ export default function EmployerLogin() {
     }
   };
 
-  const handleForgotPasswordConfirm = () => {
-    const email = getValues("email");
-    if (!email) {
-      toast({
-        title: "Email Required",
-        description: "Please enter your email address first",
-        variant: "destructive",
-      });
-      return;
-    }
-    forgotPasswordMutation.mutate(email);
+  const handleForgotPassword = () => {
+    setIsForgotModalOpen(true);
   };
 
   return (
@@ -310,39 +278,15 @@ export default function EmployerLogin() {
               </div>
             </div>
 
-            {/* Forgot Password Link with Modal */}
             <div className="text-right">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors font-poppins"
-                    data-testid="button-forgot-password"
-                  >
-                    Forgot Password?
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Reset Password Request</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Your password reset request will be sent to the admin team. You will receive an email notification once your request has been processed.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel data-testid="button-forgot-cancel">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={handleForgotPasswordConfirm}
-                      disabled={forgotPasswordMutation.isPending}
-                      data-testid="button-forgot-submit"
-                    >
-                      {forgotPasswordMutation.isPending ? "Sending..." : "Send Request"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors font-poppins"
+                data-testid="button-forgot-password"
+              >
+                Forgot Password?
+              </button>
             </div>
 
             {/* Login Button */}
@@ -357,6 +301,12 @@ export default function EmployerLogin() {
           </form>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotModalOpen}
+        onClose={() => setIsForgotModalOpen(false)}
+        initialEmail={getValues("email")}
+      />
     </div>
   );
 }

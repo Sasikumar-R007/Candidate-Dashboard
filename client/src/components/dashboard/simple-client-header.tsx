@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
+import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
 
 interface SimpleClientHeaderProps {
   companyName?: string;
@@ -24,6 +25,7 @@ export default function SimpleClientHeader({
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { logout } = useAuth();
@@ -83,6 +85,11 @@ export default function SimpleClientHeader({
   const handleAccountSettings = () => {
     setShowUserDropdown(false);
     setShowProfileSettings(true); // For now, account settings opens the same modal
+  };
+
+  const handlePasswordChange = () => {
+    setShowUserDropdown(false);
+    setIsChangePasswordModalOpen(true);
   };
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -149,26 +156,16 @@ export default function SimpleClientHeader({
                 
                 {/* Menu Items */}
                 <div className="py-2">
-                  {/* Settings sections - commented out for now */}
-                  {/* <button 
-                    onClick={handleProfileSettings}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
-                    data-testid="button-client-profile-settings"
-                  >
-                    <User size={16} />
-                    <span>Profile Settings</span>
-                  </button>
-                  
                   <button 
-                    onClick={handleAccountSettings}
+                    onClick={handlePasswordChange}
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
-                    data-testid="button-client-account-settings"
+                    data-testid="button-client-change-password"
                   >
                     <Settings size={16} />
-                    <span>Account Settings</span>
+                    <span>Change Password</span>
                   </button>
                   
-                  <hr className="my-2 border-gray-200" /> */}
+                  <hr className="my-2 border-gray-200" />
                   
                   <button 
                     onClick={handleLogout}
@@ -197,6 +194,11 @@ export default function SimpleClientHeader({
       <ProfileSettingsModal
         open={showProfileSettings}
         onOpenChange={setShowProfileSettings}
+      />
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
       />
     </div>
   );

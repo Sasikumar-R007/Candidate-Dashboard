@@ -24,7 +24,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { ChatDock } from '@/components/chat/chat-dock';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
-import { useEmployeeAuth } from '@/contexts/auth-context';
+import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
 
 interface ChatUser {
   id: number;
@@ -51,6 +51,7 @@ function ClientChatInterface() {
 }
 
 export default function ClientDashboard() {
+  const { logout } = useAuth();
   const { toast } = useToast();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
@@ -1865,9 +1866,17 @@ export default function ClientDashboard() {
                 Please contact your administrator or wait for your account to be configured.
               </p>
               <div className="pt-4 border-t">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mb-4">
                   Logged in as: {(clientProfile as any).email}
                 </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-gray-600 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => logout()}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
               </div>
             </CardContent>
           </Card>

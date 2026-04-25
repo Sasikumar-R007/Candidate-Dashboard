@@ -7,21 +7,22 @@ const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
 export const api = {
   // Profile APIs
-  getProfile: () => fetch(createApiUrl('/api/profile')).then(res => res.json()),
+  getProfile: () => fetch(createApiUrl('/api/profile'), { credentials: 'include' }).then(res => res.json()),
   updateProfile: (data: any) => apiRequest('PATCH', '/api/profile', data),
   
   // Job Preferences APIs
-  getJobPreferences: () => fetch(createApiUrl('/api/job-preferences')).then(res => res.json()),
+  getJobPreferences: () => fetch(createApiUrl('/api/job-preferences'), { credentials: 'include' }).then(res => res.json()),
   updateJobPreferences: (data: any) => apiRequest('PATCH', '/api/job-preferences', data),
   
   // Skills APIs
-  getSkills: () => fetch(createApiUrl('/api/skills')).then(res => res.json()),
+  getSkills: () => fetch(createApiUrl('/api/skills'), { credentials: 'include' }).then(res => res.json()),
   
   // Activities APIs
-  getActivities: () => fetch(createApiUrl('/api/activities')).then(res => res.json()),
+  getActivities: () => fetch(createApiUrl('/api/activities'), { credentials: 'include' }).then(res => res.json()),
+  logActivity: (data: { description: string; type: string }) => apiRequest('POST', '/api/activities', data),
   
   // Job Applications APIs
-  getJobApplications: () => fetch(createApiUrl('/api/job-applications')).then(res => res.json()),
+  getJobApplications: () => fetch(createApiUrl('/api/job-applications'), { credentials: 'include' }).then(res => res.json()),
   
   // File Upload APIs
   uploadBanner: (file: File) => {
@@ -30,6 +31,7 @@ export const api = {
     return fetch(createApiUrl('/api/upload/banner'), {
       method: 'POST',
       body: formData,
+      credentials: 'include',
     }).then(res => res.json());
   },
   
@@ -39,6 +41,7 @@ export const api = {
     return fetch(createApiUrl('/api/upload/profile'), {
       method: 'POST',
       body: formData,
+      credentials: 'include',
     }).then(res => res.json());
   },
   
@@ -48,6 +51,7 @@ export const api = {
     return fetch(createApiUrl('/api/upload/resume'), {
       method: 'POST',
       body: formData,
+      credentials: 'include',
     }).then(res => res.json());
   },
 };

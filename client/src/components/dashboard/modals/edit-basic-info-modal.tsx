@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUpdateProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@shared/schema';
@@ -12,6 +13,40 @@ interface EditBasicInfoModalProps {
   onOpenChange: (open: boolean) => void;
   profile: Profile;
 }
+
+interface FieldProps {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  type?: string;
+  readOnly?: boolean;
+  disabled?: boolean;
+}
+
+const Field = ({ id, label, value, onChange, required, placeholder, type = 'text', readOnly, disabled }: FieldProps) => (
+  <div className="relative group">
+    <label 
+      htmlFor={id}
+      className="absolute -top-2 left-3 bg-white dark:bg-gray-800 px-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest z-10 group-focus-within:text-blue-500 transition-colors"
+    >
+      {label}
+    </label>
+    <Input
+      id={id}
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      readOnly={readOnly}
+      disabled={disabled}
+      placeholder={placeholder}
+      className={`h-12 border-gray-200 dark:border-gray-700 rounded-xl px-4 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600 ${disabled ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : ''}`}
+    />
+  </div>
+);
 
 export default function EditBasicInfoModal({ open, onOpenChange, profile }: EditBasicInfoModalProps) {
   const [formData, setFormData] = useState({
@@ -23,6 +58,7 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
     whatsapp: profile.whatsapp || '',
     email: profile.email || '',
     secondaryEmail: profile.secondaryEmail || '',
+    gender: profile.gender || '',
     currentLocation: profile.currentLocation || '',
     preferredLocation: profile.preferredLocation || '',
     dateOfBirth: profile.dateOfBirth || '',
@@ -31,7 +67,6 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
   const updateProfile = useUpdateProfile();
   const { toast } = useToast();
 
-  // Check if form data has changed
   const hasChanges = useMemo(() => {
     return (
       formData.firstName !== (profile.firstName || '') ||
@@ -42,6 +77,7 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
       formData.whatsapp !== (profile.whatsapp || '') ||
       formData.email !== (profile.email || '') ||
       formData.secondaryEmail !== (profile.secondaryEmail || '') ||
+      formData.gender !== (profile.gender || '') ||
       formData.currentLocation !== (profile.currentLocation || '') ||
       formData.preferredLocation !== (profile.preferredLocation || '') ||
       formData.dateOfBirth !== (profile.dateOfBirth || '')
@@ -69,151 +105,150 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Profile Information</DialogTitle>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <DialogContent className="max-w-2xl rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Edit Profile Information</DialogTitle>
+            <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              Update your personal and contact details for better visibility and record keeping.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-8 bg-white dark:bg-gray-800 overflow-y-auto flex-1">
           <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="firstName" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">First Name</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                required
-                placeholder="Mathew"
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Last Name</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                required
-                placeholder="Anderson"
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="title" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Job Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-              placeholder="Cloud Engineer"
-              className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
+            <Field 
+              id="firstName" 
+              label="First Name" 
+              value={formData.firstName} 
+              onChange={(v) => setFormData({ ...formData, firstName: v })} 
+              required 
+              placeholder="e.g. Mathew" 
             />
-          </div>
-          
-          <div>
-            <Label htmlFor="location" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Location</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              required
-              placeholder="Chennai"
-              className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
+            <Field 
+              id="lastName" 
+              label="Last Name" 
+              value={formData.lastName} 
+              onChange={(v) => setFormData({ ...formData, lastName: v })} 
+              required 
+              placeholder="e.g. Anderson" 
             />
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="phone" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Mobile Number</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="90347 59099"
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
-              />
-            </div>
-            <div>
-              <Label htmlFor="whatsapp" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">WhatsApp No</Label>
-              <Input
-                id="whatsapp"
-                value={formData.whatsapp}
-                onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                placeholder="90347 59099"
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="email" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Primary Email (Read Only)</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                readOnly
-                disabled
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none bg-gray-100 dark:bg-gray-700 cursor-not-allowed px-0 pb-2 opacity-60"
-              />
-            </div>
-            <div>
-              <Label htmlFor="secondaryEmail" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Secondary Email</Label>
-              <Input
-                id="secondaryEmail"
-                type="email"
-                value={formData.secondaryEmail}
-                onChange={(e) => setFormData({ ...formData, secondaryEmail: e.target.value })}
-                placeholder="mathew.and@gmail.com"
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="currentLocation" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Current Location</Label>
-              <Input
-                id="currentLocation"
-                value={formData.currentLocation}
-                onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
-                placeholder="Chennai."
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
-              />
-            </div>
-            <div>
-              <Label htmlFor="preferredLocation" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Preferred Location</Label>
-              <Input
-                id="preferredLocation"
-                value={formData.preferredLocation}
-                onChange={(e) => setFormData({ ...formData, preferredLocation: e.target.value })}
-                placeholder="Bengaluru"
-                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Date of Birth</Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-              className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
+            <Field 
+              id="title" 
+              label="Job Title" 
+              value={formData.title} 
+              onChange={(v) => setFormData({ ...formData, title: v })} 
+              required 
+              placeholder="e.g. Cloud Engineer" 
+            />
+            <Field 
+              id="location" 
+              label="Location" 
+              value={formData.location} 
+              onChange={(v) => setFormData({ ...formData, location: v })} 
+              required 
+              placeholder="e.g. Chennai, India" 
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded">
+          <div className="grid grid-cols-2 gap-6">
+            <Field 
+              id="phone" 
+              label="Mobile Number" 
+              value={formData.phone} 
+              onChange={(v) => setFormData({ ...formData, phone: v })} 
+              placeholder="e.g. +91 98765 43210" 
+            />
+            <Field 
+              id="whatsapp" 
+              label="WhatsApp No" 
+              value={formData.whatsapp} 
+              onChange={(v) => setFormData({ ...formData, whatsapp: v })} 
+              placeholder="e.g. +91 98765 43210" 
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <Field 
+              id="email" 
+              label="Primary Email (Read Only)" 
+              value={formData.email} 
+              onChange={() => {}} 
+              disabled 
+              readOnly 
+            />
+            <Field 
+              id="secondaryEmail" 
+              label="Secondary Email" 
+              value={formData.secondaryEmail} 
+              onChange={(v) => setFormData({ ...formData, secondaryEmail: v })} 
+              placeholder="e.g. mathew.work@gmail.com" 
+              type="email"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <Field 
+              id="currentLocation" 
+              label="Current Location" 
+              value={formData.currentLocation} 
+              onChange={(v) => setFormData({ ...formData, currentLocation: v })} 
+              placeholder="e.g. Chennai, TN" 
+            />
+            <Field 
+              id="preferredLocation" 
+              label="Preferred Location" 
+              value={formData.preferredLocation} 
+              onChange={(v) => setFormData({ ...formData, preferredLocation: v })} 
+              placeholder="e.g. Bengaluru, KA" 
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <Field 
+              id="dateOfBirth" 
+              label="Date of Birth" 
+              value={formData.dateOfBirth} 
+              onChange={(v) => setFormData({ ...formData, dateOfBirth: v })} 
+              type="date" 
+            />
+            <div className="relative group">
+              <label className="absolute -top-2 left-3 bg-white dark:bg-gray-800 px-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest z-10 group-focus-within:text-blue-500 transition-colors">
+                Gender
+              </label>
+              <Select
+                value={formData.gender}
+                onValueChange={(v) => setFormData({ ...formData, gender: v })}
+              >
+                <SelectTrigger className="h-12 border-gray-200 dark:border-gray-700 rounded-xl px-4 bg-white dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              className="rounded-xl px-6 h-12 font-semibold border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+            >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={updateProfile.isPending || !hasChanges}
-              className="bg-blue-600 text-white hover:bg-blue-700 rounded"
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded-xl px-10 h-12 font-bold shadow-lg shadow-blue-200 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
@@ -222,4 +257,4 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
       </DialogContent>
     </Dialog>
   );
-}
+}

@@ -23,13 +23,14 @@ import navLogoImage from "@/assets/nav logo.png";
 import lp01Image from "@/assets/lp01.png";
 import lp02Image from "@/assets/lp02.png";
 import lp03Image from "@/assets/lp03.png";
+import staffosLogo from "@/assets/staffos logo.png";
 import { useAuth } from "@/contexts/auth-context";
 import { getDefaultRouteForAuthUser } from "@/lib/auth-routing";
 import { useQuery } from "@tanstack/react-query";
 import { JobCard } from "@/components/landing/JobCard";
 import { RecruiterJob } from "@shared/schema";
 import { ChevronLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 type SearchSuggestion = {
   role: string;
@@ -107,11 +108,7 @@ const searchSuggestions: SearchSuggestion[] = [
   },
 ];
 
-const topRoles = [
-  { name: "Product Designer", jobs: "1.1K Jobs" },
-  { name: "Full-Stack Development", jobs: "4.7K Jobs" },
-  { name: "Project Manager", jobs: "9.6K Jobs" },
-];
+// Real-time top roles will be derived from the jobs array inside the component
 
 const jobCategories = [
   { icon: Home, label: "Remote" },
@@ -132,6 +129,7 @@ export default function Landing() {
   const [experience, setExperience] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const JOBS_PER_PAGE = 6;
 
@@ -150,44 +148,34 @@ export default function Landing() {
     }
   };
 
+  const handleDelayedNav = (href: string) => {
+    setIsNavigating(true);
+    setTimeout(() => {
+      window.location.href = href;
+    }, 1000);
+  };
+
+  // Derive top roles from real jobs data
+  const dynamicTopRoles = Array.from(new Set(jobs.map(j => j.role || j.title)))
+    .filter(Boolean)
+    .slice(0, 3)
+    .map(role => ({ name: role }));
+
+  // Use the default if no jobs yet
+  const displayTopRoles = dynamicTopRoles.length > 0 ? dynamicTopRoles : [
+    { name: "Product Designer" },
+    { name: "Software Engineer" },
+    { name: "Project Manager" }
+  ];
+
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredSearchResults = normalizedSearchQuery
-    ? searchSuggestions
-        .map((suggestion) => {
-          const searchableTerms = [
-            suggestion.role,
-            suggestion.company,
-            suggestion.location,
-            suggestion.category,
-            ...suggestion.skills,
-          ].map((item) => item.toLowerCase());
-
-          let score = 0;
-
-          searchableTerms.forEach((term) => {
-            if (term === normalizedSearchQuery) {
-              score += 120;
-            } else if (term.startsWith(normalizedSearchQuery)) {
-              score += 80;
-            } else if (term.includes(normalizedSearchQuery)) {
-              score += 40;
-            }
-          });
-
-          suggestion.skills.forEach((skill) => {
-            const normalizedSkill = skill.toLowerCase();
-            if (normalizedSkill === normalizedSearchQuery) {
-              score += 140;
-            } else if (normalizedSkill.startsWith(normalizedSearchQuery)) {
-              score += 90;
-            }
-          });
-
-          return { ...suggestion, score };
+    ? jobs
+        .filter(job => {
+          const searchableText = `${job.role} ${job.companyName} ${job.location} ${job.jobCategory} ${job.primarySkills}`.toLowerCase();
+          return searchableText.includes(normalizedSearchQuery);
         })
-        .filter((suggestion) => suggestion.score > 0)
-        .sort((left, right) => right.score - left.score)
         .slice(0, 6)
     : [];
 
@@ -227,19 +215,19 @@ export default function Landing() {
             </div>
 
             <div className="hidden md:flex items-center space-x-4">
-              <Link href="/candidate-login">
-                <Button 
-                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-[10px] px-6 font-bold transition-all shadow-md shadow-purple-100"
-                >
-                  Login
-                </Button>
-              </Link>
+              <Button 
+                onClick={() => handleDelayedNav("/candidate-login")}
+                className="bg-purple-600 hover:bg-purple-700 text-white rounded-[10px] px-6 font-bold transition-all shadow-md shadow-purple-100"
+              >
+                Login
+              </Button>
               <div className="h-8 w-px bg-gray-200" />
-              <Link href="/employer-login">
-                <button className="text-[15px] font-bold text-gray-700 hover:text-purple-600 transition-colors">
-                  For Employer
-                </button>
-              </Link>
+              <button 
+                onClick={() => handleDelayedNav("/employer-login")}
+                className="text-[15px] font-bold text-gray-700 hover:text-purple-600 transition-colors"
+              >
+                For Employer
+              </button>
             </div>
 
             <button
@@ -279,29 +267,33 @@ export default function Landing() {
 
               <div className="flex-1 px-6 py-8 bg-gray-200">
                 <div className="flex flex-col gap-6">
-                  <Link href="/candidate-login" onClick={() => setMobileMenuOpen(false)}>
-                    <button className="w-full bg-white text-gray-800 hover:bg-gray-50 border-2 border-gray-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md">
-                      Login
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/candidate-login"); }}
+                    className="w-full bg-white text-gray-800 hover:bg-gray-50 border-2 border-gray-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Login
+                  </button>
 
-                  <Link href="/candidate-registration" onClick={() => setMobileMenuOpen(false)}>
-                    <button className="w-full bg-purple-600 text-white hover:bg-purple-700 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-md hover:shadow-lg">
-                      Register
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/candidate-registration"); }}
+                    className="w-full bg-purple-600 text-white hover:bg-purple-700 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    Register
+                  </button>
 
-                  <Link href="/employer-login" onClick={() => setMobileMenuOpen(false)}>
-                    <button className="w-full bg-white text-purple-600 hover:bg-purple-50 border-2 border-purple-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md">
-                      For Employer
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/employer-login"); }}
+                    className="w-full bg-white text-purple-600 hover:bg-purple-50 border-2 border-purple-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    For Employer
+                  </button>
 
-                  <Link href="/contact" onClick={() => setMobileMenuOpen(false)}>
-                    <button className="w-full bg-white text-gray-800 hover:bg-gray-50 border-2 border-gray-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md">
-                      Contact
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full bg-white text-gray-800 hover:bg-gray-50 border-2 border-gray-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Contact
+                  </button>
                 </div>
               </div>
             </div>
@@ -370,40 +362,35 @@ export default function Landing() {
               placeholder="Enter Location"
               className="w-full md:w-48 px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-500 h-[48px]"
             />
-            <Link href="/candidate-login" className="w-full md:w-48">
-              <button
-                type="button"
-                className="bg-purple-600 hover:bg-purple-700 text-white w-full px-4 py-3 h-[48px] text-base font-semibold rounded-sm border border-purple-600 flex items-center justify-center transition-colors"
-              >
-                Search
-              </button>
-            </Link>
+            <button
+              type="button"
+              onClick={() => handleDelayedNav("/candidate-login")}
+              className="w-full md:w-48 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 h-[48px] text-base font-semibold rounded-sm border border-purple-600 flex items-center justify-center transition-colors"
+            >
+              Search
+            </button>
 
             {showSearchResults && searchQuery.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
                 {filteredSearchResults.length > 0 ? (
                   filteredSearchResults.map((result, index) => (
-                    <Link
-                      key={`${result.role}-${result.company}-${index}`}
-                      href="/candidate-login"
+                    <div 
+                      key={`${result.id}-${index}`}
+                      onClick={() => handleDelayedNav("/candidate-login")}
+                      className="cursor-pointer border-b border-gray-100 p-4 transition-colors hover:bg-gray-50"
                     >
-                      <div className="cursor-pointer border-b border-gray-100 p-4 transition-colors hover:bg-gray-50">
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{result.role}</h3>
-                            <p className="text-sm text-gray-600">
-                              {result.company} | {result.location} | {result.experience}
-                            </p>
-                            <p className="mt-1 text-xs text-purple-700">
-                              Skills: {result.skills.slice(0, 3).join(", ")} | {result.category}
-                            </p>
-                          </div>
-                          <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
-                            Apply
-                          </Button>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{result.role}</h3>
+                          <p className="text-sm text-gray-600">
+                            {result.companyName} | {result.location} | {result.experience} yrs
+                          </p>
                         </div>
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+                          Apply
+                        </Button>
                       </div>
-                    </Link>
+                    </div>
                   ))
                 ) : (
                   <div className="p-4 text-sm text-gray-600">
@@ -524,16 +511,8 @@ export default function Landing() {
               )}
             </>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {[1, 2, 3, 4, 5, 6].map((index) => (
-                <div key={index} className="flex justify-center">
-                  <img
-                    src={lp02Image}
-                    alt="Actively Hiring Roles"
-                    className="w-full h-auto rounded-lg"
-                  />
-                </div>
-              ))}
+            <div className="py-12 text-center text-gray-500 bg-white/40 rounded-2xl border border-white/60">
+              No active roles available at the moment. Please check back later.
             </div>
           )}
 
@@ -545,11 +524,12 @@ export default function Landing() {
               <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4">
                 Unlock your potential with constructive feedback from our recruiters.
               </p>
-              <Link href="/candidate-login">
-                <Button className="bg-white border border-black text-black hover:bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base w-full sm:w-auto">
-                  Explore Now!
-                </Button>
-              </Link>
+              <Button 
+                onClick={() => handleDelayedNav("/candidate-login")}
+                className="bg-white border border-black text-black hover:bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base w-full sm:w-auto transition-all active:scale-95"
+              >
+                Explore Now!
+              </Button>
             </div>
             <div className="hidden md:block flex-shrink-0">
               <img
@@ -582,19 +562,20 @@ export default function Landing() {
                   </p>
                 </div>
 
-                <div className="space-y-3">
-                  {topRoles.map((role, index) => (
-                    <Link key={index} href="/candidate-login">
-                      <div className="cursor-pointer rounded-lg border border-purple-200/70 bg-white/70 p-4 shadow-sm transition-all hover:bg-white">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-bold text-gray-900">{role.name}</h3>
-                            <p className="text-sm text-gray-600">{role.jobs}</p>
-                          </div>
-                          <ChevronRight className="w-5 h-5 text-gray-900" />
+                <div className="space-y-4">
+                  {displayTopRoles.map((role, index) => (
+                    <div 
+                      key={index} 
+                      onClick={() => handleDelayedNav("/candidate-login")}
+                      className="cursor-pointer rounded-lg border border-purple-200/70 bg-white/70 p-5 shadow-sm transition-all hover:bg-white hover:translate-y-[-2px] hover:shadow-md mb-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-gray-900">{role.name}</h3>
                         </div>
+                        <ChevronRight className="w-5 h-5 text-gray-900" />
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -612,14 +593,13 @@ export default function Landing() {
             <p className="text-base sm:text-lg text-gray-700 mb-6 sm:mb-8">
               Don't wait - get your next opportunity today.
             </p>
-            <Link href="/candidate-registration">
-              <Button
-                size="lg"
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg"
-              >
-                Start Now
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              onClick={() => handleDelayedNav("/candidate-registration")}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg transition-all active:scale-95"
+            >
+              Start Now
+            </Button>
           </div>
         </section>
       </main>
@@ -674,6 +654,107 @@ export default function Landing() {
           </p>
         </div>
       </footer>
+
+      {/* Final Premium Neon Loading Overlay */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/40 backdrop-blur-xl overflow-hidden"
+          >
+            <div className="relative flex items-center justify-center scale-100 sm:scale-110">
+              {/* Outer Neon Spinning Ring - Tightened */}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute"
+              >
+                <svg width="140" height="140" viewBox="0 0 100 100" className="overflow-visible">
+                  <defs>
+                    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#06b6d4" />
+                      <stop offset="100%" stopColor="#8b5cf6" />
+                    </linearGradient>
+                    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+                  
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="48"
+                    fill="none"
+                    stroke="url(#neonGradient)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeDasharray="60 180"
+                    filter="url(#neonGlow)"
+                    className="opacity-90"
+                  />
+                </svg>
+              </motion.div>
+
+              {/* Inner Reverse Spinning Ring - Tightened */}
+              <motion.div
+                animate={{ rotate: -360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="absolute"
+              >
+                <svg width="120" height="120" viewBox="0 0 100 100" className="overflow-visible">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeDasharray="15 45"
+                    className="opacity-40"
+                  />
+                </svg>
+              </motion.div>
+
+              {/* Centered Pulsing Logo */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1],
+                  opacity: [0.95, 1, 0.95],
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="relative z-10 flex items-center justify-center"
+              >
+                {/* Central Glow Aura */}
+                <div className="absolute w-20 h-20 bg-cyan-500/20 rounded-full blur-3xl" />
+                
+                <div className="relative p-3 bg-white/10 rounded-full backdrop-blur-md border border-white/20 shadow-2xl">
+                  <img 
+                    src={staffosLogo} 
+                    alt="StaffOS" 
+                    className="w-12 h-12 sm:w-16 sm:h-16 object-contain" 
+                  />
+                  
+                  {/* Rotating inner neon particles */}
+                  <div className="absolute inset-0">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                      className="w-full h-full relative"
+                    >
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_6px_#22d3ee]" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full shadow-[0_0_6px_#a855f7]" />
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

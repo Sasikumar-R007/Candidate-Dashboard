@@ -410,15 +410,15 @@ export class MemStorage implements IStorage {
 
     // Sample skills
     const primarySkills = [
-      "Business Development", "International Sales", "Marketing Analysis", 
-      "Digital Marketing", "Lead Generation", "SEO"
+      "React", "TypeScript", "Node.js", 
+      "Cloud Architecture", "System Design", "PostgreSQL"
     ];
     const secondarySkills = [
-      "Corporate Sales", "Customer Service", "Resource Manager", 
-      "Direct sales", "Customer Interaction"
+      "Docker", "Kubernetes", "AWS", 
+      "Redis", "GraphQL"
     ];
     const knowledgeSkills = [
-      "Telecalling", "Sales requirement", "ILETS English communication"
+      "Agile Methodology", "CI/CD Pipelines", "Test Driven Development"
     ];
 
     [...primarySkills, ...secondarySkills, ...knowledgeSkills].forEach((skillName, index) => {
@@ -943,6 +943,20 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const application: JobApplication = { ...insertApplication, id };
     this.jobApplications.set(id, application);
+    
+    // Find matching recruiter job and increment its applicationCount
+    const job = Array.from(this.recruiterJobs.values()).find(
+      j => j.role === insertApplication.jobTitle && j.companyName === insertApplication.company
+    );
+    
+    if (job) {
+      const updatedJob = {
+        ...job,
+        applicationCount: (job.applicationCount || 0) + 1
+      };
+      this.recruiterJobs.set(job.id, updatedJob);
+    }
+    
     return application;
   }
 
@@ -1725,6 +1739,20 @@ export class MemStorage implements IStorage {
     const totalDefaulted = Math.max(0, totalRequired - totalDelivered);
     
     return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
+  }
+
+  async getUserActivities(role: string, limit: number = 5): Promise<UserActivity[]> {
+    return Array.from(this.userActivities.values())
+      .filter(a => a.targetRole.toLowerCase().includes(role.toLowerCase()))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  async createUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
+    const id = randomUUID();
+    const newActivity: UserActivity = { ...activity, id };
+    this.userActivities.set(id, newActivity);
+    return newActivity;
   }
 }
 

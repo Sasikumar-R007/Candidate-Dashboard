@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
+import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
 import type { UserActivity } from "@shared/schema";
 
 interface AdminTopHeaderProps {
@@ -51,6 +52,7 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [profileModalView, setProfileModalView] = useState<"profile" | "settings">("profile");
   const [profileData, setProfileData] = useState<any>(null);
   const [, navigate] = useLocation();
@@ -199,10 +201,9 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
     setShowProfileSettings(true);
   };
 
-  const handleSystemSettings = () => {
+  const handlePasswordChange = () => {
     setShowUserDropdown(false);
-    setProfileModalView("settings");
-    setShowProfileSettings(true);
+    setIsChangePasswordModalOpen(true);
   };
 
   return (
@@ -286,12 +287,12 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
                 </button>
 
                 <button
-                  onClick={handleSystemSettings}
+                  onClick={handlePasswordChange}
                   className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                  data-testid="button-settings"
+                  data-testid="button-change-password"
                 >
                   <Settings size={17} />
-                  <span>Settings</span>
+                  <span>Change Password</span>
                 </button>
 
                 <button
@@ -332,6 +333,11 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
         open={showProfileSettings}
         onOpenChange={setShowProfileSettings}
         initialView={profileModalView}
+      />
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
       />
     </header>
   );

@@ -1,7 +1,10 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, json, boolean, real, pgEnum, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, json, jsonb, boolean, real, pgEnum, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+export const registrationStageEnum = pgEnum("registration_stage", ['registered', 'verified', 'resume_uploaded', 'completed']);
+export const onboardingSourceEnum = pgEnum("onboarding_source", ['manual', 'resume']);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -19,6 +22,7 @@ export const sessions = pgTable("session", {
 export const profiles = pgTable("profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
+  candidateId: text("candidate_id"), // STCA001 format
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
@@ -55,17 +59,24 @@ export const profiles = pgTable("profiles", {
   currentDomain: text("current_domain"),
   companyLevel: text("company_level"),
   productService: text("product_service"),
+  course: text("course"),
+  degreeLevel: text("degree_level"),
+  totalExperience: text("total_experience"),
+  graduationYear: text("graduation_year"),
+  educationHistory: jsonb("education_history"),
+  salaryRange: text("salary_range"),
 });
 
 export const jobPreferences = pgTable("job_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  profileId: varchar("profile_id").notNull(),
+  profileId: varchar("profile_id").notNull().unique(),
   jobTitles: text("job_titles").notNull(),
   workMode: text("work_mode").notNull(),
   employmentType: text("employment_type").notNull(),
   locations: text("locations").notNull(),
   startDate: text("start_date").notNull(),
   instructions: text("instructions"),
+  salaryRange: text("salary_range"),
 });
 
 export const skills = pgTable("skills", {
@@ -81,6 +92,15 @@ export const activities = pgTable("activities", {
   type: text("type").notNull(), // resume_update, job_applied
   description: text("description").notNull(),
   date: text("date").notNull(),
+});
+
+export const passwordResets = pgTable("password_resets", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull(),
+  otp: text("otp").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isVerified: boolean("is_verified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const jobApplications = pgTable("job_applications", {
@@ -260,7 +280,7 @@ export const employees = pgTable("employees", {
   email: text("email").notNull().unique(),
   password: text("password"), // Optional - only required for login credentials
   role: text("role").notNull().default('employee_record'), // recruiter, team_leader, client, admin, employee_record
-  
+
   // Basic Information
   address: text("address"),
   designation: text("designation"),
@@ -268,19 +288,19 @@ export const employees = pgTable("employees", {
   department: text("department"),
   joiningDate: text("joining_date"),
   employmentStatus: text("employment_status"), // Active, Inactive, etc
-  
+
   // ESIC & EPFO
   esic: text("esic"), // Yes/No dropdown
   epfo: text("epfo"), // Yes/No dropdown
   esicNo: text("esic_no"),
   epfoNo: text("epfo_no"),
-  
+
   // Family Details
   fatherName: text("father_name"),
   motherName: text("mother_name"),
   fatherNumber: text("father_number"),
   motherNumber: text("mother_number"),
-  
+
   // CTC & Appraisal
   offeredCtc: text("offered_ctc"),
   currentStatus: text("current_status"), // dropdown
@@ -290,7 +310,7 @@ export const employees = pgTable("employees", {
   appraisedYear: text("appraised_year"), // dropdown
   yearlyCTC: text("yearly_ctc"),
   currentMonthlyCTC: text("current_monthly_ctc"),
-  
+
   // Bank Details
   nameAsPerBank: text("name_as_per_bank"),
   accountNumber: text("account_number"),
@@ -298,13 +318,13 @@ export const employees = pgTable("employees", {
   bankName: text("bank_name"),
   branch: text("branch"),
   city: text("city"),
-  
+
   // Legacy/Other
   reportingTo: text("reporting_to"),
   isActive: boolean("is_active").default(true),
   createdAt: text("created_at").notNull(),
   lastLoginAt: text("last_login_at"), // Last login timestamp
-  
+
   // Profile media (for dashboard display)
   profilePicture: text("profile_picture"),
   bannerImage: text("banner_image"),
@@ -360,6 +380,7 @@ export const candidates = pgTable("candidates", {
   phoneVerified: boolean("phone_verified").default(false),
   createdAt: text("created_at").notNull(),
   lastViewedAt: text("last_viewed_at"), // Track when profile was last viewed
+  registrationStage: registrationStageEnum("registration_stage").notNull().default("registered"),
 });
 
 export const otps = pgTable("otps", {
@@ -575,7 +596,7 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications).om
   profileId: true,
   appliedDate: true,
 }).extend({
-  skills: z.union([z.string(), z.array(z.string())]).optional().transform(val => 
+  skills: z.union([z.string(), z.array(z.string())]).optional().transform(val =>
     Array.isArray(val) ? JSON.stringify(val) : val
   ),
 });
@@ -757,6 +778,7 @@ export const recruiterJobs = pgTable("recruiter_jobs", {
   experience: text("experience").notNull(),
   location: text("location"),
   workMode: text("work_mode"), // Remote, Hybrid, On-site
+  employmentType: text("employment_type"), // Full-time, Part-time, etc.
   salaryPackage: text("salary_package"),
   aboutCompany: text("about_company"),
   roleDefinitions: text("role_definitions"),
@@ -993,4 +1015,6 @@ export type RequirementAssignment = typeof requirementAssignments.$inferSelect;
 export type InsertResumeSubmission = z.infer<typeof insertResumeSubmissionSchema>;
 export type ResumeSubmission = typeof resumeSubmissions.$inferSelect;
 export type InsertDailyMetricsSnapshot = z.infer<typeof insertDailyMetricsSnapshotSchema>;
+export type DailyMetricsSnapshot = typeof dailyMetricsSnapshots.$inferSelect;
+
 export type DailyMetricsSnapshot = typeof dailyMetricsSnapshots.$inferSelect;
