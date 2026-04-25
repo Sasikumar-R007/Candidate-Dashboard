@@ -61,12 +61,15 @@ export default function PostJobModal({
 
   const validateForm = () => {
     const required = ['companyName', 'role', 'experience', 'location', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
-    return required.every(field => formData[field as keyof JobFormData].toString().trim() !== '');
+    return required.every(field => {
+      const value = formData[field as keyof JobFormData];
+      return value !== undefined && value !== null && value.toString().trim() !== '';
+    });
   };
 
   const isFormValid = validateForm();
   
-  const getFilteredSkills = (skills: string[]) => skills.filter(s => s.trim() !== '');
+  const getFilteredSkills = (skills: string[] | undefined | null) => (skills || []).filter(s => s && s.trim() !== '');
 
   const postJobMutation = useMutation({
     mutationFn: async (jobData: any) => {
@@ -233,18 +236,20 @@ const deriveLocationType = (workMode: string): string => {
   const addSkill = (type: 'primary' | 'secondary' | 'knowledge', value: string) => {
     if (!value.trim()) return;
     const skillList = type === 'primary' ? 'primarySkills' : type === 'secondary' ? 'secondarySkills' : 'knowledgeOnly';
-    if (formData[skillList].includes(value.trim())) return;
-    if (formData[skillList].length >= 10) return;
+    const currentSkills = formData[skillList] || [];
+    if (currentSkills.includes(value.trim())) return;
+    if (currentSkills.length >= 10) return;
     
     setFormData({
       ...formData,
-      [skillList]: [...formData[skillList], value.trim()]
+      [skillList]: [...currentSkills, value.trim()]
     });
   };
 
   const removeSkill = (type: 'primary' | 'secondary' | 'knowledge', index: number) => {
     const skillList = type === 'primary' ? 'primarySkills' : type === 'secondary' ? 'secondarySkills' : 'knowledgeOnly';
-    const newSkills = formData[skillList].filter((_, i) => i !== index);
+    const currentSkills = formData[skillList] || [];
+    const newSkills = currentSkills.filter((_, i) => i !== index);
     setFormData({ ...formData, [skillList]: newSkills });
   };
 
@@ -643,7 +648,7 @@ const deriveLocationType = (workMode: string): string => {
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {formData.primarySkills.filter(s => s && s.trim() !== '').map((skill, index) => (
+                    {(formData.primarySkills || []).filter(s => s && s.trim() !== '').map((skill, index) => (
                       <Badge key={index} className="bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
                         {skill}
                         <X size={12} className="cursor-pointer hover:text-blue-900" onClick={() => removeSkill('primary', index)} />
@@ -693,7 +698,7 @@ const deriveLocationType = (workMode: string): string => {
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {formData.secondarySkills.filter(s => s && s.trim() !== '').map((skill, index) => (
+                    {(formData.secondarySkills || []).filter(s => s && s.trim() !== '').map((skill, index) => (
                       <Badge key={index} className="bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
                         {skill}
                         <X size={12} className="cursor-pointer hover:text-indigo-900" onClick={() => removeSkill('secondary', index)} />
@@ -743,7 +748,7 @@ const deriveLocationType = (workMode: string): string => {
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {formData.knowledgeOnly.filter(s => s && s.trim() !== '').map((skill, index) => (
+                    {(formData.knowledgeOnly || []).filter(s => s && s.trim() !== '').map((skill, index) => (
                       <Badge key={index} className="bg-gray-50 text-gray-600 border border-gray-200 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
                         {skill}
                         <X size={12} className="cursor-pointer hover:text-gray-900" onClick={() => removeSkill('knowledge', index)} />
