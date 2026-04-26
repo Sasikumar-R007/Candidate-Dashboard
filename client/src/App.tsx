@@ -34,6 +34,7 @@ import SupportDashboard from "@/pages/support-dashboard";
 import SupportLogin from "@/pages/support-login";
 import CandidateProfile from "@/pages/candidate-profile";
 
+
 function Router() {
   return (
     <Switch>
@@ -61,7 +62,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/recruiter-login-2" component={RecruiterDashboard2} />
+      <Route path="/recruiter" component={RecruiterDashboard2} />
       
       <Route path="/client" component={ClientDashboard} />
       
@@ -124,6 +125,8 @@ function Router() {
           <SupportDashboard />
         </ProtectedRoute>
       </Route>
+      
+
       
       <Route component={NotFound} />
     </Switch>

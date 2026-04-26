@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/auth-context";
 const protectedPrefixes = [
   "/admin",
   "/team-leader",
-  "/recruiter-login-2",
+  "/recruiter",
   "/client",
   "/support-dashboard",
   "/candidate",

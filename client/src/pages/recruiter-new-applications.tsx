@@ -187,11 +187,7 @@ export default function RecruiterNewApplications() {
         <div className="flex items-center gap-4 mb-4">
           <Button
             onClick={() => {
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                navigate('/recruiter-login-2');
-              }
+              navigate('/recruiter');
             }}
             variant="outline"
             size="sm"
@@ -428,7 +424,7 @@ export default function RecruiterNewApplications() {
                           className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
                           onClick={() => {
                             sessionStorage.setItem('recruiterDashboardSidebarTab', 'pipeline');
-                            navigate('/recruiter-login-2');
+                            navigate('/recruiter');
                           }}
                           data-testid={`button-view-pipeline-${candidate.id}`}
                         >

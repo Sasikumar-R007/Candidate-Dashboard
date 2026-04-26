@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Camera, Mail, Pencil, Settings, Shield, UserCircle } from "lucide-react";
 import { useAuth, useCandidateAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, apiFileUpload } from "@/lib/queryClient";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -72,7 +72,7 @@ export function ProfileSettingsModal({
   const endpoint = useMemo(() => {
     if (employee?.role === "admin") return "/api/admin/profile";
     if (employee?.role === "team_leader") return "/api/team-leader/profile";
-    if (employee?.role === "recruiter") return "/api/recruiter/profile";
+    if (employee?.role === "recruiter" || employee?.role === "talent_advisor") return "/api/recruiter/profile";
     if (employee?.role === "client") return "/api/client/profile";
     if (candidate) return "/api/candidate/profile";
     return null;
@@ -81,7 +81,7 @@ export function ProfileSettingsModal({
   const uploadEndpoint = useMemo(() => {
     if (employee?.role === "admin") return "/api/admin/upload/profile";
     if (employee?.role === "team_leader") return "/api/team-leader/upload/profile";
-    if (employee?.role === "recruiter") return "/api/recruiter/upload/profile";
+    if (employee?.role === "recruiter" || employee?.role === "talent_advisor") return "/api/recruiter/upload/profile";
     if (employee?.role === "client") return "/api/client/upload/profile";
     return "/api/upload/profile";
   }, [employee?.role]);
@@ -166,11 +166,7 @@ export function ProfileSettingsModal({
     if (!selectedProfileFile) return profileData?.profilePicture || null;
     const uploadForm = new FormData();
     uploadForm.append("file", selectedProfileFile);
-    const response = await fetch(uploadEndpoint, {
-      method: "POST",
-      body: uploadForm,
-      credentials: "include",
-    });
+    const response = await apiFileUpload(uploadEndpoint, uploadForm);
     if (!response.ok) {
       throw new Error("Failed to upload profile image");
     }
@@ -223,7 +219,8 @@ export function ProfileSettingsModal({
         title: "Success",
         description: "Profile updated successfully.",
       });
-    } catch {
+    } catch (error) {
+      console.error("Save profile error:", error);
       toast({
         title: "Error",
         description: "Failed to save profile changes.",

@@ -18,7 +18,7 @@ esbuild.build({
   outfile: 'dist/index.js',
   external: externals,
   packages: 'external',
-  minify: true,
+  minify: false,
   sourcemap: false,
   define: {
     'process.env.NODE_ENV': '"production"'

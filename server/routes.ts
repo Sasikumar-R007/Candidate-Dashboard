@@ -420,297 +420,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeJobs = allJobs
         .filter(job => job.status === "Active");
 
-      // Add dummy jobs for design testing if needed
-      const dummyJobs = [
-        {
-          id: "dummy-1",
-          role: "Hardware Developer",
-          companyName: "Symphonix",
-          location: "Trichy",
-          workMode: "On-site",
-          experience: "0+",
-          salaryPackage: "₹ 5.5 LPA",
-          roleDefinitions: "Building next-gen IoT hardware solutions combining design, development, and innovation.",
-          primarySkills: JSON.stringify(["IoT", "Arduino", "C++", "C"]),
-          applicationCount: 12,
-          postedDate: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-          status: "Active"
-        },
-        {
-          id: "dummy-2",
-          role: "Frontend Engineer",
-          companyName: "MetaTech",
-          location: "Bangalore",
-          workMode: "Remote",
-          experience: "2-4",
-          salaryPackage: "₹ 12-18 LPA",
-          roleDefinitions: "Creating immersive user interfaces with React and Three.js.",
-          primarySkills: JSON.stringify(["React", "Three.js", "TypeScript"]),
-          applicationCount: 45,
-          postedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-3",
-          role: "Backend Architect",
-          companyName: "CloudScale",
-          location: "Hyderabad",
-          workMode: "Hybrid",
-          experience: "8+",
-          salaryPackage: "₹ 35-45 LPA",
-          roleDefinitions: "Designing scalable microservices architectures.",
-          primarySkills: JSON.stringify(["Go", "Kubernetes", "Redis"]),
-          applicationCount: 8,
-          postedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-4",
-          role: "UI Designer",
-          companyName: "PixelPerfect",
-          location: "Chennai",
-          workMode: "On-site",
-          experience: "1-3",
-          salaryPackage: "₹ 8-10 LPA",
-          roleDefinitions: "Crafting beautiful designs for mobile and web applications.",
-          primarySkills: JSON.stringify(["Figma", "Adobe XD", "Prototyping"]),
-          applicationCount: 22,
-          postedDate: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-5",
-          role: "Python Developer",
-          companyName: "DataFlow",
-          location: "Pune",
-          workMode: "Remote",
-          experience: "2+",
-          salaryPackage: "₹ 10-15 LPA",
-          roleDefinitions: "Building data pipelines and automation scripts.",
-          primarySkills: JSON.stringify(["Python", "Pandas", "Django"]),
-          applicationCount: 31,
-          postedDate: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-6",
-          role: "DevOps Engineer",
-          companyName: "InfraGen",
-          location: "Mumbai",
-          workMode: "Hybrid",
-          experience: "3-5",
-          salaryPackage: "₹ 15-22 LPA",
-          roleDefinitions: "Managing cloud infrastructure and CI/CD pipelines.",
-          primarySkills: JSON.stringify(["AWS", "Terraform", "Jenkins"]),
-          applicationCount: 15,
-          postedDate: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-7",
-          role: "Full Stack Developer",
-          companyName: "BrightIdea",
-          location: "Kochi",
-          workMode: "Remote",
-          experience: "4+",
-          salaryPackage: "₹ 18-25 LPA",
-          roleDefinitions: "Working on end-to-end features for our SaaS platform.",
-          primarySkills: JSON.stringify(["Node.js", "React", "MongoDB"]),
-          applicationCount: 28,
-          postedDate: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-8",
-          role: "Security Analyst",
-          companyName: "CyberShield",
-          location: "Ahmedabad",
-          workMode: "On-site",
-          experience: "5+",
-          salaryPackage: "₹ 20-30 LPA",
-          roleDefinitions: "Ensuring our systems and data are secure from threats.",
-          primarySkills: JSON.stringify(["Cyberspace", "Ethical Hacking", "SOC"]),
-          applicationCount: 10,
-          postedDate: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-9",
-          role: "Mobile App Dev",
-          companyName: "AppExpress",
-          location: "Indore",
-          workMode: "Hybrid",
-          experience: "2+",
-          salaryPackage: "₹ 9-14 LPA",
-          roleDefinitions: "Developing high-performance Flutter applications.",
-          primarySkills: JSON.stringify(["Flutter", "Dart", "Firebase"]),
-          applicationCount: 19,
-          postedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-10",
-          role: "QA Automation",
-          companyName: "TestFlow",
-          location: "Jaipur",
-          workMode: "Remote",
-          experience: "3+",
-          salaryPackage: "₹ 12-16 LPA",
-          roleDefinitions: "Automating end-to-end tests for complex web apps.",
-          primarySkills: JSON.stringify(["Selenium", "Cypress", "Java"]),
-          applicationCount: 14,
-          postedDate: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-11",
-          role: "AI Engineer",
-          companyName: "BrainNode",
-          location: "Bangalore",
-          workMode: "Hybrid",
-          experience: "4+",
-          salaryPackage: "₹ 25-40 LPA",
-          roleDefinitions: "Implementing LLM models and fine-tuning neural networks.",
-          primarySkills: JSON.stringify(["PyTorch", "OpenAI", "Python"]),
-          applicationCount: 52,
-          postedDate: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 mins ago
-          status: "Active"
-        },
-        {
-          id: "dummy-12",
-          role: "HR Manager",
-          companyName: "PeopleFirst",
-          location: "New Delhi",
-          workMode: "On-site",
-          experience: "6-8",
-          salaryPackage: "₹ 15-20 LPA",
-          roleDefinitions: "Managing end-to-end HR operations and employee relations.",
-          primarySkills: JSON.stringify(["HRMS", "Strategy", "Recruitment"]),
-          applicationCount: 18,
-          postedDate: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-13",
-          role: "Business Analyst",
-          companyName: "InsightCorp",
-          location: "Mumbai",
-          workMode: "Remote",
-          experience: "3+",
-          salaryPackage: "₹ 14-19 LPA",
-          roleDefinitions: "Bridging the gap between business needs and technical solutions.",
-          primarySkills: JSON.stringify(["SQL", "Tableau", "Agile"]),
-          applicationCount: 26,
-          postedDate: new Date(Date.now() - 15 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-14",
-          role: "Product Designer",
-          companyName: "DesignWave",
-          location: "Goa",
-          workMode: "Remote",
-          experience: "5+",
-          salaryPackage: "₹ 20-28 LPA",
-          roleDefinitions: "Defining the product vision through high-fidelity designs.",
-          primarySkills: JSON.stringify(["Figma", "Interaction Design", "UX"]),
-          applicationCount: 40,
-          postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-15",
-          role: "Cloud Engineer",
-          companyName: "SkyHigh",
-          location: "Chennai",
-          workMode: "Hybrid",
-          experience: "3-6",
-          salaryPackage: "₹ 16-24 LPA",
-          roleDefinitions: "Scaling cloud infrastructure on Azure and GCP.",
-          primarySkills: JSON.stringify(["Azure", "GCP", "Kubernetes"]),
-          applicationCount: 12,
-          postedDate: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-16",
-          role: "Sales Executive",
-          companyName: "GrowthPlus",
-          location: "Chandigarh",
-          workMode: "On-site",
-          experience: "1-3",
-          salaryPackage: "₹ 6-10 LPA + Incentives",
-          roleDefinitions: "Driving revenue through strategic b2b client acquisitions.",
-          primarySkills: JSON.stringify(["B2B Sales", "CRM", "Negotiation"]),
-          applicationCount: 65,
-          postedDate: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-17",
-          role: "Content Writer",
-          companyName: "WordCraft",
-          location: "Remote",
-          workMode: "Remote",
-          experience: "2+",
-          salaryPackage: "₹ 7-9 LPA",
-          roleDefinitions: "Crafting compelling stories and articles for international brands.",
-          primarySkills: JSON.stringify(["Copywriting", "SEO", "Editing"]),
-          applicationCount: 50,
-          postedDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-18",
-          role: "Network Engineer",
-          companyName: "NetConnect",
-          location: "Lucknow",
-          workMode: "On-site",
-          experience: "4+",
-          salaryPackage: "₹ 11-15 LPA",
-          roleDefinitions: "Setting up and maintaining secure corporate network infrastructures.",
-          primarySkills: JSON.stringify(["Cisco", "Firewalls", "VPN"]),
-          applicationCount: 9,
-          postedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-19",
-          role: "Android Developer",
-          companyName: "DroidLabs",
-          location: "Gurgaon",
-          workMode: "Hybrid",
-          experience: "3+",
-          salaryPackage: "₹ 15-20 LPA",
-          roleDefinitions: "Building robust native Android applications.",
-          primarySkills: JSON.stringify(["Kotlin", "Jetpack Compose", "MVVM"]),
-          applicationCount: 21,
-          postedDate: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        },
-        {
-          id: "dummy-20",
-          role: "Marketing Specialist",
-          companyName: "BrandBuzz",
-          location: "Remote",
-          workMode: "Remote",
-          experience: "2-5",
-          salaryPackage: "₹ 10-14 LPA",
-          roleDefinitions: "Executing performance marketing campaigns across channels.",
-          primarySkills: JSON.stringify(["Google Ads", "Meta Ads", "Analytics"]),
-          applicationCount: 33,
-          postedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          status: "Active"
-        }
-      ];
-
-      const combinedJobs = [...(activeJobs as any[]), ...dummyJobs].sort((a, b) => {
+      // Sort real jobs by newest first
+      const sortedJobs = activeJobs.sort((a, b) => {
         const dateA = a.postedDate ? new Date(a.postedDate).getTime() : 0;
         const dateB = b.postedDate ? new Date(b.postedDate).getTime() : 0;
         return dateB - dateA;
       });
 
-      res.json(combinedJobs);
+      res.json(sortedJobs);
     } catch (error) {
       console.error('Error fetching public jobs:', error);
       res.status(500).json({ message: "Failed to fetch job postings" });
@@ -1041,8 +758,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/candidate-register", async (req, res) => {
     try {
       // Validate request body
+      console.log("[Registration] Received registration request:", req.body);
       const validationResult = candidateRegistrationSchema.safeParse(req.body);
       if (!validationResult.success) {
+        console.warn("[Registration] Validation failed:", validationResult.error.errors);
         return res.status(400).json({
           message: "Invalid input",
           errors: validationResult.error.errors
@@ -3561,16 +3280,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
       );
       const teamRecruiterNames = teamRecruiters.map(r => r.name.toLowerCase());
+      const teamRecruiterIdsArray = teamRecruiters.map(r => r.id);
 
-      // Get all candidates and filter by team members
-      const allCandidates = await db.select().from(candidates).orderBy(desc(candidates.createdAt));
-      const teamCandidates = allCandidates.filter(c => {
-        const addedByMatch = c.addedBy && teamRecruiterNames.includes(c.addedBy.toLowerCase());
-        const assignedToMatch = c.assignedTo && teamRecruiterNames.includes(c.assignedTo.toLowerCase());
-        return addedByMatch || assignedToMatch;
+      // Get team data similarly to the main pipeline endpoint
+      const allApplications = await db.select().from(jobApplications);
+      const recruiterJobsList = await db.select().from(recruiterJobs);
+      const teamRecruiterJobIds = new Set(
+        recruiterJobsList
+          .filter(job => job.recruiterId && teamRecruiterIdsArray.includes(job.recruiterId))
+          .map(job => job.id)
+      );
+
+      const assignments = await storage.getActiveRequirementAssignments();
+      const teamRequirementIds = new Set<string>();
+      if (assignments && assignments.length > 0) {
+        assignments.forEach((assignment: any) => {
+          if (teamRecruiterIdsArray.includes(assignment.recruiterId)) {
+            teamRequirementIds.add(assignment.requirementId);
+          }
+        });
+      }
+
+      // Filter applications that belong to team
+      const teamApplications = allApplications.filter((app: any) => {
+        if (app.recruiterJobId && teamRecruiterJobIds.has(app.recruiterJobId)) return true;
+        if (app.requirementId && teamRequirementIds.has(app.requirementId)) return true;
+        return false;
       });
 
-      // Count candidates by pipeline status
+      // Also get resume submissions for team
+      const { resumeSubmissions } = await import("@shared/schema");
+      const teamResumeSubmissions = teamRecruiterIdsArray.length > 0
+        ? await db.select().from(resumeSubmissions)
+          .where(inArray(resumeSubmissions.recruiterId, teamRecruiterIdsArray))
+        : [];
+
+      // Combine all "pipeline entities"
+      const allPipelineItems = [
+        ...teamApplications.map(a => ({ status: a.status })),
+        ...teamResumeSubmissions.map(s => ({ status: s.status || 'Submitted' }))
+      ];
+
+      // Count by stage
       const stageCounts: Record<string, number> = {
         SOURCED: 0,
         SHORTLISTED: 0,
@@ -3581,40 +3332,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         L3: 0,
         FINAL_ROUND: 0,
         HR_ROUND: 0,
-        OFFER_STAGE: 0,
-        CLOSURE: 0,
-        OFFER_DROP: 0
+        OFFER: 0,
+        CLOSURE: 0
       };
-
-      teamCandidates.forEach((candidate: any) => {
-        const status = (candidate.pipelineStatus || candidate.status || 'SOURCED').toUpperCase();
-        // Map various status values to our stage keys
-        const statusMapping: Record<string, string> = {
-          'NEW': 'SOURCED',
-          'SOURCED': 'SOURCED',
-          'SHORTLISTED': 'SHORTLISTED',
-          'INTRO CALL': 'INTRO_CALL',
-          'INTRO_CALL': 'INTRO_CALL',
-          'ASSIGNMENT': 'ASSIGNMENT',
-          'L1': 'L1',
-          'L2': 'L2',
-          'L3': 'L3',
-          'FINAL ROUND': 'FINAL_ROUND',
-          'FINAL_ROUND': 'FINAL_ROUND',
-          'HR ROUND': 'HR_ROUND',
-          'HR_ROUND': 'HR_ROUND',
-          'OFFER STAGE': 'OFFER_STAGE',
-          'OFFER_STAGE': 'OFFER_STAGE',
-          'CLOSURE': 'CLOSURE',
-          'CLOSED': 'CLOSURE',
-          'OFFER DROP': 'OFFER_DROP',
-          'OFFER_DROP': 'OFFER_DROP',
-          'REJECTED': 'OFFER_DROP'
-        };
-        const mappedStatus = statusMapping[status] || 'SOURCED';
-        if (stageCounts.hasOwnProperty(mappedStatus)) {
-          stageCounts[mappedStatus]++;
-        }
+      allPipelineItems.forEach(item => {
+        const status = (item.status || "").toUpperCase();
+        if (status.includes("SOURCED") || status.includes("APPLIED")) stageCounts.SOURCED++;
+        else if (status.includes("SHORTLISTED")) stageCounts.SHORTLISTED++;
+        else if (status.includes("INTRO CALL")) stageCounts.INTRO_CALL++;
+        else if (status.includes("ASSIGNMENT")) stageCounts.ASSIGNMENT++;
+        else if (status.includes("L1") || status.includes("LEVEL 1") || status.includes("INTERVIEW SCHEDULED")) stageCounts.L1++;
+        else if (status.includes("L2") || status.includes("LEVEL 2")) stageCounts.L2++;
+        else if (status.includes("L3") || status.includes("LEVEL 3")) stageCounts.L3++;
+        else if (status.includes("FINAL ROUND")) stageCounts.FINAL_ROUND++;
+        else if (status.includes("HR ROUND")) stageCounts.HR_ROUND++;
+        else if (status.includes("OFFER") || status.includes("SELECTED")) stageCounts.OFFER++;
+        else if (status.includes("CLOSURE") || status.includes("JOINED")) stageCounts.CLOSURE++;
       });
 
       res.json(stageCounts);

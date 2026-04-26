@@ -85,8 +85,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // Handle CORS preflight requests
 app.options('*', cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Session configuration with PostgreSQL store for persistence
 const PgSession = connectPgSimple(session);

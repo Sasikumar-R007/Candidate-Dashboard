@@ -48,13 +48,14 @@ import {
   type RequirementAssignment,
   type InsertRequirementAssignment,
   type ResumeSubmission,
+  type InsertResumeSubmission,
   type UserActivity,
   type InsertUserActivity,
-  type InsertResumeSubmission,
   type DailyMetricsSnapshot,
   type InsertDailyMetricsSnapshot,
   type InterviewTracker,
   type InsertInterviewTracker,
+
   users,
   profiles,
   jobPreferences,
@@ -81,7 +82,9 @@ import {
   resumeSubmissions,
   dailyMetricsSnapshots,
   cashOutflows,
-  interviewTracker
+  interviewTracker,
+
+  userActivities
 } from "@shared/schema";
 import { getResumeTarget } from "@shared/constants";
 import { db } from "./db";
@@ -109,8 +112,8 @@ function normalizeEmployee(emp: any): Employee {
     appraisedQuarter: emp.appraised_quarter || emp.appraisedQuarter,
     appraisedAmount: emp.appraised_amount || emp.appraisedAmount,
     appraisedYear: emp.appraised_year || emp.appraisedYear,
-    yearlyCtc: emp.yearly_ctc || emp.yearlyCtc,
-    currentMonthlyCtc: emp.current_monthly_ctc || emp.currentMonthlyCtc,
+    yearlyCTC: emp.yearly_ctc || emp.yearlyCTC,
+    currentMonthlyCTC: emp.current_monthly_ctc || emp.currentMonthlyCTC,
     nameAsPerBank: emp.name_as_per_bank || emp.nameAsPerBank,
     accountNumber: emp.account_number || emp.accountNumber,
     ifscCode: emp.ifsc_code || emp.ifscCode,
@@ -118,21 +121,14 @@ function normalizeEmployee(emp: any): Employee {
     reportingTo: emp.reporting_to || emp.reportingTo,
     isActive: emp.is_active !== undefined ? emp.is_active : emp.isActive,
     createdAt: emp.created_at || emp.createdAt,
+    lastLoginAt: emp.last_login_at || emp.lastLoginAt,
     profilePicture: emp.profile_picture || emp.profilePicture,
+    bannerImage: emp.banner_image || emp.bannerImage,
   } as Employee;
 }
 
 function normalizeCandidate(candidate: any): Candidate {
   if (!candidate) return candidate;
-  
-  // DEEP DIAGNOSTIC: Log the raw DB data to the terminal
-  if (candidate.candidate_id === 'STCA419' || candidate.candidateId === 'STCA419') {
-    console.log("[DB-RAW] Candidate Data for STCA419:", {
-      id: candidate.id,
-      stage: candidate.registration_stage,
-      dbKeys: Object.keys(candidate)
-    });
-  }
 
   return {
     ...candidate,
@@ -497,14 +493,8 @@ export class DatabaseStorage implements IStorage {
   // Employee methods
   async getEmployeeById(id: string): Promise<Employee | undefined> {
     try {
-      // Use raw SQL to exclude last_login_at column (which may not exist in production)
       const result = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
+        SELECT *
         FROM employees 
         WHERE id = ${id}
       `);
@@ -517,16 +507,10 @@ export class DatabaseStorage implements IStorage {
 
   async getEmployeeByEmail(email: string): Promise<Employee | undefined> {
     try {
-      // Use raw SQL to exclude last_login_at column (which may not exist in production)
       const result = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
+        SELECT *
         FROM employees 
-        WHERE email = ${email}
+        WHERE LOWER(email) = LOWER(${email})
       `);
       return result.rows[0] ? normalizeEmployee(result.rows[0]) : undefined;
     } catch (error) {
@@ -537,16 +521,10 @@ export class DatabaseStorage implements IStorage {
 
   async getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined> {
     try {
-      // Use raw SQL to exclude last_login_at column (which may not exist in production)
       const result = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
+        SELECT *
         FROM employees 
-        WHERE employee_id = ${employeeId}
+        WHERE LOWER(employee_id) = LOWER(${employeeId})
       `);
       return result.rows[0] ? normalizeEmployee(result.rows[0]) : undefined;
     } catch (error) {
@@ -577,14 +555,8 @@ export class DatabaseStorage implements IStorage {
 
   async getAllEmployees(): Promise<Employee[]> {
     try {
-      // Use raw SQL to exclude last_login_at column (which may not exist in production)
       const result = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
+        SELECT *
         FROM employees 
         WHERE is_active = true
         ORDER BY created_at DESC
@@ -2150,10 +2122,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInterview(id: string): Promise<boolean> {
-    const result = await db.delete(interviewTracker)
-      .where(eq(interviewTracker.id, id));
-    return result.rowCount !== undefined && result.rowCount > 0;
+    const result = await db.delete(interviewTracker).where(eq(interviewTracker.id, id));
+    return true;
   }
+
+
+
   async getUserActivities(role: string, limit: number = 5): Promise<UserActivity[]> {
     return await db.select()
       .from(userActivities)

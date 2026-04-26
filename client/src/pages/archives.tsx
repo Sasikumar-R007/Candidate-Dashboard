@@ -157,7 +157,7 @@ export default function Archives() {
     }
 
     if (employee?.role === 'recruiter' || employee?.role === 'talent_advisor') {
-      setLocation('/recruiter-login-2');
+      setLocation('/recruiter');
       return;
     }
 

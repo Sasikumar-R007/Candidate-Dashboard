@@ -79,7 +79,7 @@ export default function EmployerLogin() {
         setTimeout(() => {
           switch (result.employee.role) {
             case 'recruiter':
-              navigate("/recruiter-login-2");
+              navigate("/recruiter");
               break;
             case 'team_leader':
               navigate("/team-leader");

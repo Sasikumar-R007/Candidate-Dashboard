@@ -96,6 +96,7 @@ Team StaffOS
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
     
     console.log(`[Welcome Email] Attempting to send welcome email to ${data.email} from ${senderEmail}`);
+    console.log(`\n[DEV-TESTING] 📧 WELCOME EMAIL CONTENT for ${data.email}:\n${emailContent}\n`);
     console.log(`[Welcome Email] Resend API Key present: ${process.env.RESEND_API_KEY ? 'Yes (length: ' + process.env.RESEND_API_KEY.length + ')' : 'NO - MISSING!'}`);
     
     const result = await resend.emails.send({
@@ -110,6 +111,9 @@ Team StaffOS
       console.error(`[Welcome Email] Resend API error:`, result.error);
       console.error(`[Welcome Email] Error details:`, JSON.stringify(result.error, null, 2));
       
+      // Log failed attempt
+
+      
       // Check for 403 Forbidden specifically
       if (result.error && typeof result.error === 'object' && 'message' in result.error) {
         const errorMsg = String(result.error.message || '');
@@ -121,10 +125,13 @@ Team StaffOS
       return false;
     }
 
+
+
     console.log(`[Welcome Email] Successfully sent welcome email to ${data.email} from ${senderEmail}. Email ID: ${result.data?.id || 'N/A'}`);
     return true;
   } catch (error) {
     console.error('Error sending employee welcome email:', error);
+
     return false;
   }
 }
@@ -247,6 +254,7 @@ Team StaffOS
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
     
     console.log(`[Candidate Welcome Email] Attempting to send welcome email to ${data.email} from ${senderEmail}`);
+    console.log(`\n[DEV-TESTING] 📧 CANDIDATE WELCOME EMAIL CONTENT for ${data.email}:\n${emailContent}\n`);
     console.log(`[Candidate Welcome Email] Resend API Key present: ${process.env.RESEND_API_KEY ? 'Yes (length: ' + process.env.RESEND_API_KEY.length + ')' : 'NO - MISSING!'}`);
     
     const result = await resend.emails.send({
@@ -261,6 +269,9 @@ Team StaffOS
       console.error(`[Candidate Welcome Email] Resend API error:`, result.error);
       console.error(`[Candidate Welcome Email] Error details:`, JSON.stringify(result.error, null, 2));
       
+      // Log failed attempt
+
+      
       // Check for 403 Forbidden specifically
       if (result.error && typeof result.error === 'object' && 'message' in result.error) {
         const errorMsg = String(result.error.message || '');
@@ -272,10 +283,17 @@ Team StaffOS
       return false;
     }
 
+    // Log successful send
+
+
     console.log(`[Candidate Welcome Email] Successfully sent welcome email to ${data.email} from ${senderEmail}. Email ID: ${result.data?.id || 'N/A'}`);
     return true;
   } catch (error) {
     console.error('Error sending candidate welcome email:', error);
+    // Log exception
+    try {
+
+    } catch (e) {}
     return false;
   }
 }
@@ -334,6 +352,7 @@ Team StaffOS
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
     
     console.log(`[OTP Email] Attempting to send OTP email to ${data.email} from ${senderEmail}`);
+    console.log(`\n[DEV-TESTING] 🔑 OTP GENERATED: ${data.otp} for ${data.email}\n`);
     
     const result = await resend.emails.send({
       from: senderEmail,
@@ -345,13 +364,22 @@ Team StaffOS
 
     if (result.error) {
       console.error(`[OTP Email] Resend API error:`, result.error);
+      // Log failed attempt
+
       return false;
     }
+
+    // Log successful send
+
 
     console.log(`[OTP Email] Successfully sent OTP to ${data.email}. ID: ${result.data?.id}`);
     return true;
   } catch (error) {
     console.error('[OTP Email] Error sending OTP email:', error);
+    // Log exception
+    try {
+
+    } catch (e) {}
     return false;
   }
 }

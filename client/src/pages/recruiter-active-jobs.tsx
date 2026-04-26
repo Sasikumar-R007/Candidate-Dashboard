@@ -303,11 +303,7 @@ export default function RecruiterActiveJobs() {
         <div className="flex items-center gap-4 mb-4">
           <Button
             onClick={() => {
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                setLocation('/recruiter-login-2');
-              }
+              setLocation('/recruiter');
             }}
             variant="outline"
             size="sm"

@@ -31,7 +31,6 @@ import { JobCard } from "@/components/landing/JobCard";
 import { RecruiterJob } from "@shared/schema";
 import { ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
 type SearchSuggestion = {
   role: string;
   company: string;
@@ -107,6 +106,7 @@ const searchSuggestions: SearchSuggestion[] = [
     category: "Design",
   },
 ];
+
 
 // Real-time top roles will be derived from the jobs array inside the component
 

@@ -335,7 +335,7 @@ export const candidates = pgTable("candidates", {
   candidateId: text("candidate_id").notNull().unique(), // STCA001 format
   fullName: text("full_name").notNull(),
   email: text("email").notNull().unique(),
-  password: text("password"), // Optional for Google OAuth users
+  password: text("password"), // Optional for Google OAuth users and initial registration stage
   googleId: text("google_id").unique(), // Google OAuth ID
   // Additional candidate details
   phone: text("phone"),
@@ -487,6 +487,8 @@ export const chatRooms = pgTable("chat_rooms", {
   lastMessageAt: text("last_message_at"),
   createdAt: text("created_at").notNull(),
 });
+
+
 
 export const chatParticipants = pgTable("chat_participants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -980,6 +982,8 @@ export type InsertInterviewTrackerCounts = z.infer<typeof insertInterviewTracker
 export type InterviewTrackerCounts = typeof interviewTrackerCounts.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+export type UserActivity = typeof userActivities.$inferSelect;
+export type EmailLog = typeof emailLogs.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertImpactMetrics = z.infer<typeof insertImpactMetricsSchema>;

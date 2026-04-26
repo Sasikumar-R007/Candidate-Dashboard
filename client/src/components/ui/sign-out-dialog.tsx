@@ -35,16 +35,18 @@ export function SignOutDialog({
             </div>
             <AlertDialogTitle className="text-xl">Sign Out</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="text-base space-y-2">
-            {userName ? (
-              <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100">{userName}</span>
-              </div>
-            ) : null}
-            <p className="text-gray-600 dark:text-gray-400">
-              Are you sure you want to sign out? You'll need to log in again to access your dashboard.
-            </p>
+          <AlertDialogDescription asChild>
+            <div className="text-base space-y-2">
+              {userName ? (
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{userName}</span>
+                </div>
+              ) : null}
+              <p className="text-gray-600 dark:text-gray-400">
+                Are you sure you want to sign out? You'll need to log in again to access your dashboard.
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2">

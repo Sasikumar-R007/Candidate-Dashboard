@@ -46,7 +46,7 @@ import {
   type DailyMetricsSnapshot,
   type InsertDailyMetricsSnapshot,
   type InterviewTracker,
-  type InsertInterviewTracker
+  type InsertInterviewTracker,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -299,6 +299,10 @@ export interface IStorage {
   getInterviewsByRecruiterName(recruiterName: string): Promise<InterviewTracker[]>;
   getAllInterviews(): Promise<InterviewTracker[]>;
   updateInterview(id: string, updates: Partial<InterviewTracker>): Promise<InterviewTracker | undefined>;
+  getInterviewTracker(id: string): Promise<InterviewTracker | undefined>;
+  
+
+  
   deleteInterview(id: string): Promise<boolean>;
 }
 

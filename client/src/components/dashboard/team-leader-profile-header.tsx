@@ -4,6 +4,7 @@ import { useTheme } from '@/contexts/theme-context';
 import { useEmployeeAuth } from '@/contexts/auth-context';
 import FileUploadModal from './modals/file-upload-modal';
 import { ProfileSettingsModal } from './modals/profile-settings-modal';
+import { apiRequest, apiFileUpload } from '@/lib/queryClient';
 
 interface TeamLeaderProfile {
   name: string;
@@ -41,10 +42,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('/api/team-leader/upload/banner', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await apiFileUpload('/api/team-leader/upload/banner', formData);
       
       if (!response.ok) {
         throw new Error('Upload failed');
@@ -53,13 +51,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
       const result = await response.json();
       
       // Update profile with new banner image
-      const profileResponse = await fetch('/api/team-leader/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ bannerImage: result.url }),
-      });
+      const profileResponse = await apiRequest('PATCH', '/api/team-leader/profile', { bannerImage: result.url });
       
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
@@ -77,10 +69,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('/api/team-leader/upload/profile', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await apiFileUpload('/api/team-leader/upload/profile', formData);
       
       if (!response.ok) {
         throw new Error('Upload failed');
@@ -89,13 +78,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
       const result = await response.json();
       
       // Update profile with new profile picture
-      const profileResponse = await fetch('/api/team-leader/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ profilePicture: result.url }),
-      });
+      const profileResponse = await apiRequest('PATCH', '/api/team-leader/profile', { profilePicture: result.url });
       
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
@@ -110,13 +93,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
 
   const handleDeleteBanner = async () => {
     try {
-      const response = await fetch('/api/team-leader/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ bannerImage: null }),
-      });
+      const response = await apiRequest('PATCH', '/api/team-leader/profile', { bannerImage: null });
       
       if (response.ok) {
         const updatedProfile = await response.json();
@@ -129,7 +106,6 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
 
   const handleProfileSave = (updatedProfile: any) => {
     setCurrentProfile(updatedProfile);
-    // TODO: Send updated profile to API
   };
 
   // Use employee data from auth context for most current info, fallback to props/local state for images and team-specific data
@@ -172,7 +148,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <img 
-                src={currentProfile.profilePicture || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=32&h=32"}
+                src={displayProfile.profilePicture || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=32&h=32"}
                 alt="User" 
                 className="w-8 h-8 rounded-full"
               />
@@ -188,7 +164,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
         <div className="flex items-center gap-3">
           <i className="fas fa-user-circle text-blue-400 text-2xl"></i>
           <span className="text-xl font-semibold" data-testid="text-profile-name-header">
-            {currentProfile.name}
+            {displayProfile.name}
           </span>
         </div>
         

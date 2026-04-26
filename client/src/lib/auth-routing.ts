@@ -18,7 +18,7 @@ export function getDefaultRouteForAuthUser(user: AuthUser | null): string | null
       return "/team-leader";
     case "recruiter":
     case "talent_advisor":
-      return "/recruiter-login-2";
+      return "/recruiter";
     case "client":
       return "/client";
     case "support":

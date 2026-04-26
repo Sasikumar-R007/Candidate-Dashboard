@@ -1361,7 +1361,7 @@ const SourceResume = () => {
     
     // Check if accessed from allowed pages or if referrer contains an allowed path
     if (!isFromRecruiter && 
-        !referrer.includes('/recruiter-login-2') && 
+        !referrer.includes('/recruiter') && 
         !referrer.includes('/team-leader') && 
         !referrer.includes('/admin') && 
         !referrer.includes('/source-resume')) {
@@ -1371,7 +1371,7 @@ const SourceResume = () => {
       } else if (employee.role === 'admin') {
         setLocation('/admin');
       } else {
-        setLocation('/recruiter-login-2');
+        setLocation('/recruiter');
       }
       return;
     }
