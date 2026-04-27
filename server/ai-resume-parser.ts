@@ -28,9 +28,9 @@ export async function parseResumeWithAI(text: string): Promise<any> {
 
     console.log("AI CALL START");
     
-    // Add a 10-second timeout
+    // Add a 30-second timeout for more complex resumes
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("OpenAI request timed out after 10 seconds")), 10000)
+      setTimeout(() => reject(new Error("OpenAI request timed out after 30 seconds")), 30000)
     );
 
     const apiCallPromise = openai.chat.completions.create({
@@ -131,6 +131,9 @@ export async function parseResumeWithAI(text: string): Promise<any> {
  */
 export async function refineCandidateData(rawData: any) {
   if (!rawData) return null;
+
+  const openai = getOpenAIClient();
+  if (!openai) return rawData;
 
   try {
     const response = await openai.chat.completions.create({

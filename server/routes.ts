@@ -5677,7 +5677,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error: any) {
-      console.error('Parse resume error:', error);
+      console.error('[CRITICAL] Parse resume error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
       // Clean up file on error
       try {
         if (req.file && fs.existsSync(req.file.path)) {
@@ -5686,10 +5689,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (cleanupError) {
         console.error('File cleanup error:', cleanupError);
       }
+      
       res.status(500).json({
-        message: "Failed to parse resume",
-        error: error.message || 'Unknown error',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        message: `Failed to parse resume: ${errorMessage}`,
+        error: errorMessage,
+        success: false
+      });
+    }
+  });
+
+  // Diagnostic route to check OpenAI configuration
+  app.get("/api/admin/check-openai", requireEmployeeAuth, async (req, res) => {
+    console.log("[DIAGNOSTIC] Checking OpenAI configuration...");
+    const apiKey = process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      return res.json({ 
+        status: "error", 
+        message: "OPENAI_API_KEY is not set in environment variables." 
+      });
+    }
+
+    try {
+      const { parseResumeWithAI } = await import('./ai-resume-parser');
+      const testResult = await parseResumeWithAI("This is a test resume for API verification.");
+      
+      if (testResult === null) {
+        return res.json({ 
+          status: "error", 
+          message: "OpenAI call returned null. Check your API key and quota." 
+        });
+      }
+
+      res.json({ 
+        status: "ok", 
+        message: "OpenAI is configured and responding correctly.",
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini"
+      });
+    } catch (error: any) {
+      console.error("[DIAGNOSTIC] OpenAI check failed:", error);
+      res.json({ 
+        status: "error", 
+        message: `OpenAI check failed: ${error.message || String(error)}` 
       });
     }
   });
