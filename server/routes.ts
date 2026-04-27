@@ -344,6 +344,7 @@ function requireClientAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  console.log('[DEBUG] Registering all routes...');
   // Initialize Passport for Google OAuth
   app.use(passport.initialize());
   app.use(passport.session());
@@ -411,14 +412,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public Jobs API for Landing Page
-  app.get("/api/jobs/public", async (req, res) => {
+  // Public Jobs API for Landing Page (Renamed to avoid potential conflicts)
+  app.get("/api/public-jobs", async (req, res) => {
+    console.log(`[DEBUG] Received request for /api/public-jobs`);
     try {
       const allJobs = await storage.getAllRecruiterJobs();
+      console.log(`[DEBUG] Found ${allJobs.length} total jobs in storage`);
 
       // Filter for active jobs and sort by newest first
       const activeJobs = allJobs
         .filter(job => job.status === "Active");
+      
+      console.log(`[DEBUG] Found ${activeJobs.length} active jobs`);
 
       // Sort real jobs by newest first
       const sortedJobs = activeJobs.sort((a, b) => {
@@ -432,6 +437,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching public jobs:', error);
       res.status(500).json({ message: "Failed to fetch job postings" });
     }
+  });
+
+  // Keep old route as an alias for now to prevent breaking changes if cached
+  app.get("/api/jobs/public", async (req, res) => {
+    console.log(`[DEBUG] Received request for /api/jobs/public (LEGACY)`);
+    res.redirect("/api/public-jobs");
   });
 
   // Session Verification Route - Check if user session is valid and return user data

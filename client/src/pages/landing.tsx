@@ -134,7 +134,7 @@ export default function Landing() {
   const JOBS_PER_PAGE = 6;
 
   const { data: jobs = [] } = useQuery<RecruiterJob[]>({
-    queryKey: ["/api/jobs/public"],
+    queryKey: ["/api/public-jobs"],
   });
 
   const totalPages = Math.ceil(jobs.length / JOBS_PER_PAGE);
@@ -654,107 +654,45 @@ export default function Landing() {
           </p>
         </div>
       </footer>
-
-      {/* Final Premium Neon Loading Overlay */}
+      {/* Simplified Three-Dot Jumping Loading Overlay */}
       <AnimatePresence>
         {isNavigating && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/40 backdrop-blur-xl overflow-hidden"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md"
           >
-            <div className="relative flex items-center justify-center scale-100 sm:scale-110">
-              {/* Outer Neon Spinning Ring - Tightened */}
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                className="absolute"
-              >
-                <svg width="140" height="140" viewBox="0 0 100 100" className="overflow-visible">
-                  <defs>
-                    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#06b6d4" />
-                      <stop offset="100%" stopColor="#8b5cf6" />
-                    </linearGradient>
-                    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur stdDeviation="3" result="blur" />
-                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
-                  </defs>
-                  
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="48"
-                    fill="none"
-                    stroke="url(#neonGradient)"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeDasharray="60 180"
-                    filter="url(#neonGlow)"
-                    className="opacity-90"
-                  />
-                </svg>
-              </motion.div>
-
-              {/* Inner Reverse Spinning Ring - Tightened */}
-              <motion.div
-                animate={{ rotate: -360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="absolute"
-              >
-                <svg width="120" height="120" viewBox="0 0 100 100" className="overflow-visible">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="46"
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeDasharray="15 45"
-                    className="opacity-40"
-                  />
-                </svg>
-              </motion.div>
-
-              {/* Centered Pulsing Logo */}
-              <motion.div
-                animate={{
-                  scale: [1, 1.05, 1],
-                  opacity: [0.95, 1, 0.95],
-                }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="relative z-10 flex items-center justify-center"
-              >
-                {/* Central Glow Aura */}
-                <div className="absolute w-20 h-20 bg-cyan-500/20 rounded-full blur-3xl" />
-                
-                <div className="relative p-3 bg-white/10 rounded-full backdrop-blur-md border border-white/20 shadow-2xl">
-                  <img 
-                    src={staffosLogo} 
-                    alt="StaffOS" 
-                    className="w-12 h-12 sm:w-16 sm:h-16 object-contain" 
-                  />
-                  
-                  {/* Rotating inner neon particles */}
-                  <div className="absolute inset-0">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                      className="w-full h-full relative"
-                    >
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_6px_#22d3ee]" />
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full shadow-[0_0_6px_#a855f7]" />
-                    </motion.div>
-                  </div>
-                </div>
-              </motion.div>
+            <div className="flex space-x-3">
+              {[0, 1, 2].map((dot) => (
+                <motion.div
+                  key={dot}
+                  className="w-4 h-4 bg-purple-500 rounded-full shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                  animate={{
+                    y: ["0%", "-100%", "0%"],
+                    scale: [1, 1.2, 1],
+                    opacity: [0.6, 1, 0.6]
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    repeat: Infinity,
+                    delay: dot * 0.15,
+                    ease: "easeInOut"
+                  }}
+                />
+              ))}
             </div>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 text-white/80 text-xs font-semibold tracking-widest uppercase"
+            >
+              Loading
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }
