@@ -663,31 +663,32 @@ export default function Landing() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md"
           >
-            <div className="flex space-x-3">
-              {[0, 1, 2].map((dot) => (
-                <motion.div
-                  key={dot}
-                  className="w-4 h-4 bg-purple-500 rounded-full shadow-[0_0_15px_rgba(168,85,247,0.5)]"
-                  animate={{
-                    y: ["0%", "-100%", "0%"],
-                    scale: [1, 1.2, 1],
-                    opacity: [0.6, 1, 0.6]
-                  }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: Infinity,
-                    delay: dot * 0.15,
-                    ease: "easeInOut"
-                  }}
-                />
-              ))}
-            </div>
+            <div className="landing-loader"></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-6 text-white/80 text-xs font-semibold tracking-widest uppercase"
             >
-              Loading
+              Loading...
             </motion.p>
           </motion.div>
         )}

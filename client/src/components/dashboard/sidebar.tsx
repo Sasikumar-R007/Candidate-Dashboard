@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { User, Briefcase, Settings, LogOut, UserCircle, MessageCircle } from "lucide-react";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useCandidateAuth } from "@/contexts/auth-context";
@@ -20,6 +20,13 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const { toast } = useToast();
   const { logout } = useAuth();
   const candidate = useCandidateAuth();
+
+  const { data: candidateNudges = [] } = useQuery<any[]>({
+    queryKey: ['/api/candidate/nudges'],
+    enabled: !!candidate,
+  });
+
+  const hasUnreadNudges = candidateNudges.some(n => (n.isResponded || n.message) && !n.isRead);
 
   const menuItems = [
     { id: 'my-jobs', label: 'My Jobs', icon: Briefcase },
@@ -111,6 +118,10 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 )}
                 
                 <IconComponent size={20} />
+                
+                {item.id === 'my-jobs' && hasUnreadNudges && (
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-slate-900" />
+                )}
                 
                 {/* Tooltip */}
                 {hoveredItem === item.id && (

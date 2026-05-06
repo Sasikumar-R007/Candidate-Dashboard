@@ -201,6 +201,43 @@ const hardcodedTeamMembers = [
   }
 ];
 
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return 'N/A';
+  try {
+    // Robust parsing: try to handle yyyy-mm-dd, mm/dd/yyyy, and ISO strings
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    return date.toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    }).replace(/ /g, '-'); // e.g., 04-May-2026
+  } catch (e) {
+    return 'N/A';
+  }
+};
+
+const formatDateTime = (dateString: string | null | undefined) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    return date.toLocaleString('en-GB', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).replace(/,/g, '').replace(/ /g, (match, offset) => offset < 11 ? '-' : ' '); 
+    // e.g., 04-May-2026 02:00 PM
+  } catch (e) {
+    return 'N/A';
+  }
+};
+
 export default function TeamMembersSidebar() {
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -221,6 +258,8 @@ export default function TeamMembersSidebar() {
     closures: number;
     lastClosure: string;
     qtrsAchieved: number;
+    targetAchievement: number;
+    totalRevenue: string;
   }>>({
     queryKey: ['/api/admin/team-performance']
   });
@@ -267,14 +306,7 @@ export default function TeamMembersSidebar() {
         }
 
         // Get last login
-        let lastLogin = 'N/A';
-        if (emp.lastLoginAt) {
-          try {
-            lastLogin = new Date(emp.lastLoginAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-          } catch (e) {
-            lastLogin = 'N/A';
-          }
-        }
+        const lastLogin = formatDateTime(emp.lastLoginAt);
         
         return {
           name: emp.name,
@@ -286,14 +318,14 @@ export default function TeamMembersSidebar() {
           department: emp.department || 'N/A',
           email: emp.email,
           age: emp.age || 0,
-          joiningDate: emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+          joiningDate: formatDate(emp.joiningDate),
           lastLogin: lastLogin,
           lastClosure: performanceData?.lastClosure || 'N/A',
           tenure: performanceData?.tenure || tenure,
           totalClosures: performanceData?.closures || 0,
           quartersAchieved: performanceData?.qtrsAchieved || 0,
-          targetAchievement: 0, // Will be calculated from API if needed
-          totalRevenue: "0", // Will be calculated from API if needed
+          targetAchievement: performanceData?.targetAchievement || 0,
+          totalRevenue: performanceData?.totalRevenue || "0",
           teamLeaderName,
           teamLeaderId
         };

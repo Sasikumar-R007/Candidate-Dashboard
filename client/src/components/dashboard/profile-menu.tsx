@@ -74,7 +74,7 @@ export default function ProfileMenu({
           <div className="w-8 h-8 flex items-center justify-center text-gray-500">
             <Settings size={18} />
           </div>
-          <span className="font-bold text-sm">Settings Page</span>
+          <span className="font-semibold text-sm">Settings Page</span>
         </DropdownMenuItem>
 
         <DropdownMenuItem 
@@ -84,7 +84,7 @@ export default function ProfileMenu({
           <div className="w-8 h-8 flex items-center justify-center text-gray-500">
             <HelpCircle size={18} />
           </div>
-          <span className="font-bold text-sm">Help & Support</span>
+          <span className="font-semibold text-sm">Help & Support</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator className="my-1 bg-gray-50" />
@@ -96,7 +96,7 @@ export default function ProfileMenu({
           <div className="w-8 h-8 flex items-center justify-center text-rose-500">
             <LogOut size={18} />
           </div>
-          <span className="font-bold text-sm">Sign Out</span>
+          <span className="font-semibold text-sm">Sign Out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

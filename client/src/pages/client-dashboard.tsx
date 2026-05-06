@@ -20,7 +20,10 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 import ClientMainSidebar from '@/components/dashboard/client-main-sidebar';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import AddCandidateModal from '@/components/dashboard/modals/add-candidate-modal';
+import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
+import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
@@ -675,6 +678,9 @@ export default function ClientDashboard() {
                   <div className="text-2xl font-bold text-green-500">{dashboardStats.successfulHires}</div>
                 </div>
               </div>
+
+              {/* Nudge Escalation Table */}
+              <ActiveNudgesTable />
 
               {/* Roles & Status Table - Redesigned (Image 2) */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -1742,6 +1748,15 @@ export default function ClientDashboard() {
       case 'chat':
         return <ClientChatInterface />;
 
+      case 'nudges':
+        return (
+          <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
+            <div className="flex-1 overflow-y-auto p-6">
+              <NudgesTab />
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1860,7 +1875,7 @@ export default function ClientDashboard() {
             </CardHeader>
             <CardContent className="text-center space-y-4">
               <p className="text-gray-600" data-testid="text-profile-not-linked-message">
-                Your client dashboard access is pending. An administrator needs to link your account to a client profile before you can access the dashboard.
+                Your client workspace access is pending. An administrator needs to link your account to a client profile before you can access the workspace.
               </p>
               <p className="text-sm text-gray-500">
                 Please contact your administrator or wait for your account to be configured.

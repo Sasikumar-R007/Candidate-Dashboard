@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Users, FileText, GitBranch, Trophy, MessageCircle, ChevronRight, User, LogOut, Bell, Briefcase, Settings, ChevronDown } from "lucide-react";
+import { Users, FileText, GitBranch, Trophy, MessageCircle, ChevronRight, User, LogOut, Bell, Briefcase, Settings, ChevronDown, Zap } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -28,6 +28,7 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
     { id: 'requirements', label: 'Requirements', icon: FileText },
     { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
     { id: 'performance', label: 'Performance', icon: Trophy },
+    { id: 'nudges', label: 'Nudges', icon: Zap },
     { id: 'chat', label: 'Chat', icon: MessageCircle }
   ];
 

@@ -8,7 +8,7 @@ import {
   MessageCircle, Loader2, Star, CheckCircle2, Building2, 
   Calendar, AlertTriangle, Lightbulb, Share2, MoreHorizontal,
   ArrowRight, MousePointer2, ChevronLeft, ChevronRight, LayoutGrid,
-  Zap, Flame, Target, Globe, Box, Users, RefreshCw
+  Zap, Flame, Target, Globe, Box, Users, RefreshCw, Archive, Building, Calendar as LucideCalendar
 } from "lucide-react";
 
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
@@ -35,6 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface JobBoardTabProps {
   onNavigateToSettings?: () => void;
@@ -136,6 +137,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
   const [jobToApply, setJobToApply] = useState<JobListing | null>(null);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
   
   // Filter States
   const [roleFilter, setRoleFilter] = useState('');
@@ -245,6 +247,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   };
 
   return (
+    <>
     <div className="flex bg-white dark:bg-gray-900 h-screen overflow-hidden font-inter">
       {/* Left Session: Sidebar with Filters */}
       <div 
@@ -551,8 +554,20 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
                
                <div className="flex flex-col items-end">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{filteredJobs.length} Jobs Found</span>
-               </div>
+                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{filteredJobs.length} Jobs Found</span>
+                </div>
+
+                <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
+                
+                 <Button 
+                   variant="outline" 
+                   size="sm" 
+                   onClick={() => setShowArchiveModal(true)}
+                   className="bg-red-50 hover:bg-red-100 text-red-600 border-red-100 rounded-xl h-10 px-4 flex items-center gap-2 font-semibold text-[11px] tracking-wide"
+                 >
+                   <Archive size={16} className="text-red-500" />
+                   Archive
+                 </Button>
             </div>
         </div>
 
@@ -751,10 +766,10 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                              <div className="space-y-6">
                                {selectedJob.primarySkills?.length > 0 && (
                                  <div>
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
                                       Primary Skills
-                                    </p>
+                                    </div>
                                     <div className="flex flex-wrap gap-2">
                                        {selectedJob.primarySkills.map(skill => (
                                           <Badge key={skill} className="bg-blue-600 text-white border-none px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-transform hover:scale-105 cursor-default">{skill}</Badge>
@@ -764,10 +779,10 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                                )}
                                {selectedJob.secondarySkills?.length > 0 && (
                                  <div>
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
                                       Secondary Skills
-                                    </p>
+                                    </div>
                                     <div className="flex flex-wrap gap-2">
                                        {selectedJob.secondarySkills.map(skill => (
                                           <Badge key={skill} className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-transform hover:scale-105 cursor-default">{skill}</Badge>
@@ -777,10 +792,10 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                                )}
                                {selectedJob.knowledgeOnly?.length > 0 && (
                                  <div>
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
                                       Knowledge Only
-                                    </p>
+                                    </div>
                                     <div className="flex flex-wrap gap-2">
                                        {selectedJob.knowledgeOnly.map(skill => (
                                           <Badge key={skill} variant="outline" className="text-gray-500 border-gray-200 dark:border-gray-700 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-transform hover:scale-105 cursor-default">{skill}</Badge>
@@ -874,6 +889,117 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    
+    {/* Archive Modal */}
+    <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>
+      <DialogContent className="max-w-[1000px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
+        <DialogHeader className="p-6 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+                <Archive size={20} />
+              </div>
+              Application Archive
+            </DialogTitle>
+          </div>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-gray-50/50 text-gray-500 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Role</th>
+                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Company</th>
+                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Applied on</th>
+                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Status</th>
+                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Last update</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {(() => {
+                  const mapStatusToStage = (status: string | null): string => {
+                    if (!status) return 'Applied';
+                    const s = status.toLowerCase();
+                    if (s.includes('applied') || s.includes('new') || s.includes('process')) return 'Applied';
+                    if (s === 'l1' || s === 'l2' || s.includes('review')) return 'In-Review';
+                    if (s.includes('interview') || s === 'l3' || s.includes('scheduled') || s.includes('final')) return 'Interview Stage';
+                    if (s.includes('hr')) return 'HR Round';
+                    if (s.includes('offer')) return 'Offer';
+                    if (s.includes('reject') || s.includes('screened') || s.includes('out')) return 'Screened Out';
+                    return 'Applied';
+                  };
 
+                  const archivedApplications = jobApplicationsData.filter(
+                    (app) => app.status === 'Withdrawn' || mapStatusToStage(app.status) === 'Screened Out' || app.status === 'Archived'
+                  );
+
+                  if (archivedApplications.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={5} className="py-20 text-center">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
+                              <Archive size={32} />
+                            </div>
+                            <p className="font-semibold text-gray-400 tracking-tight text-xs">No archived applications found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return archivedApplications.map((app) => (
+                    <tr key={app.id} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-red-50/50 flex items-center justify-center text-red-500 border border-red-100/50">
+                            <Briefcase size={14} />
+                          </div>
+                          <span className="font-semibold text-gray-900">{app.jobTitle}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 text-gray-500 font-medium">
+                          <Building2 size={14} className="text-gray-300" />
+                          {app.company}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 text-gray-400 font-medium text-[12px] tracking-tight">
+                          <LucideCalendar size={12} />
+                          {new Date(app.appliedDate).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <Badge className={`${app.status === 'Withdrawn' ? 'bg-amber-50 text-amber-600 border-amber-100' : app.status === 'Archived' ? 'bg-gray-50 text-gray-600 border-gray-100' : 'bg-red-50 text-red-600 border-red-100'} border-none rounded-lg px-3 py-1 text-[10px] font-semibold tracking-tight`}>
+                          {app.status === 'Withdrawn' ? 'Withdrawn' : app.status === 'Archived' ? 'Archived' : 'Rejected'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 text-gray-400 font-medium text-[12px] tracking-tight">
+                          <Clock size={12} />
+                          {new Date(app.appliedDate).toLocaleDateString()}
+                        </div>
+                      </td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div className="p-6 border-t bg-white flex justify-end">
+          <Button 
+            onClick={() => setShowArchiveModal(false)}
+            className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-semibold px-8"
+          >
+            Close Archive
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

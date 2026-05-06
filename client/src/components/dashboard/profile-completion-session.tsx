@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
-import { Progress } from "@/components/ui/progress";
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle, Lock, ArrowRight, Upload, Info } from 'lucide-react';
+import { CheckCircle2, Lock, ArrowRight, Upload } from 'lucide-react';
 import type { Profile } from '@shared/schema';
 
 interface ProfileCompletionSessionProps {
@@ -16,7 +15,9 @@ import { calculateProfileCompletion } from '@/lib/profile-utils';
 export default function ProfileCompletionSession({ profile, jobPreferences, onNavigateToProfile }: ProfileCompletionSessionProps) {
   if (!profile) return null;
 
-  const { percentage, missing } = calculateProfileCompletion(profile, jobPreferences);
+  const { percentage, sections, missing } = calculateProfileCompletion(profile, jobPreferences);
+  const neededForVisibility = Math.max(0, 50 - percentage);
+  const doneCount = sections.length - missing.length;
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-[2rem] p-8 mt-12 mb-10 border border-blue-100 dark:border-blue-800 shadow-sm overflow-hidden relative group">
@@ -29,6 +30,10 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
             <p className="text-gray-600 dark:text-gray-400 font-medium">
               Complete your profile to unlock all job opportunities and let recruiters find you.
             </p>
+            <div className="mt-3 flex items-baseline gap-2 justify-center md:justify-start">
+              <span className="text-4xl font-bold text-gray-900 dark:text-white">{percentage}%</span>
+              <span className="text-base font-medium text-amber-600">Need {neededForVisibility}% more</span>
+            </div>
           </div>
           
           <div className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-white dark:border-gray-700 min-w-[160px]">
@@ -37,15 +42,22 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-blue-100/50 dark:bg-gray-700 rounded-full h-3 mb-8 overflow-hidden">
+        <div className="w-full bg-blue-100/50 dark:bg-gray-700 rounded-full h-3 mb-3 overflow-hidden relative">
           <div 
             className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-1000 ease-out"
             style={{ width: `${percentage}%` }}
           ></div>
+          <div className="absolute -top-5 text-[10px] font-semibold text-gray-500" style={{ left: "50%" }}>
+            50%
+          </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3 mb-6 flex items-center gap-3">
+          <Lock size={16} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-900">Reach 50% and recruiters can find and contact you directly.</p>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-start justify-between gap-6">
           <div className="flex-1">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">What's missing:</h3>
             <div className="flex flex-wrap gap-2">
@@ -63,6 +75,16 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
                   <CheckCircle2 className="w-3 h-3 mr-1" /> All clear!
                 </Badge>
               )}
+            </div>
+
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2 max-w-xl">
+              <p className="text-[11px] text-amber-900 mb-1">
+                You need at least 50% profile completion to apply for jobs and share details.
+              </p>
+              <div className="rounded-md bg-green-100 px-2 py-1.5 flex items-center gap-2">
+                <Upload size={12} className="text-green-700" />
+                <span className="text-[11px] text-green-900">Done {doneCount}/{sections.length} sections</span>
+              </div>
             </div>
           </div>
           

@@ -10,7 +10,10 @@ import AddRequirementModal from '@/components/dashboard/modals/add-requirement-m
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import EditActiveJobModal from '@/components/dashboard/modals/edit-active-job-modal';
+import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
+import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -573,7 +576,54 @@ export default function TeamLeaderDashboard() {
               <p className="text-[11px] font-medium uppercase tracking-wide text-blue-500">Package</p>
               <p className="mt-1 font-medium text-slate-900">{job.salaryPackage || `${job.salaryMin ? job.salaryMin/100000 + 'L - ' : ''}${job.salaryMax ? job.salaryMax/100000 + 'L' : ''}`}</p>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Status</p>
+                <Select
+                  value={String(job.status || 'Active')}
+                  onValueChange={(value) => updateRecruiterJobMutation.mutate({ id: job.id, data: { status: value } })}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Hold">Hold</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Assign TA</p>
+                <Select
+                  value={job.assignedTaId || 'unassigned'}
+                  onValueChange={(value) => {
+                    if (value === 'unassigned') {
+                      updateRecruiterJobMutation.mutate({ id: job.id, data: { assignedTaId: null, assignedTaName: null } });
+                    } else {
+                      const member = (teamMembers || []).find((m: any) => String(m.id) === value);
+                      if (member) {
+                        updateRecruiterJobMutation.mutate({ id: job.id, data: { assignedTaId: value, assignedTaName: member.name } });
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Assign TA" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {chatTeamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+              <span className="text-[11px] text-slate-400 italic">
+                {job.assignedTaName ? `Assigned to: ${job.assignedTaName}` : 'No TA assigned'}
+              </span>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -634,6 +684,30 @@ export default function TeamLeaderDashboard() {
       toast({
         title: "Error",
         description: error.message || "Failed to assign Talent Advisor",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to update recruiter job status and assignment
+  const updateRecruiterJobMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest('PUT', `/api/recruiter/jobs/${id}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/sourcing/jobs', employee?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
+      toast({
+        title: "Success",
+        description: "Job updated successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update job",
         variant: "destructive",
       });
     },
@@ -846,7 +920,7 @@ export default function TeamLeaderDashboard() {
       if (!user || user.type !== 'employee') {
         toast({
           title: "Authentication Required",
-          description: "Please login to access Team Leader dashboard",
+          description: "Please login to access Delivery Workspace",
           variant: "destructive",
         });
         navigate('/employer-login');
@@ -880,7 +954,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex items-center justify-center h-screen">
         <div className="flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
-          <div className="text-lg text-gray-600">Loading...</div>
+          <div className="text-lg text-gray-600">Loading Delivery Workspace...</div>
         </div>
       </div>
     );
@@ -892,7 +966,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex items-center justify-center h-screen">
         <div className="flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
-          <div className="text-lg text-gray-600">Loading...</div>
+          <div className="text-lg text-gray-600">Loading Delivery Workspace...</div>
         </div>
       </div>
     );
@@ -903,11 +977,22 @@ export default function TeamLeaderDashboard() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
-          <div className="text-lg text-gray-600">Loading...</div>
+          <div className="text-lg text-gray-600">Loading Delivery Workspace...</div>
         </div>
       </div>
     );
   }
+
+  const renderNudgesContent = () => (
+    <div className="flex min-h-screen">
+      <div className="flex-1 ml-16 bg-gray-50">
+        <AdminTopHeader companyName="Delivery Workspace" hideHelpButton={true} />
+        <div className="h-[calc(100vh-64px)] overflow-y-auto">
+          <NudgesTab />
+        </div>
+      </div>
+    </div>
+  );
 
   const renderMainContent = () => {
     switch (sidebarTab) {
@@ -921,6 +1006,8 @@ export default function TeamLeaderDashboard() {
         return renderPerformanceContent();
       case 'chat':
         return renderChatContent();
+      case 'nudges':
+        return renderNudgesContent();
       default:
         return renderTeamContent();
     }
@@ -945,7 +1032,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            companyName="Scaling Theory" 
+            companyName="Delivery Workspace" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
           <div className="flex h-screen">
@@ -1089,6 +1176,9 @@ export default function TeamLeaderDashboard() {
                   </Card>
                 </div>
               </div>
+
+              {/* Nudge Escalation Table */}
+              <ActiveNudgesTable />
 
               {/* Target Section */}
               <Card className="bg-white border border-gray-200 shadow-sm">
@@ -2198,7 +2288,7 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex h-screen">
         <div className="flex-1 ml-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-          <AdminTopHeader companyName="StaffOS" />
+          <AdminTopHeader companyName="Delivery Workspace" />
           <div className="flex flex-col h-full p-6">
             <div className="flex items-center justify-between mb-6">
               <div>

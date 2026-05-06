@@ -8,8 +8,11 @@ import AddRequirementModal from '@/components/dashboard/modals/add-requirement-m
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
+import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
+import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchBar } from '@/components/ui/search-bar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight, Clock, Zap, AlertTriangle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -30,6 +33,49 @@ import { ChatDock } from '@/components/chat/chat-dock';
 import { ChatModal } from '@/components/chat/admin-chat-modal';
 import { useToast } from '@/hooks/use-toast';
 import { useEmployeeAuth } from '@/contexts/auth-context';
+
+// Helper function to calculate elapsed working hours
+function getElapsedWorkingHours(startDateStr: string | Date): number {
+  const startDate = new Date(startDateStr);
+  const endDate = new Date();
+  
+  if (startDate >= endDate) return 0;
+
+  let current = new Date(startDate);
+  let elapsedMs = 0;
+  
+  while (current < endDate) {
+    const day = current.getDay();
+    // Monday = 1, Friday = 5
+    if (day >= 1 && day <= 5) {
+      const startOfDay = new Date(current);
+      startOfDay.setHours(9, 30, 0, 0);
+      
+      const endOfDay = new Date(current);
+      endOfDay.setHours(18, 30, 0, 0);
+
+      const actualStart = current > startOfDay ? current : startOfDay;
+      const actualEnd = endDate < endOfDay ? endDate : endOfDay;
+
+      if (actualStart < actualEnd) {
+        elapsedMs += (actualEnd.getTime() - actualStart.getTime());
+      }
+    }
+    current.setDate(current.getDate() + 1);
+    current.setHours(0, 0, 0, 0);
+  }
+  
+  return elapsedMs / (1000 * 60 * 60);
+}
+
+function formatRemainingWorkingTime(elapsedHours: number, maxHours = 6): string {
+  if (elapsedHours >= maxHours) return "Escalated";
+  const remainingHours = maxHours - elapsedHours;
+  const hours = Math.floor(remainingHours);
+  const mins = Math.floor((remainingHours - hours) * 60);
+  if (hours === 0 && mins === 0) return "Escalated";
+  return `${hours} hrs ${mins} mins`;
+}
 
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
@@ -44,6 +90,10 @@ export default function RecruiterDashboard2() {
   };
 
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
+  const [updateModalNudge, setUpdateModalNudge] = useState<any>(null);
+  const [updateDropdown1, setUpdateDropdown1] = useState("");
+  const [updateDropdown2, setUpdateDropdown2] = useState("");
+  const [localUpdatedNudges, setLocalUpdatedNudges] = useState<Set<string>>(new Set());
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedChatRoom, setSelectedChatRoom] = useState<string | null>(null);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
@@ -270,9 +320,9 @@ export default function RecruiterDashboard2() {
 
   // Mutation for updating application status
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status, statusNote, rejectionReason }: { id: string; status: string; statusNote?: string; rejectionReason?: string }) => {
       setUpdatingApplicantId(id);
-      const response = await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status });
+      const response = await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status, statusNote, rejectionReason });
       const responseData = await response.json();
       return { id, status, application: responseData.application };
     },
@@ -672,7 +722,33 @@ export default function RecruiterDashboard2() {
 
   // Status options for dropdowns
   const statuses = ['In-Process', 'Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Closure', 'Screened Out'];
-  const rejectionReasons = ['Skill mismatch', 'Lack of communication', 'Inadequate experience', 'Unprofessional behavior', 'Other'];
+  const rejectionReasons = [
+    'Skills not aligned',
+    'Experience mismatch',
+    'Interview performance below expectations',
+    'Role / tech stack mismatch',
+    'Cultural fit concerns',
+    'Compensation not aligned',
+    'Notice period / availability issue',
+    'Location constraint',
+    'Stronger candidate selected',
+    'Role closed / on hold',
+    'Other (please specify)'
+  ];
+
+  const rejectionMessages: Record<string, string> = {
+    'Skills not aligned': 'Thank you for your time and interest. At this stage, we are proceeding with candidates whose skills more closely match the role requirements.',
+    'Experience mismatch': 'Thank you for your interest. We are currently moving forward with candidates whose experience aligns more closely with this role.',
+    'Interview performance below expectations': 'Thank you for taking the time to interview. We will not be moving forward at this stage as we are looking for a closer alignment with the role requirements.',
+    'Role / tech stack mismatch': 'Thank you for your time. This role requires specific experience in certain technologies, and we are prioritizing candidates with that alignment.',
+    'Cultural fit concerns': 'Thank you for your time during the process. We are proceeding with candidates who more closely align with the team’s working style and requirements.',
+    'Compensation not aligned': 'Thank you for your interest. At this stage, we are unable to align on the compensation expectations for this role.',
+    'Notice period / availability issue': 'Thank you for your time. The role requires a joining timeline that we are unable to align on currently.',
+    'Location constraint': 'Thank you for your interest. This role requires a specific location or work setup, and we are proceeding with candidates aligned to that requirement.',
+    'Stronger candidate selected': 'Thank you for your interest. We had a competitive pool of candidates and have decided to move forward with another profile at this time.',
+    'Role closed / on hold': 'Thank you for your time and interest. The position has been put on hold for now. We will reach out if it reopens.',
+    'Other (please specify)': 'Thank you for your time and interest. We will not be moving forward at this stage. We truly appreciate your effort and wish you the very best ahead.'
+  };
 
   // Transform API applications to applicant data format for the UI
   const applicantData = useMemo(() => {
@@ -734,15 +810,30 @@ export default function RecruiterDashboard2() {
         rating: 4.0,
         resumeFile: app.resumeFile || null,
         profileId: app.profileId || null,
-        appliedDate: app.appliedDate || null
+        appliedDate: app.appliedDate || null,
+        statusNote: app.statusNote || null,
+        rejectionReason: app.rejectionReason || null
       };
     });
   }, [allApplications]);
 
   // Track local changes to applicant statuses
   const [applicantStatusOverrides, setApplicantStatusOverrides] = useState<{ [key: string]: string }>({});
+  const [rejectedStageOverrides, setRejectedStageOverrides] = useState<{ [key: string]: string }>({});
+  const [rejectedAtOverrides, setRejectedAtOverrides] = useState<{ [key: string]: string }>({});
+  const [autoArchivedIds, setAutoArchivedIds] = useState<Set<string>>(new Set());
   // Track which applicant is currently being updated for loading state
   const [updatingApplicantId, setUpdatingApplicantId] = useState<string | null>(null);
+
+  const parseRejectedMeta = (statusNote?: string | null) => {
+    const note = statusNote || "";
+    const stageMatch = note.match(/\[\[REJECT_STAGE:([^\]]+)\]\]/);
+    const atMatch = note.match(/\[\[REJECTED_AT:([^\]]+)\]\]/);
+    return {
+      rejectedFromStage: stageMatch ? stageMatch[1] : null,
+      rejectedAt: atMatch ? atMatch[1] : null,
+    };
+  };
 
   // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
   const getPipelineCandidatesByStage = useMemo(() => {
@@ -750,8 +841,7 @@ export default function RecruiterDashboard2() {
       ...a,
       currentStatus: applicantStatusOverrides[a.id] || a.currentStatus
     })).filter(a =>
-      applicantStatusOverrides[a.id] !== 'Archived' &&
-      applicantStatusOverrides[a.id] !== 'Screened Out'
+      applicantStatusOverrides[a.id] !== 'Archived'
     );
 
     // Filter by pipelineDate if set
@@ -815,7 +905,13 @@ export default function RecruiterDashboard2() {
 
     const getCandidatesForStage = (stage: string) => {
       const statusesToMatch = stageMapping[stage] || [];
-      return effectiveApplicants.filter(a => statusesToMatch.includes(a.currentStatus));
+      return effectiveApplicants.filter((a: any) => {
+        if (statusesToMatch.includes(a.currentStatus)) return true;
+        if (a.currentStatus !== 'Screened Out' && a.currentStatus !== 'Rejected') return false;
+        const meta = parseRejectedMeta(a.statusNote);
+        const previousStage = meta.rejectedFromStage || rejectedStageOverrides[a.id];
+        return !!previousStage && statusesToMatch.includes(previousStage);
+      });
     };
 
     return {
@@ -832,7 +928,33 @@ export default function RecruiterDashboard2() {
       closure: getCandidatesForStage('Closure'),
       offerDrop: getCandidatesForStage('Offer Drop')
     };
-  }, [applicantData, applicantStatusOverrides, pipelineDate]);
+  }, [applicantData, applicantStatusOverrides, pipelineDate, rejectedStageOverrides]);
+
+  useEffect(() => {
+    const now = Date.now();
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+
+    applicantData.forEach((candidate: any) => {
+      const effectiveStatus = applicantStatusOverrides[candidate.id] || candidate.currentStatus;
+      if (effectiveStatus !== 'Screened Out' && effectiveStatus !== 'Rejected') return;
+      if (autoArchivedIds.has(candidate.id)) return;
+
+      const meta = parseRejectedMeta(candidate.statusNote);
+      const rejectedAtIso = meta.rejectedAt || rejectedAtOverrides[candidate.id];
+      if (!rejectedAtIso) return;
+      const rejectedAtTs = new Date(rejectedAtIso).getTime();
+      if (Number.isNaN(rejectedAtTs)) return;
+
+      if (now - rejectedAtTs >= twentyFourHoursMs) {
+        setApplicantStatusOverrides(prev => ({ ...prev, [candidate.id]: 'Archived' }));
+        setAutoArchivedIds(prev => new Set(prev).add(candidate.id));
+        updateStatusMutation.mutate({
+          id: candidate.id,
+          status: 'Archived'
+        });
+      }
+    });
+  }, [applicantData, applicantStatusOverrides, autoArchivedIds, rejectedAtOverrides, updateStatusMutation]);
 
   // Handle clicking on a pipeline candidate
   const handlePipelineCandidateClick = (candidate: any) => {
@@ -915,25 +1037,36 @@ export default function RecruiterDashboard2() {
   // Archive candidate when screened out
   const archiveCandidate = () => {
     if (selectedCandidate) {
-      // Use otherReasonText if "Other" is selected, otherwise use reason
-      const finalReason = reason === 'Other' && otherReasonText.trim()
-        ? `Other: ${otherReasonText.trim()}`
-        : reason;
-
-      // Store reason in console for now (can be added to API later)
-      if (finalReason) {
-        console.log('Archive reason:', finalReason);
-      }
+      // Get the message based on the selected reason
+      const message = rejectionMessages[reason] || rejectionMessages['Other (please specify)'];
+      
+      // If "Other" is specified, use the custom text as the status note (or append it)
+      const finalNoteBase = reason === 'Other (please specify)' && otherReasonText.trim()
+        ? otherReasonText.trim()
+        : message;
+      const finalNote = `${finalNoteBase}\n\n[[REJECT_STAGE:${selectedCandidate.currentStatus || 'In-Process'}]] [[REJECTED_AT:${new Date().toISOString()}]]`;
 
       setApplicantStatusOverrides(prev => ({
         ...prev,
-        [selectedCandidate.id]: 'Archived'
+        [selectedCandidate.id]: 'Screened Out'
       }));
-      // Persist the archived status
+      setRejectedStageOverrides(prev => ({
+        ...prev,
+        [selectedCandidate.id]: selectedCandidate.currentStatus || 'In-Process'
+      }));
+      setRejectedAtOverrides(prev => ({
+        ...prev,
+        [selectedCandidate.id]: new Date().toISOString()
+      }));
+
+      // Persist the archived status with the message/note
       updateStatusMutation.mutate({
         id: selectedCandidate.id,
-        status: 'Screened Out'
+        status: 'Screened Out',
+        statusNote: finalNote,
+        rejectionReason: reason
       });
+
       setIsReasonModalOpen(false);
       setSelectedCandidate(null);
       setReason('');
@@ -1116,6 +1249,32 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/performance-summary'],
   });
 
+  const { data: realNudges = [], isLoading: isLoadingNudges } = useQuery<any[]>({
+    queryKey: ['/api/nudges'],
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  const respondMutation = useMutation({
+    mutationFn: async ({ id, message }: { id: string, message: string }) => {
+      const res = await apiRequest('POST', `/api/nudges/${id}/respond`, { message });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/nudges'] });
+      toast({
+        title: "Nudge updated",
+        description: "Successfully marked as contacted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update nudge.",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Filter out reassigned requirements for counts
   const activeRequirements = useMemo(() => {
     return recruiterRequirements.filter((req: any) => req.assignmentStatus !== "reassigned");
@@ -1192,11 +1351,22 @@ export default function RecruiterDashboard2() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
-          <div className="text-lg text-gray-600">Loading Recruiter Dashboard...</div>
+          <div className="text-lg text-gray-600">Loading Advisory Workspace...</div>
         </div>
       </div>
     );
   }
+
+  const renderNudgesContent = () => (
+    <div className="flex min-h-screen">
+      <div className="flex-1 ml-16 bg-gray-50 dark:bg-gray-950">
+        <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
+        <div className="h-[calc(100vh-64px)] overflow-y-auto">
+          <NudgesTab />
+        </div>
+      </div>
+    </div>
+  );
 
   const renderMainContent = () => {
     switch (sidebarTab) {
@@ -1210,20 +1380,44 @@ export default function RecruiterDashboard2() {
         return renderPerformanceContent();
       case 'chat':
         return renderChatContent();
+      case 'nudges':
+        return renderNudgesContent();
       default:
         return renderRecruiterContent();
     }
   };
+
+  const handleUpdateNudgeConfirm = () => {
+    if (!updateModalNudge || !updateDropdown1 || !updateDropdown2) {
+      toast({ title: "Error", description: "Please select both options to update the candidate.", variant: "destructive" });
+      return;
+    }
+    
+    const message = `${updateDropdown1} ${updateDropdown2}`;
+    
+    // Fire API call
+    respondMutation.mutate({ id: updateModalNudge.id, message });
+    
+    // Optimistic UI update
+    setLocalUpdatedNudges(prev => new Set(prev).add(updateModalNudge.id));
+    
+    setUpdateModalNudge(null);
+    setUpdateDropdown1("");
+    setUpdateDropdown2("");
+  };
+
+  const renderNudgesSession = () => <ActiveNudgesTable />;
+
 
   const renderRecruiterContent = () => {
 
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
+          <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
-            <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
+            <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full scrollbar-hide">
 
               {/* Success Alert */}
               {showSuccessAlert && (
@@ -1231,6 +1425,9 @@ export default function RecruiterDashboard2() {
                   {successMessage || 'Operation completed successfully!'}
                 </div>
               )}
+
+              {/* Nudges Session */}
+              {renderNudgesSession()}
 
               {/* Applicant Overview Table */}
               <Card className="bg-white border border-gray-200">
@@ -1300,7 +1497,7 @@ export default function RecruiterDashboard2() {
                       </div>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto scrollbar-hide">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200">
@@ -1385,7 +1582,7 @@ export default function RecruiterDashboard2() {
                   </button>
                 </CardHeader>
                 <CardContent className="p-6 pt-0">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200">
@@ -1579,7 +1776,8 @@ export default function RecruiterDashboard2() {
               {/* Bottom Row - Pending Meetings and Message Status */}
               <div className="grid grid-cols-2 gap-6">
                 {/* Pending Meetings */}
-                <Card className="bg-white border border-gray-200">
+                <Card className={`bg-white border border-gray-200 transition-all duration-300 ${pendingMeetingsData.length === 0 ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                     <CardTitle className="text-lg font-semibold text-gray-900">Pending Meetings</CardTitle>
                     {pendingMeetingsData.length > 3 && (
@@ -1605,7 +1803,8 @@ export default function RecruiterDashboard2() {
                 </Card>
 
                 {/* Message Status */}
-                <Card className="bg-white border border-gray-200">
+                <Card className={`bg-white border border-gray-200 transition-all duration-300 ${ceoCommandsData.length === 0 ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                     <CardTitle className="text-lg font-semibold text-gray-900">Message Status</CardTitle>
                     {ceoCommandsData.length > 2 && (
@@ -1760,7 +1959,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
+          <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden px-6 py-6">
@@ -1801,7 +2000,7 @@ export default function RecruiterDashboard2() {
               <div className="flex-1 overflow-y-auto">
                 <Card className="bg-white border border-gray-200">
                   <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto scrollbar-hide">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gray-50 border-b border-gray-200">
@@ -2247,25 +2446,56 @@ export default function RecruiterDashboard2() {
     if (!dateString || dateString === 'N/A') return 'N/A';
     try {
       let date: Date;
-      if (typeof dateString === 'string' && dateString.includes('-')) {
-        const [day, month, year] = dateString.split('-');
-        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      if (typeof dateString === 'string') {
+        // Handle ISO format
+        if (dateString.includes('T') || dateString.endsWith('Z')) {
+          date = new Date(dateString);
+        } 
+        // Handle DD-MM-YYYY or YYYY-MM-DD
+        else if (dateString.includes('-')) {
+          const parts = dateString.split('-');
+          if (parts.length === 3) {
+            if (parts[0].length === 4) { // YYYY-MM-DD
+               const [year, month, day] = parts;
+               date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            } else { // DD-MM-YYYY
+               const [day, month, year] = parts;
+               date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            }
+          } else {
+            date = new Date(dateString);
+          }
+        } else {
+          date = new Date(dateString);
+        }
       } else {
-        date = new Date(dateString);
+        date = new Date(dateString as any);
       }
       
+      // Validate date
+      if (isNaN(date.getTime())) return 'N/A';
+      
       const now = new Date();
-      const diffTime = Math.abs(now.getTime() - date.getTime());
+      now.setHours(0, 0, 0, 0);
+      const compareDate = new Date(date);
+      compareDate.setHours(0, 0, 0, 0);
+      
+      const diffTime = now.getTime() - compareDate.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       
-      if (diffDays === 0) return '0 days ago';
+      // Handle future dates or today
+      if (diffDays <= 0) return '0 days ago';
       if (diffDays === 1) return '01 day ago';
+      
       const paddedDays = diffDays < 10 ? `0${diffDays}` : diffDays.toString();
       return `${paddedDays} days ago`;
     } catch {
       return 'N/A';
     }
   };
+
+
 
   // Pipeline stages with display names
   const pipelineStages = [
@@ -2285,7 +2515,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
+          <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -2353,14 +2583,30 @@ export default function RecruiterDashboard2() {
                                 const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt || candidate.createdAt);
                                 const roleApplied = candidate.roleApplied || candidate.jobTitle || 'N/A';
                                 const company = candidate.company || 'N/A';
+                                const effectiveStatus = applicantStatusOverrides[candidate.id] || candidate.currentStatus || candidate.status || '';
+                                const isRejectedCandidate =
+                                  effectiveStatus === 'Screened Out' || effectiveStatus === 'Rejected';
                                 
                                 return (
                                   <div
                                     key={candidate.id || index}
                                     onClick={() => handlePipelineCandidateClick(candidate)}
-                                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
+                                    className={`bg-white dark:bg-gray-800 border rounded p-1.5 cursor-pointer hover:shadow-sm transition-all relative ${
+                                      isRejectedCandidate
+                                        ? 'border-red-400 dark:border-red-500 ring-1 ring-red-300/60'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                                    }`}
                                     data-testid={`candidate-${stage.key}-${index}`}
                                   >
+                                    {isRejectedCandidate && (
+                                      <div className="absolute top-1 right-1 flex items-center justify-center">
+                                        <span className="absolute inline-flex h-4 w-4 rounded-full bg-red-400 opacity-75 animate-ping"></span>
+                                        <span className="relative inline-flex h-4 w-4 rounded-full bg-red-100 items-center justify-center">
+                                          <AlertTriangle className="w-2.5 h-2.5 text-red-600" />
+                                        </span>
+                                      </div>
+                                    )}
+
                                     {/* Card Content */}
                                     <div className="flex items-start gap-1.5">
                                       {/* Avatar - Very Small */}
@@ -2392,6 +2638,7 @@ export default function RecruiterDashboard2() {
                                         {daysAgo}
                                       </p>
                                     </div>
+
                                   </div>
                                 );
                               })
@@ -2621,7 +2868,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50 dark:bg-gray-950">
-          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
+          <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
           <div className="flex h-[calc(100vh-64px)]">
             {/* Main Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -2723,7 +2970,7 @@ export default function RecruiterDashboard2() {
                 </div>
 
                 {/* Table Content */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto scrollbar-hide">
                   {isLoadingClosureReports ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
@@ -2887,7 +3134,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex h-screen">
         <div className="flex-1 ml-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
+          <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
           <div className="flex flex-col h-full p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -2985,7 +3232,7 @@ export default function RecruiterDashboard2() {
           </DialogHeader>
           <div className="space-y-4">
             {aggregatedTargets?.allQuarters && aggregatedTargets.allQuarters.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scrollbar-hide">
                 <table className="w-full border-collapse bg-white rounded border border-gray-200">
                   <thead>
                     <tr className="bg-gray-100">
@@ -3247,7 +3494,7 @@ export default function RecruiterDashboard2() {
           <DialogHeader>
             <DialogTitle>Today's Scheduled Interviews</DialogTitle>
           </DialogHeader>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-hide">
             {getTodaysInterviews.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No interviews scheduled for today
@@ -3306,7 +3553,7 @@ export default function RecruiterDashboard2() {
           <DialogHeader>
             <DialogTitle>Pending Interview Cases</DialogTitle>
           </DialogHeader>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-hide">
             {getPendingInterviews.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No pending interview cases
@@ -3399,7 +3646,7 @@ export default function RecruiterDashboard2() {
               <Label htmlFor="reason">Reason</Label>
               <Select value={reason} onValueChange={(value) => {
                 setReason(value);
-                if (value !== 'Other') {
+                if (value !== 'Other (please specify)') {
                   setOtherReasonText('');
                 }
               }}>
@@ -3413,7 +3660,7 @@ export default function RecruiterDashboard2() {
                 </SelectContent>
               </Select>
             </div>
-            {reason === 'Other' && (
+            {reason === 'Other (please specify)' && (
               <div>
                 <Label htmlFor="other-reason">Please specify the reason</Label>
                 <Textarea
@@ -3435,7 +3682,7 @@ export default function RecruiterDashboard2() {
               <Button
                 onClick={archiveCandidate}
                 className="bg-red-600 hover:bg-red-700"
-                disabled={reason === 'Other' && !otherReasonText.trim()}
+                disabled={!reason || (reason === 'Other (please specify)' && !otherReasonText.trim())}
               >
                 Archive Candidate
               </Button>

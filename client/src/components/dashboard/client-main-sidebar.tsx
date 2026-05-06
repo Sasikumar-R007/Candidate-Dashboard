@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Briefcase, FileText, GitBranch, MessageCircle, ChevronRight, LogOut, HelpCircle } from "lucide-react";
+import { Briefcase, FileText, GitBranch, MessageCircle, ChevronRight, LogOut, HelpCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -23,10 +23,11 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
   const { logout } = useAuth();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Briefcase },
+    { id: 'dashboard', label: 'Client Workspace', icon: Briefcase },
     { id: 'requirements', label: 'Pipeline', icon: GitBranch },
     { id: 'reports', label: 'Reports', icon: FileText },
-    { id: 'chat', label: 'Chat System', icon: MessageCircle }
+    { id: 'chat', label: 'Chat System', icon: MessageCircle },
+    { id: 'nudges', label: 'Nudges', icon: Zap }
   ];
 
   // Logout mutation for employees (clients)
@@ -202,7 +203,7 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-slate-700">
-            <h2 className="text-lg font-semibold">Client Menu</h2>
+            <h2 className="text-lg font-semibold">Client Workspace</h2>
             <button
               onClick={() => setIsExpanded(false)}
               className="text-slate-400 hover:text-white transition-colors"

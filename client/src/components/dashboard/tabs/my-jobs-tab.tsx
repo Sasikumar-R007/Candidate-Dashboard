@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,18 +10,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, MapPin, Flame, Eye, Archive } from 'lucide-react';
+import { MoreHorizontal, MapPin, Flame, Eye, Archive, Zap, Clock, ChevronDown, ChevronUp, Ban, Send, MessageCircle, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useJobApplications, useApplyJob } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile, useJobPreferences } from "@/hooks/use-profile";
 import type { JobApplication } from '@shared/schema';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import CandidateMetrics from '@/components/dashboard/candidate-metrics';
 import ProfileStrength from '@/components/dashboard/profile-strength';
 import SuggestionJobCard from '@/components/dashboard/suggestion-job-card';
 import ProfileCompletionSession from '@/components/dashboard/profile-completion-session';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import { useAuth } from '@/hooks/use-auth';
+import { motion, AnimatePresence } from 'framer-motion';
+import { NudgeIcon } from '@/components/ui/nudge-icon';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 // Helper function to calculate days ago from a date
 function calculateDaysAgo(date: Date | string): string {
@@ -60,6 +71,57 @@ interface MyJobsTabProps {
   onOpenSupport?: () => void;
 }
 
+const PIPELINE_STAGES = [
+  'Applied',
+  'In-Review',
+  'Interview Stage',
+  'HR Round',
+  'Offer',
+  'Screened Out'
+];
+
+const mapStatusToStage = (status: string | null): string => {
+  if (!status) return 'Applied';
+  const s = status.toLowerCase();
+  // "In Process" and "Applied" should both map to "Applied" stage for recent applications
+  if (s.includes('applied') || s.includes('new') || s.includes('process')) return 'Applied';
+  if (s === 'l1' || s === 'l2' || s.includes('review')) return 'In-Review';
+  if (s.includes('interview') || s === 'l3' || s.includes('scheduled') || s.includes('final')) return 'Interview Stage';
+  if (s.includes('hr')) return 'HR Round';
+  if (s.includes('offer')) return 'Offer';
+  if (s.includes('reject') || s.includes('screened') || s.includes('out')) return 'Screened Out';
+  return 'Applied';
+};
+
+function calculateTimeRemaining(lastNudgedAt: Date | string | null, status: string): string | null {
+  if (!lastNudgedAt) return null;
+  const lastNudge = new Date(lastNudgedAt);
+  const now = new Date();
+  const diff = now.getTime() - lastNudge.getTime();
+  
+  let cooldownHours = 48; // Default
+  const statusStr = status.toLowerCase();
+  
+  if (statusStr.includes('screened out') || statusStr.includes('rejected')) {
+    return null; // Don't show cooldown if screened out
+  } else if (statusStr.includes('offer')) {
+    cooldownHours = 3;
+  } else if (statusStr.includes('interview') || statusStr.includes('hr round')) {
+    cooldownHours = 24;
+  } else if (statusStr.includes('applied') || statusStr.includes('review') || statusStr.includes('in process')) {
+    cooldownHours = 48;
+  }
+  
+  const cooldown = cooldownHours * 60 * 60 * 1000;
+  
+  if (diff >= cooldown) return null;
+  
+  const remaining = cooldown - diff;
+  const hours = Math.floor(remaining / (1000 * 60 * 60));
+  const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  return `${hours}h ${minutes}m`;
+}
+
 interface JobSuggestion {
   id: string;
   company: string;
@@ -94,11 +156,78 @@ export default function MyJobsTab({
   const [selectedApplication, setSelectedApplication] = useState<JobApplication | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [withdrawApp, setWithdrawApp] = useState<JobApplication | null>(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawReason, setWithdrawReason] = useState<string>("");
   const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
   const [pendingApplyJob, setPendingApplyJob] = useState<JobSuggestion | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  const [isMetricsExpanded, setIsMetricsExpanded] = useState(true);
+  const [showWithdrawSuccess, setShowWithdrawSuccess] = useState(false);
+  const [withdrawText, setWithdrawText] = useState("");
   const jobsPerPage = 3;
   
   const { data: jobApplications = [], isLoading } = useJobApplications();
+  const { data: candidateNudges = [] } = useQuery<any[]>({
+    queryKey: ['/api/candidate/nudges'],
+  });
+  const [showAllNudgesDialog, setShowAllNudgesDialog] = useState(false);
+
+  const withdrawMutation = useMutation({
+    mutationFn: async ({ id, reason, note }: { id: string; reason: string; note?: string }) => {
+      // Use the existing status update endpoint but set status to Withdrawn
+      const res = await apiRequest("PATCH", `/api/job-applications/${id}/status`, { 
+        status: "Withdrawn",
+        statusNote: note || reason,
+        rejectionReason: reason
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/job-applications'] });
+      setShowWithdrawSuccess(true);
+      // Success state is shown in the modal now
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to withdraw application",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/job-applications/${id}/status`, { 
+        status: "Archived"
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/job-applications'] });
+      toast({
+        title: "Job archived",
+        description: "Application has been moved to archive.",
+      });
+      setExpandedJobId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive application",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const confirmWithdraw = async () => {
+    if (!withdrawApp || !withdrawReason) return;
+    const finalReason = withdrawReason === "Others (please specify)" ? withdrawText : withdrawReason;
+    await withdrawMutation.mutateAsync({ id: withdrawApp.id, reason: finalReason });
+  };
+
   const applyJobMutation = useApplyJob();
   const { data: savedJobsData } = useSavedJobs();
   const saveJobMutation = useSaveJob();
@@ -107,9 +236,42 @@ export default function MyJobsTab({
   const { data: profile } = useProfile();
   const { data: jobPreferences } = useJobPreferences();
 
+  const markAsReadMutation = useMutation({
+    mutationFn: async (nudgeId: string) => {
+      await apiRequest('PATCH', `/api/candidate/nudges/${nudgeId}/read`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/candidate/nudges'] });
+    }
+  });
+
+  const handleToggleExpand = (jobId: string) => {
+    const isExpanding = expandedJobId !== jobId;
+    setExpandedJobId(isExpanding ? jobId : null);
+
+    if (isExpanding) {
+      // Find unread nudges for this job and mark them as read
+      const jobNudges = candidateNudges.filter(n => n.applicationId === jobId && (n.isResponded || n.message) && !n.isRead);
+      jobNudges.forEach(n => markAsReadMutation.mutate(n.id));
+    }
+  };
+
   const { data: recruiterJobs = [] } = useQuery<any[]>({
     queryKey: ['/api/jobs'],
   });
+
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60000); // Force re-render every minute for timers
+    return () => clearInterval(interval);
+  }, []);
+
+  const timeRemainingMap = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    jobApplications.forEach(app => {
+      map[app.id] = calculateTimeRemaining(app.lastNudgedAt, app.status);
+    });
+    return map;
+  }, [jobApplications, tick]);
 
   // Create a Set of applied jobs for fast lookup
   const appliedJobs = new Set(
@@ -119,17 +281,23 @@ export default function MyJobsTab({
   // STRICT JOB MATCHING LOGIC
   const candidateSkills = profile?.skills?.split(',').map(s => s.trim().toLowerCase()) || [];
   
-  const jobSuggestions: JobSuggestion[] = recruiterJobs
+  const matchedSuggestions = recruiterJobs
     .filter(job => !appliedJobs.has(`${job.role}-${job.companyName}`))
     .filter(job => {
-      // If candidate has no skills yet, show nothing or all depending on policy
+      // If candidate has no skills yet, show nothing for strict matching
       if (candidateSkills.length === 0) return false;
       
       const jobSkills = (job.primarySkills || "").toLowerCase().split(',').map((s: string) => s.trim());
-      // Match if at least 40% of candidate skills match job skills
       const matches = candidateSkills.filter(s => jobSkills.some(js => js.includes(s) || s.includes(js)));
       return matches.length > 0;
-    })
+    });
+
+  // Fallback to all jobs if no matches found
+  const rawSuggestions = matchedSuggestions.length > 0 
+    ? matchedSuggestions 
+    : recruiterJobs.filter(job => !appliedJobs.has(`${job.role}-${job.companyName}`));
+
+  const jobSuggestions: JobSuggestion[] = rawSuggestions
     .map((job, index) => {
       const backgroundColors = ['bg-blue-50', 'bg-green-50', 'bg-red-50', 'bg-purple-50', 'bg-yellow-50'];
       const borderColors = ['bg-blue-200', 'bg-green-200', 'bg-red-200', 'bg-purple-200', 'bg-yellow-200'];
@@ -182,11 +350,7 @@ export default function MyJobsTab({
   };
 
   const handleArchiveJob = (job: JobApplication) => {
-    // TODO: Implement archive functionality with API
-    toast({
-      title: "Job archived",
-      description: `${job.jobTitle} at ${job.company} has been archived.`,
-    });
+    archiveMutation.mutate(job.id);
   };
 
   const handleSeeAllJobs = () => {
@@ -275,6 +439,30 @@ export default function MyJobsTab({
     }
   };
 
+  const handleNudge = async (application: JobApplication) => {
+    try {
+      await apiRequest('POST', `/api/applications/${application.id}/nudge`, {});
+      
+      toast({
+        title: "Nudge Sent!",
+        description: `We've sent a pinch to the recruiter for ${application.jobTitle}.`,
+      });
+      
+      // Refresh applications to update lastNudgedAt
+      queryClient.invalidateQueries({ queryKey: ['/api/job-applications'] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send nudge",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleWithdraw = (application: any) => {
+    setWithdrawApp(application);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-12">
@@ -289,99 +477,326 @@ export default function MyJobsTab({
     <div className={`flex h-full overflow-hidden ${className || ''}`}>
       {/* Main Content Area - Applied Jobs and Job Suggestions (Scrollable) */}
       <div className="flex-1 min-w-0 overflow-y-auto bg-gray-50 font-poppins">
-        <div className="p-6 space-y-6 max-w-full">
-          {/* Applied Jobs Section */}
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Applied Jobs</h2>
-          
-          <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-bold text-gray-800">Role</th>
-                <th className="text-left py-3 px-4 font-bold text-gray-800">Company</th>
-                <th className="text-left py-3 px-4 font-bold text-gray-800">Type</th>
-                <th className="text-left py-3 px-4 font-bold text-gray-800">Status</th>
-                <th className="text-left py-3 px-4 font-bold text-gray-800">Applied On</th>
-                <th className="text-left py-3 px-4 font-bold text-gray-800">Applied Since</th>
-                <th className="w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobApplications
-                .slice(0, showAllJobs ? undefined : 5)
-                .map((job: JobApplication) => (
-                <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-4 font-medium text-gray-900">{job.jobTitle}</td>
-                  <td className="py-4 px-4 text-gray-700">{job.company}</td>
-                  <td className="py-4 px-4 text-gray-700">{job.jobType || 'Full-Time'}</td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                      job.status === 'Rejected' 
-                        ? 'bg-red-100 text-red-800' 
-                        : job.status === 'In Process' || job.status === 'Applied'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        job.status === 'Rejected' 
-                          ? 'bg-red-500' 
-                          : job.status === 'In Process' || job.status === 'Applied'
-                          ? 'bg-blue-500'
-                          : 'bg-green-500'
-                      }`}></span>
-                      {job.status || 'In Process'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-gray-700">{formatDate(job.appliedDate)}</td>
-                  <td className="py-4 px-4 text-gray-600">{formatDate(job.appliedDate)}</td>
-                  <td className="py-4 px-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" data-testid={`button-menu-${job.id}`}>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewJob(job)} data-testid={`menu-view-${job.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Job
-                        </DropdownMenuItem>
-                        {job.status === 'Rejected' && (
-                          <DropdownMenuItem onClick={() => handleArchiveJob(job)} data-testid={`menu-archive-${job.id}`}>
-                            <Archive className="mr-2 h-4 w-4" />
-                            Archive
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="p-4 space-y-4 max-w-full">
+          {/* Applied Jobs Section - Pipeline Layout */}
+          <div className="bg-white rounded-md p-4 shadow-sm relative border border-gray-100">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Applied Jobs</h2>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto pb-6 min-h-[400px] custom-scrollbar">
+              {PIPELINE_STAGES.map((stage) => {
+                const stageApplications = jobApplications.filter(app => mapStatusToStage(app.status) === stage);
+                
+                return (
+                  <div key={stage} className="flex-shrink-0 w-[250px]">
+                    <div className="flex items-center justify-between mb-4 px-2">
+                      <h3 className="font-bold text-gray-700 text-[12px] flex items-center gap-2">
+                        {stage}
+                        <span className="bg-green-100 text-green-700 px-1.5 py-0 rounded-full text-[9px]">
+                          {stageApplications.length}
+                        </span>
+                      </h3>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {stageApplications.map((job) => {
+                        const isExpanded = expandedJobId === job.id;
+                        const timeRemaining = timeRemainingMap[job.id];
+                        const isNudgeDisabled = !!timeRemaining;
 
-        {jobApplications.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            No job applications found. Start applying to jobs to see them here.
-          </div>
-        )}
+                        return (
+                          <div 
+                            key={job.id} 
+                            className={`relative transition-all duration-300 ${isExpanded ? 'z-10' : 'z-0'}`}
+                          >
+                            {/* Backdrop blur when expanded */}
+                            {isExpanded && (
+                              <div 
+                                className="fixed inset-0 bg-black/10 backdrop-blur-[3px] z-[-1]"
+                                onClick={() => setExpandedJobId(null)}
+                              />
+                            )}
 
-        {/* View More button for Applied Jobs */}
-        {jobApplications.length > 5 && !showAllJobs && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <Button 
-              variant="link" 
-              className="text-blue-600 hover:text-blue-700 p-0 font-normal"
-              onClick={() => setShowAllJobs(true)}
-              data-testid="button-see-all-applied"
-            >
-            View More
-            </Button>
+                            <motion.div
+                              layout
+                              initial={false}
+                              animate={{ 
+                                scale: 1,
+                                width: '100%',
+                                x: 0,
+                                boxShadow: isExpanded ? '0 25px 50px -12px rgb(0 0 0 / 0.15)' : '0 1px 3px 0 rgb(0 0 0 / 0.1)'
+                              }}
+                              transition={{ duration: 0.15, ease: "easeOut" }}
+                              className={`border cursor-pointer transition-all duration-200 ${
+                                isExpanded ? 'border-indigo-400 ring-2 ring-indigo-100 z-10' : 'border-gray-200 hover:border-indigo-200'
+                              } ${
+                                stage === 'Applied' ? 'bg-blue-50/50' :
+                                stage === 'In-Review' ? 'bg-amber-50/50' :
+                                stage === 'Interview Stage' ? 'bg-purple-50/50' :
+                                stage === 'HR Round' ? 'bg-indigo-50/50' :
+                                stage === 'Offer' ? 'bg-green-50/50' :
+                                'bg-gray-50/50'
+                              } rounded-[8px] p-3.5`}
+                              onClick={() => handleToggleExpand(job.id)}
+                            >
+                              {/* New Message Badge */}
+                              {candidateNudges.some(n => n.applicationId === job.id && (n.isResponded || n.message) && !n.isRead) && (
+                                <div className="absolute -top-1 -right-1 z-20">
+                                  <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex justify-between items-start mb-1">
+                                <h4 className="font-bold text-gray-800 text-[14px] leading-tight flex-1 mr-2">{job.jobTitle}</h4>
+                                {stage === 'Screened Out' && (
+                                  <div className="flex-shrink-0">
+                                    <div className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                      Rejected
+                                    </div>
+                                  </div>
+                                )}
+                                {stage !== 'Screened Out' && (
+                                  <div className="flex-shrink-0">
+                                    {timeRemaining && (
+                                      <div className="relative flex items-center justify-center mr-1">
+                                        <div className="absolute w-4 h-4 bg-red-400 rounded-full animate-ping opacity-75" />
+                                        <Zap className="w-4 h-4 text-blue-500 fill-blue-500 relative z-10 animate-pulse" />
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1.5">
+                                <span className="font-semibold text-gray-600">{job.company}</span>
+                                <span>{calculateDaysAgo(job.appliedDate)} ago</span>
+                              </div>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="overflow-hidden pt-2 space-y-2"
+                                  >
+                                    {/* Latest Response Snippet */}
+                                    {candidateNudges
+                                      .filter(n => n.applicationId === job.id && (n.isResponded || n.message))
+                                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                      .slice(0, 1)
+                                      .map(nudge => (
+                                        <div key={nudge.id} className="bg-white/60 dark:bg-gray-800/40 p-2 rounded border border-indigo-100 dark:border-indigo-900/50 mb-2">
+                                          <div className="flex items-center gap-1.5 mb-1">
+                                            <MessageCircle className="w-3 h-3 text-indigo-500" />
+                                            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Latest Update</span>
+                                          </div>
+                                          <p className="text-[11px] text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                                            "{nudge.message || 'Responded'}"
+                                          </p>
+                                          <div className="text-[9px] text-gray-400 mt-1 text-right">
+                                            {new Date(nudge.respondedAt || nudge.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                          </div>
+                                        </div>
+                                      ))}
+
+                                    {stage !== 'Screened Out' && (
+                                      <Button 
+                                        className="w-full bg-[#4F00FF] hover:bg-[#3D00CC] text-white text-[11px] h-8 font-bold rounded-[5px] flex items-center justify-center gap-2"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleViewJob(job);
+                                        }}
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                        View Details
+                                      </Button>
+                                    )}
+                                    
+                                    {stage === 'Screened Out' && (
+                                      <div className="pt-2 border-t border-blue-200 mt-2">
+                                        <div className="flex items-start gap-3 mb-4">
+                                          <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center border border-red-100 flex-shrink-0">
+                                            <AlertCircle className="w-5 h-5 text-red-500" />
+                                          </div>
+                                          <div>
+                                            <h5 className="text-[14px] font-bold text-gray-900 leading-tight">Reason for rejection</h5>
+                                            <p className="text-[11px] text-gray-500">Shared by the Recruiter</p>
+                                          </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 rounded-[5px] p-3 border-l-4 border-red-500 mb-4">
+                                          <h6 className="text-[12px] font-bold text-gray-900 mb-1">{job.rejectionReason || 'Screened Out'}</h6>
+                                          <p className="text-[11px] text-gray-600 leading-relaxed">
+                                            {job.statusNote || 'Thank you for your interest. We will not be moving forward at this stage.'}
+                                          </p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between gap-3">
+                                          <Button 
+                                            className="flex-1 bg-[#4CAF50] hover:bg-[#43A047] text-white text-[13px] h-10 font-bold rounded-[5px] shadow-sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleArchiveJob(job);
+                                            }}
+                                          >
+                                            Move to Archive
+                                          </Button>
+                                          <button 
+                                            className="text-red-500 text-[13px] font-medium hover:underline px-2"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setExpandedJobId(null);
+                                            }}
+                                          >
+                                            Dismiss
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {stage !== 'Screened Out' && (
+                                      <div className="flex gap-2">
+                                        <Button 
+                                          className="flex-1 bg-[#FF4D4D] hover:bg-[#E64444] text-white text-[11px] h-8 font-bold rounded-[5px] flex items-center justify-center gap-2"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleWithdraw(job);
+                                          }}
+                                        >
+                                          <Ban className="w-3.5 h-3.5" />
+                                          Withdraw
+                                        </Button>
+                                        
+                                        <div className="relative flex-1 group">
+                                          <Button 
+                                            className={`w-full text-white text-[11px] h-8 font-bold rounded-[5px] flex items-center justify-center gap-2 transition-all ${
+                                              isNudgeDisabled 
+                                                ? 'bg-[#00AF00]/50 cursor-not-allowed' 
+                                                : 'bg-[#00AF00] hover:bg-[#009500]'
+                                            }`}
+                                            disabled={isNudgeDisabled}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleNudge(job);
+                                            }}
+                                          >
+                                            {isNudgeDisabled ? (
+                                              <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {timeRemaining}</span>
+                                            ) : (
+                                              <><Zap className="w-3.5 h-3.5" /> Nudge</>
+                                            )}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          </div>
+                        );
+                      })}
+                      
+                      {stageApplications.length === 0 && (
+                        <div className="h-24"></div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {jobApplications.length === 0 && (
+              <div className="text-center py-20 text-gray-500">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                  <Archive className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="font-medium">No job applications found.</p>
+                <p className="text-sm text-gray-400">Start applying to jobs to see them here.</p>
+              </div>
+            )}
           </div>
-        )}
-          </div>
+          {/* Candidate Nudges Updates Section */}
+          {candidateNudges.filter(n => n.isResponded || n.message).length > 0 && (
+            <div className="bg-white rounded-md p-4 shadow-sm relative border border-gray-100 mb-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-blue-500 fill-blue-500" /> Nudge Updates
+                </h2>
+                {candidateNudges.filter(n => n.isResponded || n.message).length > 5 && (
+                  <Button size="sm" onClick={() => setShowAllNudgesDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-[5px] font-medium h-8">
+                    View More
+                  </Button>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 text-gray-700 border-b">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">Job Title</th>
+                      <th className="px-4 py-2 font-medium">Company</th>
+                      <th className="px-4 py-2 font-medium whitespace-nowrap">Nudged on</th>
+                      <th className="px-4 py-2 font-medium whitespace-nowrap">Responded on</th>
+                      <th className="px-4 py-2 font-medium">Recruiter Response</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candidateNudges
+                      .filter(n => n.isResponded || n.message)
+                      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .slice(0, 5)
+                      .map((nudge: any) => (
+                      <tr 
+                        key={nudge.id} 
+                        className={`border-b last:border-0 hover:bg-gray-50/50 transition-colors ${!nudge.isRead ? 'bg-blue-50/30' : ''}`}
+                      >
+                        <td className="px-4 py-3 font-medium text-gray-900 flex items-center gap-2">
+                          {!nudge.isRead && (
+                            <div className="w-2 h-2 bg-red-500 rounded-full shrink-0" />
+                          )}
+                          {nudge.jobTitle}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{nudge.company}</td>
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                          {new Date(nudge.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                          {nudge.respondedAt ? new Date(nudge.respondedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {nudge.message ? (
+                            <span className="block text-xs text-gray-700">
+                              {nudge.message}
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded border border-green-200">
+                              Responded
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {!nudge.isRead && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => markAsReadMutation.mutate(nudge.id)}
+                              className="h-7 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2"
+                            >
+                              Mark as read
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Job Suggestions Section */}
           <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -444,10 +859,32 @@ export default function MyJobsTab({
         </div>
       </div>
 
-      {/* Right Sidebar - Candidate Metrics (Fixed) */}
-      <div className="w-80 flex-shrink-0 bg-white border-l border-gray-200 overflow-y-auto h-full" data-testid="candidate-metrics-column">
-        <div className="p-6">
-          <CandidateMetrics />
+      {/* Right Sidebar - Candidate Metrics (Collapsible) */}
+      <div className="flex-shrink-0 h-full relative z-40">
+        <motion.div 
+          animate={{ width: isMetricsExpanded ? 320 : 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="bg-white border-l border-gray-200 h-full overflow-hidden" 
+          data-testid="candidate-metrics-column"
+        >
+          <div className={`p-6 ${isMetricsExpanded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200 w-[320px]`}>
+            <CandidateMetrics />
+          </div>
+        </motion.div>
+
+        {/* Toggle Button - Outside the overflow area with Tooltip-like label */}
+        <div className="absolute left-[-16px] top-1/2 -translate-y-1/2 z-50 flex items-center">
+          <button
+            onClick={() => setIsMetricsExpanded(!isMetricsExpanded)}
+            className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-all hover:scale-110 group relative"
+          >
+            {isMetricsExpanded ? <ChevronDown className="w-5 h-5 rotate-90" /> : <ChevronDown className="w-5 h-5 -rotate-90" />}
+            
+            {/* Tooltip Label */}
+            <span className="absolute right-full mr-3 px-2 py-1 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              {isMetricsExpanded ? 'Hide Metrics' : 'Show Metrics'}
+            </span>
+          </button>
         </div>
       </div>
     </div>
@@ -830,6 +1267,204 @@ export default function MyJobsTab({
           </div>
         </div>
       )}
+      {/* Full Nudge Logs Dialog */}
+      <Dialog open={showAllNudgesDialog} onOpenChange={setShowAllNudgesDialog}>
+        <DialogContent className="max-w-[1000px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-xl">
+          <DialogHeader className="p-6 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-blue-500 fill-blue-500" /> All Nudge Logs
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-6">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50 text-gray-700 border-b sticky top-0">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Nudged On</th>
+                  <th className="px-4 py-2 font-medium">Job Title</th>
+                  <th className="px-4 py-2 font-medium">Company</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Responded on</th>
+                  <th className="px-4 py-2 font-medium">Recruiter Response</th>
+                  <th className="px-4 py-2 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {candidateNudges
+                  .filter(n => n.isResponded || n.message)
+                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map((nudge: any) => (
+                  <tr 
+                    key={nudge.id} 
+                    className={`border-b last:border-0 hover:bg-gray-50/50 transition-colors ${!nudge.isRead ? 'bg-blue-50/30' : ''}`}
+                  >
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{new Date(nudge.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900 flex items-center gap-2">
+                      {!nudge.isRead && (
+                        <div className="w-2 h-2 bg-red-500 rounded-full shrink-0" />
+                      )}
+                      {nudge.jobTitle}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{nudge.company}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold">
+                        {nudge.currentStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {nudge.respondedAt ? new Date(nudge.respondedAt).toLocaleString() : '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {nudge.message ? (
+                        <span className="block text-xs text-gray-700">
+                          {nudge.message}
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded border border-green-200">
+                          Responded
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {!nudge.isRead && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => markAsReadMutation.mutate(nudge.id)}
+                          className="h-7 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2"
+                        >
+                          Mark as read
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Withdrawal Modal */}
+      <Dialog 
+        open={!!withdrawApp} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setWithdrawApp(null);
+            setWithdrawReason("");
+            setWithdrawText("");
+            setShowWithdrawSuccess(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-none shadow-2xl font-poppins">
+          <AnimatePresence mode="wait">
+            {!showWithdrawSuccess ? (
+              <motion.div 
+                key="withdraw-form"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="p-8 space-y-6"
+              >
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold text-gray-900">Help us improve</h2>
+                  <div className="flex items-start gap-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-sm shadow-blue-200">
+                      <Info className="w-5 h-5" />
+                    </div>
+                    <p className="text-[13px] text-gray-600 leading-relaxed font-medium">
+                      We understand priorities change. Let us know why so we can do better.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">Choose your primary reason for withdrawing</Label>
+                    <Select value={withdrawReason} onValueChange={setWithdrawReason}>
+                      <SelectTrigger className="h-12 rounded-xl border-gray-100 bg-gray-50/50 hover:bg-gray-100/50 transition-all text-[14px]">
+                        <SelectValue placeholder="Select a reason" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                        <SelectItem value="Accepted another offer">Accepted another offer</SelectItem>
+                        <SelectItem value="Compensation not aligned">Compensation not aligned</SelectItem>
+                        <SelectItem value="Role not aligned">Role not aligned</SelectItem>
+                        <SelectItem value="Company / product not aligned">Company / product not aligned</SelectItem>
+                        <SelectItem value="Location / work mode not suitable">Location / work mode not suitable</SelectItem>
+                        <SelectItem value="Process took longer than expected">Process took longer than expected</SelectItem>
+                        <SelectItem value="Didn’t receive timely updates">Didn’t receive timely updates</SelectItem>
+                        <SelectItem value="Process felt too lengthy">Process felt too lengthy</SelectItem>
+                        <SelectItem value="Change in career plans">Change in career plans</SelectItem>
+                        <SelectItem value="Availability / notice period constraints">Availability / notice period constraints</SelectItem>
+                        <SelectItem value="Others (please specify)">Others (please specify)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {withdrawReason === "Others (please specify)" && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      className="space-y-2"
+                    >
+                      <textarea
+                        value={withdrawText}
+                        onChange={(e) => setWithdrawText(e.target.value)}
+                        placeholder="Please tell us more..."
+                        className="w-full min-h-[100px] p-4 rounded-xl border border-gray-100 bg-gray-50/50 text-sm focus:bg-white transition-all outline-none"
+                      />
+                    </motion.div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button
+                    onClick={() => confirmWithdraw()}
+                    disabled={!withdrawReason || (withdrawReason === "Others (please specify)" && !withdrawText) || withdrawMutation.isPending}
+                    className="w-full bg-[#4F8AFF] hover:bg-[#3D78FF] text-white rounded-xl h-12 font-bold shadow-lg shadow-blue-100 transition-all active:scale-[0.98]"
+                  >
+                    {withdrawMutation.isPending ? "Submitting..." : "Submit Feedback"}
+                  </Button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="withdraw-success"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-12 flex flex-col items-center text-center bg-white"
+              >
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.2 }}
+                  className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mb-8 border-4 border-green-100"
+                >
+                  <CheckCircle2 className="w-10 h-10 text-green-500" />
+                </motion.div>
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 tracking-tight">Thank you for your time and interest.</h2>
+                <p className="text-[14px] text-gray-500 leading-relaxed font-medium">
+                  We appreciate your time and honesty in informing us. Wishing you great success in your next opportunity!
+                </p>
+                
+                <Button 
+                  onClick={() => {
+                    setWithdrawApp(null);
+                    setWithdrawReason("");
+                    setWithdrawText("");
+                    setShowWithdrawSuccess(false);
+                  }}
+                  className="mt-10 px-10 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold h-12 shadow-xl shadow-gray-200 transition-all active:scale-95"
+                >
+                  Close
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </DialogContent>
+      </Dialog>
+
     </>
   );
 }

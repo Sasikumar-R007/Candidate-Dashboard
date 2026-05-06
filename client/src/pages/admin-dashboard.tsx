@@ -4100,6 +4100,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const getPerformanceBadgeColor = (grade: string) => {
+    switch (grade) {
+      case 'G':
+        return 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400';
+      case 'A':
+        return 'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-400';
+      case 'B':
+        return 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400';
+      default:
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+  };
+
   const handleDateChange = (value: string) => {
     setMeetingDate(value);
     setIsCustomDate(value === 'custom');
@@ -5037,7 +5050,7 @@ export default function AdminDashboard() {
             <div className="bg-white dark:bg-gray-900 rounded p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Overall Performance</h3>
-                <div className={`text-lg font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-8 h-8 rounded flex items-center justify-center`} data-testid="indicator-performance">
+                <div className={`text-lg font-bold ${getPerformanceBadgeColor(dailyMetricsData.overallPerformance || 'G')} w-8 h-8 rounded flex items-center justify-center`} data-testid="indicator-performance">
                   {dailyMetricsData.overallPerformance || 'G'}
                 </div>
               </div>

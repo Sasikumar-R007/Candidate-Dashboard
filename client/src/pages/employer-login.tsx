@@ -225,7 +225,7 @@ export default function EmployerLogin() {
             </div>
             <div>
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</h2>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to access your dashboard</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to access your workspace</p>
             </div>
           </div>
 

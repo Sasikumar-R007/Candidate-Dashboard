@@ -147,7 +147,7 @@ export default function Dashboard() {
       default:
         return (
           <div className="flex flex-col flex-1 h-full">
-            <DashboardHeader title="Dashboard" />
+            <DashboardHeader title="Candidate Workspace" />
             <div className="flex-1 overflow-y-auto">
               <MyJobsTab 
                 onNavigateToJobBoard={() => setSidebarTab('job-board')} 

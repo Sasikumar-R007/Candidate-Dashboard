@@ -55,6 +55,8 @@ import {
   type InsertDailyMetricsSnapshot,
   type InterviewTracker,
   type InsertInterviewTracker,
+  type Nudge,
+  type InsertNudge,
 
   users,
   profiles,
@@ -83,6 +85,7 @@ import {
   dailyMetricsSnapshots,
   cashOutflows,
   interviewTracker,
+  nudges,
 
   userActivities
 } from "@shared/schema";
@@ -379,11 +382,73 @@ export class DatabaseStorage implements IStorage {
 
   // Job applications methods
   async getJobApplicationsByProfile(profileId: string): Promise<JobApplication[]> {
-    return await db.select().from(jobApplications).where(eq(jobApplications.profileId, profileId)).orderBy(desc(jobApplications.appliedDate));
+    const applications = await this.queryJobApplications(sql`"profile_id" = ${profileId}`);
+    return applications.sort((a, b) => {
+      const aDate = a.appliedDate ? new Date(a.appliedDate as any).getTime() : 0;
+      const bDate = b.appliedDate ? new Date(b.appliedDate as any).getTime() : 0;
+      return bDate - aDate;
+    });
   }
 
   async createJobApplication(insertApplication: InsertJobApplication): Promise<JobApplication> {
-    const [application] = await db.insert(jobApplications).values(insertApplication).returning();
+    const availableColumns = await this.getAvailableColumns("job_applications");
+    const columns: string[] = [];
+    const values: any[] = [];
+
+    const setIfAvailable = (column: string, value: any) => {
+      if (value === undefined) return;
+      if (!availableColumns.includes(column)) return;
+      columns.push(column);
+      values.push(value);
+    };
+
+    setIfAvailable("profile_id", insertApplication.profileId);
+    setIfAvailable("recruiter_job_id", (insertApplication as any).recruiterJobId ?? null);
+    setIfAvailable("requirement_id", (insertApplication as any).requirementId ?? null);
+    setIfAvailable("owner_employee_id", (insertApplication as any).ownerEmployeeId ?? null);
+    setIfAvailable("owner_role", (insertApplication as any).ownerRole ?? null);
+    setIfAvailable("job_title", insertApplication.jobTitle);
+    setIfAvailable("company", insertApplication.company);
+    setIfAvailable("job_type", insertApplication.jobType ?? null);
+    setIfAvailable("status", insertApplication.status ?? "In Process");
+    setIfAvailable("source", (insertApplication as any).source ?? "job_board");
+    setIfAvailable("candidate_name", insertApplication.candidateName ?? null);
+    setIfAvailable("candidate_email", insertApplication.candidateEmail ?? null);
+    setIfAvailable("candidate_phone", insertApplication.candidatePhone ?? null);
+    setIfAvailable("description", insertApplication.description ?? null);
+    setIfAvailable("salary", insertApplication.salary ?? null);
+    setIfAvailable("location", insertApplication.location ?? null);
+    setIfAvailable("work_mode", insertApplication.workMode ?? null);
+    setIfAvailable("experience", insertApplication.experience ?? null);
+    setIfAvailable("skills", insertApplication.skills ?? null);
+    setIfAvailable("logo", insertApplication.logo ?? null);
+    setIfAvailable("withdraw_reason", (insertApplication as any).withdrawReason ?? null);
+    setIfAvailable("status_note", (insertApplication as any).statusNote ?? null);
+    setIfAvailable("rejection_reason", (insertApplication as any).rejectionReason ?? null);
+
+    if (!columns.includes("profile_id") || !columns.includes("job_title") || !columns.includes("company")) {
+      throw new Error("Missing required job application fields for insert");
+    }
+
+    await db.execute(sql`
+      INSERT INTO "job_applications" (${sql.join(columns.map((c) => sql.raw(`"${c}"`)), sql`, `)})
+      VALUES (${sql.join(values.map((v) => sql`${v}`), sql`, `)})
+    `);
+
+    const created = await this.queryJobApplications(
+      sql`"profile_id" = ${insertApplication.profileId} AND "job_title" = ${insertApplication.jobTitle} AND "company" = ${insertApplication.company}`,
+    );
+
+    const application = created.sort((a, b) => {
+      const aDate = a.appliedDate ? new Date(a.appliedDate as any).getTime() : 0;
+      const bDate = b.appliedDate ? new Date(b.appliedDate as any).getTime() : 0;
+      return bDate - aDate;
+    })[0];
+
+    if (!application) {
+      throw new Error("Job application created but could not be reloaded");
+    }
+
     return application;
   }
 
@@ -412,7 +477,18 @@ export class DatabaseStorage implements IStorage {
 
   // Requirements methods
   async getRequirements(): Promise<Requirement[]> {
-    return await db.select().from(requirements).where(eq(requirements.isArchived, false)).orderBy(desc(requirements.createdAt));
+    try {
+      return await db.select().from(requirements).where(eq(requirements.isArchived, false)).orderBy(desc(requirements.createdAt));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (!message.includes("is_archived")) throw error;
+      return await db.select().from(requirements).orderBy(desc(requirements.createdAt));
+    }
+  }
+
+  async getRequirementById(id: string): Promise<Requirement | undefined> {
+    const [requirement] = await db.select().from(requirements).where(eq(requirements.id, id));
+    return requirement || undefined;
   }
 
   async createRequirement(insertRequirement: InsertRequirement & { id?: string }): Promise<Requirement> {
@@ -482,7 +558,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getArchivedRequirements(): Promise<ArchivedRequirement[]> {
-    return await db.select().from(archivedRequirements).orderBy(desc(archivedRequirements.archivedAt));
+    try {
+      return await db.select().from(archivedRequirements).orderBy(desc(archivedRequirements.archivedAt));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (message.includes("archived_requirements") || message.includes("column")) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   async deleteRequirement(id: string): Promise<boolean> {
@@ -965,7 +1049,9 @@ export class DatabaseStorage implements IStorage {
   }> {
     const reqs = await this.getRequirementsByCompany(companyName);
     // Filter only client-submitted JDs (STR format)
-    const clientReqs = reqs.filter(r => r.id && /^STR\d{5}$/.test(r.id));
+        const clientReqs = reqs.filter(r => !r.isArchived);
+
+
     
     const activeRoles = clientReqs.filter(r => r.status === 'open' || r.status === 'in_progress').length;
     const pausedRoles = clientReqs.filter(r => r.status === 'paused').length;
@@ -1577,21 +1663,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]> {
-    return await db.select().from(jobApplications)
-      .where(eq(jobApplications.recruiterJobId, recruiterJobId))
-      .orderBy(desc(jobApplications.appliedDate));
+    const applications = await this.queryJobApplications(sql`"recruiter_job_id" = ${recruiterJobId}`);
+    return applications.sort((a, b) => {
+      const aDate = a.appliedDate ? new Date(a.appliedDate as any).getTime() : 0;
+      const bDate = b.appliedDate ? new Date(b.appliedDate as any).getTime() : 0;
+      return bDate - aDate;
+    });
   }
 
   async getJobApplicationsByRequirementId(requirementId: string): Promise<JobApplication[]> {
-    return await db.select().from(jobApplications)
-      .where(eq(jobApplications.requirementId, requirementId))
-      .orderBy(desc(jobApplications.appliedDate));
+    try {
+      const applications = await this.queryJobApplications(sql`"requirement_id" = ${requirementId}`);
+      return applications.sort((a, b) => {
+        const aDate = a.appliedDate ? new Date(a.appliedDate as any).getTime() : 0;
+        const bDate = b.appliedDate ? new Date(b.appliedDate as any).getTime() : 0;
+        return bDate - aDate;
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (message.includes("requirement_id")) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   async getJobApplicationById(id: string): Promise<JobApplication | undefined> {
-    const [application] = await db.select().from(jobApplications)
-      .where(eq(jobApplications.id, id))
-      .limit(1);
+    const [application] = await this.queryJobApplications(sql`"id" = ${id}`);
     return application || undefined;
   }
 
@@ -1600,12 +1698,27 @@ export class DatabaseStorage implements IStorage {
     return jobApplication;
   }
 
-  async updateJobApplicationStatus(id: string, status: string): Promise<JobApplication | undefined> {
-    const [application] = await db
-      .update(jobApplications)
-      .set({ status })
-      .where(eq(jobApplications.id, id))
-      .returning();
+  async updateJobApplicationStatus(id: string, status: string, reason?: string, statusNote?: string, rejectionReason?: string): Promise<JobApplication | undefined> {
+    const availableColumns = await this.getAvailableColumns("job_applications");
+    const assignments: ReturnType<typeof sql>[] = [sql`"status" = ${status}`];
+
+    if (reason !== undefined && availableColumns.includes("withdraw_reason")) {
+      assignments.push(sql`"withdraw_reason" = ${reason}`);
+    }
+    if (statusNote !== undefined && availableColumns.includes("status_note")) {
+      assignments.push(sql`"status_note" = ${statusNote}`);
+    }
+    if (rejectionReason !== undefined && availableColumns.includes("rejection_reason")) {
+      assignments.push(sql`"rejection_reason" = ${rejectionReason}`);
+    }
+
+    await db.execute(sql`
+      UPDATE "job_applications"
+      SET ${sql.join(assignments, sql`, `)}
+      WHERE "id" = ${id}
+    `);
+
+    const [application] = await this.queryJobApplications(sql`"id" = ${id}`);
     return application || undefined;
   }
 
@@ -1616,21 +1729,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRequirementsByTalentAdvisor(talentAdvisorName: string): Promise<Requirement[]> {
-    return await db.select().from(requirements)
-      .where(and(
-        eq(requirements.talentAdvisor, talentAdvisorName),
-        eq(requirements.isArchived, false)
-      ))
-      .orderBy(desc(requirements.createdAt));
+    try {
+      return await db.select().from(requirements)
+        .where(and(
+          eq(requirements.talentAdvisor, talentAdvisorName),
+          eq(requirements.isArchived, false)
+        ))
+        .orderBy(desc(requirements.createdAt));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (!message.includes("is_archived") && !message.includes("talent_advisor")) throw error;
+      try {
+        return await db.select().from(requirements)
+          .where(eq(requirements.talentAdvisor, talentAdvisorName))
+          .orderBy(desc(requirements.createdAt));
+      } catch {
+        return [];
+      }
+    }
   }
 
   async getRequirementsByTalentAdvisorId(talentAdvisorId: string): Promise<Requirement[]> {
-    return await db.select().from(requirements)
-      .where(and(
-        eq(requirements.talentAdvisorId, talentAdvisorId),
-        eq(requirements.isArchived, false)
-      ))
-      .orderBy(desc(requirements.createdAt));
+    try {
+      return await db.select().from(requirements)
+        .where(and(
+          eq(requirements.talentAdvisorId, talentAdvisorId),
+          eq(requirements.isArchived, false)
+        ))
+        .orderBy(desc(requirements.createdAt));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (!message.includes("talent_advisor_id") && !message.includes("is_archived")) throw error;
+
+      try {
+        return await db.select().from(requirements)
+          .where(eq(requirements.talentAdvisorId, talentAdvisorId))
+          .orderBy(desc(requirements.createdAt));
+      } catch {
+        return [];
+      }
+    }
   }
 
   // Recruiter Commands methods
@@ -2136,8 +2274,59 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  async createUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
-    const [newActivity] = await db.insert(userActivities).values(activity).returning();
-    return newActivity;
+  async deleteInterview(id: string): Promise<boolean> {
+    const result = await db.delete(interviewTracker).where(eq(interviewTracker.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Nudge methods
+  async createNudge(insertNudge: InsertNudge): Promise<Nudge> {
+    const [nudge] = await db.insert(nudges).values(insertNudge).returning();
+    return nudge;
+  }
+
+  async getNudgesByRecruiter(recruiterId: string): Promise<Nudge[]> {
+    return await db.select().from(nudges).where(eq(nudges.recruiterId, recruiterId)).orderBy(desc(nudges.createdAt));
+  }
+
+  async getNudgesByCandidate(candidateId: string): Promise<Nudge[]> {
+    return await db.select().from(nudges).where(eq(nudges.candidateId, candidateId)).orderBy(desc(nudges.createdAt));
+  }
+
+  async updateJobApplicationNudgeTime(id: string, lastNudgedAt: Date): Promise<JobApplication | undefined> {
+    const [application] = await db
+      .update(jobApplications)
+      .set({ lastNudgedAt })
+      .where(eq(jobApplications.id, id))
+      .returning();
+    return application || undefined;
+  }
+
+  async getActiveNudges(): Promise<Nudge[]> {
+    return await db.select().from(nudges).orderBy(desc(nudges.createdAt));
+  }
+
+  async updateNudgeEscalation(id: string, escalationLevel: string, lastEscalatedAt: Date): Promise<Nudge | undefined> {
+    const [nudge] = await db
+      .update(nudges)
+      .set({ escalationLevel, lastEscalatedAt })
+      .where(eq(nudges.id, id))
+      .returning();
+    return nudge || undefined;
+  }
+
+  async markNudgeAsResponded(id: string, message?: string, escalationLevel?: string): Promise<Nudge | undefined> {
+    const [nudge] = await db
+      .update(nudges)
+      .set({ 
+        isResponded: true, 
+        isRead: true, 
+        respondedAt: new Date(),
+        ...(message ? { message } : {}),
+        ...(escalationLevel ? { escalationLevel } : {})
+      })
+      .where(eq(nudges.id, id))
+      .returning();
+    return nudge || undefined;
   }
 }

@@ -47,6 +47,8 @@ import {
   type InsertDailyMetricsSnapshot,
   type InterviewTracker,
   type InsertInterviewTracker,
+  type Nudge,
+  type InsertNudge,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -82,6 +84,7 @@ export interface IStorage {
   
   // Requirements methods
   getRequirements(): Promise<Requirement[]>;
+  getRequirementById(id: string): Promise<Requirement | undefined>;
   getRequirementsByTeamLead(teamLeadName: string): Promise<Requirement[]>;
   getRequirementsByTalentAdvisor(talentAdvisorName: string): Promise<Requirement[]>;
   getRequirementsByTalentAdvisorId(talentAdvisorId: string): Promise<Requirement[]>;
@@ -268,7 +271,7 @@ export interface IStorage {
   getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]>;
   getJobApplicationsByRequirementId(requirementId: string): Promise<JobApplication[]>;
   createRecruiterJobApplication(application: InsertJobApplication & { profileId: string }): Promise<JobApplication>;
-  updateJobApplicationStatus(id: string, status: string): Promise<JobApplication | undefined>;
+  updateJobApplicationStatus(id: string, status: string, reason?: string): Promise<JobApplication | undefined>;
   
   // Requirement Assignment methods
   createRequirementAssignment(assignment: InsertRequirementAssignment): Promise<RequirementAssignment>;
@@ -304,6 +307,15 @@ export interface IStorage {
 
   
   deleteInterview(id: string): Promise<boolean>;
+
+  // Nudge methods
+  createNudge(nudge: InsertNudge): Promise<Nudge>;
+  getNudgesByRecruiter(recruiterId: string): Promise<Nudge[]>;
+  getNudgesByCandidate(candidateId: string): Promise<Nudge[]>;
+  updateJobApplicationNudgeTime(id: string, lastNudgedAt: Date): Promise<JobApplication | undefined>;
+  updateNudgeEscalation(id: string, escalationLevel: string, lastEscalatedAt: Date): Promise<Nudge | undefined>;
+  markNudgeAsResponded(id: string, message?: string, escalationLevel?: string): Promise<Nudge | undefined>;
+  getActiveNudges(): Promise<Nudge[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1003,6 +1015,10 @@ export class MemStorage implements IStorage {
   // Requirements methods implementation
   async getRequirements(): Promise<Requirement[]> {
     return Array.from(this.requirements.values()).filter(req => !req.isArchived);
+  }
+
+  async getRequirementById(id: string): Promise<Requirement | undefined> {
+    return this.requirements.get(id);
   }
 
   async getRequirementsByTeamLead(teamLeadName: string): Promise<Requirement[]> {
@@ -1757,6 +1773,51 @@ export class MemStorage implements IStorage {
     const newActivity: UserActivity = { ...activity, id };
     this.userActivities.set(id, newActivity);
     return newActivity;
+  }
+
+  // Nudge methods (mock)
+  async createNudge(nudge: InsertNudge): Promise<Nudge> {
+    const id = randomUUID();
+    const newNudge = { 
+      ...nudge, 
+      id, 
+      createdAt: new Date(), 
+      isRead: false, 
+      isResponded: false,
+      escalationLevel: "recruiter",
+      lastEscalatedAt: new Date()
+    } as Nudge;
+    return newNudge;
+  }
+
+  async getNudgesByRecruiter(recruiterId: string): Promise<Nudge[]> {
+    return [];
+  }
+
+  async getNudgesByCandidate(candidateId: string): Promise<Nudge[]> {
+    return [];
+  }
+
+  async updateJobApplicationNudgeTime(id: string, lastNudgedAt: Date): Promise<JobApplication | undefined> {
+    const app = this.jobApplications.get(id);
+    if (app) {
+      const updated = { ...app, lastNudgedAt };
+      this.jobApplications.set(id, updated);
+      return updated;
+    }
+    return undefined;
+  }
+
+  async updateNudgeEscalation(id: string, escalationLevel: string, lastEscalatedAt: Date): Promise<Nudge | undefined> {
+    return undefined;
+  }
+
+  async markNudgeAsResponded(id: string, message?: string): Promise<Nudge | undefined> {
+    return undefined;
+  }
+
+  async getActiveNudges(): Promise<Nudge[]> {
+    return [];
   }
 }
 

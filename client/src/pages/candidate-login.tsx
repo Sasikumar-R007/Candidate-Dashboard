@@ -521,7 +521,7 @@ export default function CandidateLogin() {
                 {isLogin ? "Welcome Back" : "Create Account"}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 font-poppins">
-                {isLogin ? "Sign in to continue your journey" : "Join thousands of successful candidates"}
+                {isLogin ? "Sign in to access your workspace" : "Join thousands of successful candidates"}
               </p>
             </div>
 

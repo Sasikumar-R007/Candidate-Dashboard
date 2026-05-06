@@ -9,13 +9,55 @@ import { storage } from "./storage";
 import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
+import { sql, eq, and, or, desc, lte, gte, inArray, isNull } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
 import { db } from "./db";
-import { eq, desc, sql, and, inArray, or, isNull } from "drizzle-orm";
+
+function calculateQuartersSince(joiningDate: string | Date | null | undefined): number {
+  if (!joiningDate) return 0;
+  const join = new Date(joiningDate);
+  const now = new Date();
+  if (isNaN(join.getTime())) return 0;
+
+  // Fiscal year starts in April. 
+  // Map month (0-11) to fiscal quarter index (0-3)
+  // Apr(3), May(4), Jun(5) -> Q1 (index 0)
+  // Jul(6), Aug(7), Sep(8) -> Q2 (index 1)
+  // Oct(9), Nov(10), Dec(11) -> Q3 (index 2)
+  // Jan(0), Feb(1), Mar(2) -> Q4 (index 3)
+  
+  const getFiscalQuarterIndex = (date: Date) => {
+    const month = date.getMonth();
+    if (month >= 3) return Math.floor((month - 3) / 3);
+    return 3; // Jan-Mar is the 4th quarter
+  };
+
+  const getFiscalYear = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    return month >= 3 ? year : year - 1;
+  };
+
+  const startFY = getFiscalYear(join);
+  const startQ = getFiscalQuarterIndex(join);
+  
+  const currentFY = getFiscalYear(now);
+  const currentQ = getFiscalQuarterIndex(now);
+
+  const totalQuarters = (currentFY - startFY) * 4 + (currentQ - startQ);
+  
+  // We count the starting quarter as well if they joined at the beginning, 
+  // but usually "Quarters Achieved" implies completed ones or participation.
+  // The user says "based on joining date (month -> based on actual Quarter format)".
+  // Let's return the number of quarters they have been active in.
+  return Math.max(0, totalQuarters + 1); 
+}
+
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
+import { parseJDWithAI } from "./ai-jd-parser";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
 import { DEFAULT_EMPLOYEE_WELCOME_MESSAGE, EMPLOYEE_WELCOME_MESSAGE_KEY, getAppSetting, upsertAppSetting } from "./admin-settings";
@@ -93,6 +135,51 @@ function getEarlyExitDayBucket(joinedDate?: string | null, actionDate?: string |
 
   return ">90";
 }
+
+// Helper to calculate working hours (9 AM - 6 PM)
+function calculateWorkingHours(start: Date, end: Date): number {
+  if (start >= end) return 0;
+  
+  let totalMinutes = 0;
+  const current = new Date(start);
+  const endLimit = new Date(end);
+  
+  // Iterate minute by minute or hour by hour for efficiency?
+  // Hour by hour is better, then handle partial hours at start and end.
+  
+  while (current < endLimit) {
+    const day = current.getDay();
+    const isWorkingDay = day !== 0 && day !== 6;
+    
+    if (isWorkingDay) {
+      const currentHour = current.getHours();
+      
+      // If we are in working hours
+      if (currentHour >= 9 && currentHour < 18) {
+        // Calculate minutes in this hour
+        const hourStart = new Date(current);
+        hourStart.setMinutes(0, 0, 0);
+        const hourEnd = new Date(current);
+        hourEnd.setMinutes(59, 59, 999);
+        
+        const effectiveStart = current > hourStart ? current : hourStart;
+        const effectiveEnd = endLimit < hourEnd ? endLimit : hourEnd;
+        
+        const diffMs = effectiveEnd.getTime() - effectiveStart.getTime();
+        if (diffMs > 0) {
+          totalMinutes += diffMs / (1000 * 60);
+        }
+      }
+    }
+    
+    // Advance to start of next hour
+    current.setHours(current.getHours() + 1);
+    current.setMinutes(0, 0, 0);
+  }
+  
+  return totalMinutes / 60;
+}
+
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -247,8 +334,9 @@ function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 function normalizeSourcingRole(role: string | null | undefined): "recruiter" | "team_leader" | null {
-  if (role === "team_leader") return "team_leader";
-  if (role === "recruiter") return "recruiter";
+  const r = role?.toLowerCase();
+  if (r === "team_leader" || r === "teamleader") return "team_leader";
+  if (r === "recruiter" || r === "talent_advisor" || r === "ta") return "recruiter";
   return null;
 }
 
@@ -312,15 +400,17 @@ function buildJobOwnershipFilter(employee: { id: string; role: string }) {
     eq(recruiterJobs.ownerRole, ownerRole),
   );
 
+  const assignedToActor = eq(recruiterJobs.assignedTaId, employee.id);
+
   if (ownerRole === "recruiter") {
     const legacyRecruiterRecords = and(
       isNull(recruiterJobs.ownerEmployeeId),
       eq(recruiterJobs.recruiterId, employee.id),
     );
-    return or(ownedByActor, legacyRecruiterRecords);
+    return or(ownedByActor, assignedToActor, legacyRecruiterRecords);
   }
 
-  return ownedByActor;
+  return or(ownedByActor, assignedToActor);
 }
 
 function buildApplicationOwnershipFilter(employee: { id: string; role: string }) {
@@ -329,10 +419,19 @@ function buildApplicationOwnershipFilter(employee: { id: string; role: string })
     return null;
   }
 
-  return and(
+  const ownedByActor = and(
     eq(jobApplications.ownerEmployeeId, employee.id),
     eq(jobApplications.ownerRole, ownerRole),
   );
+
+  // Applications for jobs assigned to this actor
+  const assignedToActor = sql`EXISTS (
+    SELECT 1 FROM ${recruiterJobs}
+    WHERE ${recruiterJobs.id} = ${jobApplications.recruiterJobId}
+    AND ${recruiterJobs.assignedTaId} = ${employee.id}
+  )`;
+
+  return or(ownedByActor, assignedToActor);
 }
 
 // Authentication middleware for client routes ONLY
@@ -552,6 +651,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Nudges API for Recruiters/TLs
+  app.get("/api/nudges", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employeeUuid = req.session.employeeId!;
+      const employee = await storage.getEmployeeById(employeeUuid);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const allNudges = await storage.getActiveNudges();
+      const now = new Date();
+
+      // Escalation logic: Only update non-responded nudges
+      for (const nudge of allNudges) {
+        if (nudge.isResponded) continue;
+        
+        const createdAt = nudge.createdAt;
+        if (!createdAt) continue;
+        
+        const createdDate = new Date(createdAt);
+        if (isNaN(createdDate.getTime())) continue;
+
+        const elapsedWorkingHours = calculateWorkingHours(createdDate, now);
+        const status = (nudge.currentStatus || '').toLowerCase();
+        const isOfferStage = status.includes('offer');
+
+        let requiredLevel = 'recruiter';
+        if (isOfferStage) {
+          // Accelerated escalation for Offer Stage (3, 6, 9 working hours)
+          if (elapsedWorkingHours >= 9) {
+            requiredLevel = 'client';
+          } else if (elapsedWorkingHours >= 6) {
+            requiredLevel = 'admin';
+          } else if (elapsedWorkingHours >= 3) {
+            requiredLevel = 'team_leader';
+          }
+        } else {
+          // Standard escalation (6, 12, 18 working hours)
+          if (elapsedWorkingHours >= 18) {
+            requiredLevel = 'client';
+          } else if (elapsedWorkingHours >= 12) {
+            requiredLevel = 'admin';
+          } else if (elapsedWorkingHours >= 6) {
+            requiredLevel = 'team_leader';
+          }
+        }
+
+        if (nudge.escalationLevel !== requiredLevel) {
+          try {
+            await storage.updateNudgeEscalation(nudge.id, requiredLevel, now);
+          } catch (updateErr) {
+            console.error(`Failed to update nudge ${nudge.id}:`, updateErr);
+          }
+        }
+      }
+
+      // Re-fetch to get updated levels
+      const updatedNudges = await storage.getActiveNudges();
+      
+      const role = (employee.role || '').toLowerCase();
+      const isTA = role === 'recruiter' || role === 'talent_advisor' || role === 'ta';
+      let activeNudges = [];
+
+      // Filter for Actionable Nudges only (Current level's turn and not responded)
+      if (role === 'admin') {
+        activeNudges = updatedNudges.filter(n => !n.isResponded && n.escalationLevel === 'admin');
+      } else if (role === 'client') {
+        activeNudges = updatedNudges.filter(n => !n.isResponded && n.escalationLevel === 'client');
+      } else if (role === 'team_leader') {
+        const allEmployees = await storage.getAllEmployees();
+        const teamMemberIds = allEmployees
+          .filter(emp => emp.reportingTo === employee.employeeId || emp.reportingTo === employee.id)
+          .map(emp => emp.id);
+        
+        const myIds = [employee.id, employee.employeeId].filter(Boolean);
+
+        activeNudges = updatedNudges.filter(n => {
+          if (n.isResponded || n.escalationLevel !== 'team_leader') return false;
+          
+          // Show if it's their own job or a team member's job
+          return (n.recruiterId && (myIds.includes(n.recruiterId) || teamMemberIds.includes(n.recruiterId)));
+        });
+      } else if (isTA) {
+        // Recruiter (TA)
+        activeNudges = updatedNudges.filter(n => 
+          !n.isResponded && n.escalationLevel === 'recruiter' && n.recruiterId === employee.id
+        );
+      }
+
+      res.json(activeNudges);
+    } catch (error) {
+      console.error('Fetch nudges error:', error);
+      res.status(500).json({ message: "Internal server error", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.get("/api/nudges/logs", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employeeUuid = req.session.employeeId!;
+      const employee = await storage.getEmployeeById(employeeUuid);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const allNudges = await storage.getActiveNudges();
+      const role = (employee.role || '').toLowerCase();
+      let logNudges = [];
+
+      if (role === 'admin') {
+        // Admin sees nudges they responded to OR nudges that escalated past admin
+        logNudges = allNudges.filter(n => 
+          (n.isResponded && n.escalationLevel === 'admin') || 
+          (['client'].includes(n.escalationLevel || ''))
+        );
+      } else if (role === 'client') {
+        // Client sees nudges they responded to
+        logNudges = allNudges.filter(n => n.isResponded && n.escalationLevel === 'client');
+      } else if (role === 'team_leader') {
+        const allEmployees = await storage.getAllEmployees();
+        const teamMemberIds = allEmployees
+          .filter(emp => emp.reportingTo === employee.employeeId || emp.reportingTo === employee.id)
+          .map(emp => emp.id);
+        const myIds = [employee.id, employee.employeeId].filter(Boolean);
+
+        logNudges = allNudges.filter(n => {
+          const isRelevant = n.recruiterId && (myIds.includes(n.recruiterId) || teamMemberIds.includes(n.recruiterId));
+          if (!isRelevant) return false;
+
+          // In logs if responded at TL level OR escalated past TL level
+          return (n.isResponded && n.escalationLevel === 'team_leader') || 
+                 (['admin', 'client'].includes(n.escalationLevel || ''));
+        });
+      } else {
+        // Recruiter (TA)
+        logNudges = allNudges.filter(n => {
+          if (n.recruiterId !== employee.id) return false;
+
+          // In logs if responded at recruiter level OR escalated past recruiter level
+          return (n.isResponded && n.escalationLevel === 'recruiter') || 
+                 (['team_leader', 'admin', 'client'].includes(n.escalationLevel || ''));
+        });
+      }
+
+      res.json(logNudges);
+    } catch (error) {
+      console.error('Fetch nudge logs error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+
+  app.post("/api/nudges/:id/respond", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
+      const employeeUuid = req.session.employeeId!;
+      const employee = await storage.getEmployeeById(employeeUuid);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Mark as responded and update the escalation level to the responder's role
+      // This stops the escalation flow and shows who responded
+      const nudge = await storage.markNudgeAsResponded(id, message, employee.role);
+      
+      if (!nudge) {
+        return res.status(404).json({ message: "Nudge not found" });
+      }
+
+      res.json(nudge);
+    } catch (error) {
+      console.error('Respond to nudge error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Employee Authentication Routes
   app.post("/api/auth/employee-login", async (req, res) => {
     try {
@@ -590,7 +868,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Account is inactive" });
       }
 
-      // Note: lastLoginAt update skipped as column may not exist in production
+      // Update lastLoginAt
+      try {
+        await db.execute(sql`
+          UPDATE employees 
+          SET last_login_at = ${new Date().toISOString()} 
+          WHERE id = ${employee.id}
+        `);
+      } catch (err) {
+        console.error('Failed to update lastLoginAt:', err);
+      }
 
       // Regenerate session to prevent session fixation attacks
       req.session.regenerate((err) => {
@@ -2109,6 +2396,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Nudge application for candidate
+  app.post("/api/applications/:id/nudge", requireCandidateAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const application = await storage.getJobApplicationById(id);
+      
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Identify the recruiter/TA who should receive the nudge
+      let recruiterId = null;
+      let attributionSource = 'none';
+      
+      if (application.recruiterJobId) {
+        const job = await storage.getRecruiterJobById(application.recruiterJobId);
+        if (job) {
+          // Use recruiterId or ownerEmployeeId from the job posting
+          recruiterId = job.recruiterId || job.ownerEmployeeId;
+          attributionSource = 'recruiterJob';
+        }
+      } 
+      
+      if (!recruiterId && application.requirementId) {
+        const requirement = await storage.getRequirementById(application.requirementId);
+        if (requirement) {
+          // Use talentAdvisorId from the requirement
+          recruiterId = requirement.talentAdvisorId;
+          attributionSource = 'requirement';
+        }
+      }
+
+      // If still no recruiterId, check if application has an ownerEmployeeId
+      if (!recruiterId && application.ownerEmployeeId) {
+        recruiterId = application.ownerEmployeeId;
+        attributionSource = 'applicationOwner';
+      }
+
+      console.log(`Nudge attribution: application=${id}, recruiterId=${recruiterId}, source=${attributionSource}`);
+
+      const nudgeData = {
+        applicationId: application.id,
+        candidateId: application.profileId,
+        candidateName: application.candidateName || "Candidate",
+        jobTitle: application.jobTitle,
+        company: application.company,
+        currentStatus: application.status,
+        recruiterId: recruiterId,
+        isRead: false,
+        isResponded: false,
+        escalationLevel: 'recruiter',
+        createdAt: new Date(),
+        lastEscalatedAt: new Date()
+      };
+
+      const nudge = await storage.createNudge(nudgeData as any);
+
+      
+      // Update the application's last nudged time
+      await storage.updateJobApplicationNudgeTime(application.id, new Date());
+
+      res.status(201).json(nudge);
+    } catch (error) {
+      console.error('Nudge application error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get all nudges for the logged-in candidate
+  app.get("/api/candidate/nudges", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const candidateNudges = await storage.getNudgesByCandidate(candidate.id);
+      res.json(candidateNudges);
+    } catch (error) {
+      console.error('Get candidate nudges error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mark a nudge as read for candidate
+  app.patch("/api/candidate/nudges/:id/read", requireCandidateAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // We use a simplified update since it's just marking as read
+      const [nudge] = await db
+        .update(nudges)
+        .set({ isRead: true })
+        .where(and(eq(nudges.id, id), eq(nudges.candidateId, candidate.id)))
+        .returning();
+
+      if (!nudge) {
+        return res.status(404).json({ message: "Nudge not found or access denied" });
+      }
+
+      res.json(nudge);
+    } catch (error) {
+      console.error('Mark nudge as read error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create job application for candidate
   app.post("/api/job-applications", requireCandidateAuth, async (req, res) => {
     try {
@@ -2138,6 +2538,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You have already applied for this job" });
       }
 
+      // Check if job has an assigned TA who should own the application
+      let ownerEmployeeId = null;
+      let ownerRole = null;
+
+      if (validationResult.data.recruiterJobId) {
+        try {
+          const job = await storage.getRecruiterJobById(validationResult.data.recruiterJobId);
+          if (job && job.assignedTaId) {
+            ownerEmployeeId = job.assignedTaId;
+            ownerRole = "recruiter"; // TAs are recruiters in the system
+            console.log(`[JOB APP] Assigning ownership to TA ${job.assignedTaName} (${job.assignedTaId}) for job ${job.role}`);
+          } else if (job) {
+            // Default to job owner if no TA assigned
+            ownerEmployeeId = job.ownerEmployeeId;
+            ownerRole = job.ownerRole;
+          }
+        } catch (err) {
+          console.error("Failed to check job assignment for ownership:", err);
+        }
+      }
+
       // Create the job application with server-side defaults
       // Populate candidate details from profile if not provided
       const applicationData = {
@@ -2146,6 +2567,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         candidateName: validationResult.data.candidateName || candidate.fullName || null,
         candidateEmail: validationResult.data.candidateEmail || candidate.email || null,
         candidatePhone: validationResult.data.candidatePhone || candidate.phone || null,
+        ownerEmployeeId: ownerEmployeeId || validationResult.data.ownerEmployeeId || null,
+        ownerRole: ownerRole || validationResult.data.ownerRole || null,
       };
 
       const application = await storage.createJobApplication(applicationData);
@@ -2169,6 +2592,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Create job application error:', error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Candidate can update status for own applications (e.g., Withdrawn, Archived)
+  app.patch("/api/job-applications/:id/status", requireCandidateAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, statusNote, rejectionReason } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (application.profileId !== candidate.id) {
+        return res.status(403).json({ message: "You can only update your own applications" });
+      }
+
+      const allowedStatuses = new Set(["Withdrawn", "Archived"]);
+      if (!allowedStatuses.has(status)) {
+        return res.status(400).json({ message: "Invalid status for candidate action" });
+      }
+
+      const updated = await storage.updateJobApplicationStatus(id, status, undefined, statusNote, rejectionReason);
+      if (!updated) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      res.json({ message: "Application status updated", application: updated });
+    } catch (error) {
+      console.error("Candidate update application status error:", error);
+      res.status(500).json({ message: "Failed to update application status" });
     }
   });
 
@@ -3281,7 +3746,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      if (employee.role !== 'team_leader') {
+      const role = (employee.role || '').toLowerCase();
+      if (role !== 'team_leader') {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
@@ -4308,10 +4774,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get target mappings for this team leader
         const tlTargets = allTargetMappings.filter(tm => tm.teamLeadId === tl.id || tm.teamLeadName === tl.name);
 
-        // Calculate quarters achieved (where target was met)
-        const qtrsAchieved = tlTargets.filter(tm =>
-          (tm.targetAchieved ?? 0) >= tm.minimumTarget
-        ).length;
+        // Calculate quarters since joining (as requested: based on joining date)
+        const qtrsAchieved = calculateQuartersSince(tl.joiningDate);
 
         // Get revenue mappings for this team leader (sum of all their recruiters' closures)
         const recruiterIds = recruiters.map(r => r.id);
@@ -4773,16 +5237,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get requirements assigned to this recruiter directly from requirements table
       // Filter out reassigned requirements for counts
       // IMPORTANT: Use employee.id (database ID), not employee.employeeId
-      const allRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      let allRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      if (!allRequirements.length) {
+        allRequirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+      }
       console.log('[RECRUITER DAILY METRICS] Found requirements for', employee.name, ':', allRequirements.length);
 
       // Get assignment status to filter out reassigned requirements
       const { requirementAssignments } = await import("@shared/schema");
       const requirementIds = allRequirements.map(r => r.id);
-      const allAssignments = requirementIds.length > 0
-        ? await db.select().from(requirementAssignments)
-          .where(inArray(requirementAssignments.requirementId, requirementIds))
-        : [];
+      let allAssignments: any[] = [];
+      if (requirementIds.length > 0) {
+        try {
+          allAssignments = await db.select().from(requirementAssignments)
+            .where(inArray(requirementAssignments.requirementId, requirementIds));
+        } catch (assignmentError) {
+          console.warn('[RECRUITER DAILY METRICS] requirement_assignments unavailable, continuing without assignment filters:', assignmentError);
+        }
+      }
 
       // Filter to only active assignments (exclude reassigned)
       const activeRequirementIds = new Set(
@@ -4835,8 +5307,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all resume submissions by this recruiter for their requirements
       const { resumeSubmissions, jobApplications } = await import("@shared/schema");
-      const allSubmissionsRaw = await db.select().from(resumeSubmissions)
-        .where(eq(resumeSubmissions.recruiterId, employee.id));
+      let allSubmissionsRaw: any[] = [];
+      try {
+        allSubmissionsRaw = await db.select().from(resumeSubmissions)
+          .where(eq(resumeSubmissions.recruiterId, employee.id));
+      } catch (submissionError) {
+        console.warn('[RECRUITER DAILY METRICS] resume_submissions unavailable, continuing with tagged applications only:', submissionError);
+      }
 
       // Get all resume submissions by this recruiter (up to selected date - cumulative)
       const allSubmissions = allSubmissionsRaw.filter(sub => {
@@ -4847,8 +5324,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all job applications tagged by this recruiter (up to selected date - cumulative)
       // These are candidates tagged to requirements (source: 'recruiter_tagged')
-      const taggedApplicationsRaw = await db.select().from(jobApplications)
-        .where(eq(jobApplications.source, 'recruiter_tagged'));
+      let taggedApplicationsRaw: any[] = [];
+      try {
+        taggedApplicationsRaw = await db.select().from(jobApplications)
+          .where(eq(jobApplications.source, 'recruiter_tagged'));
+      } catch (applicationError) {
+        console.warn('[RECRUITER DAILY METRICS] job_applications unavailable, continuing with resume submissions only:', applicationError);
+      }
 
       // Filter applications up to the selected date (cumulative)
       const taggedApplications = taggedApplicationsRaw.filter(app => {
@@ -5352,17 +5834,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      if (employee.role === 'team_leader') {
+      const role = (employee.role || '').toLowerCase();
+      if (role === 'team_leader' || role === 'tl') {
         const allEmployees = await storage.getAllEmployees();
         const teamRecruiters = allEmployees.filter(
-          emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+          emp => (emp.role === 'recruiter' || emp.role === 'talent_advisor' || emp.role === 'ta') && 
+                 (emp.reportingTo === employee.employeeId || emp.reportingTo === employee.id)
         );
 
         const allRequirements: any[] = [];
         const addedIds = new Set<string>();
 
-        for (const recruiter of teamRecruiters) {
-          const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
+        // Optimization: Use Promise.all if the number of recruiters is small, or just batch
+        const recruiterReqsResults = await Promise.all(
+          teamRecruiters.map(async (recruiter) => {
+            const byId = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
+            if (byId.length > 0) return byId;
+            return storage.getRequirementsByTalentAdvisor(recruiter.name);
+          })
+        );
+
+        for (const recruiterRequirements of recruiterReqsResults) {
           for (const req of recruiterRequirements) {
             if (!addedIds.has(req.id)) {
               allRequirements.push(req);
@@ -5387,10 +5879,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const { requirementAssignments } = await import("@shared/schema");
         const requirementIds = allRequirements.map(r => r.id);
-        const allAssignments = requirementIds.length > 0
-          ? await db.select().from(requirementAssignments)
-            .where(inArray(requirementAssignments.requirementId, requirementIds))
-          : [];
+        let allAssignments: any[] = [];
+        if (requirementIds.length > 0) {
+          try {
+            allAssignments = await db.select().from(requirementAssignments)
+              .where(inArray(requirementAssignments.requirementId, requirementIds));
+          } catch (assignmentError) {
+            console.warn('[RECRUITER REQUIREMENTS] requirement_assignments unavailable, continuing without assignment status:', assignmentError);
+          }
+        }
 
         const requirementsWithStatus = allRequirements.map(req => {
           const assignment = allAssignments.find(a => a.requirementId === req.id);
@@ -5427,8 +5924,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([...recentClosedArchivedRequirements, ...requirementsWithStatus]);
       }
 
-      if (employee.role !== 'recruiter') {
-        return res.status(403).json({ message: "Access denied. Recruiter or Team Leader role required." });
+      const isTA = role === 'recruiter' || role === 'talent_advisor' || role === 'ta';
+      if (!isTA) {
+        return res.status(403).json({ message: "Access denied. Recruiter or Talent Advisor role required." });
       }
 
       // CRITICAL: Verify we're using the correct employee ID
@@ -5436,16 +5934,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch requirements assigned to this recruiter/talent advisor (using ID-based lookup)
       // IMPORTANT: Use employee.id (database ID), not employee.employeeId
-      const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      let recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      if (!recruiterRequirements.length) {
+        recruiterRequirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+      }
       console.log('[RECRUITER REQUIREMENTS] Found requirements for', employee.name, ':', recruiterRequirements.length);
 
       // Get assignment status for each requirement
       const { requirementAssignments } = await import("@shared/schema");
       const requirementIds = recruiterRequirements.map(r => r.id);
-      const allAssignments = requirementIds.length > 0
-        ? await db.select().from(requirementAssignments)
-          .where(inArray(requirementAssignments.requirementId, requirementIds))
-        : [];
+      let allAssignments: any[] = [];
+      if (requirementIds.length > 0) {
+        try {
+          allAssignments = await db.select().from(requirementAssignments)
+            .where(inArray(requirementAssignments.requirementId, requirementIds));
+        } catch (assignmentError) {
+          console.warn('[RECRUITER REQUIREMENTS] requirement_assignments unavailable, continuing without assignment status:', assignmentError);
+        }
+      }
 
       // Filter out reassigned requirements - only show active assignments
       // First, get requirements that are actively assigned to this recruiter
@@ -8711,10 +9217,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Count quarters achieved (where target was met)
-        const quartersAchieved = memberTargets.filter(tm =>
-          (tm.targetAchieved ?? 0) >= tm.minimumTarget
-        ).length;
+        // Count quarters since joining (as requested: based on joining date)
+        const quartersAchieved = calculateQuartersSince(member.joiningDate);
+
+        // Calculate total revenue
+        const totalRevenue = memberClosures
+          .filter(rm => rm.status === 'closed')
+          .reduce((sum, rm) => sum + (parseFloat(rm.revenue || '0') || 0), 0);
+
+        // Calculate target achievement percentage
+        const totalTarget = memberTargets.reduce((sum, tm) => sum + (tm.minimumTarget || 0), 0);
+        const totalAchieved = memberTargets.reduce((sum, tm) => sum + (tm.targetAchieved || 0), 0);
+        const targetAchievement = totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0;
 
         return {
           id: member.id,
@@ -8723,7 +9237,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tenure,
           closures: memberClosures.length,
           lastClosure,
-          qtrsAchieved: quartersAchieved
+          qtrsAchieved: quartersAchieved,
+          targetAchievement,
+          totalRevenue: totalRevenue.toLocaleString('en-IN')
         };
       });
 
@@ -9847,6 +10363,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.primarySkills = JSON.stringify(skillsArray);
       }
 
+      // Handle assignment and status (New fields)
+      if (reqBody.assignedTaId !== undefined) updateData.assignedTaId = reqBody.assignedTaId;
+      if (reqBody.assignedTaName !== undefined) updateData.assignedTaName = reqBody.assignedTaName;
+      if (reqBody.status !== undefined) updateData.status = reqBody.status;
+
       const job = await storage.updateRecruiterJob(id, updateData);
       res.json({ message: "Job updated successfully", job });
     } catch (error) {
@@ -9954,9 +10475,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { jobId, dateFrom, dateTo, status } = req.query;
 
+      const ownershipFilter = buildJobOwnershipFilter(employee);
+      if (!ownershipFilter) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can access applications" });
+      }
+
       // Get this actor's jobs
       const jobs = await db.select().from(recruiterJobs)
-        .where(buildJobOwnershipFilter(employee)!)
+        .where(ownershipFilter)
         .orderBy(desc(recruiterJobs.postedDate));
       const jobIds = jobs.map(j => j.id);
       console.log('[RECRUITER APPLICATIONS] Found jobs for', employee.name, ':', jobIds.length);
@@ -10159,7 +10685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/recruiter/applications/:id/status", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, statusNote, rejectionReason } = req.body;
 
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
@@ -10173,7 +10699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const previousStatus = existingApplication.status;
 
       // Update the application status in the database
-      const application = await storage.updateJobApplicationStatus(id, status);
+      const application = await storage.updateJobApplicationStatus(id, status, undefined, statusNote, rejectionReason);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
@@ -12587,50 +13113,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Extract position
-      let position = null;
-      const positionPatterns = [
-        /(?:position|role|job title|title|looking for|seeking|hiring)[\s:]+([A-Za-z\s&/]+)/i,
-        /^([A-Za-z\s&]+?)(?:\s+(?:developer|engineer|manager|analyst|specialist|lead|architect|designer|scientist))/i,
-        /(?:we are|we're|looking for|seeking|hiring)\s+([A-Za-z\s&]+?)(?:developer|engineer|manager|analyst|specialist|lead|architect|designer|scientist)/i
-      ];
-      for (const pattern of positionPatterns) {
-        const match = jdText.match(pattern);
-        if (match && match[1]) {
-          position = match[1].trim();
-          break;
-        }
+      // Extract information using AI
+      const aiParsed = await parseJDWithAI(jdText);
+      
+      if (aiParsed) {
+        return res.json({
+          success: true,
+          data: {
+            position: aiParsed.position || null,
+            primarySkills: aiParsed.primarySkills || null,
+            secondarySkills: aiParsed.secondarySkills || null,
+            knowledgeOnly: aiParsed.knowledgeOnly || null,
+            experience: aiParsed.experience || null,
+            location: aiParsed.location || null
+          }
+        });
       }
 
-      // Extract skills (common tech skills)
-      const commonSkills = [
-        'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Angular', 'Vue', 'Node.js',
-        'Express', 'Django', 'Flask', 'Spring', 'SQL', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis',
-        'AWS', 'Azure', 'Docker', 'Kubernetes', 'Git', 'CI/CD', 'Agile', 'Scrum', 'Machine Learning',
-        'Data Science', 'TensorFlow', 'PyTorch', 'HTML', 'CSS', 'SASS', 'LESS', 'GraphQL', 'REST API',
-        'Microservices', 'DevOps', 'Linux', 'Unix', 'Shell Scripting', 'Jenkins', 'GitLab', 'GitHub'
-      ];
-
-      const foundSkills: string[] = [];
-      const lowerText = jdText.toLowerCase();
-
-      for (const skill of commonSkills) {
-        if (lowerText.includes(skill.toLowerCase())) {
-          foundSkills.push(skill);
-        }
-      }
-
-      // Split skills into primary (first 5-8) and secondary (rest)
-      const primarySkills = foundSkills.slice(0, 8).join(', ');
-      const secondarySkills = foundSkills.slice(8, 15).join(', ');
-
-      res.json({
+      // Fallback to basic extraction if AI fails
+      return res.json({
         success: true,
         data: {
-          position: position || null,
-          primarySkills: primarySkills || null,
-          secondarySkills: secondarySkills || null,
-          knowledgeOnly: null // Can be enhanced later
+          position: null,
+          primarySkills: null,
+          secondarySkills: null,
+          knowledgeOnly: null
         }
       });
     } catch (error: any) {

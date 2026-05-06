@@ -126,6 +126,28 @@ export const jobApplications = pgTable("job_applications", {
   experience: text("experience"),
   skills: text("skills"), // JSON stringified array
   logo: text("logo"),
+  lastNudgedAt: timestamp("last_nudged_at"),
+  withdrawReason: text("withdraw_reason"),
+  statusNote: text("status_note"),
+  rejectionReason: text("rejection_reason"),
+});
+
+export const nudges = pgTable("nudges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull(),
+  candidateId: varchar("candidate_id").notNull(),
+  recruiterId: varchar("recruiter_id"), // Links to employees.id (the recruiter who should receive the nudge)
+  candidateName: text("candidate_name").notNull(),
+  jobTitle: text("job_title").notNull(),
+  company: text("company").notNull(),
+  currentStatus: text("current_status").notNull(),
+  message: text("message"), // Optional short message/reason
+  isRead: boolean("is_read").default(false),
+  isResponded: boolean("is_responded").default(false),
+  escalationLevel: text("escalation_level").default("recruiter"), // recruiter, team_leader, client, admin
+  lastEscalatedAt: timestamp("last_escalated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  respondedAt: timestamp("responded_at"),
 });
 
 export const savedJobs = pgTable("saved_jobs", {
@@ -573,6 +595,8 @@ export const cashOutflows = pgTable("cash_outflows", {
   createdAt: text("created_at").notNull(),
 });
 
+
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -605,6 +629,11 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications).om
 
 export const insertSavedJobSchema = createInsertSchema(savedJobs).omit({
   id: true,
+});
+
+export const insertNudgeSchema = createInsertSchema(nudges).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
@@ -788,7 +817,9 @@ export const recruiterJobs = pgTable("recruiter_jobs", {
   primarySkills: text("primary_skills"), // JSON stringified array
   secondarySkills: text("secondary_skills"), // JSON stringified array
   knowledgeOnly: text("knowledge_only"), // JSON stringified array
-  status: text("status").notNull().default("Active"), // Active, Closed, Draft
+  status: text("status").notNull().default("Active"), // Active, Closed, Hold, Draft
+  assignedTaId: varchar("assigned_ta_id"), // The Talent Advisor assigned to this job
+  assignedTaName: text("assigned_ta_name"), // Display name of the assigned TA
   applicationCount: integer("application_count").default(0),
   postedDate: timestamp("posted_date").notNull().defaultNow(),
   closedDate: timestamp("closed_date"),
@@ -947,6 +978,8 @@ export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertSavedJob = z.infer<typeof insertSavedJobSchema>;
 export type SavedJob = typeof savedJobs.$inferSelect;
+export type InsertNudge = z.infer<typeof insertNudgeSchema>;
+export type Nudge = typeof nudges.$inferSelect;
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type InsertTeamLeaderProfile = z.infer<typeof insertTeamLeaderProfileSchema>;
@@ -1020,5 +1053,5 @@ export type InsertResumeSubmission = z.infer<typeof insertResumeSubmissionSchema
 export type ResumeSubmission = typeof resumeSubmissions.$inferSelect;
 export type InsertDailyMetricsSnapshot = z.infer<typeof insertDailyMetricsSnapshotSchema>;
 export type DailyMetricsSnapshot = typeof dailyMetricsSnapshots.$inferSelect;
-
-export type DailyMetricsSnapshot = typeof dailyMetricsSnapshots.$inferSelect;
+export type InsertNudge = z.infer<typeof insertNudgeSchema>;
+export type Nudge = typeof nudges.$inferSelect;

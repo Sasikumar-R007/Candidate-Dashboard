@@ -159,4 +159,97 @@ export async function ensureRequirementManagementColumns() {
 
   // Also ensure job_preferences table has salary_range
   await pool.query('ALTER TABLE job_preferences ADD COLUMN IF NOT EXISTS "salary_range" text');
+
+  // Employee profile and payroll columns
+  await pool.query(`
+    ALTER TABLE employees
+    ADD COLUMN IF NOT EXISTS "address" text,
+    ADD COLUMN IF NOT EXISTS "designation" text,
+    ADD COLUMN IF NOT EXISTS "phone" text,
+    ADD COLUMN IF NOT EXISTS "department" text,
+    ADD COLUMN IF NOT EXISTS "joining_date" text,
+    ADD COLUMN IF NOT EXISTS "employment_status" text,
+    ADD COLUMN IF NOT EXISTS "esic" text,
+    ADD COLUMN IF NOT EXISTS "epfo" text,
+    ADD COLUMN IF NOT EXISTS "esic_no" text,
+    ADD COLUMN IF NOT EXISTS "epfo_no" text,
+    ADD COLUMN IF NOT EXISTS "father_name" text,
+    ADD COLUMN IF NOT EXISTS "mother_name" text,
+    ADD COLUMN IF NOT EXISTS "father_number" text,
+    ADD COLUMN IF NOT EXISTS "mother_number" text,
+    ADD COLUMN IF NOT EXISTS "offered_ctc" text,
+    ADD COLUMN IF NOT EXISTS "current_status" text,
+    ADD COLUMN IF NOT EXISTS "increment_count" text,
+    ADD COLUMN IF NOT EXISTS "appraised_quarter" text,
+    ADD COLUMN IF NOT EXISTS "appraised_amount" text,
+    ADD COLUMN IF NOT EXISTS "appraised_year" text,
+    ADD COLUMN IF NOT EXISTS "yearly_ctc" text,
+    ADD COLUMN IF NOT EXISTS "current_monthly_ctc" text,
+    ADD COLUMN IF NOT EXISTS "name_as_per_bank" text,
+    ADD COLUMN IF NOT EXISTS "account_number" text,
+    ADD COLUMN IF NOT EXISTS "ifsc_code" text,
+    ADD COLUMN IF NOT EXISTS "bank_name" text,
+    ADD COLUMN IF NOT EXISTS "branch" text,
+    ADD COLUMN IF NOT EXISTS "city" text,
+    ADD COLUMN IF NOT EXISTS "profile_picture" text,
+    ADD COLUMN IF NOT EXISTS "banner_image" text
+  `);
+
+  // Candidate ownership columns
+  await pool.query(`
+    ALTER TABLE candidates
+    ADD COLUMN IF NOT EXISTS "owner_employee_id" varchar(255),
+    ADD COLUMN IF NOT EXISTS "owner_role" text
+  `);
+
+  // Job ownership and assignment columns
+  await pool.query(`
+    ALTER TABLE recruiter_jobs
+    ADD COLUMN IF NOT EXISTS "owner_employee_id" varchar(255),
+    ADD COLUMN IF NOT EXISTS "owner_role" text,
+    ADD COLUMN IF NOT EXISTS "assigned_ta_id" varchar(255),
+    ADD COLUMN IF NOT EXISTS "assigned_ta_name" text
+  `);
+
+  // Application ownership columns
+  await pool.query(`
+    ALTER TABLE job_applications
+    ADD COLUMN IF NOT EXISTS "owner_employee_id" varchar(255),
+    ADD COLUMN IF NOT EXISTS "owner_role" text
+  `);
+
+  // Nudge feature columns and table
+  await pool.query(`
+    ALTER TABLE job_applications
+    ADD COLUMN IF NOT EXISTS "last_nudged_at" timestamp,
+    ADD COLUMN IF NOT EXISTS "status_note" text,
+    ADD COLUMN IF NOT EXISTS "withdraw_reason" text
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS nudges (
+      id varchar(255) PRIMARY KEY DEFAULT gen_random_uuid(),
+      application_id varchar(255) NOT NULL,
+      candidate_id varchar(255) NOT NULL,
+      recruiter_id varchar(255),
+      candidate_name text NOT NULL,
+      job_title text NOT NULL,
+      company text NOT NULL,
+      current_status text NOT NULL,
+      message text,
+      is_read boolean DEFAULT false,
+      is_responded boolean DEFAULT false,
+      escalation_level text DEFAULT 'recruiter',
+      last_escalated_at timestamp NOT NULL DEFAULT now(),
+      created_at timestamp NOT NULL DEFAULT now(),
+      responded_at timestamp
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE nudges
+    ADD COLUMN IF NOT EXISTS escalation_level text DEFAULT 'recruiter',
+    ADD COLUMN IF NOT EXISTS last_escalated_at timestamp NOT NULL DEFAULT now(),
+    ADD COLUMN IF NOT EXISTS responded_at timestamp
+  `);
 }
