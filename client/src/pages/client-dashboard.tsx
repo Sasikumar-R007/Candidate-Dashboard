@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -28,36 +28,27 @@ import { ChatDock } from '@/components/chat/chat-dock';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
-
-interface ChatUser {
-  id: number;
-  name: string;
-  requirements: number;
-  closures: number;
-  avatar: string;
-  status: string;
-}
-
-// Simple Chat Interface Component
-function ClientChatInterface() {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Chat System</h2>
-          <p className="text-gray-600">Chat functionality coming soon</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+import ClientAgreementFirstLoginModal from '@/components/client-dashboard/client-agreement-first-login-modal';
+import { ClientSharedProfilesModal } from '@/components/dashboard/modals/client-shared-profiles-modal';
+import { logConsent } from '@/lib/consent-log';
+import {
+  CandidateCommentsSession,
+  type CandidateCommentsSessionApplicant,
+} from '@/components/dashboard/candidate-comments-session';
+import {
+  buildPipelineSessionList,
+  CLIENT_PIPELINE_STAGE_ORDER,
+  mapClientPipelineCandidate,
+} from '@/lib/pipeline-session-utils';
 
 export default function ClientDashboard() {
   const { logout } = useAuth();
   const { toast } = useToast();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+  const [sharedProfilesOpen, setSharedProfilesOpen] = useState(false);
+  const [sharedProfilesRequirementId, setSharedProfilesRequirementId] = useState<string | null>(null);
+  const [sharedProfilesRoleTitle, setSharedProfilesRoleTitle] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [jdFilePreviewUrl, setJdFilePreviewUrl] = useState<string | null>(null);
   const [jdText, setJdText] = useState('');
@@ -66,7 +57,7 @@ export default function ClientDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [pipelineDate, setPipelineDate] = useState<Date>(new Date());
   const [metricsDate, setMetricsDate] = useState<Date>(new Date());
-  const [pipelinePeriod, setPipelinePeriod] = useState<string>("daily");
+  const [pipelinePeriod, setPipelinePeriod] = useState<string>("all");
   const [pipelineMonth, setPipelineMonth] = useState<string>(format(new Date(), "MMMM"));
   const [pipelineYear, setPipelineYear] = useState<string>(new Date().getFullYear().toString());
   const [pipelineQuarter, setPipelineQuarter] = useState<string>("Q1");
@@ -92,7 +83,7 @@ export default function ClientDashboard() {
   // Fetch drop rates from API (calculated from actual data)
   const { data: dropRatesData, isLoading: isLoadingDropRates } = useQuery({
     queryKey: ['/api/client/drop-rates'],
-    initialData: {
+    placeholderData: {
       interviewDropRate: 25,
       offerDropRate: 20,
       totalInterviewsScheduled: 100,
@@ -110,9 +101,11 @@ export default function ClientDashboard() {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isJdPreviewModalOpen, setIsJdPreviewModalOpen] = useState(false);
   const [jdPosition, setJdPosition] = useState('');
-  const [selectedCandidate, setSelectedCandidate] = useState<{ id: string, name: string, stage: string } | null>(null);
-  const [candidatePopupPosition, setCandidatePopupPosition] = useState<{ x: number, y: number } | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
+  const [jdNoOfPositions, setJdNoOfPositions] = useState(1);
+  const [pipelineView, setPipelineView] = useState<'board' | 'candidate-session'>('board');
+  const [sessionApplicationId, setSessionApplicationId] = useState<string | null>(null);
+  const [sessionApplicantSnapshot, setSessionApplicantSnapshot] =
+    useState<CandidateCommentsSessionApplicant | null>(null);
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
@@ -164,6 +157,17 @@ export default function ClientDashboard() {
       return 'N/A';
     }
   };
+
+  // Helper function to format Role ID shortly
+  const formatRoleId = (id: string) => {
+    if (!id) return 'N/A';
+    if (id.includes('-')) {
+      // Format UUID as ROL-XXXXXX
+      return `ROL-${id.split('-')[0].substring(0, 6).toUpperCase()}`;
+    }
+    return id;
+  };
+
   const [selectedRoleForView, setSelectedRoleForView] = useState<any>(null);
   const [selectedRoleForEdit, setSelectedRoleForEdit] = useState<any>(null);
   const [isViewRoleModalOpen, setIsViewRoleModalOpen] = useState(false);
@@ -179,6 +183,7 @@ export default function ClientDashboard() {
   const [editKnowledgeOnly, setEditKnowledgeOnly] = useState('');
   const [editSpecialInstructions, setEditSpecialInstructions] = useState('');
   const [editJdPosition, setEditJdPosition] = useState('');
+  const [editNoOfPositions, setEditNoOfPositions] = useState(1);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   // Fetch metrics data from API - with filters
@@ -261,7 +266,7 @@ export default function ClientDashboard() {
   // Fetch dashboard stats from API
   const { data: dashboardStats } = useQuery({
     queryKey: ['/api/client/dashboard-stats'],
-    initialData: {
+    placeholderData: {
       rolesAssigned: 0,
       totalPositions: 0,
       activeRoles: 0,
@@ -274,7 +279,7 @@ export default function ClientDashboard() {
   // Fetch roles/requirements from API
   const { data: allRolesData, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['/api/client/requirements'],
-    initialData: [],
+    placeholderData: [],
     staleTime: 0,
     refetchOnMount: 'always'
   });
@@ -291,7 +296,7 @@ export default function ClientDashboard() {
       const response = await apiRequest('GET', url);
       return response.json();
     },
-    initialData: []
+    placeholderData: []
   });
 
   // Use only real pipeline data - no sample data
@@ -303,8 +308,36 @@ export default function ClientDashboard() {
   // Fetch closure reports from API
   const { data: allClosureReports, isLoading: isLoadingClosures } = useQuery({
     queryKey: ['/api/client/closures'],
-    initialData: []
+    placeholderData: []
   });
+  const { data: activeNudges = [] } = useQuery({
+    queryKey: ['/api/nudges'],
+    placeholderData: []
+  });
+
+  const computedDashboardStats = useMemo(() => {
+    const roles = Array.isArray(allRolesData) ? (allRolesData as any[]) : [];
+    const normalizeStatus = (value: string | null | undefined) => (value || '').trim().toLowerCase();
+    const totalPositions = roles.reduce((sum: number, role: any) => sum + Math.max(1, Number(role?.noOfPositions) || 1), 0);
+    const activeRoles = roles.filter((role: any) => {
+      const status = normalizeStatus(role?.status);
+      return status === 'active' || status === 'open' || status === 'in_progress' || status === 'in progress';
+    }).length;
+    const pausedRoles = roles.filter((role: any) => normalizeStatus(role?.status) === 'paused').length;
+    const withdrawnRoles = roles.filter((role: any) => {
+      const status = normalizeStatus(role?.status);
+      return status === 'withdrawn' || status === 'cancelled' || status === 'closed' || status === 'completed';
+    }).length;
+
+    return {
+      rolesAssigned: roles.length || dashboardStats.rolesAssigned,
+      totalPositions: totalPositions || dashboardStats.totalPositions,
+      activeRoles: activeRoles || dashboardStats.activeRoles,
+      pausedRoles: pausedRoles || dashboardStats.pausedRoles,
+      withdrawnRoles: withdrawnRoles || dashboardStats.withdrawnRoles,
+      successfulHires: Array.isArray(allClosureReports) ? allClosureReports.length : dashboardStats.successfulHires,
+    };
+  }, [allRolesData, allClosureReports, dashboardStats]);
 
   // Fetch client profile from API
   const { data: clientProfile, isLoading: isLoadingProfile } = useQuery({
@@ -313,6 +346,39 @@ export default function ClientDashboard() {
   const employee = useEmployeeAuth();
   const userName = clientProfile?.name || employee?.name || "Client User";
   const userRole = employee?.role || 'client';
+  const isClientRole = String(employee?.role || '').toLowerCase() === 'client';
+  const [showClientAgreementModal, setShowClientAgreementModal] = useState(false);
+
+  useEffect(() => {
+    if (!isClientRole) {
+      setShowClientAgreementModal(false);
+      return;
+    }
+    if (isLoadingProfile || !clientProfile) {
+      return;
+    }
+    setShowClientAgreementModal(clientProfile.clientAgreementAccepted !== true);
+  }, [isClientRole, isLoadingProfile, clientProfile]);
+
+  const handleClientAgreementAccept = async () => {
+    if (!employee?.id) return;
+    const ok = await logConsent({
+      user_id: employee.id,
+      role: "client",
+      consent_type: "client_agreement",
+      policy_version: "2026-05-10",
+    });
+    if (ok) {
+      await queryClient.invalidateQueries({ queryKey: ['/api/client/profile'] });
+      setShowClientAgreementModal(false);
+    } else {
+      toast({
+        title: "Could not save agreement",
+        description: "Check your connection and try again. If this keeps happening, contact support.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Mutation for rejecting a candidate
   const rejectCandidateMutation = useMutation({
@@ -327,16 +393,22 @@ export default function ClientDashboard() {
       });
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/client/pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/client/dashboard-stats'] });
+      queryClient.invalidateQueries({
+        queryKey: ['/api/client/applications', variables.id, 'session'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['/api/client/applications', variables.id, 'comments'],
+      });
       toast({
         title: "Candidate Rejected",
         description: "The candidate has been rejected successfully.",
       });
-      setSelectedCandidate(null);
-      setCandidatePopupPosition(null);
-      setRejectReason('');
+      setSessionApplicantSnapshot((prev) =>
+        prev && prev.id === variables.id ? { ...prev, currentStatus: 'Rejected' } : prev,
+      );
     },
     onError: () => {
       toast({
@@ -385,104 +457,62 @@ export default function ClientDashboard() {
     setKnowledgeOnly('');
     setSpecialInstructions('');
     setJdPosition('');
+    setJdNoOfPositions(1);
     if (jdFileInputRef.current) {
       jdFileInputRef.current.value = '';
     }
   };
 
+  const isJdFormReady = useMemo(() => {
+    return (
+      !!jdPosition.trim() &&
+      jdNoOfPositions >= 1 &&
+      !!primarySkills.trim() &&
+      !!secondarySkills.trim() &&
+      !!knowledgeOnly.trim() &&
+      !!specialInstructions.trim() &&
+      (!!uploadedFile || !!jdText.trim())
+    );
+  }, [jdPosition, jdNoOfPositions, primarySkills, secondarySkills, knowledgeOnly, specialInstructions, uploadedFile, jdText]);
+
+  const openJdPreviewIfValid = () => {
+    if (!isJdFormReady) {
+      toast({
+        title: "Required fields missing",
+        description: "Please complete Position, No. of Positions, skills, special instructions, and JD file/text.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsJdPreviewModalOpen(true);
+  };
+
   const filteredPipelineData = useMemo(() => {
     let filtered = [...mergedPipelineData];
 
-    // Apply period-based date filtering
-    if (pipelinePeriod === "daily" && pipelineDate) {
-      const filterDate = format(pipelineDate, 'yyyy-MM-dd');
-      filtered = filtered.filter((c: any) => {
-        // Skip sample candidates - only show real data
-        if (c.id && c.id.startsWith('sample-')) return false;
-        
-        // Check appliedDate (can be in DD-MM-YYYY or ISO format)
-        let dateToCheck: string | null = null;
-        if (c.appliedDate) {
-          try {
-            // Try parsing as DD-MM-YYYY first
-            if (c.appliedDate.includes('-') && c.appliedDate.split('-').length === 3) {
-              const [day, month, year] = c.appliedDate.split('-');
-              if (day.length <= 2 && month.length <= 2) {
-                // DD-MM-YYYY format
-                const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
-              } else {
-                // ISO format
-                const parsedDate = new Date(c.appliedDate);
-                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
-              }
-            } else {
-              // ISO format
-              const parsedDate = new Date(c.appliedDate);
-              dateToCheck = format(parsedDate, 'yyyy-MM-dd');
-            }
-          } catch {
-            return false;
+    const getCandidateDateKey = (candidate: any): string | null => {
+      const source = candidate?.appliedDate || candidate?.updatedAt || candidate?.createdAt;
+      if (!source || source === 'N/A') return null;
+      try {
+        if (typeof source === 'string' && source.includes('-') && source.split('-').length === 3) {
+          const [partA, partB, partC] = source.split('-');
+          if (partA.length <= 2 && partB.length <= 2 && partC.length === 4) {
+            const parsedDate = new Date(parseInt(partC, 10), parseInt(partB, 10) - 1, parseInt(partA, 10));
+            return format(parsedDate, 'yyyy-MM-dd');
           }
         }
-        
-        // Also check updatedAt or createdAt if appliedDate is not available
-        if (!dateToCheck && (c.updatedAt || c.createdAt)) {
-          try {
-            const dateStr = c.updatedAt || c.createdAt;
-            const parsedDate = new Date(dateStr);
-            dateToCheck = format(parsedDate, 'yyyy-MM-dd');
-          } catch {
-            return false;
-          }
-        }
-        
-        if (!dateToCheck) return false;
-        return dateToCheck === filterDate;
-      });
-    } else if (pipelinePeriod === "monthly" && pipelineMonth && pipelineYear) {
-      const monthMap: Record<string, number> = {
-        'January': 1, 'February': 2, 'March': 3, 'April': 4,
-        'May': 5, 'June': 6, 'July': 7, 'August': 8,
-        'September': 9, 'October': 10, 'November': 11, 'December': 12
-      };
-      const targetMonth = monthMap[pipelineMonth];
-      const targetYear = parseInt(pipelineYear);
-      filtered = filtered.filter((c: any) => {
-        // Skip sample candidates - only show real data
-        if (c.id && c.id.startsWith('sample-')) return false;
-        if (!c.appliedDate || c.appliedDate === 'N/A') return false;
-        try {
-          const [day, month, year] = c.appliedDate.split('-');
-          return parseInt(month) === targetMonth && parseInt(year) === targetYear;
-        } catch {
-          return false;
-        }
-      });
-    } else if (pipelinePeriod === "quarterly" && pipelineQuarter && pipelineYear) {
-      const quarterMap: Record<string, number[]> = {
-        'Q1': [1, 2, 3], 'Q2': [4, 5, 6], 'Q3': [7, 8, 9], 'Q4': [10, 11, 12]
-      };
-      const targetMonths = quarterMap[pipelineQuarter] || [];
-      const targetYear = parseInt(pipelineYear);
-      filtered = filtered.filter((c: any) => {
-        // Skip sample candidates - only show real data
-        if (c.id && c.id.startsWith('sample-')) return false;
-        if (!c.appliedDate || c.appliedDate === 'N/A') return false;
-        try {
-          const [day, month, year] = c.appliedDate.split('-');
-          return targetMonths.includes(parseInt(month)) && parseInt(year) === targetYear;
-        } catch {
-          return false;
-        }
-      });
-    }
+        return format(new Date(source), 'yyyy-MM-dd');
+      } catch {
+        return null;
+      }
+    };
 
-    // Filter by selected requirement
-    if (selectedRequirement && selectedRequirement !== 'all') {
-      filtered = filtered.filter((c: any) => {
-        return c.requirementId === selectedRequirement;
-      });
+    // Keep only real rows
+    filtered = filtered.filter((c: any) => !(c.id && c.id.startsWith('sample-')));
+
+    if (pipelinePeriod === "today") {
+      const todayKey = format(new Date(), 'yyyy-MM-dd');
+      filtered = filtered.filter((c: any) => getCandidateDateKey(c) === todayKey);
     }
 
     // Filter by selected role (single select) - Keep for backward compatibility
@@ -503,29 +533,54 @@ export default function ClientDashboard() {
     }
 
     return filtered;
-  }, [mergedPipelineData, pipelinePeriod, pipelineDate, pipelineMonth, pipelineYear, pipelineQuarter, selectedRole, selectedRequirement, allRolesData, sampleRoles]);
+  }, [mergedPipelineData, pipelinePeriod, selectedRole, allRolesData, sampleRoles]);
 
   // Group pipeline data by stage for the column view
   const pipelineStages = [
     { key: 'L1', display: 'Level 1' },
     { key: 'L2', display: 'Level 2' },
     { key: 'L3', display: 'Level 3' },
-    { key: 'Final Round', display: 'Final Round' },
     { key: 'HR Round', display: 'HR Round' },
+    { key: 'Final Round', display: 'Final Round' },
     { key: 'Offer Stage', display: 'Offer Stage' },
-    { key: 'Closure', display: 'Closure' }
+    { key: 'Closure', display: 'Closure' },
+    { key: 'Rejected', display: 'Rejected' }
   ];
+  const matchesStage = (candidate: any, stageKey: string) => {
+    const status = candidate?.currentStatus;
+    if (stageKey === 'Offer Stage') {
+      return status === 'Offer Stage';
+    }
+    return status === stageKey;
+  };
   const groupedPipeline = pipelineStages.reduce((acc, stage) => {
-    acc[stage.key] = filteredPipelineData.filter(c => c.currentStatus === stage.key);
+    acc[stage.key] = filteredPipelineData.filter(c => matchesStage(c, stage.key));
     return acc;
   }, {} as Record<string, any[]>);
 
+  const clientPipelineSessionList = useMemo(
+    () =>
+      buildPipelineSessionList(
+        groupedPipeline,
+        CLIENT_PIPELINE_STAGE_ORDER,
+        (c) => mapClientPipelineCandidate(c),
+      ),
+    [groupedPipeline],
+  );
+
   // Calculate stage counts for sidebar (using filtered data)
   const stageCounts = {
-    'Sourced': filteredPipelineData.filter(c => c.currentStatus === 'Sourced').length,
+    'Screening': filteredPipelineData.filter(c =>
+      c.currentStatus === 'Screening' ||
+      c.currentStatus === 'Evaluating' ||
+      c.currentStatus === 'Resume Review' ||
+      c.currentStatus === 'In-Process' ||
+      c.currentStatus === 'In Process' ||
+      c.currentStatus === 'Intro Call' ||
+      c.currentStatus === 'Assignment' ||
+      c.currentStatus === 'Sourced'
+    ).length,
     'Shortlisted': filteredPipelineData.filter(c => c.currentStatus === 'Shortlisted').length,
-    'Intro Call': filteredPipelineData.filter(c => c.currentStatus === 'Intro Call').length,
-    'Assignment': filteredPipelineData.filter(c => c.currentStatus === 'Assignment').length,
     'L1': groupedPipeline['L1']?.length || 0,
     'L2': groupedPipeline['L2']?.length || 0,
     'L3': groupedPipeline['L3']?.length || 0,
@@ -549,6 +604,7 @@ export default function ClientDashboard() {
       case 'HR Round': return { bg: 'bg-green-600', hover: 'hover:bg-green-700', text: 'text-white' };
       case 'Offer Stage': return { bg: 'bg-green-700', hover: 'hover:bg-green-800', text: 'text-white' };
       case 'Closure': return { bg: 'bg-green-800', hover: 'hover:bg-green-900', text: 'text-white' };
+      case 'Rejected': return { bg: 'bg-red-100', hover: 'hover:bg-red-200', text: 'text-gray-800' };
       default: return { bg: 'bg-gray-200', hover: 'hover:bg-gray-300', text: 'text-gray-800' };
     }
   };
@@ -579,9 +635,6 @@ export default function ClientDashboard() {
     });
   }, [allRolesData]);
 
-  // Recent chats data - static for now
-  const recentChats: ChatUser[] = [];
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active':
@@ -608,7 +661,61 @@ export default function ClientDashboard() {
     }
   };
 
+  const handlePipelineCandidateClick = (candidate: any) => {
+    if (candidate.id && candidate.id.startsWith('sample-')) {
+      toast({
+        title: "Sample Candidate",
+        description: "This is a sample candidate. Open a real pipeline card to view details.",
+        variant: "default",
+      });
+      return;
+    }
+    if (!candidate?.id) return;
+    const snapshot = mapClientPipelineCandidate(candidate);
+    setSessionApplicationId(snapshot.id);
+    setSessionApplicantSnapshot(snapshot);
+    setPipelineView('candidate-session');
+  };
+
+  const handleSelectSessionApplicant = (applicant: CandidateCommentsSessionApplicant) => {
+    setSessionApplicationId(applicant.id);
+    setSessionApplicantSnapshot(applicant);
+  };
+
+  const handleCloseCandidateSession = () => {
+    setPipelineView('board');
+    setSessionApplicationId(null);
+    setSessionApplicantSnapshot(null);
+  };
+
   const renderMainContent = () => {
+    if (
+      sidebarTab === 'requirements' &&
+      pipelineView === 'candidate-session' &&
+      sessionApplicationId
+    ) {
+      return (
+        <div className="flex h-screen flex-col overflow-hidden bg-white">
+          <CandidateCommentsSession
+            applicationId={sessionApplicationId}
+            fallbackApplicant={sessionApplicantSnapshot}
+            pipelineApplicants={clientPipelineSessionList}
+            onSelectApplicant={handleSelectSessionApplicant}
+            onBack={handleCloseCandidateSession}
+            apiMode="client"
+            viewerName={userName}
+            clientReject={{
+              canReject:
+                (sessionApplicantSnapshot?.currentStatus || '').toLowerCase() !== 'rejected',
+              isRejecting: rejectCandidateMutation.isPending,
+              onReject: (reason) =>
+                rejectCandidateMutation.mutate({ id: sessionApplicationId, reason }),
+            }}
+          />
+        </div>
+      );
+    }
+
     switch (sidebarTab) {
       case 'dashboard':
         return (
@@ -619,6 +726,10 @@ export default function ClientDashboard() {
               clientName={(clientProfile as any)?.name || undefined}
               clientEmail={(clientProfile as any)?.email || undefined}
               onHelpClick={() => setIsHelpChatOpen(true)}
+              nudgeCount={Array.isArray(activeNudges) ? activeNudges.length : 0}
+              closureCount={Array.isArray(allClosureReports) ? allClosureReports.length : 0}
+              onOpenNudges={() => setSidebarTab('nudges')}
+              onOpenClosures={() => setIsClosureModalOpen(true)}
             />
 
             <div className="px-6 py-6 space-y-6">
@@ -630,7 +741,7 @@ export default function ClientDashboard() {
                     <Briefcase className="h-6 w-6 text-blue-600" />
                   </div>
                   <div className="text-xs font-medium text-blue-600 mb-1">Roles Assigned</div>
-                  <div className="text-2xl font-bold text-blue-600">{dashboardStats.rolesAssigned}</div>
+                  <div className="text-2xl font-bold text-blue-600">{computedDashboardStats.rolesAssigned}</div>
                 </div>
 
                 {/* Total Positions */}
@@ -639,7 +750,7 @@ export default function ClientDashboard() {
                     <Users className="h-6 w-6 text-gray-600" />
                   </div>
                   <div className="text-xs font-medium text-gray-600 mb-1">Total Positions</div>
-                  <div className="text-2xl font-bold text-gray-900">{dashboardStats.totalPositions}</div>
+                  <div className="text-2xl font-bold text-gray-900">{computedDashboardStats.totalPositions}</div>
                 </div>
 
                 {/* Active Roles */}
@@ -648,7 +759,7 @@ export default function ClientDashboard() {
                     <Play className="h-6 w-6 text-gray-600" />
                   </div>
                   <div className="text-xs font-medium text-gray-600 mb-1">Active Roles</div>
-                  <div className="text-2xl font-bold text-gray-900">{dashboardStats.activeRoles}</div>
+                  <div className="text-2xl font-bold text-gray-900">{computedDashboardStats.activeRoles}</div>
                 </div>
 
                 {/* Paused Roles */}
@@ -657,7 +768,7 @@ export default function ClientDashboard() {
                     <Pause className="h-6 w-6 text-gray-600" />
                   </div>
                   <div className="text-xs font-medium text-gray-600 mb-1">Paused Roles</div>
-                  <div className="text-2xl font-bold text-gray-900">{dashboardStats.pausedRoles}</div>
+                  <div className="text-2xl font-bold text-gray-900">{computedDashboardStats.pausedRoles}</div>
                 </div>
 
                 {/* Withdrawn Roles */}
@@ -666,7 +777,7 @@ export default function ClientDashboard() {
                     <Minus className="h-6 w-6 text-orange-500" />
                   </div>
                   <div className="text-xs font-medium text-orange-500 mb-1">Withdrawn Roles</div>
-                  <div className="text-2xl font-bold text-orange-500">{dashboardStats.withdrawnRoles}</div>
+                  <div className="text-2xl font-bold text-orange-500">{computedDashboardStats.withdrawnRoles}</div>
                 </div>
 
                 {/* Successful Hires */}
@@ -675,7 +786,7 @@ export default function ClientDashboard() {
                     <Trophy className="h-6 w-6 text-green-500" />
                   </div>
                   <div className="text-xs font-medium text-green-500 mb-1">Successful Hires</div>
-                  <div className="text-2xl font-bold text-green-500">{dashboardStats.successfulHires}</div>
+                  <div className="text-2xl font-bold text-green-500">{computedDashboardStats.successfulHires}</div>
                 </div>
               </div>
 
@@ -684,8 +795,18 @@ export default function ClientDashboard() {
 
               {/* Roles & Status Table - Redesigned (Image 2) */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-lg font-bold text-gray-900">Roles & Status</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setIsRolesModalOpen(true)}
+                    disabled={!Array.isArray(allRolesData) || allRolesData.length === 0}
+                  >
+                    View more
+                  </Button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -733,7 +854,7 @@ export default function ClientDashboard() {
 
                           return (
                             <tr key={role.roleId || index} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{formatRoleId(role.roleId)}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.role}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.team}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.recruiter}</td>
@@ -763,10 +884,22 @@ export default function ClientDashboard() {
                                       View
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => {
+                                      const fullRole = (allRolesData as any[]).find(r => r.roleId === role.roleId) || role;
+                                      const rid = fullRole?.id || fullRole?.roleId || role.roleId;
+                                      if (!rid) return;
+                                      setSharedProfilesRequirementId(String(rid));
+                                      setSharedProfilesRoleTitle(fullRole?.position || fullRole?.role || role.role || '');
+                                      setSharedProfilesOpen(true);
+                                    }}>
+                                      <Users className="mr-2 h-4 w-4" />
+                                      Shared Profiles
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
                                       const fullRole = (allRolesData as any[]).find(r => r.roleId === role.roleId);
                                       setSelectedRoleForEdit(fullRole || role);
                                       // Initialize edit form with current values
                                       setEditJdPosition(fullRole?.role || role?.role || '');
+                                      setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
                                       setEditJdText(fullRole?.jdText || role?.jdText || '');
                                       setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || '');
                                       setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || '');
@@ -817,15 +950,15 @@ export default function ClientDashboard() {
                       <RotateCcw className="h-4 w-4" />
                     </Button>
                     <Button
-                      onClick={() => setIsJdPreviewModalOpen(true)}
+                      onClick={openJdPreviewIfValid}
                       variant="outline"
                       className="px-6 py-2 rounded border-gray-300 hover:bg-gray-50"
                     >
                       Preview
                     </Button>
                     <Button
-                      onClick={() => setIsJdPreviewModalOpen(true)}
-                      disabled={!jdPosition.trim() || (!uploadedFile && !jdText.trim())}
+                      onClick={openJdPreviewIfValid}
+                      disabled={!isJdFormReady}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Submit
@@ -950,23 +1083,36 @@ export default function ClientDashboard() {
                     </div>
                   </div>
 
-                  {/* Position Field - Required */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Position/Role <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      value={jdPosition}
-                      onChange={(e) => setJdPosition(e.target.value)}
-                      placeholder="e.g., Senior Software Engineer"
-                      className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
-                    />
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Position/Role <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={jdPosition}
+                        onChange={(e) => setJdPosition(e.target.value)}
+                        placeholder="e.g., Senior Software Engineer"
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        No. of Positions <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={jdNoOfPositions}
+                        onChange={(e) => setJdNoOfPositions(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                      />
+                    </div>
                   </div>
 
                   {/* Skills and Knowledge Section - Below Upload Areas */}
                   <div className="grid grid-cols-3 gap-4 mb-6">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Primary Skills</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Primary Skills <span className="text-red-500">*</span></label>
                       <Input
                         value={primarySkills}
                         onChange={(e) => setPrimarySkills(e.target.value)}
@@ -975,7 +1121,7 @@ export default function ClientDashboard() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Secondary Skills</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Secondary Skills <span className="text-red-500">*</span></label>
                       <Input
                         value={secondarySkills}
                         onChange={(e) => setSecondarySkills(e.target.value)}
@@ -984,7 +1130,7 @@ export default function ClientDashboard() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Knowledge Only</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Knowledge Only <span className="text-red-500">*</span></label>
                       <Input
                         value={knowledgeOnly}
                         onChange={(e) => setKnowledgeOnly(e.target.value)}
@@ -996,7 +1142,7 @@ export default function ClientDashboard() {
 
                   {/* Special Instructions */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Special Instructions</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Special Instructions <span className="text-red-500">*</span></label>
                     <Textarea
                       value={specialInstructions}
                       onChange={(e) => setSpecialInstructions(e.target.value)}
@@ -1012,20 +1158,22 @@ export default function ClientDashboard() {
 
       case 'requirements':
         return (
-          <div className="flex flex-col h-full">
-            {/* Simple Client Header */}
+          <div className="flex h-full min-h-0 flex-col">
             <SimpleClientHeader
               companyName={(clientProfile as any)?.company || (isLoadingProfile ? 'Loading...' : 'Company')}
               clientName={(clientProfile as any)?.name || undefined}
               clientEmail={(clientProfile as any)?.email || undefined}
               onHelpClick={() => setIsHelpChatOpen(true)}
+              nudgeCount={Array.isArray(activeNudges) ? activeNudges.length : 0}
+              closureCount={Array.isArray(allClosureReports) ? allClosureReports.length : 0}
+              onOpenNudges={() => setSidebarTab('nudges')}
+              onOpenClosures={() => setIsClosureModalOpen(true)}
             />
-            <div className="flex flex-1 overflow-hidden">
-              {/* Main Pipeline Content */}
-              <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="p-6 flex-1 overflow-hidden flex flex-col">
+            <div className="flex min-h-0 flex-1">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="space-y-6 p-6">
                   {/* Pipeline Header with Filters - Matching Image Design */}
-                  <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                  <div className="flex flex-shrink-0 justify-between items-center">
                     <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
                     <div className="flex items-center gap-3">
                       {/* Requirement Filter */}
@@ -1037,7 +1185,7 @@ export default function ClientDashboard() {
                           <SelectItem value="all">All Requirements</SelectItem>
                           {(allRolesData as any[]).map((role) => (
                             <SelectItem key={role.id || role.roleId} value={role.id || role.roleId}>
-                              {role.position || role.role} {role.roleId ? `(${role.roleId})` : ''}
+                              {role.position || role.role}
                             </SelectItem>
                           ))}
                           {(allRolesData as any[]).length === 0 && (
@@ -1052,75 +1200,18 @@ export default function ClientDashboard() {
                           <SelectValue placeholder="Period" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="today">Today</SelectItem>
+                          <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                       </Select>
-
-                      {/* Date Picker - Show based on period */}
-                      {pipelinePeriod === "daily" && (
-                        <StandardDatePicker
-                          value={pipelineDate}
-                          onChange={(date) => date && setPipelineDate(date)}
-                          placeholder="Select date"
-                          className="h-10 w-40 rounded"
-                        />
-                      )}
-                      {pipelinePeriod === "monthly" && (
-                        <div className="flex gap-2">
-                          <Select value={pipelineMonth} onValueChange={setPipelineMonth}>
-                            <SelectTrigger className="h-10 w-32 rounded">
-                              <SelectValue placeholder="Month" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(month => (
-                                <SelectItem key={month} value={month}>{month}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select value={pipelineYear} onValueChange={setPipelineYear}>
-                            <SelectTrigger className="h-10 w-24 rounded">
-                              <SelectValue placeholder="Year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                      {pipelinePeriod === "quarterly" && (
-                        <div className="flex gap-2">
-                          <Select value={pipelineQuarter} onValueChange={setPipelineQuarter}>
-                            <SelectTrigger className="h-10 w-24 rounded">
-                              <SelectValue placeholder="Quarter" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Q1">Q1</SelectItem>
-                              <SelectItem value="Q2">Q2</SelectItem>
-                              <SelectItem value="Q3">Q3</SelectItem>
-                              <SelectItem value="Q4">Q4</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Select value={pipelineYear} onValueChange={setPipelineYear}>
-                            <SelectTrigger className="h-10 w-24 rounded">
-                              <SelectValue placeholder="Year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {/* Pipeline Stages - Kanban Board Layout - Compact to Fit Screen */}
-                  <div className="border border-gray-200 rounded-lg bg-gray-50 p-2 flex-1 flex flex-col min-h-0 mb-6">
+                  {/* Pipeline Stages - Kanban Board */}
+                  <div
+                    className="mb-6 flex flex-col rounded-lg border border-gray-200 bg-gray-50 p-2"
+                    style={{ height: "calc(100vh - 200px)", minHeight: "420px" }}
+                  >
                     <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
                       <div className="flex gap-1.5 w-full h-full">
                         {pipelineStages.map((stage) => {
@@ -1162,7 +1253,7 @@ export default function ClientDashboard() {
                                     return (
                                       <div
                                         key={candidate.id}
-                                        onClick={(e) => handleCandidateClick(e, candidate, stage.key)}
+                                        onClick={() => handlePipelineCandidateClick(candidate)}
                                         className={`border rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 relative ${
                                           isRejected 
                                             ? 'bg-red-50 border-red-200' 
@@ -1214,8 +1305,8 @@ export default function ClientDashboard() {
                   </div>
 
                   {/* Closure Reports Table */}
-                  <Card className="mt-6">
-                    <CardHeader className="bg-gray-50 border-b border-gray-200">
+                  <Card>
+                    <CardHeader className="border-b border-gray-200 bg-gray-50">
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-lg font-semibold text-gray-900">Closure report</CardTitle>
                         <Button
@@ -1230,7 +1321,7 @@ export default function ClientDashboard() {
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse">
                           <thead>
-                            <tr className="bg-gray-100 border-b border-gray-200">
+                            <tr className="border-b border-gray-200 bg-gray-100">
                               <th className="text-left p-3 font-medium text-gray-700 text-sm">Candidate</th>
                               <th className="text-left p-3 font-medium text-gray-700 text-sm">Positions</th>
                               <th className="text-left p-3 font-medium text-gray-700 text-sm">Talent Advisor</th>
@@ -1239,15 +1330,25 @@ export default function ClientDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {allClosureReports.slice(0, 5).map((row, index) => (
-                              <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                                <td className="p-3 text-gray-900">{row.candidate}</td>
-                                <td className="p-3 text-gray-600">{row.position}</td>
-                                <td className="p-3 text-gray-600">{row.advisor}</td>
-                                <td className="p-3 text-gray-600">{row.offered}</td>
-                                <td className="p-3 text-gray-600">{row.joined}</td>
+                            {(Array.isArray(allClosureReports) ? allClosureReports : []).length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="p-6 text-center text-sm text-gray-500">
+                                  No closure reports yet
+                                </td>
                               </tr>
-                            ))}
+                            ) : (
+                              (allClosureReports as { candidate: string; position: string; advisor: string; offered: string; joined: string }[])
+                                .slice(0, 5)
+                                .map((row, index) => (
+                                  <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                                    <td className="p-3 text-gray-900">{row.candidate}</td>
+                                    <td className="p-3 text-gray-600">{row.position}</td>
+                                    <td className="p-3 text-gray-600">{row.advisor}</td>
+                                    <td className="p-3 text-gray-600">{row.offered}</td>
+                                    <td className="p-3 text-gray-600">{row.joined}</td>
+                                  </tr>
+                                ))
+                            )}
                           </tbody>
                         </table>
                       </div>
@@ -1260,17 +1361,16 @@ export default function ClientDashboard() {
               <div className="w-64 bg-white border-l border-gray-200">
                 <div className="p-4 space-y-1">
                   {[
-                    { label: 'SOURCED', stageKey: 'Sourced', color: 'bg-green-100' },
                     { label: 'SHORTLISTED', stageKey: 'Shortlisted', color: 'bg-green-200' },
-                    { label: 'INTRO CALL', stageKey: 'Intro Call', color: 'bg-green-300' },
-                    { label: 'ASSIGNMENT', stageKey: 'Assignment', color: 'bg-green-400' },
+                    { label: 'SCREENING', stageKey: 'Screening', color: 'bg-green-100' },
                     { label: 'LEVEL 1', stageKey: 'L1', color: 'bg-green-500 text-white' },
                     { label: 'LEVEL 2', stageKey: 'L2', color: 'bg-green-600 text-white' },
                     { label: 'LEVEL 3', stageKey: 'L3', color: 'bg-green-700 text-white' },
                     { label: 'FINAL ROUND', stageKey: 'Final Round', color: 'bg-green-800 text-white' },
                     { label: 'HR ROUND', stageKey: 'HR Round', color: 'bg-green-900 text-white' },
                     { label: 'OFFER STAGE', stageKey: 'Offer Stage', color: 'bg-green-900 text-white' },
-                    { label: 'CLOSURE', stageKey: 'Closure', color: 'bg-green-950 text-white' }
+                    { label: 'CLOSURE', stageKey: 'Closure', color: 'bg-green-950 text-white' },
+                    { label: 'REJECTED', stageKey: 'Rejected', color: 'bg-red-100' }
                   ].map((item, index) => (
                     <div key={index} className={`flex justify-between items-center py-3 px-4 rounded ${item.color}`}>
                       <span className={`text-sm font-medium ${item.color.includes('text-white') ? 'text-white' : 'text-gray-700'}`}>{item.label}</span>
@@ -1291,6 +1391,10 @@ export default function ClientDashboard() {
               <SimpleClientHeader
                 companyName={(clientProfile as any)?.company || 'Loading...'}
                 onHelpClick={() => setIsHelpChatOpen(true)}
+                nudgeCount={Array.isArray(activeNudges) ? activeNudges.length : 0}
+                closureCount={Array.isArray(allClosureReports) ? allClosureReports.length : 0}
+                onOpenNudges={() => setSidebarTab('nudges')}
+                onOpenClosures={() => setIsClosureModalOpen(true)}
               />
             </div>
             <div className="flex flex-1 overflow-hidden">
@@ -1745,9 +1849,6 @@ export default function ClientDashboard() {
           </div>
         );
 
-      case 'chat':
-        return <ClientChatInterface />;
-
       case 'nudges':
         return (
           <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
@@ -1760,46 +1861,6 @@ export default function ClientDashboard() {
       default:
         return null;
     }
-  };
-
-  const handleCandidateClick = (e: React.MouseEvent, candidate: any, stage: string) => {
-    // Prevent clicking on sample candidates (they don't exist in database)
-    if (candidate.id && candidate.id.startsWith('sample-')) {
-      toast({
-        title: "Sample Candidate",
-        description: "This is a sample candidate. Only real candidates can be rejected.",
-        variant: "default"
-      });
-      return;
-    }
-    
-    e.stopPropagation();
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    setCandidatePopupPosition({
-      x: rect.left + rect.width + 10,
-      y: rect.top
-    });
-    setSelectedCandidate({ id: candidate.id, name: candidate.candidateName, stage });
-  };
-
-  const closeCandidatePopup = () => {
-    setSelectedCandidate(null);
-    setCandidatePopupPosition(null);
-    setRejectReason('');
-  };
-
-  const handleReject = () => {
-    // Handle reject logic here
-    console.log('Rejecting candidate:', selectedCandidate, 'Reason:', rejectReason);
-
-    // Show success toast notification
-    toast({
-      title: "Candidate Rejected",
-      description: `${selectedCandidate?.name} has been rejected successfully.`,
-      className: "bg-green-50 border-green-200 text-green-800",
-    });
-
-    closeCandidatePopup();
   };
 
   const handleMetricCheckboxChange = (metric: 'speed' | 'quality' | 'impact') => {
@@ -1900,22 +1961,33 @@ export default function ClientDashboard() {
     );
   }
 
+  const blockClientDashboard = isClientRole && showClientAgreementModal;
+
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Client Sidebar with Toggle */}
-      <ClientMainSidebar
-        activeTab={sidebarTab}
-        onTabChange={setSidebarTab}
-        onExpandedChange={setIsSidebarExpanded}
+      <ClientAgreementFirstLoginModal
+        open={blockClientDashboard}
+        onAccept={handleClientAgreementAccept}
       />
+      <div
+        className={`contents ${blockClientDashboard ? 'pointer-events-none select-none' : ''}`}
+        aria-hidden={blockClientDashboard}
+      >
+        {/* Client Sidebar with Toggle */}
+        <ClientMainSidebar
+          activeTab={sidebarTab}
+          onTabChange={setSidebarTab}
+          onExpandedChange={setIsSidebarExpanded}
+        />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex ml-16">
-        {/* Middle Section */}
-        <div className={`${sidebarTab === 'dashboard' ? 'flex-1' : 'w-full'} bg-white`}>
-          {renderMainContent()}
+        {/* Main Content Area */}
+        <div className="flex min-h-0 flex-1 ml-16">
+          {/* Middle Section */}
+          <div className={`${sidebarTab === 'dashboard' ? 'flex-1' : 'w-full'} flex h-full min-h-0 flex-col overflow-hidden bg-white`}>
+            {renderMainContent()}
+          </div>
+
         </div>
-
       </div>
 
       {/* Roles Modal */}
@@ -1940,14 +2012,14 @@ export default function ClientDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {allRolesData.length === 0 ? (
+                {Array.isArray(allRolesData) && allRolesData.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-8 text-center text-gray-500">No roles found.</td>
                   </tr>
                 ) : (
-                  allRolesData.map((role, index) => (
+                  (Array.isArray(allRolesData) ? allRolesData : []).map((role, index) => (
                     <tr key={role.roleId || index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{formatRoleId(role.roleId)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
@@ -1975,9 +2047,21 @@ export default function ClientDashboard() {
                               View
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
+                              const rid = role?.id || role?.roleId;
+                              if (!rid) return;
+                              setSharedProfilesRequirementId(String(rid));
+                              setSharedProfilesRoleTitle(role?.position || role?.role || '');
+                              setSharedProfilesOpen(true);
+                              setIsRolesModalOpen(false);
+                            }}>
+                              <Users className="mr-2 h-4 w-4" />
+                              Shared Profiles
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
                               setSelectedRoleForEdit(role);
                               // Initialize edit form with current values
                               setEditJdPosition(role?.role || '');
+                              setEditNoOfPositions(Math.max(1, Number(role?.noOfPositions ?? 1) || 1));
                               setEditJdText(role?.jdText || '');
                               setEditPrimarySkills(role?.primarySkills || '');
                               setEditSecondarySkills(role?.secondarySkills || '');
@@ -2011,6 +2095,16 @@ export default function ClientDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ClientSharedProfilesModal
+        open={sharedProfilesOpen}
+        onOpenChange={(o) => {
+          setSharedProfilesOpen(o);
+          if (!o) setSharedProfilesRequirementId(null);
+        }}
+        requirementId={sharedProfilesRequirementId}
+        roleTitle={sharedProfilesRoleTitle}
+      />
 
       {/* JD Text Modal */}
       <Dialog open={isJdModalOpen} onOpenChange={setIsJdModalOpen}>
@@ -2217,11 +2311,10 @@ export default function ClientDashboard() {
             <Button
               onClick={async () => {
                 try {
-                  // Validate that either file or text is provided
-                  if (!uploadedFile && !jdText.trim()) {
+                  if (!isJdFormReady) {
                     toast({
                       title: "Validation Error",
-                      description: "Please provide either a JD file or JD text (at least one is required).",
+                      description: "Please fill all required JD fields before submitting.",
                       variant: "destructive"
                     });
                     return;
@@ -2244,6 +2337,7 @@ export default function ClientDashboard() {
                     jdText: jdText || null,
                     jdFile: jdFileUrl,
                     position: jdPosition,
+                    noOfPositions: jdNoOfPositions,
                     primarySkills,
                     secondarySkills,
                     knowledgeOnly,
@@ -2462,6 +2556,7 @@ export default function ClientDashboard() {
           setEditKnowledgeOnly('');
           setEditSpecialInstructions('');
           setEditJdPosition('');
+          setEditNoOfPositions(1);
         }
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -2490,6 +2585,17 @@ export default function ClientDashboard() {
                     onChange={(e) => setEditJdPosition(e.target.value)}
                     placeholder={selectedRoleForEdit.role || "e.g., Senior Software Engineer"}
                     className="bg-white border-gray-300 rounded-md placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">No. of Positions</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editNoOfPositions}
+                    onChange={(e) => setEditNoOfPositions(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                    className="bg-white border-gray-300 rounded-md"
                   />
                 </div>
 
@@ -2626,6 +2732,7 @@ export default function ClientDashboard() {
                   // Update requirement
                   const response = await apiRequest('PATCH', `/api/client/requirements/${selectedRoleForEdit.roleId}`, {
                     position: editJdPosition || selectedRoleForEdit.role,
+                    noOfPositions: editNoOfPositions || selectedRoleForEdit.noOfPositions || 1,
                     jdText: editJdText || selectedRoleForEdit.jdText || null,
                     jdFile: jdFileUrl,
                     primarySkills: editPrimarySkills || selectedRoleForEdit.primarySkills || null,
@@ -2679,7 +2786,7 @@ export default function ClientDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {allClosureReports.map((report, index) => (
+                {(Array.isArray(allClosureReports) ? allClosureReports : []).map((report, index) => (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{report.candidate}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.position}</td>
@@ -2797,132 +2904,9 @@ export default function ClientDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Reject Candidate Confirmation Dialog */}
-      <Dialog open={selectedCandidate !== null && !candidatePopupPosition} onOpenChange={(open) => !open && setSelectedCandidate(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reject Candidate</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to reject <strong>{selectedCandidate?.name}</strong>?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-xs text-gray-500">
-              Current stage: {selectedCandidate?.stage}
-            </p>
-            <div>
-              <Label htmlFor="reject-reason" className="text-sm font-medium">
-                Reason for rejection (optional)
-              </Label>
-              <Textarea
-                id="reject-reason"
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Enter reason for rejection..."
-                className="mt-2"
-                data-testid="textarea-reject-reason"
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedCandidate(null);
-                  setRejectReason('');
-                }}
-                data-testid="button-cancel-reject"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  if (selectedCandidate?.id) {
-                    rejectCandidateMutation.mutate({
-                      id: selectedCandidate.id,
-                      reason: rejectReason
-                    });
-                  }
-                }}
-                disabled={rejectCandidateMutation.isPending}
-                data-testid="button-confirm-reject"
-              >
-                {rejectCandidateMutation.isPending ? 'Rejecting...' : 'Reject'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Candidate Action Popup */}
-      {selectedCandidate && candidatePopupPosition && (
-        <>
-          {/* Backdrop to close popup */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={closeCandidatePopup}
-          />
-
-          {/* Popup */}
-          <div
-            className="fixed z-50 bg-white border border-gray-300 rounded shadow-lg p-4 w-64"
-            style={{
-              left: candidatePopupPosition.x,
-              top: candidatePopupPosition.y
-            }}
-          >
-            <div className="mb-3">
-              <h4 className="font-medium text-gray-900">{selectedCandidate.name}</h4>
-              <p className="text-sm text-gray-500">{selectedCandidate.stage}</p>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Reject with reason:</label>
-                <Textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Enter rejection reason..."
-                  className="w-full h-16 text-xs border border-gray-300 rounded p-2 resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => {
-                    if (selectedCandidate?.id) {
-                      rejectCandidateMutation.mutate({
-                        id: selectedCandidate.id,
-                        reason: rejectReason
-                      });
-                    }
-                  }}
-                  disabled={rejectCandidateMutation.isPending || !rejectReason.trim()}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 text-sm rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid="button-reject-popup"
-                >
-                  {rejectCandidateMutation.isPending ? 'Rejecting...' : 'Reject'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Floating Help Button */}
-      <button
-        onClick={() => setIsHelpChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
-        data-testid="button-help"
-        aria-label="Help"
-        title="Need help? Chat with us!"
-      >
-        <HelpCircle size={24} />
-      </button>
-
       {/* Chat Support */}
       <ChatDock
-        open={isHelpChatOpen}
+        open={isHelpChatOpen && !blockClientDashboard}
         onClose={() => setIsHelpChatOpen(false)}
         userName={userName}
         userRole={userRole}

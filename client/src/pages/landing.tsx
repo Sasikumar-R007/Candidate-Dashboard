@@ -20,14 +20,16 @@ import {
   X,
 } from "lucide-react";
 import navLogoImage from "@/assets/nav logo.png";
-import lp01Image from "@/assets/lp01.png";
-import lp02Image from "@/assets/lp02.png";
-import lp03Image from "@/assets/lp03.png";
-import staffosLogo from "@/assets/staffos logo.png";
 import { useAuth } from "@/contexts/auth-context";
 import { getDefaultRouteForAuthUser } from "@/lib/auth-routing";
 import { useQuery } from "@tanstack/react-query";
 import { JobCard } from "@/components/landing/JobCard";
+import { LandingFeaturesGrid } from "@/components/landing/landing-features-grid";
+import { LandingHeroSection } from "@/components/landing/landing-hero-section";
+import {
+  LandingSearchHero,
+  type LocationOption,
+} from "@/components/landing/landing-search-hero";
 import { RecruiterJob } from "@shared/schema";
 import { ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -126,7 +128,7 @@ export default function Landing() {
   const [, navigate] = useLocation();
   const { user, isLoading, isVerified } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [experience, setExperience] = useState("");
+  const [locationFilter, setLocationFilter] = useState<LocationOption>("All India");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -191,15 +193,9 @@ export default function Landing() {
   }, [user, isLoading, isVerified, navigate]);
 
   return (
-    <div
-      className="min-h-screen font-sans"
-      style={{
-        background:
-          "linear-gradient(to bottom, #FAF8FF 0%, #F1ECFF 30%, #E5DDFF 62%, #8776FF 100%)",
-      }}
-    >
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/50 bg-[#faf8ff]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+    <div className="flex min-h-screen flex-col bg-white font-sans text-gray-900">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto max-w-[90rem] px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1 sm:space-x-1.5">
               <img
@@ -214,20 +210,20 @@ export default function Landing() {
               </span>
             </div>
 
-            <div className="hidden md:flex items-center space-x-4">
-              <Button 
+            <div className="hidden md:flex items-center gap-3">
+              <Button
                 onClick={() => handleDelayedNav("/candidate-login")}
-                className="bg-purple-600 hover:bg-purple-700 text-white rounded-[10px] px-6 font-bold transition-all shadow-md shadow-purple-100"
+                className="rounded-[6px] bg-[#2563EB] px-6 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
               >
                 Login
               </Button>
-              <div className="h-8 w-px bg-gray-200" />
-              <button 
+              <Button
+                variant="outline"
                 onClick={() => handleDelayedNav("/employer-login")}
-                className="text-[15px] font-bold text-gray-700 hover:text-purple-600 transition-colors"
+                className="rounded-[6px] border-gray-300 bg-white text-sm font-semibold text-gray-900 hover:bg-gray-50"
               >
                 For Employer
-              </button>
+              </Button>
             </div>
 
             <button
@@ -269,21 +265,21 @@ export default function Landing() {
                 <div className="flex flex-col gap-6">
                   <button 
                     onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/candidate-login"); }}
-                    className="w-full bg-white text-gray-800 hover:bg-gray-50 border-2 border-gray-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="w-full rounded-[6px] bg-[#2563EB] px-6 py-4 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700 hover:shadow-lg"
                   >
                     Login
                   </button>
 
                   <button 
                     onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/candidate-registration"); }}
-                    className="w-full bg-purple-600 text-white hover:bg-purple-700 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
+                    className="w-full rounded-[6px] border-2 border-[#2563EB] bg-white px-6 py-4 text-base font-semibold text-[#2563EB] shadow-sm transition-all duration-200 hover:bg-blue-50 hover:shadow-md"
                   >
                     Register
                   </button>
 
                   <button 
                     onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/employer-login"); }}
-                    className="w-full bg-white text-purple-600 hover:bg-purple-50 border-2 border-purple-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="w-full rounded-[6px] border-2 border-gray-300 bg-white px-6 py-4 text-base font-semibold text-gray-900 shadow-sm transition-all duration-200 hover:bg-gray-50 hover:shadow-md"
                   >
                     For Employer
                   </button>
@@ -301,116 +297,43 @@ export default function Landing() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pt-24 sm:pt-28">
-        <section className="mb-16">
-          <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 leading-tight">
-              <span className="inline">Your next </span>
-              <span className="bg-purple-600 text-white px-4 py-2 inline-block text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
-                <span
-                  className="inline-block"
-                  style={{ paddingBottom: "0.1em", display: "inline-block" }}
-                >
-                  BIG opportunity
-                </span>
-              </span>
-              <br />
-              <span className="text-purple-600">starts here!</span>
-            </h1>
-            <p className="text-base sm:text-lg md:text-xl text-gray-600 mt-4">
-              Find roles that match your skills and apply in minutes.
-            </p>
-          </div>
+      <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 pb-8 pt-24 sm:px-6 sm:pb-12 sm:pt-28">
+        <LandingHeroSection
+          onSignUp={() => handleDelayedNav("/candidate-registration")}
+        />
+        <LandingFeaturesGrid />
 
-          <div className="relative mx-auto flex max-w-5xl flex-col gap-3 rounded-lg border border-white/70 bg-white/95 p-3 shadow-lg sm:gap-4 sm:p-4 md:flex-row">
-            <input
-              type="text"
-              placeholder="Enter Skill/Designation/Company"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSearchResults(e.target.value.length > 0);
-              }}
-              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-              onFocus={() => searchQuery.length > 0 && setShowSearchResults(true)}
-            />
-            <input
-              type="number"
-              placeholder="Experience"
-              className="w-full md:w-32 px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              min={0}
-              max={25}
-              step={1}
-              inputMode="numeric"
-              value={experience}
-              onChange={(e) => {
-                const nextValue = e.target.value;
-                if (nextValue === "") {
-                  setExperience("");
-                  return;
-                }
+        <LandingSearchHero
+          searchQuery={searchQuery}
+          onSearchQueryChange={(v) => {
+            setSearchQuery(v);
+            setShowSearchResults(v.trim().length > 0);
+          }}
+          location={locationFilter}
+          onLocationChange={setLocationFilter}
+          onSearch={() => handleDelayedNav("/candidate-login")}
+          onTagClick={(tag) => {
+            setSearchQuery(tag);
+            setShowSearchResults(false);
+          }}
+          showSearchResults={showSearchResults}
+          filteredResults={filteredSearchResults}
+          onPickResult={() => handleDelayedNav("/candidate-login")}
+          onBlurDropdown={() => setTimeout(() => setShowSearchResults(false), 200)}
+          onFocusSearch={() => searchQuery.trim().length > 0 && setShowSearchResults(true)}
+        />
 
-                const nextNumber = Number(nextValue);
-                if (nextNumber >= 0 && nextNumber <= 25) {
-                  setExperience(nextValue);
-                }
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Enter Location"
-              className="w-full md:w-48 px-4 py-3 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-purple-500 h-[48px]"
-            />
-            <button
-              type="button"
-              onClick={() => handleDelayedNav("/candidate-login")}
-              className="w-full md:w-48 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 h-[48px] text-base font-semibold rounded-sm border border-purple-600 flex items-center justify-center transition-colors"
-            >
-              Search
-            </button>
-
-            {showSearchResults && searchQuery.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
-                {filteredSearchResults.length > 0 ? (
-                  filteredSearchResults.map((result, index) => (
-                    <div 
-                      key={`${result.id}-${index}`}
-                      onClick={() => handleDelayedNav("/candidate-login")}
-                      className="cursor-pointer border-b border-gray-100 p-4 transition-colors hover:bg-gray-50"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{result.role}</h3>
-                          <p className="text-sm text-gray-600">
-                            {result.companyName} | {result.location} | {result.experience} yrs
-                          </p>
-                        </div>
-                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
-                          Apply
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-4 text-sm text-gray-600">
-                    No matching roles found. Try React, Designer, Google, HR, or Analytics.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-12">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 text-center">
+        <section className="mb-16 mt-2">
+          <div className="mt-10">
+            <h2 className="mb-2 text-center text-xl font-bold text-gray-900 sm:text-2xl">
               Browse jobs by category
             </h2>
-            <p className="text-sm sm:text-base text-gray-600 text-center mb-6">
+            <p className="mb-6 text-center text-sm text-gray-600 sm:text-base">
               Explore roles grouped by industry and find the perfect fit faster.
             </p>
-            <div className="relative overflow-hidden py-4 group">
-              <motion.div 
-                className="flex gap-4 w-max"
+            <div className="group relative overflow-hidden py-4">
+              <motion.div
+                className="flex w-max gap-4"
                 animate={{
                   x: [0, -1000],
                 }}
@@ -425,233 +348,200 @@ export default function Landing() {
                 whileHover={{ animationPlayState: "paused" }}
                 style={{ display: "flex", gap: "1rem" }}
               >
-                {/* Double the categories for seamless loop */}
                 {[...jobCategories, ...jobCategories, ...jobCategories].map((category, index) => (
-                  <button 
-                    key={index} 
+                  <button
+                    key={index}
+                    type="button"
                     onClick={() => {
                       const jobsSection = document.getElementById("jobs");
                       if (jobsSection) {
                         jobsSection.scrollIntoView({ behavior: "smooth" });
                       }
                     }}
-                    className="flex items-center gap-3 px-6 py-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 min-w-[200px] shrink-0 hover:-translate-y-1"
+                    className="flex min-w-[200px] shrink-0 items-center gap-3 rounded-xl border border-gray-100 bg-white px-6 py-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#F89252] flex items-center justify-center flex-shrink-0 shadow-sm shadow-orange-100">
-                      <category.icon className="w-5 h-5 text-white" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 shadow-sm shadow-sky-100/80">
+                      <category.icon className="h-5 w-5 text-[#1E6BFF]" />
                     </div>
-                    <span className="text-base font-semibold text-gray-800 flex-1 text-left whitespace-nowrap">
+                    <span className="flex-1 whitespace-nowrap text-left text-base font-semibold text-gray-800">
                       {category.label}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-gray-300" />
+                    <ChevronRight className="h-4 w-4 text-gray-300" />
                   </button>
                 ))}
               </motion.div>
-              
-              {/* Fade gradients for smooth marquee edges */}
-              <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#FAF8FF] to-transparent z-10 pointer-events-none" />
-              <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#FAF8FF] to-transparent z-10 pointer-events-none" />
+
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-white to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-white to-transparent" />
             </div>
           </div>
         </section>
 
-                <section id="jobs" className="mb-12 sm:mb-16">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 text-center px-2">
-            Actively Hiring Roles
-          </h2>
-          
-          {jobs.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {currentJobs.map((job) => (
-                  <div key={job.id} className="flex justify-center">
-                    <JobCard job={job} />
-                  </div>
-                ))}
-              </div>
+        <div className="relative left-1/2 right-1/2 -ml-[50vw] mb-10 w-screen bg-[#F9FAFB] py-14 sm:mb-12 sm:py-16">
+          <section id="jobs" className="mx-auto max-w-[90rem] px-4 sm:px-6">
+            <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl md:text-4xl">
+              Latest opportunities
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-gray-600 sm:text-base">
+              Actively hiring right now — apply in one click
+            </p>
 
-              {totalPages > 1 && (
-                <div className="mt-12 flex justify-center items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="rounded-full w-10 h-10 border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center p-0"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-gray-600" />
-                  </Button>
-
-                  <div className="flex gap-2 mx-4">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`w-10 h-10 rounded-full text-sm font-semibold transition-all ${
-                          currentPage === page
-                            ? "bg-purple-600 text-white shadow-md shadow-purple-200"
-                            : "bg-white text-gray-500 border border-gray-200 hover:border-purple-300 hover:text-purple-600"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="rounded-full w-10 h-10 border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center p-0"
-                  >
-                    <ChevronRight className="w-5 h-5 text-gray-600" />
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="py-12 text-center text-gray-500 bg-white/40 rounded-2xl border border-white/60">
-              No active roles available at the moment. Please check back later.
-            </div>
-          )}
-
-          <div className="mt-8 sm:mt-12 backdrop-blur-lg bg-white/20 rounded-lg border border-white/30 shadow-xl p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 max-w-6xl mx-auto">
-            <div className="flex-1 w-full md:w-auto">
-              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Develop Your Potential!
-              </h3>
-              <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4">
-                Unlock your potential with constructive feedback from our recruiters.
-              </p>
-              <Button 
-                onClick={() => handleDelayedNav("/candidate-login")}
-                className="bg-white border border-black text-black hover:bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base w-full sm:w-auto transition-all active:scale-95"
-              >
-                Explore Now!
-              </Button>
-            </div>
-            <div className="hidden md:block flex-shrink-0">
-              <img
-                src={lp03Image}
-                alt="Develop Your Potential"
-                className="w-auto h-24 sm:h-32"
-              />
-            </div>
-          </div>
-        </section>
-
-<section className="mb-12 sm:mb-16 relative">
-          <div className="rounded-2xl border border-white/70 bg-white/45 p-4 shadow-[0_20px_70px_rgba(116,81,255,0.18)] backdrop-blur-lg sm:p-6 md:p-8 lg:p-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
-              <div className="flex justify-center lg:justify-start">
-                <img
-                  src={lp01Image}
-                  alt="Career exploration"
-                  className="w-full max-w-md h-auto"
-                />
-              </div>
-
-              <div className="space-y-4 sm:space-y-6">
-                <div>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">
-                    Explore Careers in Top Roles
-                  </h2>
-                  <p className="text-base sm:text-lg text-gray-700">
-                    Choose a role and discover curated opportunities tailored just for you.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  {displayTopRoles.map((role, index) => (
-                    <div 
-                      key={index} 
-                      onClick={() => handleDelayedNav("/candidate-login")}
-                      className="cursor-pointer rounded-lg border border-purple-200/70 bg-white/70 p-5 shadow-sm transition-all hover:bg-white hover:translate-y-[-2px] hover:shadow-md mb-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-bold text-gray-900">{role.name}</h3>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-gray-900" />
-                      </div>
-                    </div>
+            {jobs.length > 0 ? (
+              <>
+                <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+                  {currentJobs.map((job) => (
+                    <JobCard key={job.id} job={job} />
                   ))}
                 </div>
+
+                <div className="mt-10 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex justify-center sm:justify-start">
+                    {totalPages > 1 && (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                          className="h-9 w-9 rounded-[6px] border-gray-200 bg-white p-0 hover:bg-gray-50"
+                        >
+                          <ChevronLeft className="h-4 w-4 text-gray-600" />
+                        </Button>
+                        <div className="mx-1 flex flex-wrap justify-center gap-1.5">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                              key={page}
+                              type="button"
+                              onClick={() => handlePageChange(page)}
+                              className={`h-9 min-w-[2.25rem] rounded-[6px] px-2 text-sm font-semibold transition-all ${
+                                currentPage === page
+                                  ? "bg-[#1E6BFF] text-white shadow-md shadow-blue-200/50"
+                                  : "border border-gray-200 bg-white text-gray-500 hover:border-sky-300 hover:text-[#1E6BFF]"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages}
+                          className="h-9 w-9 rounded-[6px] border-gray-200 bg-white p-0 hover:bg-gray-50"
+                        >
+                          <ChevronRight className="h-4 w-4 text-gray-600" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-center sm:justify-end">
+                    <Button
+                      type="button"
+                      onClick={() => handleDelayedNav("/candidate-login")}
+                      className="h-10 rounded-[6px] bg-[#1E6BFF] px-6 text-sm font-bold text-white hover:bg-blue-700"
+                    >
+                      Browse More Jobs
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-10 rounded-xl border border-sky-100/80 bg-white py-12 text-center text-gray-500 shadow-sm">
+                No active roles available at the moment. Please check back later.
               </div>
+            )}
+          </section>
+        </div>
+
+        <div className="mx-auto mb-12 max-w-[90rem] sm:mb-16">
+          <div className="flex flex-col items-start justify-between gap-6 rounded-[10px] bg-[#2563EB] px-6 py-8 sm:flex-row sm:items-center sm:px-10 sm:py-10">
+            <div className="text-left">
+              <h2 className="text-2xl font-bold text-white sm:text-3xl">
+                Ready for your next big career move?
+              </h2>
+              <p className="mt-2 max-w-xl text-base text-white/90">
+                Don&apos;t wait — get your next opportunity today.
+              </p>
             </div>
-          </div>
-        </section>
-
-        
-
-        <section className="backdrop-blur-lg bg-white/10 border border-white/30 py-12 sm:py-16 mb-12 sm:mb-16 rounded-lg px-4 sm:px-6">
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Ready for your next big career move?
-            </h2>
-            <p className="text-base sm:text-lg text-gray-700 mb-6 sm:mb-8">
-              Don't wait - get your next opportunity today.
-            </p>
             <Button
-              size="lg"
+              type="button"
               onClick={() => handleDelayedNav("/candidate-registration")}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg transition-all active:scale-95"
+              className="h-10 shrink-0 rounded-[6px] bg-white px-8 text-sm font-bold text-[#2563EB] shadow-sm hover:bg-gray-100 sm:h-11 sm:text-base"
             >
-              Start Now
+              Register
             </Button>
           </div>
-        </section>
+        </div>
       </main>
 
-      <footer className="text-white max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <div className="mb-6 sm:mb-8">
-          <div className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-white mb-4">
-            STAFFOS...
+      <footer className="mt-auto w-full border-t border-gray-100 bg-white text-[#2563EB]">
+        <div className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6 sm:py-12">
+          <div className="mb-8">
+            <div className="mb-4 text-4xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
+              STAFFOS...
+            </div>
+            <div className="flex gap-3">
+              <a
+                href="https://linkedin.com/company/scaling-theory/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:bg-white hover:text-[#2563EB]"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-5 w-5" />
+              </a>
+              <a
+                href="https://twitter.com/ScalingTheory"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:bg-white hover:text-[#2563EB]"
+                aria-label="Twitter"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.facebook.com/scalingtheory"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:bg-white hover:text-[#2563EB]"
+                aria-label="Facebook"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+            </div>
           </div>
-          <div className="flex gap-3 sm:gap-4 mb-6">
-            <a
-              href="https://linkedin.com/company/scaling-theory/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-            >
-              <Linkedin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </a>
-            <a
-              href="https://twitter.com/ScalingTheory"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-            >
-              <Twitter className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </a>
-            <a
-              href="https://www.facebook.com/scalingtheory"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-            >
-              <Facebook className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </a>
+          <div className="space-y-3 border-t border-sky-100 pt-6 text-sm text-[#2563EB]/90">
+            <p>All trademarks are the property of their respective owners</p>
+            <p className="flex flex-wrap items-center gap-1.5">
+              <span>All rights reserved © 2026</span>
+              <a
+                href="https://scalingtheory.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium underline decoration-[#2563EB]/40 underline-offset-2 hover:opacity-80"
+              >
+                Scaling Theory Technologies Private Ltd.
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              </a>
+            </p>
           </div>
         </div>
-        <div className="pt-6">
-          <p className="text-xs sm:text-sm text-white/80 mb-2">
-            All trademarks are the property of their respective owners
-          </p>
-          <p className="text-xs sm:text-sm text-white/80 flex items-center gap-2">
-            All rights reserved © 2026 Scaling Theory Technologies Private Ltd.
-            <a
-              href="https://scalingtheory.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center hover:text-white transition-colors"
-              aria-label="Visit Scaling Theory website"
+        <div className="border-t border-white/10 bg-[#1d4ed8] py-3 text-center text-sm">
+          <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 sm:px-6">
+            <Link
+              href="/privacy-policy"
+              className="font-semibold text-white/95 transition-colors hover:text-white"
             >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </p>
+              Privacy Policy
+            </Link>
+            <Link
+              href="/terms-of-use"
+              className="font-semibold text-white/95 transition-colors hover:text-white"
+            >
+              Terms of Use
+            </Link>
+          </div>
         </div>
       </footer>
       {/* Simplified Three-Dot Jumping Loading Overlay */}
@@ -661,7 +551,7 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0f172a]/55 backdrop-blur-md"
           >
             <div className="landing-loader"></div>
 
@@ -686,7 +576,7 @@ export default function Landing() {
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 text-white/80 text-xs font-semibold tracking-widest uppercase"
+              className="mt-6 text-sm font-semibold tracking-wide text-blue-100"
             >
               Loading...
             </motion.p>

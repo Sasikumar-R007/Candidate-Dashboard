@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { broadcastDashboardEvent } from '@/lib/dashboard-sync';
 import { cn } from '@/lib/utils';
 
 interface ResumeFormData {
@@ -98,6 +99,44 @@ function cleanParsedCollegeName(value: string | null | undefined): string {
     .replace(/\s*,\s*/g, ', ')
     .replace(/\s{2,}/g, ' ')
     .trim();
+}
+
+function normalizeParsedSkills(skills: unknown): string[] {
+  if (!skills) return [];
+
+  // Common shape: "React, Node.js, SQL"
+  if (typeof skills === 'string') {
+    return skills
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  // Common shape: ["React", "Node.js"]
+  if (Array.isArray(skills)) {
+    return skills
+      .map((s) => (typeof s === 'string' ? s : String(s ?? '')).trim())
+      .filter(Boolean);
+  }
+
+  // Possible shape from AI parser: { primary: [...], secondary: [...] } or similar
+  if (typeof skills === 'object') {
+    const parts: string[] = [];
+    Object.values(skills as Record<string, unknown>).forEach((value) => {
+      if (typeof value === 'string') {
+        parts.push(...value.split(/[,\n]/).map((s) => s.trim()).filter(Boolean));
+      } else if (Array.isArray(value)) {
+        parts.push(
+          ...value
+            .map((item) => (typeof item === 'string' ? item : String(item ?? '')).trim())
+            .filter(Boolean),
+        );
+      }
+    });
+    return parts;
+  }
+
+  return [];
 }
 
 export default function UploadResumeModal({
@@ -411,7 +450,7 @@ export default function UploadResumeModal({
 
       // Map skills
       if (parsedData.skills) {
-        const skillArray = parsedData.skills.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+        const skillArray = normalizeParsedSkills(parsedData.skills);
         if (skillArray.length > 0) {
           const skillsToFill = skillArray.slice(0, 5);
           const emptySlots = 5 - skillsToFill.length;
@@ -486,6 +525,11 @@ export default function UploadResumeModal({
       queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/candidates/counts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      // Notify other open tabs so their Applicant Overview refreshes too.
+      broadcastDashboardEvent({
+        type: 'applications:changed',
+        source: 'upload-resume-modal',
+      });
       
       toast({
         title: "Resume uploaded successfully",
@@ -627,19 +671,29 @@ export default function UploadResumeModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
         <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-          <DialogHeader className="relative">
+          <DialogHeader className="relative pr-48">
             <DialogTitle>Upload Resume</DialogTitle>
             <DialogDescription className="text-sm text-gray-500 mt-1">
               Upload resume for easy parsing and auto-fill
             </DialogDescription>
-            <button
-              onClick={handleReset}
-              className="absolute top-0 right-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
-              title="Reset all fields"
-              type="button"
-            >
-              <RotateCcw className="h-4 w-4 text-gray-600" />
-            </button>
+            <div className="absolute top-0 right-0 flex items-center gap-2">
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || createCandidateMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium disabled:opacity-50"
+                data-testid="button-submit-resume"
+              >
+                {isSubmitting || createCandidateMutation.isPending ? 'Submitting...' : 'Submit Resume'}
+              </Button>
+              <button
+                onClick={handleReset}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                title="Reset all fields"
+                type="button"
+              >
+                <RotateCcw className="h-4 w-4 text-gray-600" />
+              </button>
+            </div>
           </DialogHeader>
           
           <div className="space-y-4 pt-4">
@@ -1173,6 +1227,7 @@ export default function UploadResumeModal({
                 <Switch
                   checked={deliverToRequirement}
                   onCheckedChange={setDeliverToRequirement}
+                  className="border border-black data-[state=checked]:bg-black data-[state=unchecked]:bg-white [&>span]:data-[state=checked]:bg-white [&>span]:data-[state=unchecked]:bg-black"
                   data-testid="toggle-deliver-requirement"
                 />
               </div>
@@ -1203,17 +1258,6 @@ export default function UploadResumeModal({
               </Select>
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-center pt-4">
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting || createCandidateMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded font-medium disabled:opacity-50"
-                data-testid="button-submit-resume"
-              >
-                {isSubmitting || createCandidateMutation.isPending ? 'Submitting...' : 'Submit Resume'}
-              </Button>
-            </div>
           </div>
         </div>
       </DialogContent>

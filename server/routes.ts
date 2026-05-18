@@ -6,7 +6,7 @@ import fs from "fs";
 import passport from "passport";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets, nudges, consentLogs, profiles, candidateApplicationComments } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { sql, eq, and, or, desc, lte, gte, inArray, isNull } from "drizzle-orm";
@@ -100,6 +100,86 @@ async function ensureClosureActionsTable() {
   `);
 }
 
+async function ensureConsentLogsTable() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS consent_logs (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id text NOT NULL,
+      role text NOT NULL,
+      consent_type text NOT NULL,
+      policy_version text NOT NULL,
+      accepted_at timestamp NOT NULL DEFAULT now(),
+      ip_address text,
+      user_agent text
+    )
+  `);
+}
+
+const ONE_TIME_CONSENT_TYPES = new Set([
+  "platform_consent",
+  "employee_agreement",
+  "client_agreement",
+]);
+
+async function hasLoggedConsent(userId: string, consentType: string): Promise<boolean> {
+  try {
+    await ensureConsentLogsTable();
+    const hit = await db
+      .select({ id: consentLogs.id })
+      .from(consentLogs)
+      .where(and(eq(consentLogs.userId, userId), eq(consentLogs.consentType, consentType)))
+      .limit(1);
+    return hit.length > 0;
+  } catch (error) {
+    console.error("hasLoggedConsent error:", error);
+    return false;
+  }
+}
+
+async function getLatestConsentAcceptedAtIso(userId: string, consentType: string): Promise<string | null> {
+  try {
+    await ensureConsentLogsTable();
+    const rows = await db
+      .select({ acceptedAt: consentLogs.acceptedAt })
+      .from(consentLogs)
+      .where(and(eq(consentLogs.userId, userId), eq(consentLogs.consentType, consentType)))
+      .orderBy(desc(consentLogs.acceptedAt))
+      .limit(1);
+    const at = rows[0]?.acceptedAt;
+    if (!at) return null;
+    return at instanceof Date ? at.toISOString() : new Date(String(at)).toISOString();
+  } catch (error) {
+    console.error("getLatestConsentAcceptedAtIso error:", error);
+    return null;
+  }
+}
+
+/** Must match client `ProtectedRoute` gated roles and `/api/auth/verify-session`. */
+const GATED_EMPLOYEE_AGREEMENT_ROLES = new Set([
+  "recruiter",
+  "talent_advisor",
+  "ta",
+  "teamlead",
+  "team_leader",
+  "teamleader",
+  "tl",
+  "admin",
+]);
+
+function normalizeEmployeeRoleForAgreement(role: string | null | undefined): string {
+  return String(role || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_");
+}
+
+async function computeEmployeeAgreementAccepted(employee: { id: string; role?: string | null }): Promise<boolean> {
+  const normalizedRole = normalizeEmployeeRoleForAgreement(employee.role);
+  const needsEmployeeAgreement = GATED_EMPLOYEE_AGREEMENT_ROLES.has(normalizedRole);
+  if (!needsEmployeeAgreement) return true;
+  return hasLoggedConsent(employee.id, "employee_agreement");
+}
+
 function parseAdminDate(value?: string | null) {
   if (!value) return null;
 
@@ -178,6 +258,481 @@ function calculateWorkingHours(start: Date, end: Date): number {
   }
   
   return totalMinutes / 60;
+}
+
+async function syncActiveNudgeEscalations(): Promise<void> {
+  const allNudges = await storage.getActiveNudges();
+  const now = new Date();
+
+  for (const nudge of allNudges) {
+    if (nudge.isResponded) continue;
+
+    const createdAt = nudge.createdAt;
+    if (!createdAt) continue;
+
+    const createdDate = new Date(createdAt as unknown as string);
+    if (isNaN(createdDate.getTime())) continue;
+
+    const elapsedWorkingHours = calculateWorkingHours(createdDate, now);
+    const status = (nudge.currentStatus || "").toLowerCase();
+    const isOfferStage = status.includes("offer");
+
+    let requiredLevel = "recruiter";
+    if (isOfferStage) {
+      if (elapsedWorkingHours >= 9) requiredLevel = "client";
+      else if (elapsedWorkingHours >= 6) requiredLevel = "admin";
+      else if (elapsedWorkingHours >= 3) requiredLevel = "team_leader";
+    } else {
+      if (elapsedWorkingHours >= 18) requiredLevel = "client";
+      else if (elapsedWorkingHours >= 12) requiredLevel = "admin";
+      else if (elapsedWorkingHours >= 6) requiredLevel = "team_leader";
+    }
+
+    if (nudge.escalationLevel !== requiredLevel) {
+      try {
+        await storage.updateNudgeEscalation(nudge.id, requiredLevel, now);
+      } catch (updateErr) {
+        console.error(`Failed to update nudge ${nudge.id}:`, updateErr);
+      }
+    }
+  }
+}
+
+function formatOrdinalShortDate(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return "";
+  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (isNaN(d.getTime())) return "";
+  const day = d.getDate();
+  const j = day % 10;
+  const k = day % 100;
+  const suffix =
+    j === 1 && k !== 11 ? "st" : j === 2 && k !== 12 ? "nd" : j === 3 && k !== 13 ? "rd" : "th";
+  const month = d.toLocaleString("en-GB", { month: "short" });
+  return `${day}${suffix} ${month}`;
+}
+
+function getRevenueMappingRecencyTs(mapping: {
+  closureDate?: string | null;
+  createdAt?: string | null;
+  offeredDate?: string | null;
+}): number {
+  const candidates = [mapping.closureDate, mapping.createdAt, mapping.offeredDate];
+  for (const value of candidates) {
+    if (!value) continue;
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) return parsed.getTime();
+  }
+  return 0;
+}
+
+function resolveTeamLeaderName(
+  recruiterId: string | null | undefined,
+  allEmployees: Array<{ id: string; employeeId: string; name: string; reportingTo: string | null }>,
+): string {
+  if (!recruiterId) return "Unknown TL";
+  const rec = allEmployees.find((e) => e.id === recruiterId);
+  if (!rec) return "Unknown TL";
+  const key = rec.reportingTo?.trim();
+  if (!key) return "Unknown TL";
+  const tl = allEmployees.find((e) => e.id === key || e.employeeId === key);
+  return tl?.name || "Unknown TL";
+}
+
+function isRecentNotification(dateInput: string | Date | null | undefined, hours = 24): boolean {
+  if (!dateInput) return false;
+  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (isNaN(d.getTime())) return false;
+  return Date.now() - d.getTime() <= hours * 60 * 60 * 1000;
+}
+
+/** Match nudge / feed rows where recruiterId may be employees.id or employees.employeeId */
+function matchesEmployeeRef(
+  employee: { id: string; employeeId?: string | null },
+  ref: string | null | undefined,
+): boolean {
+  if (!ref) return false;
+  if (ref === employee.id) return true;
+  const code = employee.employeeId?.trim();
+  return !!code && ref === code;
+}
+
+async function canonicalizeEmployeeIdForNudge(ref: string | null | undefined): Promise<string | null> {
+  if (!ref) return null;
+  const trimmed = ref.trim();
+  if (!trimmed) return null;
+  const byId = await storage.getEmployeeById(trimmed);
+  if (byId) return byId.id;
+  const byCode = await storage.getEmployeeByEmployeeId(trimmed);
+  if (byCode) return byCode.id;
+  return trimmed;
+}
+
+function normalizeStatusToken(status: string | null | undefined): string {
+  return (status || "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function isShortlistedApplicationStatus(status: string | null | undefined): boolean {
+  const n = normalizeStatusToken(status);
+  if (!n) return false;
+  return n === "shortlisted" || n.includes("shortlist");
+}
+
+function taEscalationFeedLine(n: { jobTitle?: string | null; candidateName?: string | null; escalationLevel?: string | null }): string {
+  const lvl = (n.escalationLevel || "").toLowerCase();
+  const job = n.jobTitle || "Role";
+  const cand = n.candidateName || "Candidate";
+  if (lvl === "team_leader") return `[${job} - ${cand} - Escalated to TL]`;
+  if (lvl === "admin") return `[${job} - ${cand} - Escalated to Admin]`;
+  if (lvl === "client") return `[${job} - ${cand} - Escalated to Client]`;
+  return `[${job} - ${cand} - Escalated]`;
+}
+
+async function buildEmployeeNotificationsFeed(employee: any) {
+  const role = (employee?.role || "").toLowerCase();
+  const isTA = role === "recruiter" || role === "talent_advisor" || role === "ta";
+  const isTL = role === "team_leader";
+  const isAdmin = role === "admin";
+
+  await syncActiveNudgeEscalations();
+  const [allNudges, allEmployees, allRevenueMappings, allRequirements, allApplications] = await Promise.all([
+    storage.getActiveNudges(),
+    storage.getAllEmployees(),
+    storage.getAllRevenueMappings(),
+    storage.getRequirements(),
+    storage.getAllJobApplications(),
+  ]);
+
+  const toIso = (value: any): string | null => {
+    if (!value) return null;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  };
+
+  if (isAdmin) {
+    const adminNudges = allNudges
+      .filter((n) => !n.isResponded && n.escalationLevel === "admin")
+      .map((n) => ({
+        id: n.id,
+        line: `[${n.jobTitle} - ${resolveTeamLeaderName(n.recruiterId, allEmployees)}]`,
+        createdAt: toIso(n.createdAt),
+        isUnread: !n.isRead,
+      }));
+
+    const clientEscalations = allNudges
+      .filter((n) => !n.isResponded && n.escalationLevel === "client")
+      .map((n) => ({
+        id: n.id,
+        line: `[${n.candidateName} - ${resolveTeamLeaderName(n.recruiterId, allEmployees)} - Escalated to "${n.company}"]`,
+        createdAt: toIso(n.createdAt),
+        isUnread: !n.isRead,
+      }));
+
+    const closures = [...allRevenueMappings]
+      .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
+      .slice(0, 100)
+      .map((rm) => {
+        const createdAt = toIso(rm.createdAt);
+        return {
+          id: rm.id,
+          line: `[${rm.position} - ${rm.teamLeadName} - (${formatOrdinalShortDate(rm.closureDate || rm.createdAt)})]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt),
+        };
+      });
+
+    return {
+      role: "admin",
+      closures,
+      nudges: adminNudges,
+      escalatedNudges: clientEscalations,
+      newRequirements: [],
+      newCandidateApplied: [],
+      unreadCount:
+        adminNudges.filter((i) => i.isUnread).length +
+        clientEscalations.filter((i) => i.isUnread).length +
+        closures.filter((i) => i.isUnread).length,
+    };
+  }
+
+  if (isTL) {
+    const teamMemberKeys = new Set<string>();
+    for (const emp of allEmployees.filter(
+      (e) => e.reportingTo === employee.employeeId || e.reportingTo === employee.id,
+    )) {
+      teamMemberKeys.add(emp.id);
+      if (emp.employeeId) teamMemberKeys.add(emp.employeeId);
+    }
+    const myIds = [employee.id, employee.employeeId].filter(Boolean) as string[];
+    const belongsToTeam = (recruiterId?: string | null) =>
+      !!recruiterId && (myIds.includes(recruiterId) || teamMemberKeys.has(recruiterId));
+
+    const newRequirements = allRequirements
+      .filter((r) => (r.teamLead || "").toLowerCase() === (employee.name || "").toLowerCase())
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 100)
+      .map((r) => {
+        const createdAt = toIso(r.createdAt);
+        return {
+          id: r.id,
+          line: `[${r.position} - ${r.company}]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt),
+        };
+      });
+
+    const nudges = allNudges
+      .filter((n) => !n.isResponded && n.escalationLevel === "team_leader" && belongsToTeam(n.recruiterId))
+      .map((n) => ({
+        id: n.id,
+        line: `[${n.jobTitle} - ${
+          allEmployees.find((e) => matchesEmployeeRef(e, n.recruiterId))?.name || "TA"
+        }]`,
+        createdAt: toIso(n.createdAt),
+        isUnread: true,
+      }));
+
+    const escalatedNudges = allNudges
+      .filter(
+        (n) =>
+          !n.isResponded &&
+          (n.escalationLevel === "admin" || n.escalationLevel === "client") &&
+          belongsToTeam(n.recruiterId),
+      )
+      .map((n) => ({
+        id: n.id,
+        line:
+          n.escalationLevel === "client"
+            ? `[${n.candidateName} - ${n.jobTitle} - Escalated to Client]`
+            : `[${n.candidateName} - ${n.jobTitle} - Escalated to Admin]`,
+        createdAt: toIso(n.createdAt),
+        isUnread: true,
+      }));
+
+    const closures = [...allRevenueMappings]
+      .filter((rm) => rm.teamLeadId === employee.id || (rm.teamLeadName || "").toLowerCase() === (employee.name || "").toLowerCase())
+      .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
+      .slice(0, 100)
+      .map((rm) => {
+        const createdAt = toIso(rm.createdAt);
+        return {
+          id: rm.id,
+          line: `[${rm.position} - ${rm.talentAdvisorName} - (${formatOrdinalShortDate(rm.closureDate || rm.createdAt)})]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt),
+        };
+      });
+
+    return {
+      role: "team_leader",
+      newRequirements,
+      nudges,
+      escalatedNudges,
+      closures,
+      newCandidateApplied: [],
+      unreadCount:
+        newRequirements.filter((i) => i.isUnread).length +
+        nudges.length +
+        escalatedNudges.length +
+        closures.filter((i) => i.isUnread).length,
+    };
+  }
+
+  if (role === "client") {
+    const allClients = await storage.getAllClients();
+    const linkedClient = allClients.find((c: any) =>
+      !c.isLoginOnly &&
+      (
+        (c.employeeId && c.employeeId === employee.employeeId) ||
+        (c.email && employee.email && c.email.toLowerCase() === employee.email.toLowerCase())
+      )
+    );
+    const clientCompanyName = (linkedClient?.brandName || employee.name || "").trim();
+    const normalizedClientCompany = clientCompanyName.toLowerCase();
+
+    const clientRequirements = allRequirements.filter((r) =>
+      (r.company || "").trim().toLowerCase() === normalizedClientCompany
+    );
+    const clientRequirementIds = new Set(clientRequirements.map((r) => r.id));
+    const clientRequirementPositions = new Set(
+      clientRequirements.map((r) => (r.position || "").trim().toLowerCase()).filter(Boolean)
+    );
+
+    const nudges = allNudges
+      .filter((n) =>
+        !n.isResponded &&
+        n.escalationLevel === "client" &&
+        (n.company || "").trim().toLowerCase() === normalizedClientCompany
+      )
+      .map((n) => ({
+        id: n.id,
+        line: `[${n.candidateName || "Candidate"} - ${n.jobTitle || "Role"}]`,
+        createdAt: toIso(n.createdAt),
+        isUnread: !n.isRead,
+      }));
+
+    const closures = [...allRevenueMappings]
+      .filter((rm) => (rm.clientName || "").trim().toLowerCase() === normalizedClientCompany)
+      .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
+      .slice(0, 100)
+      .map((rm) => {
+        const createdAt = toIso(rm.closureDate || rm.createdAt);
+        return {
+          id: rm.id,
+          line: `[${rm.candidateName || "Candidate"} - ${rm.position || "Role"} - ${rm.talentAdvisorName || "TA"}]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt, 72),
+        };
+      });
+
+    const newCandidateApplied = allApplications
+      .filter((app: any) => {
+        if (!isShortlistedApplicationStatus(app.status)) return false;
+
+        const reqId = (app.requirementId || "").trim();
+        const appCompany = (app.company || "").trim().toLowerCase();
+        const appRole = (app.jobTitle || app.requirementPosition || "").trim().toLowerCase();
+
+        return (
+          (reqId && clientRequirementIds.has(reqId)) ||
+          (appCompany && appCompany === normalizedClientCompany) ||
+          (appRole && clientRequirementPositions.has(appRole))
+        );
+      })
+      .sort((a: any, b: any) => new Date(b.updatedAt || b.appliedDate || 0).getTime() - new Date(a.updatedAt || a.appliedDate || 0).getTime())
+      .slice(0, 100)
+      .map((app: any) => {
+        const createdAt = toIso(app.updatedAt || app.appliedDate);
+        return {
+          id: app.id,
+          line: `[${app.candidateName || "Candidate"} - ${(app.jobTitle || app.requirementPosition || "Role")} - Shortlisted]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt, 72),
+        };
+      });
+
+    return {
+      role: "client",
+      newRequirements: [],
+      nudges,
+      escalatedNudges: [],
+      closures,
+      newCandidateApplied,
+      unreadCount:
+        nudges.filter((i) => i.isUnread).length +
+        closures.filter((i) => i.isUnread).length +
+        newCandidateApplied.filter((i) => i.isUnread).length,
+    };
+  }
+
+  if (isTA) {
+    const newRequirements = allRequirements
+      .filter(
+        (r) =>
+          matchesEmployeeRef(employee, r.talentAdvisorId) ||
+          (r.talentAdvisor || "").toLowerCase() === (employee.name || "").toLowerCase(),
+      )
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 100)
+      .map((r) => {
+        const createdAt = toIso(r.createdAt);
+        return {
+          id: r.id,
+          line: `[${r.position} - ${r.company}]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt),
+        };
+      });
+
+    const nudges = allNudges
+      .filter(
+        (n) => !n.isResponded && n.escalationLevel === "recruiter" && matchesEmployeeRef(employee, n.recruiterId),
+      )
+      .map((n) => ({
+        id: n.id,
+        line: `[${n.jobTitle} - ${n.candidateName}]`,
+        createdAt: toIso(n.createdAt),
+        isUnread: true,
+      }));
+
+    const taEscalatedLevels = new Set(["team_leader", "admin", "client"]);
+    const escalatedNudges = allNudges
+      .filter(
+        (n) =>
+          !n.isResponded &&
+          taEscalatedLevels.has((n.escalationLevel || "").toLowerCase()) &&
+          matchesEmployeeRef(employee, n.recruiterId),
+      )
+      .map((n) => ({
+        id: n.id,
+        line: taEscalationFeedLine(n),
+        createdAt: toIso(n.createdAt),
+        isUnread: true,
+      }));
+
+    const closures = [...allRevenueMappings]
+      .filter(
+        (rm) =>
+          rm.talentAdvisorId === employee.id ||
+          matchesEmployeeRef(employee, rm.talentAdvisorId) ||
+          (rm.talentAdvisorName || "").toLowerCase() === (employee.name || "").toLowerCase(),
+      )
+      .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
+      .slice(0, 100)
+      .map((rm) => {
+        const createdAt = toIso(rm.closureDate || rm.createdAt);
+        return {
+          id: rm.id,
+          line: `[${rm.position} - ${rm.clientName || "Client"} - (${formatOrdinalShortDate(rm.closureDate || rm.createdAt)})]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt, 72),
+        };
+      });
+
+    const recruiterJobIds = new Set((await storage.getRecruiterJobsByRecruiterId(employee.id)).map((j) => j.id));
+    const newCandidateApplied = allApplications
+      .filter((app) => {
+        const ownJob = !!app.recruiterJobId && recruiterJobIds.has(app.recruiterJobId);
+        const ownTagged = matchesEmployeeRef(employee, app.ownerEmployeeId);
+        const isApplied = (app.source || "").toLowerCase() !== "recruiter_tagged";
+        return (ownJob || ownTagged) && isApplied;
+      })
+      .sort((a, b) => new Date(b.appliedDate || 0).getTime() - new Date(a.appliedDate || 0).getTime())
+      .slice(0, 100)
+      .map((app) => {
+        const createdAt = toIso(app.appliedDate);
+        return {
+          id: app.id,
+          line: `[${app.candidateName || "Candidate"} - ${app.jobTitle || "Role"}]`,
+          createdAt,
+          isUnread: isRecentNotification(createdAt, 72),
+        };
+      });
+
+    return {
+      role: "recruiter",
+      newRequirements,
+      nudges,
+      escalatedNudges,
+      closures,
+      newCandidateApplied,
+      unreadCount:
+        newRequirements.filter((i) => i.isUnread).length +
+        nudges.length +
+        escalatedNudges.length +
+        closures.filter((i) => i.isUnread).length +
+        newCandidateApplied.filter((i) => i.isUnread).length,
+    };
+  }
+
+  return {
+    role,
+    newRequirements: [],
+    nudges: [],
+    escalatedNudges: [],
+    closures: [],
+    newCandidateApplied: [],
+    unreadCount: 0,
+  };
 }
 
 
@@ -317,6 +872,13 @@ function requireEmployeeAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function requireAnyAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.employeeId && !req.session.candidateId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
 // Authentication middleware for support team ONLY
 function requireSupportAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.employeeId || req.session.employeeRole !== 'support') {
@@ -334,9 +896,27 @@ function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 function normalizeSourcingRole(role: string | null | undefined): "recruiter" | "team_leader" | null {
-  const r = role?.toLowerCase();
-  if (r === "team_leader" || r === "teamleader") return "team_leader";
-  if (r === "recruiter" || r === "talent_advisor" || r === "ta") return "recruiter";
+  const raw = (role || "").toLowerCase().trim();
+  const r = raw.replace(/[\s-]+/g, "_");
+  if (
+    r === "team_leader" ||
+    r === "teamleader" ||
+    r === "tl" ||
+    (raw.includes("team") && raw.includes("lead"))
+  ) {
+    return "team_leader";
+  }
+  if (
+    r === "recruiter" ||
+    r === "talent_advisor" ||
+    r === "ta" ||
+    r === "talent_advisor_ta" ||
+    (raw.includes("talent") &&
+      (raw.includes("advisor") || raw.includes("acquisition") || raw.includes("consultant"))) ||
+    (raw.includes("recruit") && !raw.includes("manager") && !raw.includes("head"))
+  ) {
+    return "recruiter";
+  }
   return null;
 }
 
@@ -434,12 +1014,498 @@ function buildApplicationOwnershipFilter(employee: { id: string; role: string })
   return or(ownedByActor, assignedToActor);
 }
 
+function formatCommentAuthorRole(role: string | null | undefined): string {
+  const r = (role || "").toLowerCase();
+  if (r === "admin") return "Admin";
+  if (r === "team_leader" || r === "teamleader") return "TL";
+  if (r === "recruiter" || r === "talent_advisor" || r === "ta") return "TA";
+  if (r === "client") return "Client";
+  if (r === "hr" || r === "human_resources") return "HR";
+  return role || "Staff";
+}
+
+async function employeeCanAccessRecruiterApplication(
+  employee: { id: string; role: string; employeeId?: string | null },
+  application: {
+    ownerEmployeeId?: string | null;
+    ownerRole?: string | null;
+    recruiterJobId?: string | null;
+    requirementId?: string | null;
+  },
+): Promise<boolean> {
+  const roleLower = (employee.role || "").toLowerCase().replace(/[\s-]+/g, "_");
+  if (
+    roleLower === "admin" ||
+    roleLower === "manager" ||
+    roleLower.includes("admin") ||
+    roleLower.includes("manager")
+  ) {
+    return true;
+  }
+
+  const ownerRole = normalizeSourcingRole(employee.role);
+
+  if (ownerRole === "team_leader") {
+    const allEmployees = await storage.getAllEmployees();
+    const tlEmployeeId = employee.employeeId || employee.id;
+    const teamRecruiterIds = new Set(
+      allEmployees
+        .filter(
+          (emp) =>
+            normalizeSourcingRole(emp.role) === "recruiter" &&
+            (emp.reportingTo === tlEmployeeId || emp.reportingTo === employee.id),
+        )
+        .map((emp) => emp.id),
+    );
+
+    if (application.ownerEmployeeId && teamRecruiterIds.has(application.ownerEmployeeId)) {
+      return true;
+    }
+
+    if (application.recruiterJobId) {
+      const job = await storage.getRecruiterJobById(application.recruiterJobId);
+      if (job?.recruiterId && teamRecruiterIds.has(job.recruiterId)) {
+        return true;
+      }
+      if (job?.ownerEmployeeId && teamRecruiterIds.has(job.ownerEmployeeId)) {
+        return true;
+      }
+      if ((job as any)?.assignedTaId && teamRecruiterIds.has((job as any).assignedTaId)) {
+        return true;
+      }
+    }
+  }
+
+  if (!ownerRole) {
+    return false;
+  }
+
+  let hasAccess =
+    application.ownerEmployeeId === employee.id &&
+    application.ownerRole === ownerRole;
+
+  if (!hasAccess && application.recruiterJobId) {
+    const job = await storage.getRecruiterJobById(application.recruiterJobId);
+    if (job) {
+      hasAccess =
+        (job.ownerEmployeeId === employee.id && job.ownerRole === ownerRole) ||
+        job.recruiterId === employee.id ||
+        (job as any).assignedTaId === employee.id;
+    }
+  }
+
+  return hasAccess;
+}
+
+async function employeeCanViewCandidateRecord(
+  employee: { id: string; name: string; role: string },
+  candidate: {
+    id: string;
+    email?: string | null;
+    ownerEmployeeId?: string | null;
+    ownerRole?: string | null;
+    addedBy?: string | null;
+    isActive?: boolean | null;
+  },
+): Promise<boolean> {
+  const roleLower = (employee.role || "").toLowerCase();
+  if (roleLower === "admin" || roleLower === "manager") {
+    return true;
+  }
+
+  const ownerRole = normalizeSourcingRole(employee.role);
+  if (ownerRole) {
+    const ownsRecord =
+      (candidate.ownerEmployeeId === employee.id && candidate.ownerRole === ownerRole) ||
+      (ownerRole === "recruiter" && !candidate.ownerEmployeeId && candidate.addedBy === employee.name);
+
+    if (ownsRecord) {
+      return true;
+    }
+
+    // Source Resume lists active candidates across the database for recruiters/TLs.
+    if (candidate.isActive !== false) {
+      return true;
+    }
+
+    if (candidate.email) {
+      const email = candidate.email.trim().toLowerCase();
+      const relatedApps = await db
+        .select({ id: jobApplications.id, ownerEmployeeId: jobApplications.ownerEmployeeId, ownerRole: jobApplications.ownerRole, recruiterJobId: jobApplications.recruiterJobId })
+        .from(jobApplications)
+        .where(sql`lower(${jobApplications.candidateEmail}) = ${email}`);
+
+      for (const app of relatedApps) {
+        if (await employeeCanAccessRecruiterApplication(employee, app)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function parseSkillsValue(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map((s) => String(s).trim()).filter(Boolean);
+        }
+      } catch {
+        // fall through
+      }
+    }
+    return trimmed.split(/[,;|]/).map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+async function resolveApplicationCandidateDetails(application: {
+  id: string;
+  profileId?: string | null;
+  candidateName?: string | null;
+  candidateEmail?: string | null;
+  candidatePhone?: string | null;
+  jobTitle?: string | null;
+  company?: string | null;
+  status?: string | null;
+  source?: string | null;
+  appliedDate?: Date | string | null;
+  experience?: string | null;
+  location?: string | null;
+  skills?: string | null;
+  statusNote?: string | null;
+  rejectionReason?: string | null;
+}) {
+  let skills = parseSkillsValue(application.skills);
+  const email = application.candidateEmail?.trim().toLowerCase() || null;
+
+  let candidateRow: Awaited<ReturnType<typeof storage.getCandidateByEmail>> | undefined;
+  if (email) {
+    candidateRow = await storage.getCandidateByEmail(email);
+  }
+
+  let profileRow: (typeof profiles.$inferSelect) | undefined;
+  if (candidateRow?.id) {
+    const byUserId = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, candidateRow.id))
+      .limit(1);
+    profileRow = byUserId[0];
+  }
+  if (!profileRow && email) {
+    const byEmail = await db
+      .select()
+      .from(profiles)
+      .where(sql`lower(${profiles.email}) = ${email}`)
+      .limit(1);
+    profileRow = byEmail[0];
+  }
+  if (!profileRow && application.profileId && !String(application.profileId).startsWith("recruiter-tagged-")) {
+    const byId = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.id, application.profileId))
+      .limit(1);
+    profileRow = byId[0];
+  }
+
+  const preferencesProfileId = profileRow?.id || candidateRow?.id;
+  let preferences: Awaited<ReturnType<typeof storage.getJobPreferences>> | undefined;
+  if (preferencesProfileId) {
+    preferences = await storage.getJobPreferences(preferencesProfileId);
+  }
+
+  const resumeFile =
+    candidateRow?.resumeFile ||
+    profileRow?.resumeFile ||
+    null;
+
+  const linkedinUrl =
+    candidateRow?.linkedinUrl ||
+    profileRow?.linkedinUrl ||
+    null;
+
+  const location =
+    application.location ||
+    candidateRow?.location ||
+    profileRow?.currentLocation ||
+    profileRow?.location ||
+    null;
+
+  const experience =
+    application.experience ||
+    candidateRow?.experience ||
+    profileRow?.totalExperience ||
+    null;
+
+  const currentCompany =
+    candidateRow?.company ||
+    profileRow?.currentCompany ||
+    application.company ||
+    null;
+
+  const currentRole =
+    candidateRow?.currentRole ||
+    candidateRow?.designation ||
+    profileRow?.currentRole ||
+    profileRow?.title ||
+    application.jobTitle ||
+    null;
+
+  const education =
+    candidateRow?.education ||
+    profileRow?.education ||
+    [profileRow?.highestQualification, profileRow?.collegeName].filter(Boolean).join(" · ") ||
+    null;
+
+  const noticePeriod =
+    candidateRow?.noticePeriod ||
+    profileRow?.noticePeriod ||
+    null;
+
+  const ctc =
+    candidateRow?.ctc ||
+    candidateRow?.ectc ||
+    profileRow?.salaryRange ||
+    null;
+
+  const preferredLocation =
+    profileRow?.preferredLocation ||
+    null;
+
+  if (!skills.length) {
+    skills = parseSkillsValue(candidateRow?.skills || profileRow?.skills);
+  }
+
+  const workSummary =
+    candidateRow?.resumeText ||
+    profileRow?.resumeText ||
+    null;
+
+  const preferencesSummary = preferences
+    ? [
+        preferences.jobTitles ? `Roles: ${preferences.jobTitles}` : null,
+        preferences.workMode ? `Work mode: ${preferences.workMode}` : null,
+        preferences.employmentType ? `Employment: ${preferences.employmentType}` : null,
+        preferences.locations ? `Locations: ${preferences.locations}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+
+  return {
+    id: application.id,
+    candidateName:
+      application.candidateName ||
+      candidateRow?.fullName ||
+      (profileRow ? `${profileRow.firstName} ${profileRow.lastName}`.trim() : null) ||
+      "Candidate",
+    candidateEmail: application.candidateEmail || candidateRow?.email || profileRow?.email || null,
+    candidatePhone:
+      application.candidatePhone ||
+      candidateRow?.phone ||
+      profileRow?.phone ||
+      profileRow?.mobile ||
+      null,
+    jobTitle: application.jobTitle,
+    company: application.company,
+    status: application.status,
+    source: application.source,
+    appliedDate: application.appliedDate,
+    candidateRecordId: candidateRow?.id || null,
+    profileId: profileRow?.id || null,
+    experience,
+    location,
+    preferredLocation,
+    currentCompany,
+    currentRole,
+    skills,
+    resumeFile,
+    linkedinUrl,
+    education,
+    highestQualification: profileRow?.highestQualification || null,
+    collegeName: profileRow?.collegeName || null,
+    noticePeriod,
+    ctc,
+    ectc: candidateRow?.ectc || null,
+    workSummary,
+    preferences: preferences
+      ? {
+          jobTitles: preferences.jobTitles,
+          workMode: preferences.workMode,
+          employmentType: preferences.employmentType,
+          locations: preferences.locations,
+          summary: preferencesSummary,
+        }
+      : null,
+    portfolioUrl: candidateRow?.portfolioUrl || profileRow?.portfolioUrl || null,
+    websiteUrl: candidateRow?.websiteUrl || profileRow?.websiteUrl || null,
+    pedigreeLevel: candidateRow?.pedigreeLevel || profileRow?.pedigreeLevel || null,
+    companyLevel: candidateRow?.companyLevel || profileRow?.companyLevel || null,
+    statusNote: application.statusNote,
+    rejectionReason: application.rejectionReason,
+  };
+}
+
 // Authentication middleware for client routes ONLY
 function requireClientAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.employeeId || req.session.employeeRole !== 'client') {
     return res.status(403).json({ message: "Access denied. Client authentication required." });
   }
   next();
+}
+
+/** Resolve Master Data client for a logged-in client employee (shared by client dashboard APIs). */
+async function findCompanyForEmployee(employee: any) {
+  const clients = await storage.getAllClients();
+  if (!employee) return undefined;
+
+  const emEmail = (employee.email || "").trim().toLowerCase();
+  const emHumanId = (employee.employeeId || "").trim();
+  const emName = (employee.name || "").trim().toLowerCase();
+
+  if (emHumanId && (emHumanId.includes("SPOC") || emHumanId.includes("POC"))) {
+    const companyCodeMatch = emHumanId.match(/^(.+?)(?:SPOC|POC)/);
+    if (companyCodeMatch) {
+      const companyCode = companyCodeMatch[1];
+      const company = clients.find((c) => c.clientCode === companyCode && !c.isLoginOnly);
+      if (company) return company;
+    }
+  }
+
+  const linkedClient = clients.find(
+    (c: any) =>
+      !c.isLoginOnly &&
+      ((c.employeeId && String(c.employeeId).trim() === emHumanId) ||
+        (c.email && emEmail && String(c.email).trim().toLowerCase() === emEmail))
+  );
+  if (linkedClient) return linkedClient;
+
+  const byName = clients.find(
+    (c: any) =>
+      !c.isLoginOnly &&
+      emName &&
+      (String(c.brandName || "").trim().toLowerCase() === emName ||
+        String(c.incorporatedName || "").trim().toLowerCase() === emName)
+  );
+  if (byName) return byName;
+
+  return undefined;
+}
+
+/**
+ * Job applications this client should see: linked requirement, company name variants,
+ * role title match to a client requirement, or recruiter job (company + role) bridge.
+ */
+async function getJobApplicationsScopedToClient(employee: any): Promise<{
+  client: Awaited<ReturnType<typeof findCompanyForEmployee>>;
+  companyName: string;
+  clientRequirements: Awaited<ReturnType<typeof storage.getRequirementsByCompany>>;
+  applications: any[];
+}> {
+  const client = await findCompanyForEmployee(employee);
+  const companyName = client?.brandName || employee.name;
+
+  const clientRequirements = await storage.getRequirementsByCompany(companyName);
+  const clientRequirementIds = new Set(clientRequirements.map((req: any) => req.id));
+  const clientRequirementPositions = new Set(
+    clientRequirements.map((req: any) => (req.position || "").trim().toLowerCase()).filter(Boolean)
+  );
+
+  const clientCompanyNames = new Set<string>();
+  const addCompany = (n?: string | null) => {
+    const v = (n || "").trim().toLowerCase();
+    if (v) clientCompanyNames.add(v);
+  };
+  addCompany(companyName);
+  addCompany(client?.brandName);
+  addCompany((client as any)?.incorporatedName);
+  addCompany(employee?.name);
+  for (const r of clientRequirements) addCompany((r as any).company);
+
+  const allApplications = await storage.getAllJobApplications();
+  let allRecruiterJobs: any[] = [];
+  try {
+    allRecruiterJobs = await storage.getAllRecruiterJobs();
+  } catch {
+    allRecruiterJobs = [];
+  }
+  const recruiterJobById = new Map(allRecruiterJobs.map((j: any) => [j.id, j]));
+
+  const inScope = (app: any) => {
+    const reqId = (app.requirementId || "").trim();
+    if (reqId && clientRequirementIds.has(reqId)) return true;
+
+    const appCompany = (app.company || "").trim().toLowerCase();
+    if (appCompany && clientCompanyNames.has(appCompany)) return true;
+
+    const appRole = (app.jobTitle || app.roleApplied || "").trim().toLowerCase();
+    if (appRole && clientRequirementPositions.has(appRole)) return true;
+
+    const jobId = (app.recruiterJobId || "").trim();
+    if (jobId) {
+      const job = recruiterJobById.get(jobId) as any;
+      if (job) {
+        const jc = (job.companyName || "").trim().toLowerCase();
+        const jr = (job.role || "").trim().toLowerCase();
+        if (jc && clientCompanyNames.has(jc) && jr && clientRequirementPositions.has(jr)) return true;
+      }
+    }
+    return false;
+  };
+
+  return {
+    client,
+    companyName,
+    clientRequirements,
+    applications: allApplications.filter(inScope),
+  };
+}
+
+function serializeApplicationComment(comment: {
+  id: string;
+  applicationId: string;
+  authorEmployeeId: string;
+  authorName: string;
+  authorRole: string;
+  body: string;
+  createdAt: Date | string | null;
+}) {
+  const raw = comment.createdAt;
+  let createdAt: string;
+  if (raw instanceof Date) {
+    createdAt = raw.toISOString();
+  } else if (typeof raw === "string" && raw.trim()) {
+    const parsed = new Date(raw);
+    createdAt = Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString();
+  } else {
+    createdAt = new Date().toISOString();
+  }
+  return { ...comment, createdAt };
+}
+
+async function clientCanAccessJobApplication(
+  employee: { id: string; name?: string | null },
+  applicationId: string,
+): Promise<{ allowed: boolean; application?: Awaited<ReturnType<typeof storage.getJobApplicationById>> }> {
+  const application = await storage.getJobApplicationById(applicationId);
+  if (!application) {
+    return { allowed: false };
+  }
+  const { applications } = await getJobApplicationsScopedToClient(employee);
+  const allowed = applications.some((app: { id?: string }) => app.id === applicationId);
+  return { allowed, application };
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -552,10 +1618,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const employee = await storage.getEmployeeById(req.session.employeeId);
         if (employee && employee.isActive) {
           const { password: _, ...employeeData } = employee;
+          const employeeAgreementAccepted = await computeEmployeeAgreementAccepted(employee);
           return res.json({
             authenticated: true,
-            userType: 'employee',
-            user: employeeData
+            userType: "employee",
+            user: { ...employeeData, employeeAgreementAccepted },
           });
         }
       }
@@ -565,10 +1632,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const candidate = await storage.getCandidateByCandidateId(req.session.candidateId);
         if (candidate) {
           const { password: _, ...candidateData } = candidate;
+          const platformConsentAccepted = await hasLoggedConsent(candidate.id, "platform_consent");
           return res.json({
             authenticated: true,
-            userType: 'candidate',
-            user: candidateData
+            userType: "candidate",
+            user: { ...candidateData, platformConsentAccepted },
           });
         }
       }
@@ -578,6 +1646,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Session verification error:', error);
       return res.json({ authenticated: false });
+    }
+  });
+
+  app.post("/api/consent/log", requireAnyAuth, async (req, res) => {
+    try {
+      await ensureConsentLogsTable();
+
+      const payloadSchema = z.object({
+        user_id: z.string().min(1),
+        role: z.enum(["candidate", "client", "employee"]),
+        consent_type: z.enum(["platform_consent", "job_consent", "client_agreement", "employee_agreement"]),
+        policy_version: z.string().min(1),
+      });
+
+      const parsed = payloadSchema.safeParse(req.body || {});
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid consent log payload" });
+      }
+
+      const { user_id, role, consent_type, policy_version } = parsed.data;
+
+      if (req.session.candidateId) {
+        const candidate = await storage.getCandidateByCandidateId(req.session.candidateId);
+        if (!candidate || candidate.id !== user_id) {
+          return res.status(403).json({ message: "Consent user does not match session" });
+        }
+        if (role !== "candidate") {
+          return res.status(400).json({ message: "Invalid role for candidate session" });
+        }
+        if (consent_type !== "platform_consent" && consent_type !== "job_consent") {
+          return res.status(400).json({ message: "Invalid consent type for candidate session" });
+        }
+      } else if (req.session.employeeId) {
+        if (req.session.employeeId !== user_id) {
+          return res.status(403).json({ message: "Consent user does not match session" });
+        }
+        const employee = await storage.getEmployeeById(req.session.employeeId);
+        if (!employee) {
+          return res.status(403).json({ message: "Employee not found" });
+        }
+        const er = String(employee.role || "").toLowerCase();
+        if (role === "client") {
+          if (er !== "client" || consent_type !== "client_agreement") {
+            return res.status(400).json({ message: "Invalid client consent request" });
+          }
+        } else if (role === "employee") {
+          if (consent_type !== "employee_agreement") {
+            return res.status(400).json({ message: "Invalid employee consent request" });
+          }
+        } else {
+          return res.status(400).json({ message: "Invalid role for employee session" });
+        }
+      } else {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      if (ONE_TIME_CONSENT_TYPES.has(consent_type) && (await hasLoggedConsent(user_id, consent_type))) {
+        return res.status(200).json({ success: true, idempotent: true });
+      }
+
+      const xForwardedFor = req.headers["x-forwarded-for"];
+      const forwarded = Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor;
+      const ipAddress = (forwarded?.split(",")[0] || req.ip || null)?.trim() || null;
+      const userAgent = (req.headers["user-agent"] || null) as string | null;
+
+      const [inserted] = await db
+        .insert(consentLogs)
+        .values({
+          userId: user_id,
+          role,
+          consentType: consent_type,
+          policyVersion: policy_version,
+          ipAddress,
+          userAgent,
+        })
+        .returning();
+
+      return res.status(201).json({ success: true, consentLog: inserted });
+    } catch (error) {
+      console.error("Consent log error:", error);
+      return res.status(500).json({ message: "Failed to log consent" });
+    }
+  });
+
+  app.get("/api/consent/acceptance-status", requireAnyAuth, async (req, res) => {
+    try {
+      await ensureConsentLogsTable();
+
+      if (req.session.candidateId) {
+        const candidate = await storage.getCandidateByCandidateId(req.session.candidateId);
+        if (!candidate) {
+          return res.status(401).json({ message: "Not authenticated" });
+        }
+        const platformConsentAt = await getLatestConsentAcceptedAtIso(candidate.id, "platform_consent");
+        return res.json({
+          userType: "candidate",
+          platformConsentAt,
+          employeeAgreementAt: null,
+          clientAgreementAt: null,
+        });
+      }
+
+      if (req.session.employeeId) {
+        const employee = await storage.getEmployeeById(req.session.employeeId);
+        if (!employee) {
+          return res.status(401).json({ message: "Not authenticated" });
+        }
+        const er = String(employee.role || "").toLowerCase();
+        if (er === "client") {
+          const clientAgreementAt = await getLatestConsentAcceptedAtIso(employee.id, "client_agreement");
+          return res.json({
+            userType: "client",
+            platformConsentAt: null,
+            employeeAgreementAt: null,
+            clientAgreementAt,
+          });
+        }
+        const employeeAgreementAt = await getLatestConsentAcceptedAtIso(employee.id, "employee_agreement");
+        return res.json({
+          userType: "employee",
+          platformConsentAt: null,
+          employeeAgreementAt,
+          clientAgreementAt: null,
+        });
+      }
+
+      return res.status(401).json({ message: "Not authenticated" });
+    } catch (error) {
+      console.error("Consent acceptance-status error:", error);
+      return res.status(500).json({ message: "Failed to load consent acceptance" });
+    }
+  });
+
+  app.get("/api/admin/consent-logs", requireAdminAuth, async (req, res) => {
+    try {
+      await ensureConsentLogsTable();
+      const limitRaw = Number(req.query.limit);
+      const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 200, 1), 1000);
+      const rows = await db
+        .select()
+        .from(consentLogs)
+        .orderBy(desc(consentLogs.acceptedAt))
+        .limit(limit);
+      return res.json(rows);
+    } catch (error) {
+      console.error("Admin consent logs error:", error);
+      return res.status(500).json({ message: "Failed to fetch consent logs" });
     }
   });
 
@@ -661,54 +1876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const allNudges = await storage.getActiveNudges();
-      const now = new Date();
-
-      // Escalation logic: Only update non-responded nudges
-      for (const nudge of allNudges) {
-        if (nudge.isResponded) continue;
-        
-        const createdAt = nudge.createdAt;
-        if (!createdAt) continue;
-        
-        const createdDate = new Date(createdAt);
-        if (isNaN(createdDate.getTime())) continue;
-
-        const elapsedWorkingHours = calculateWorkingHours(createdDate, now);
-        const status = (nudge.currentStatus || '').toLowerCase();
-        const isOfferStage = status.includes('offer');
-
-        let requiredLevel = 'recruiter';
-        if (isOfferStage) {
-          // Accelerated escalation for Offer Stage (3, 6, 9 working hours)
-          if (elapsedWorkingHours >= 9) {
-            requiredLevel = 'client';
-          } else if (elapsedWorkingHours >= 6) {
-            requiredLevel = 'admin';
-          } else if (elapsedWorkingHours >= 3) {
-            requiredLevel = 'team_leader';
-          }
-        } else {
-          // Standard escalation (6, 12, 18 working hours)
-          if (elapsedWorkingHours >= 18) {
-            requiredLevel = 'client';
-          } else if (elapsedWorkingHours >= 12) {
-            requiredLevel = 'admin';
-          } else if (elapsedWorkingHours >= 6) {
-            requiredLevel = 'team_leader';
-          }
-        }
-
-        if (nudge.escalationLevel !== requiredLevel) {
-          try {
-            await storage.updateNudgeEscalation(nudge.id, requiredLevel, now);
-          } catch (updateErr) {
-            console.error(`Failed to update nudge ${nudge.id}:`, updateErr);
-          }
-        }
-      }
-
-      // Re-fetch to get updated levels
+      await syncActiveNudgeEscalations();
       const updatedNudges = await storage.getActiveNudges();
       
       const role = (employee.role || '').toLowerCase();
@@ -722,22 +1890,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeNudges = updatedNudges.filter(n => !n.isResponded && n.escalationLevel === 'client');
       } else if (role === 'team_leader') {
         const allEmployees = await storage.getAllEmployees();
-        const teamMemberIds = allEmployees
-          .filter(emp => emp.reportingTo === employee.employeeId || emp.reportingTo === employee.id)
-          .map(emp => emp.id);
-        
-        const myIds = [employee.id, employee.employeeId].filter(Boolean);
+        const teamMemberKeys = new Set<string>();
+        for (const emp of allEmployees.filter(
+          (e) => e.reportingTo === employee.employeeId || e.reportingTo === employee.id,
+        )) {
+          teamMemberKeys.add(emp.id);
+          if (emp.employeeId) teamMemberKeys.add(emp.employeeId);
+        }
+        const myIds = [employee.id, employee.employeeId].filter(Boolean) as string[];
 
         activeNudges = updatedNudges.filter(n => {
           if (n.isResponded || n.escalationLevel !== 'team_leader') return false;
           
           // Show if it's their own job or a team member's job
-          return (n.recruiterId && (myIds.includes(n.recruiterId) || teamMemberIds.includes(n.recruiterId)));
+          return !!(n.recruiterId && (myIds.includes(n.recruiterId) || teamMemberKeys.has(n.recruiterId)));
         });
       } else if (isTA) {
         // Recruiter (TA)
         activeNudges = updatedNudges.filter(n => 
-          !n.isResponded && n.escalationLevel === 'recruiter' && n.recruiterId === employee.id
+          !n.isResponded && n.escalationLevel === 'recruiter' && matchesEmployeeRef(employee, n.recruiterId)
         );
       }
 
@@ -772,13 +1943,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logNudges = allNudges.filter(n => n.isResponded && n.escalationLevel === 'client');
       } else if (role === 'team_leader') {
         const allEmployees = await storage.getAllEmployees();
-        const teamMemberIds = allEmployees
-          .filter(emp => emp.reportingTo === employee.employeeId || emp.reportingTo === employee.id)
-          .map(emp => emp.id);
-        const myIds = [employee.id, employee.employeeId].filter(Boolean);
+        const teamMemberKeys = new Set<string>();
+        for (const emp of allEmployees.filter(
+          (e) => e.reportingTo === employee.employeeId || e.reportingTo === employee.id,
+        )) {
+          teamMemberKeys.add(emp.id);
+          if (emp.employeeId) teamMemberKeys.add(emp.employeeId);
+        }
+        const myIds = [employee.id, employee.employeeId].filter(Boolean) as string[];
 
         logNudges = allNudges.filter(n => {
-          const isRelevant = n.recruiterId && (myIds.includes(n.recruiterId) || teamMemberIds.includes(n.recruiterId));
+          const isRelevant = n.recruiterId && (myIds.includes(n.recruiterId) || teamMemberKeys.has(n.recruiterId));
           if (!isRelevant) return false;
 
           // In logs if responded at TL level OR escalated past TL level
@@ -788,7 +1963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Recruiter (TA)
         logNudges = allNudges.filter(n => {
-          if (n.recruiterId !== employee.id) return false;
+          if (!matchesEmployeeRef(employee, n.recruiterId)) return false;
 
           // In logs if responded at recruiter level OR escalated past recruiter level
           return (n.isResponded && n.escalationLevel === 'recruiter') || 
@@ -897,7 +2072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.userType = 'employee';
 
         // Save session before responding
-        req.session.save((saveErr) => {
+        req.session.save(async (saveErr) => {
           if (saveErr) {
             console.error('Session save error:', saveErr);
             const errorMessage = saveErr instanceof Error ? saveErr.message : String(saveErr);
@@ -908,13 +2083,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          // Return employee data (excluding password) for frontend routing
-          const { password: _, ...employeeData } = employee;
-          res.json({
-            success: true,
-            employee: employeeData,
-            message: "Login successful"
-          });
+          try {
+            const employeeAgreementAccepted = await computeEmployeeAgreementAccepted(employee);
+            const { password: _, ...employeeData } = employee;
+            res.json({
+              success: true,
+              employee: { ...employeeData, employeeAgreementAccepted },
+              message: "Login successful"
+            });
+          } catch (agreementErr) {
+            console.error("Employee login agreement flag error:", agreementErr);
+            const { password: _, ...employeeData } = employee;
+            res.json({
+              success: true,
+              employee: { ...employeeData, employeeAgreementAccepted: false },
+              message: "Login successful"
+            });
+          }
         });
       });
     } catch (error) {
@@ -1942,6 +3127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         graduationYear: profileData?.graduationYear || '',
         salaryRange: profileData?.salaryRange || '',
         secondaryEmail: profileData?.secondaryEmail || '',
+        platformConsentAccepted: await hasLoggedConsent(candidate.id, "platform_consent"),
       };
 
       res.json(profile);
@@ -2387,9 +3573,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get real job applications from database
-      const jobApplications = await storage.getJobApplicationsByProfile(candidate.id);
+      let candidateJobApplications = await storage.getJobApplicationsByProfile(candidate.id);
 
-      res.json(jobApplications);
+      // Legacy cleanup:
+      // If candidate has already confirmed at least one recruiter-tagged application,
+      // auto-confirm any older pending recruiter-tagged rows to avoid repeated consent prompts.
+      const hasRecruiterConsent = candidateJobApplications.some(
+        (app: any) =>
+          String(app.source || "").toLowerCase() === "recruiter_tagged" &&
+          app.isCandidateConfirmed === true,
+      );
+      const pendingRecruiterTaggedIds = candidateJobApplications
+        .filter(
+          (app: any) =>
+            String(app.source || "").toLowerCase() === "recruiter_tagged" &&
+            app.isCandidateConfirmed === false,
+        )
+        .map((app: any) => app.id)
+        .filter(Boolean);
+
+      if (hasRecruiterConsent && pendingRecruiterTaggedIds.length > 0) {
+        await db
+          .update(jobApplications)
+          .set({ isCandidateConfirmed: true })
+          .where(inArray(jobApplications.id, pendingRecruiterTaggedIds));
+
+        candidateJobApplications = await storage.getJobApplicationsByProfile(candidate.id);
+      }
+
+      res.json(candidateJobApplications);
     } catch (error) {
       console.error('Get job applications error:', error);
       res.status(500).json({ message: "Internal server error" });
@@ -2406,35 +3618,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
 
-      // Identify the recruiter/TA who should receive the nudge
-      let recruiterId = null;
-      let attributionSource = 'none';
-      
-      if (application.recruiterJobId) {
-        const job = await storage.getRecruiterJobById(application.recruiterJobId);
-        if (job) {
-          // Use recruiterId or ownerEmployeeId from the job posting
-          recruiterId = job.recruiterId || job.ownerEmployeeId;
-          attributionSource = 'recruiterJob';
-        }
-      } 
-      
-      if (!recruiterId && application.requirementId) {
-        const requirement = await storage.getRequirementById(application.requirementId);
-        if (requirement) {
-          // Use talentAdvisorId from the requirement
-          recruiterId = requirement.talentAdvisorId;
-          attributionSource = 'requirement';
-        }
+      const [requirement, job] = await Promise.all([
+        application.requirementId ? storage.getRequirementById(application.requirementId) : Promise.resolve(null),
+        application.recruiterJobId ? storage.getRecruiterJobById(application.recruiterJobId) : Promise.resolve(null),
+      ]);
+
+      // Identify the recruiter/TA who should receive the nudge (canonical employees.id after resolve)
+      let recruiterRef: string | null = null;
+      let attributionSource = "none";
+
+      if (requirement?.talentAdvisorId) {
+        recruiterRef = requirement.talentAdvisorId;
+        attributionSource = "requirement.talentAdvisorId";
+      } else if (job?.assignedTaId) {
+        recruiterRef = job.assignedTaId;
+        attributionSource = "recruiterJob.assignedTaId";
+      } else if (job?.recruiterId) {
+        recruiterRef = job.recruiterId;
+        attributionSource = "recruiterJob.recruiterId";
+      } else if (job?.ownerEmployeeId) {
+        recruiterRef = job.ownerEmployeeId;
+        attributionSource = "recruiterJob.ownerEmployeeId";
+      } else if (application.ownerEmployeeId) {
+        recruiterRef = application.ownerEmployeeId;
+        attributionSource = "application.ownerEmployeeId";
       }
 
-      // If still no recruiterId, check if application has an ownerEmployeeId
-      if (!recruiterId && application.ownerEmployeeId) {
-        recruiterId = application.ownerEmployeeId;
-        attributionSource = 'applicationOwner';
-      }
+      const recruiterId = await canonicalizeEmployeeIdForNudge(recruiterRef);
 
-      console.log(`Nudge attribution: application=${id}, recruiterId=${recruiterId}, source=${attributionSource}`);
+      console.log(`Nudge attribution: application=${id}, recruiterRef=${recruiterRef}, recruiterId=${recruiterId}, source=${attributionSource}`);
 
       const nudgeData = {
         applicationId: application.id,
@@ -4568,6 +5780,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get admin profile error:', error);
       res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  app.get("/api/admin/notifications-feed", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee || (employee.role || "").toLowerCase() !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+      const feed = await buildEmployeeNotificationsFeed(employee);
+      res.json({
+        closures: feed.closures,
+        adminNudges: feed.nudges,
+        clientEscalations: feed.escalatedNudges,
+        unreadAdminNudges: feed.nudges.filter((i: any) => i.isUnread).length,
+        unreadClientEscalations: feed.escalatedNudges.filter((i: any) => i.isUnread).length,
+      });
+    } catch (error) {
+      console.error("Admin notifications feed error:", error);
+      res.status(500).json({ message: "Failed to load notifications" });
+    }
+  });
+
+  app.get("/api/employee/notifications-feed", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const feed = await buildEmployeeNotificationsFeed(employee);
+      res.json(feed);
+    } catch (error) {
+      console.error("Employee notifications feed error:", error);
+      res.status(500).json({ message: "Failed to load notifications" });
+    }
+  });
+
+  app.patch("/api/admin/notifications/mark-all-read", requireAdminAuth, async (_req, res) => {
+    try {
+      await db
+        .update(nudges)
+        .set({ isRead: true })
+        .where(
+          and(
+            eq(nudges.isResponded, false),
+            inArray(nudges.escalationLevel, ["admin", "client"]),
+          ),
+        );
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Mark admin notifications read error:", error);
+      res.status(500).json({ message: "Failed to update notifications" });
+    }
+  });
+
+  app.patch("/api/admin/notifications/nudges/:id/read", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [updated] = await db
+        .update(nudges)
+        .set({ isRead: true })
+        .where(and(eq(nudges.id, id), eq(nudges.isResponded, false)))
+        .returning();
+      if (!updated) {
+        return res.status(404).json({ message: "Nudge not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Mark nudge read (admin) error:", error);
+      res.status(500).json({ message: "Failed to update nudge" });
     }
   });
 
@@ -9294,7 +10576,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allKnownRequirements = [...activeRequirements, ...archivedRequirements];
 
       // Transform to closure list format for "All Closure Reports" modal
-      const closuresList = allRevenueMappings.map(rm => {
+      // Keep newest closures on top (based on closureDate / createdAt / offeredDate).
+      const closuresList = allRevenueMappings
+        .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
+        .map(rm => {
         // Calculate Fixed CTC from revenue and percentage
         const fixedCTC = rm.revenue && rm.percentage ? (rm.revenue / (rm.percentage / 100)) : 0;
 
@@ -9361,7 +10646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0",
           closureAction,
         };
-      });
+        });
 
       res.json(closuresList);
     } catch (error) {
@@ -10494,45 +11779,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (app.ownerEmployeeId === employee.id && app.ownerRole === ownerRole)
       );
 
-      // Enrich applications with candidate profile data if candidateName is missing
-      const enrichedApplications = await Promise.all(recruiterApplications.map(async (app) => {
-        // If candidateName is missing or "Unknown", try to fetch from profiles/candidates
-        if (!app.candidateName || app.candidateName === 'Unknown Candidate') {
-          try {
-            // Try to get from profiles table first
-            const { profiles, candidates } = await import("@shared/schema");
-            const profileResult = await db.select().from(profiles).where(eq(profiles.id, app.profileId)).limit(1);
+      // Enrich applications with candidate profile data and StaffOS usage status
+      const profileIds = [...new Set(recruiterApplications.map(app => app.profileId).filter(Boolean))] as string[];
+      const { profiles, candidates } = await import("@shared/schema");
+      
+      const candidatesMap = new Map();
+      const profilesMap = new Map();
+      
+      if (profileIds.length > 0) {
+        try {
+          const chunkSize = 100;
+          for (let i = 0; i < profileIds.length; i += chunkSize) {
+            const chunk = profileIds.slice(i, i + chunkSize);
+            const candidateRows = await db.select().from(candidates).where(inArray(candidates.id, chunk));
+            candidateRows.forEach(c => candidatesMap.set(c.id, c));
+            
+            const profileRows = await db.select().from(profiles).where(inArray(profiles.id, chunk));
+            profileRows.forEach(p => profilesMap.set(p.id, p));
+          }
+        } catch (error) {
+          console.error('Error fetching bulk profile data:', error);
+        }
+      }
 
-            if (profileResult.length > 0) {
-              const profile = profileResult[0];
+      const enrichedApplications = recruiterApplications.map((app) => {
+        if (app.profileId) {
+          const candidate = candidatesMap.get(app.profileId);
+          const profile = profilesMap.get(app.profileId);
+          
+          if (candidate) {
+            (app as any).isUsingStaffOS = candidate.isVerified || (candidate.password && candidate.password !== '');
+          } else {
+            (app as any).isUsingStaffOS = false;
+          }
+
+          if (!app.candidateName || app.candidateName === 'Unknown Candidate') {
+            if (profile) {
               app.candidateName = `${profile.firstName} ${profile.lastName}`.trim();
               app.candidateEmail = app.candidateEmail || profile.email || null;
               app.candidatePhone = app.candidatePhone || profile.phone || profile.mobile || null;
-              // Add resumeFile if available in profile
-              if (!app.resumeFile && profile.resumeFile) {
-                app.resumeFile = profile.resumeFile;
-              }
-            } else {
-              // Try candidates table
-              const candidateResult = await db.select().from(candidates).where(eq(candidates.id, app.profileId)).limit(1);
-              if (candidateResult.length > 0) {
-                const candidate = candidateResult[0];
-                app.candidateName = candidate.fullName || app.candidateName;
-                app.candidateEmail = app.candidateEmail || candidate.email || null;
-                app.candidatePhone = app.candidatePhone || candidate.phone || null;
-                // Add resumeFile if available in candidate
-                if (!app.resumeFile && candidate.resumeFile) {
-                  app.resumeFile = candidate.resumeFile;
-                }
-              }
+              if (!app.resumeFile && profile.resumeFile) app.resumeFile = profile.resumeFile;
+            } else if (candidate) {
+              app.candidateName = candidate.fullName || app.candidateName;
+              app.candidateEmail = app.candidateEmail || candidate.email || null;
+              app.candidatePhone = app.candidatePhone || candidate.phone || null;
+              if (!app.resumeFile && candidate.resumeFile) app.resumeFile = candidate.resumeFile;
             }
-          } catch (error) {
-            console.error('Error enriching application data:', error);
-            // Keep original data if enrichment fails
           }
+        } else {
+          (app as any).isUsingStaffOS = false;
         }
         return app;
-      }));
+      });
 
       // Apply additional filters
       let filteredApplications = enrichedApplications;
@@ -10644,25 +11942,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid company name" });
       }
 
-      const applicationData = {
-        profileId: `recruiter-tagged-${Date.now()}`,
-        requirementId: requirementId || null,
-        ownerEmployeeId: employee.id,
-        ownerRole,
-        jobTitle: jobTitle.trim(),
-        company: company.trim(),
-        status: "In Process",
-        source: "recruiter_tagged",
-        candidateName: candidateName.trim(),
-        candidateEmail: candidateEmail?.trim() || null,
-        candidatePhone: candidatePhone?.trim() || null,
-        experience: experience?.toString() || null,
-        skills: Array.isArray(skills) ? JSON.stringify(skills) : (skills || null),
-        location: location?.trim() || null,
-        appliedDate: new Date(),
-      };
+      const candidateEmailStr = candidateEmail?.trim() || null;
+      
+      // Check if an existing application exists for this candidate and requirement
+      let existingApplication = null;
+      if (candidateEmailStr && requirementId) {
+        try {
+          const result = await db.execute(sql`
+            SELECT * FROM job_applications 
+            WHERE requirement_id = ${requirementId} 
+            AND LOWER(candidate_email) = LOWER(${candidateEmailStr})
+            LIMIT 1
+          `);
+          if (result.rows && result.rows.length > 0) {
+            existingApplication = result.rows[0];
+          }
+        } catch (err) {
+          console.error("Error finding existing application:", err);
+        }
+      }
 
-      const application = await storage.createJobApplication(applicationData);
+      let hasPriorRecruiterConsent = false;
+      if (candidateEmailStr) {
+        try {
+          const priorConsentResult = await db.execute(sql`
+            SELECT 1
+            FROM job_applications
+            WHERE LOWER(candidate_email) = LOWER(${candidateEmailStr})
+              AND LOWER(source) = 'recruiter_tagged'
+              AND is_candidate_confirmed = true
+            LIMIT 1
+          `);
+          hasPriorRecruiterConsent = Boolean(priorConsentResult.rows?.length);
+        } catch (err) {
+          console.error("Error checking prior recruiter consent:", err);
+        }
+      }
+
+      let application;
+      if (existingApplication) {
+        // Reuse existing application: set status to In Process and reset confirmation
+        const [updated] = await db.update(jobApplications)
+          .set({ 
+            status: "In Process",
+            isCandidateConfirmed: hasPriorRecruiterConsent,
+            // Clear out rejection/withdraw reasons so it doesn't show up as archived anymore
+            rejectionReason: null,
+            statusNote: null,
+            withdrawReason: null,
+            appliedDate: new Date() // Reset applied date to now
+          })
+          .where(eq(jobApplications.id, existingApplication.id as string))
+          .returning();
+        
+        application = updated;
+      } else {
+        // Create new application
+        const applicationData = {
+          profileId: `recruiter-tagged-${Date.now()}`,
+          requirementId: requirementId || null,
+          ownerEmployeeId: employee.id,
+          ownerRole,
+          jobTitle: jobTitle.trim(),
+          company: company.trim(),
+          status: "In Process",
+          source: "recruiter_tagged",
+          // Ask explicit consent only once for recruiter-invited flow.
+          isCandidateConfirmed: hasPriorRecruiterConsent,
+          candidateName: candidateName.trim(),
+          candidateEmail: candidateEmailStr,
+          candidatePhone: candidatePhone?.trim() || null,
+          experience: experience?.toString() || null,
+          skills: Array.isArray(skills) ? JSON.stringify(skills) : (skills || null),
+          location: location?.trim() || null,
+          appliedDate: new Date(),
+        };
+
+        application = await storage.createJobApplication(applicationData);
+      }
 
       logCandidateSubmitted(
         storage,
@@ -10674,10 +12031,308 @@ export async function registerRoutes(app: Express): Promise<Server> {
         application.id
       );
 
-      res.status(201).json({ message: "Application created successfully", application });
+      res.status(existingApplication ? 200 : 201).json({ 
+        message: existingApplication ? "Application reactivated successfully" : "Application created successfully", 
+        application 
+      });
     } catch (error) {
       console.error("Create recruiter application error:", error);
       res.status(500).json({ message: "Failed to create application" });
+    }
+  });
+
+  // Send invite email to candidate for a recruiter application
+  app.post("/api/recruiter/applications/:id/invite", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (!ownerRole) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can send invites" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Ownership check: actor can invite only for owned records
+      let hasAccess =
+        application.ownerEmployeeId === employee.id &&
+        application.ownerRole === ownerRole;
+
+      if (!hasAccess && application.recruiterJobId) {
+        const job = await storage.getRecruiterJobById(application.recruiterJobId);
+        if (job) {
+          hasAccess =
+            (job.ownerEmployeeId === employee.id && job.ownerRole === ownerRole) ||
+            job.recruiterId === employee.id;
+        }
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied. This application does not belong to you." });
+      }
+
+      const candidateEmail = application.candidateEmail?.trim().toLowerCase();
+      if (!candidateEmail) {
+        return res.status(400).json({ message: "Candidate email is missing for this application" });
+      }
+
+      const candidate = await storage.getCandidateByEmail(candidateEmail);
+      const loginUrl = process.env.FRONTEND_URL
+        || (process.env.NODE_ENV === 'production'
+          ? 'https://staffosdemo.vercel.app'
+          : 'http://localhost:5000');
+
+      const emailSent = await sendCandidateWelcomeEmail({
+        fullName: application.candidateName || candidate?.fullName || "Candidate",
+        email: candidateEmail,
+        candidateId: candidate?.candidateId || "Pending",
+        loginUrl,
+      });
+
+      if (!emailSent) {
+        return res.status(502).json({ message: "Failed to send invite email. Please check email configuration." });
+      }
+
+      return res.json({
+        success: true,
+        message: "Invite email sent successfully",
+        candidateEmail,
+      });
+    } catch (error) {
+      console.error("Send invite email error:", error);
+      return res.status(500).json({ message: "Failed to send invite email" });
+    }
+  });
+
+  // Candidate Comments Session — application-scoped details (TA pipeline)
+  app.get("/api/recruiter/applications/:id/session", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const details = await resolveApplicationCandidateDetails(application);
+      return res.json({ application: details });
+    } catch (error) {
+      console.error("Get application session error:", error);
+      return res.status(500).json({ message: "Failed to load candidate session" });
+    }
+  });
+
+  app.get("/api/recruiter/applications/:id/comments", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const comments = await storage.getCandidateApplicationComments(id);
+      return res.json(comments.map(serializeApplicationComment));
+    } catch (error) {
+      console.error("Get application comments error:", error);
+      return res.status(500).json({ message: "Failed to load comments" });
+    }
+  });
+
+  app.post("/api/recruiter/applications/:id/comments", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bodySchema = z.object({
+        body: z.string().trim().min(1, "Comment cannot be empty").max(5000),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid comment",
+          errors: parsed.error.errors,
+        });
+      }
+
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      let comment;
+      try {
+        comment = await storage.createCandidateApplicationComment({
+          applicationId: id,
+          authorEmployeeId: employee.id,
+          authorName: employee.name,
+          authorRole: formatCommentAuthorRole(employee.role),
+          body: parsed.data.body,
+        });
+      } catch (dbError) {
+        console.error("createCandidateApplicationComment failed, using direct insert:", dbError);
+        const [row] = await db
+          .insert(candidateApplicationComments)
+          .values({
+            applicationId: id,
+            authorEmployeeId: employee.id,
+            authorName: employee.name,
+            authorRole: formatCommentAuthorRole(employee.role),
+            body: parsed.data.body,
+          })
+          .returning();
+        if (!row) {
+          throw dbError;
+        }
+        comment = row;
+      }
+
+      return res.status(201).json(serializeApplicationComment(comment));
+    } catch (error) {
+      console.error("Create application comment error:", error);
+      return res.status(500).json({ message: "Failed to post comment" });
+    }
+  });
+
+  // Candidate confirms a recruiter-tagged application
+  app.post("/api/candidate/applications/:id/confirm", requireCandidateAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Candidate can only confirm their own application
+      if (application.profileId !== candidate.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (String((application as any).source || "").toLowerCase() !== "recruiter_tagged") {
+        return res.status(400).json({ message: "Only recruiter-tagged applications can be confirmed here" });
+      }
+
+      // If already confirmed, return as success (idempotent)
+      if ((application as any).isCandidateConfirmed === true) {
+        return res.json({ message: "Application already confirmed", application });
+      }
+
+      // Flip confirmation flag in DB
+      const [updated] = await db
+        .update(jobApplications)
+        .set({ isCandidateConfirmed: true })
+        .where(eq(jobApplications.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Notify recruiter (ownerEmployeeId) via notifications + activity feed
+      const recruiterId = (application as any).ownerEmployeeId;
+      if (recruiterId) {
+        const candidateName = candidate.fullName || application.candidateName || "Candidate";
+        const jobTitleText = application.jobTitle || "the role";
+        const companyText = application.company || "";
+        const title = "Candidate confirmed application";
+        const message = `${candidateName} has confirmed their application for ${jobTitleText}${companyText ? ` at ${companyText}` : ""}.`;
+
+        try {
+          await storage.createNotification({
+            userId: recruiterId,
+            type: "candidate_application_confirmed",
+            title,
+            message,
+            status: "unread",
+            relatedJobId: application.recruiterJobId || application.requirementId || null,
+            createdAt: new Date().toISOString(),
+            readAt: null,
+          } as any);
+        } catch (notifyError) {
+          console.warn("Failed to create recruiter notification:", notifyError);
+        }
+
+        try {
+          await storage.createUserActivity({
+            actorId: candidate.id,
+            actorName: candidateName,
+            actorRole: "candidate",
+            type: "candidate_application_confirmed",
+            title,
+            description: message,
+            targetRole: "recruiter",
+            relatedId: application.id,
+            relatedType: "job_application",
+            createdAt: new Date().toISOString(),
+          } as any);
+        } catch (activityError) {
+          console.warn("Failed to create recruiter activity:", activityError);
+        }
+      }
+
+      // Persist a consent audit trail for recruiter-tagged consent acceptance.
+      try {
+        const candidateName = candidate.fullName || application.candidateName || "Candidate";
+        const jobTitleText = application.jobTitle || "the role";
+        const companyText = application.company || "";
+        const consentDescription = `${candidateName} accepted recruiter-tagged consent for ${jobTitleText}${companyText ? ` at ${companyText}` : ""}.`;
+        await storage.createUserActivity({
+          actorId: candidate.id,
+          actorName: candidateName,
+          actorRole: "candidate",
+          type: "candidate_consent_accepted",
+          title: "Candidate consent accepted",
+          description: consentDescription,
+          targetRole: "system",
+          relatedId: application.id,
+          relatedType: "job_application",
+          createdAt: new Date().toISOString(),
+        } as any);
+      } catch (consentActivityError) {
+        console.warn("Failed to create consent audit activity:", consentActivityError);
+      }
+
+      res.json({ message: "Application confirmed", application: updated });
+    } catch (error) {
+      console.error("Confirm application error:", error);
+      res.status(500).json({ message: "Failed to confirm application" });
     }
   });
 
@@ -11467,20 +13122,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      const candidate = await storage.getCandidateById(id);
+      let candidate = await storage.getCandidateById(id);
+      if (!candidate) {
+        candidate = await storage.getCandidateByCandidateId(id);
+      }
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const ownerRole = normalizeSourcingRole(employee.role);
-      if (ownerRole) {
-        const hasAccess =
-          (candidate.ownerEmployeeId === employee.id && candidate.ownerRole === ownerRole) ||
-          (ownerRole === 'recruiter' && !candidate.ownerEmployeeId && candidate.addedBy === employee.name);
-
-        if (!hasAccess) {
-          return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
-        }
+      if (!(await employeeCanViewCandidateRecord(employee, candidate))) {
+        return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
       }
 
       res.json(candidate);
@@ -12572,43 +14223,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to find company for SPOC employee
-  const findCompanyForEmployee = async (employee: any) => {
-    const clients = await storage.getAllClients();
-
-    if (!employee || !employee.employeeId) {
-      console.log('Employee or employeeId is missing');
-      return undefined;
-    }
-
-    // Check if employee is a SPOC (employeeId format: STCL001SPOC01 or legacy STCL001POC01)
-    if (employee.employeeId.includes('SPOC') || employee.employeeId.includes('POC')) {
-      // Extract company code (e.g., STCL001 from STCL001SPOC01 or STCL001POC01)
-      const companyCodeMatch = employee.employeeId.match(/^(.+?)(?:SPOC|POC)/);
-      if (companyCodeMatch) {
-        const companyCode = companyCodeMatch[1];
-        const company = clients.find(c => c.clientCode === companyCode && !c.isLoginOnly);
-        if (company) {
-          console.log(`Found company ${company.brandName} (${company.clientCode}) for SPOC ${employee.employeeId}`);
-          return company;
-        } else {
-          console.log(`No company found for SPOC ${employee.employeeId} with company code ${companyCode}`);
-          console.log(`Available client codes: ${clients.filter(c => !c.isLoginOnly).map(c => c.clientCode).join(', ')}`);
-        }
-      }
-    }
-
-    // Legacy: Try to find by email match (for old records)
-    const legacyCompany = clients.find(c => c.email === employee.email && !c.isLoginOnly);
-    if (legacyCompany) {
-      console.log(`Found legacy company ${legacyCompany.brandName} for employee ${employee.employeeId} by email match`);
-      return legacyCompany;
-    }
-
-    console.log(`No company found for employee ${employee.employeeId} (email: ${employee.email})`);
-    return undefined;
-  };
-
   // Client Dashboard Stats - Get authenticated client's dashboard statistics
   app.get("/api/client/dashboard-stats", requireClientAuth, async (req, res) => {
     try {
@@ -12686,6 +14300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: req.id, // Include id field for filtering
           roleId: req.id, // This is already in STR format (or UUID)
           role: req.position,
+          noOfPositions: req.noOfPositions ?? 1,
           position: req.position, // Include position field as well
           team: req.teamLead || 'N/A',
           recruiter: req.talentAdvisor || 'N/A',
@@ -12724,29 +14339,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      const client = await findCompanyForEmployee(employee);
-      const companyName = client?.brandName || employee.name;
-
       // Get filter parameters
       const requirementId = req.query.requirementId as string | undefined;
       const talentAdvisorId = req.query.ta as string | undefined;
 
-      // Get all requirements for this client's company
-      const clientRequirements = await storage.getRequirementsByCompany(companyName);
-      const clientRequirementIds = new Set(clientRequirements.map(req => req.id));
+      const { clientRequirements, applications: scopedApplications } =
+        await getJobApplicationsScopedToClient(employee);
 
-      // Get all job applications
-      const allApplications = await storage.getAllJobApplications();
+      const clientRequirementIds = new Set(clientRequirements.map((req) => req.id));
 
-      // Filter applications to only those tagged to client's requirements
-      let applications = allApplications.filter((app: any) => {
-        // Only include applications that are tagged to client's requirements
-        return app.requirementId && clientRequirementIds.has(app.requirementId);
-      });
+      let applications = scopedApplications;
 
       // Apply additional filters if provided
       if (requirementId && requirementId !== 'all') {
-        applications = applications.filter((app: any) => app.requirementId === requirementId);
+        const selectedRequirement = clientRequirements.find((req: any) => req.id === requirementId);
+        const selectedRole = (selectedRequirement?.position || '').trim().toLowerCase();
+
+        applications = applications.filter((app: any) => {
+          const reqId = (app.requirementId || '').trim();
+          const appRole = (app.jobTitle || app.roleApplied || '').trim().toLowerCase();
+          return reqId === requirementId || (!!selectedRole && appRole === selectedRole);
+        });
       }
 
       if (talentAdvisorId && talentAdvisorId !== 'all') {
@@ -12769,6 +14382,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const statusMap: Record<string, string> = {
           'In Process': 'L1',
           'In-Process': 'L1',
+          'Resume Review': 'L1',
+          'Evaluating': 'L1',
+          'Screening': 'L1',
+          'Intro Call': 'L1',
+          'Assignment': 'L1',
+          'Sourced': 'L1',
           'Shortlisted': 'L1',
           'Reviewed': 'L1',
           'Screened Out': 'Rejected',
@@ -12785,8 +14404,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Closure': 'Closure',
           'Offer Drop': 'Rejected',
           'Declined': 'Rejected',
-          'Rejected': 'Rejected'
+          'Rejected': 'Rejected',
+          'Hired': 'Closure',
         };
+
+        const raw = (app.status || '').trim();
+        const statusLower = raw.toLowerCase();
+        const mappedFromMap =
+          statusMap[raw] ||
+          statusMap[raw.replace(/\s+/g, ' ')] ||
+          Object.entries(statusMap).find(([k]) => k.toLowerCase() === statusLower)?.[1];
+
+        const resolvePipelineColumn = (): string => {
+          if (statusLower.includes('reject') || statusLower.includes('declin') || statusLower.includes('screened out'))
+            return 'Rejected';
+          if (statusLower.includes('offer') && !statusLower.includes('drop')) return 'Offer Stage';
+          if (mappedFromMap) return mappedFromMap;
+          if (statusLower.includes('join') || statusLower.includes('hired') || statusLower.includes('selected'))
+            return 'Closure';
+          if (statusLower.includes('hr round') || statusLower === 'hr') return 'HR Round';
+          if (statusLower.includes('final')) return 'Final Round';
+          if (statusLower === 'l2' || statusLower.includes('level 2')) return 'L2';
+          if (statusLower === 'l3' || statusLower.includes('level 3')) return 'L3';
+          if (statusLower === 'l1' || statusLower.includes('level 1')) return 'L1';
+          return 'L1';
+        };
+
+        const currentStatus = resolvePipelineColumn();
 
         // Find requirement and TA information
         let requirementPosition = 'N/A';
@@ -12807,6 +14451,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        if (requirementPosition === 'N/A') {
+          const appRole = (app.jobTitle || app.roleApplied || '').trim().toLowerCase();
+          const appCompany = (app.company || '').trim().toLowerCase();
+          const fallbackRequirement = clientRequirements.find((req: any) => {
+            const reqRole = (req.position || '').trim().toLowerCase();
+            const reqCompany = (req.company || '').trim().toLowerCase();
+            return (!!appRole && reqRole === appRole) || (!!appCompany && reqCompany === appCompany);
+          });
+
+          if (fallbackRequirement) {
+            requirementPosition = fallbackRequirement.position || 'N/A';
+            if (fallbackRequirement.talentAdvisorId) {
+              const ta = allEmployees.find((e: any) => e.id === fallbackRequirement.talentAdvisorId);
+              if (ta) {
+                talentAdvisorName = ta.name || 'N/A';
+                talentAdvisorId = ta.id;
+              }
+            }
+          }
+        }
+
         return {
           id: app.id,
           candidateName: app.candidateName || 'Unknown',
@@ -12815,7 +14480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requirementPosition: requirementPosition,
           talentAdvisorName: talentAdvisorName,
           talentAdvisorId: talentAdvisorId,
-          currentStatus: statusMap[app.status] || 'L1',
+          currentStatus,
           status: app.status,
           email: app.candidateEmail || 'N/A',
           phone: app.candidatePhone || 'N/A',
@@ -12852,6 +14517,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client Candidate Comments Session
+  app.get("/api/client/applications/:id/session", requireClientAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed, application } = await clientCanAccessJobApplication(employee, id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const details = await resolveApplicationCandidateDetails(application);
+      return res.json({ application: details });
+    } catch (error) {
+      console.error("Get client application session error:", error);
+      return res.status(500).json({ message: "Failed to load candidate session" });
+    }
+  });
+
+  app.get("/api/client/applications/:id/comments", requireClientAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed } = await clientCanAccessJobApplication(employee, id);
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const comments = await storage.getCandidateApplicationComments(id);
+      return res.json(comments.map(serializeApplicationComment));
+    } catch (error) {
+      console.error("Get client application comments error:", error);
+      return res.status(500).json({ message: "Failed to load comments" });
+    }
+  });
+
+  app.post("/api/client/applications/:id/comments", requireClientAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const bodySchema = z.object({
+        body: z.string().trim().min(1, "Comment cannot be empty").max(5000),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid comment",
+          errors: parsed.error.errors,
+        });
+      }
+
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed } = await clientCanAccessJobApplication(employee, id);
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      let comment;
+      try {
+        comment = await storage.createCandidateApplicationComment({
+          applicationId: id,
+          authorEmployeeId: employee.id,
+          authorName: employee.name,
+          authorRole: "Client",
+          body: parsed.data.body,
+        });
+      } catch (dbError) {
+        console.error("createCandidateApplicationComment (client) failed:", dbError);
+        const [row] = await db
+          .insert(candidateApplicationComments)
+          .values({
+            applicationId: id,
+            authorEmployeeId: employee.id,
+            authorName: employee.name,
+            authorRole: "Client",
+            body: parsed.data.body,
+          })
+          .returning();
+        if (!row) {
+          throw dbError;
+        }
+        comment = row;
+      }
+
+      return res.status(201).json(serializeApplicationComment(comment));
+    } catch (error) {
+      console.error("Create client application comment error:", error);
+      return res.status(500).json({ message: "Failed to post comment" });
+    }
+  });
+
   // Client Update Application Status - Allow client to update status (e.g., reject)
   app.patch("/api/client/applications/:id/status", requireClientAuth, async (req, res) => {
     try {
@@ -12862,7 +14631,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Status is required" });
       }
 
-      const application = await storage.updateJobApplicationStatus(id, status);
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed } = await clientCanAccessJobApplication(employee, id);
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const trimmedReason = typeof reason === "string" ? reason.trim() : "";
+      const statusNote =
+        status === "Rejected" && trimmedReason
+          ? `Rejected by client: ${trimmedReason}`
+          : undefined;
+
+      const application = await storage.updateJobApplicationStatus(
+        id,
+        status,
+        trimmedReason || undefined,
+        statusNote,
+        trimmedReason || undefined,
+      );
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
@@ -12917,6 +14708,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.jdText !== undefined) allowedUpdates.jdText = req.body.jdText;
       if (req.body.jdFile !== undefined) allowedUpdates.jdFile = req.body.jdFile;
       if (req.body.position !== undefined) allowedUpdates.position = req.body.position;
+      if (req.body.noOfPositions !== undefined) {
+        allowedUpdates.noOfPositions = Math.max(1, parseInt(String(req.body.noOfPositions), 10) || 1);
+      }
       // Note: Skills fields are not in requirements table schema, so we'll store them in jdText as JSON metadata
       // For now, we'll just update jdText and jdFile, and position
 
@@ -12943,16 +14737,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
 
-      const closures = await storage.getRevenueMappingsByClientName(companyName);
+      const closuresByClientName = await storage.getRevenueMappingsByClientName(companyName);
 
-      // Transform closures for client view
-      const closureReports = closures.map(closure => ({
-        candidate: closure.candidateName || 'N/A',
-        position: closure.position || 'N/A',
-        advisor: closure.talentAdvisorName || 'N/A',
-        offered: closure.offeredDate || 'N/A',
-        joined: closure.closureDate || 'N/A'
-      }));
+      const { applications: scopedApplications } = await getJobApplicationsScopedToClient(employee);
+
+      const isClosureApplicationStatus = (status: string | undefined | null) => {
+        const s = (status || "").trim().toLowerCase();
+        if (!s) return false;
+        if (s.includes("offer drop")) return false;
+        if (s.includes("reject") || s.includes("screened out")) return false;
+        if (s.includes("declined") && !s.includes("offer accepted")) return false;
+        if (/\b(joined|hired|closure|selected|placed|onboarded|onboarding)\b/.test(s)) return true;
+        if (s.includes("offer accepted")) return true;
+        if (s.includes("joined") || s.includes("hired")) return true;
+        return false;
+      };
+
+      const clientClosureApplications = scopedApplications.filter((app: any) =>
+        isClosureApplicationStatus(app.status)
+      );
+
+      const mergedClosureReports = [
+        ...closuresByClientName.map((closure) => ({
+          candidate: closure.candidateName || 'N/A',
+          position: closure.position || 'N/A',
+          advisor: closure.talentAdvisorName || 'N/A',
+          offered: closure.offeredDate || 'N/A',
+          joined: closure.closureDate || 'N/A',
+          _key: `rev-${closure.id}`
+        })),
+        ...clientClosureApplications.map((app: any) => ({
+          candidate: app.candidateName || 'N/A',
+          position: app.jobTitle || app.roleApplied || 'N/A',
+          advisor: 'N/A',
+          offered: 'N/A',
+          joined: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : 'N/A',
+          _key: `app-${app.id}`
+        }))
+      ];
+
+      // Deduplicate by candidate+position+joined
+      const seen = new Set<string>();
+      const closureReports = mergedClosureReports.filter((row) => {
+        const key = `${row.candidate}::${row.position}::${row.joined}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).map(({ _key, ...rest }) => rest);
 
       res.json(closureReports);
     } catch (error) {
@@ -12973,13 +14804,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if client profile is linked (admin created a client record in Master Data)
       const profileLinked = !!client;
+      const clientAgreementAccepted = await hasLoggedConsent(employee.id, "client_agreement");
 
       res.json({
         id: employee.id,
         name: employee.name,
         email: employee.email,
         phone: employee.phone,
+        role: employee.role,
+        employeeId: employee.employeeId,
+        department: employee.department || null,
+        joiningDate: employee.joiningDate || null,
         profileLinked,
+        clientAgreementAccepted,
         // Basic company info - get from linked company
         company: client?.brandName || employee.name || 'Company',
         // Extended client details (only if profile is linked)
@@ -12997,12 +14834,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentStatus: client.currentStatus,
           startDate: client.startDate
         } : null,
-        bannerImage: null,
-        profilePicture: null
+        bannerImage: employee.bannerImage || null,
+        profilePicture: employee.profilePicture || null
       });
     } catch (error) {
       console.error('Get client profile error:', error);
       res.status(500).json({ message: "Failed to get profile" });
+    }
+  });
+
+  app.patch("/api/client/profile", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const updates = req.body as Record<string, unknown>;
+      const employeeUpdates: Record<string, unknown> = {};
+      if (typeof updates.name === "string" && updates.name.trim()) {
+        employeeUpdates.name = updates.name.trim();
+      }
+      if (updates.phone !== undefined) {
+        employeeUpdates.phone = typeof updates.phone === "string" ? updates.phone : employee.phone;
+      }
+      if (updates.department !== undefined) {
+        employeeUpdates.department = typeof updates.department === "string" ? updates.department : employee.department;
+      }
+      if (updates.profilePicture !== undefined) {
+        employeeUpdates.profilePicture = updates.profilePicture === null || updates.profilePicture === ""
+          ? null
+          : String(updates.profilePicture);
+      }
+      if (updates.bannerImage !== undefined) {
+        employeeUpdates.bannerImage = updates.bannerImage === null || updates.bannerImage === ""
+          ? null
+          : String(updates.bannerImage);
+      }
+
+      const updatedEmployee = await storage.updateEmployee(employee.id, employeeUpdates as any);
+      if (!updatedEmployee) {
+        return res.status(500).json({ message: "Failed to update profile" });
+      }
+
+      const client = await findCompanyForEmployee(updatedEmployee);
+      const profileLinked = !!client;
+      const clientAgreementAccepted = await hasLoggedConsent(updatedEmployee.id, "client_agreement");
+
+      res.json({
+        id: updatedEmployee.id,
+        name: updatedEmployee.name,
+        email: updatedEmployee.email,
+        phone: updatedEmployee.phone,
+        role: updatedEmployee.role,
+        employeeId: updatedEmployee.employeeId,
+        department: updatedEmployee.department || null,
+        joiningDate: updatedEmployee.joiningDate || null,
+        profileLinked,
+        clientAgreementAccepted,
+        company: client?.brandName || updatedEmployee.name || "Company",
+        clientDetails: profileLinked ? {
+          clientCode: client!.clientCode,
+          brandName: client!.brandName,
+          incorporatedName: client!.incorporatedName,
+          gstin: client!.gstin,
+          address: client!.address,
+          location: client!.location,
+          spoc: client!.spoc,
+          website: client!.website,
+          linkedin: client!.linkedin,
+          category: client!.category,
+          currentStatus: client!.currentStatus,
+          startDate: client!.startDate
+        } : null,
+        bannerImage: updatedEmployee.bannerImage || null,
+        profilePicture: updatedEmployee.profilePicture || null
+      });
+    } catch (error) {
+      console.error("Update client profile error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  app.post("/api/client/upload/profile", requireClientAuth, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const baseUrl = process.env.NODE_ENV === "production"
+        ? (process.env.BACKEND_URL || `https://${req.get("host")}`)
+        : `http://${req.get("host")}`;
+
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url, filename: req.file.filename });
+    } catch (error) {
+      console.error("Client profile upload error:", error);
+      res.status(500).json({ message: "File upload failed" });
+    }
+  });
+
+  // Shared profiles submitted for a requirement (client-visible)
+  app.get("/api/client/requirements/:requirementId/shared-profiles", requireClientAuth, async (req, res) => {
+    try {
+      const { requirementId } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const clientRequirements = (await getJobApplicationsScopedToClient(employee)).clientRequirements;
+      const allowed = new Set(clientRequirements.map((r: any) => String(r.id || "").trim()));
+      if (!requirementId || !allowed.has(String(requirementId).trim())) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      const requirement = clientRequirements.find((r: any) => String(r.id).trim() === String(requirementId).trim());
+      const allApps = await storage.getAllJobApplications();
+      const apps = allApps.filter(
+        (app: any) => String(app.requirementId || "").trim() === String(requirementId).trim()
+      );
+
+      const profileIds = [...new Set(apps.map((a: any) => a.profileId).filter(Boolean))] as string[];
+      const candidatesMap = new Map<string, any>();
+      const profilesMap = new Map<string, any>();
+      const skillsByProfile = new Map<string, any[]>();
+
+      if (profileIds.length > 0) {
+        const chunkSize = 100;
+        for (let i = 0; i < profileIds.length; i += chunkSize) {
+          const chunk = profileIds.slice(i, i + chunkSize);
+          const candidateRows = await db.select().from(candidates).where(inArray(candidates.id, chunk));
+          candidateRows.forEach((c) => candidatesMap.set(c.id, c));
+          const profileRows = await db.select().from(profiles).where(inArray(profiles.id, chunk));
+          profileRows.forEach((p) => profilesMap.set(p.id, p));
+        }
+        for (const pid of profileIds) {
+          try {
+            const sk = await storage.getSkillsByProfile(pid);
+            if (sk?.length) skillsByProfile.set(pid, sk);
+          } catch {
+            /* optional */
+          }
+        }
+      }
+
+      const rows = apps.map((app: any) => {
+        const pid = app.profileId;
+        const cand = pid ? candidatesMap.get(pid) : undefined;
+        const prof = pid ? profilesMap.get(pid) : undefined;
+        const skills = pid ? skillsByProfile.get(pid) : undefined;
+        return {
+          application: {
+            id: app.id,
+            status: app.status,
+            appliedDate: app.appliedDate,
+            jobTitle: app.jobTitle,
+            company: app.company,
+            jobType: app.jobType,
+            source: app.source,
+            description: app.description,
+            salary: app.salary,
+            location: app.location,
+            workMode: app.workMode,
+            experience: app.experience,
+            skills: app.skills,
+            candidateName: app.candidateName,
+            candidateEmail: app.candidateEmail,
+            candidatePhone: app.candidatePhone,
+            statusNote: app.statusNote,
+            rejectionReason: app.rejectionReason,
+            profileId: app.profileId,
+          },
+          candidate: cand
+            ? {
+                id: cand.id,
+                candidateId: cand.candidateId,
+                fullName: cand.fullName,
+                email: cand.email,
+                phone: cand.phone,
+                company: cand.company,
+                designation: cand.designation,
+                location: cand.location,
+                experience: cand.experience,
+                skills: cand.skills,
+                education: cand.education,
+                currentRole: cand.currentRole,
+                profilePicture: cand.profilePicture,
+                resumeFile: cand.resumeFile,
+                linkedinUrl: cand.linkedinUrl,
+                portfolioUrl: cand.portfolioUrl,
+                websiteUrl: cand.websiteUrl,
+              }
+            : null,
+          profile: prof
+            ? {
+                id: prof.id,
+                firstName: prof.firstName,
+                lastName: prof.lastName,
+                email: prof.email,
+                phone: prof.phone,
+                mobile: prof.mobile,
+                title: prof.title,
+                location: prof.location,
+                education: prof.education,
+                portfolio: prof.portfolio,
+                linkedinUrl: prof.linkedinUrl,
+                profilePicture: prof.profilePicture,
+                resumeFile: prof.resumeFile,
+                skills: prof.skills,
+                highestQualification: prof.highestQualification,
+                collegeName: prof.collegeName,
+                totalExperience: prof.totalExperience,
+                currentCompany: prof.currentCompany,
+                currentRole: prof.currentRole,
+                noticePeriod: prof.noticePeriod,
+                salaryRange: prof.salaryRange,
+                preferredLocation: prof.preferredLocation,
+                currentLocation: prof.currentLocation,
+              }
+            : null,
+          skillsRows: skills || [],
+        };
+      });
+
+      res.json({
+        requirement: {
+          id: requirement?.id || requirementId,
+          position: requirement?.position || null,
+          company: requirement?.company || null,
+        },
+        profiles: rows,
+      });
+    } catch (error) {
+      console.error("Get client shared profiles error:", error);
+      res.status(500).json({ message: "Failed to load shared profiles" });
     }
   });
 
@@ -13168,8 +15234,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secondarySkills,
         knowledgeOnly,
         specialInstructions,
-        position
+        position,
+        noOfPositions
       } = req.body;
+
+      const positionsCount = Math.max(1, parseInt(String(noOfPositions ?? 1), 10) || 1);
 
       // Validate that at least JD text or file is provided
       if (!jdText && !jdFile) {
@@ -13261,6 +15330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const requirement = await storage.createRequirement({
           id: roleId, // Use Role ID as requirement ID (STR25001 format)
           position: extractedPosition,
+          noOfPositions: positionsCount,
           criticality: 'Medium', // Default, can be updated by admin
           toughness: 'Medium', // Default, can be updated by admin
           company: companyName,
@@ -13306,6 +15376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const requirement = await storage.createRequirement({
               id: newRoleId,
               position: extractedPosition,
+              noOfPositions: positionsCount,
               criticality: 'Medium',
               toughness: 'Medium',
               company: companyName,

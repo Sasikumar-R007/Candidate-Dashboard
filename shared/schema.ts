@@ -130,6 +130,18 @@ export const jobApplications = pgTable("job_applications", {
   withdrawReason: text("withdraw_reason"),
   statusNote: text("status_note"),
   rejectionReason: text("rejection_reason"),
+  isCandidateConfirmed: boolean("is_candidate_confirmed").default(true),
+});
+
+/** Internal discussion thread scoped to a single job application (pipeline card). */
+export const candidateApplicationComments = pgTable("candidate_application_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull(),
+  authorEmployeeId: varchar("author_employee_id").notNull(),
+  authorName: text("author_name").notNull(),
+  authorRole: text("author_role").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const nudges = pgTable("nudges", {
@@ -631,6 +643,11 @@ export const insertSavedJobSchema = createInsertSchema(savedJobs).omit({
   id: true,
 });
 
+export const insertCandidateApplicationCommentSchema = createInsertSchema(candidateApplicationComments).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertNudgeSchema = createInsertSchema(nudges).omit({
   id: true,
   createdAt: true,
@@ -841,6 +858,17 @@ export const userActivities = pgTable("user_activities", {
   createdAt: text("created_at").notNull(),
 });
 
+export const consentLogs = pgTable("consent_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  role: text("role").notNull(), // candidate | client | employee
+  consentType: text("consent_type").notNull(), // platform_consent | job_consent | client_agreement | employee_agreement
+  policyVersion: text("policy_version").notNull(),
+  acceptedAt: timestamp("accepted_at").notNull().defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+});
+
 export const requirementAssignments = pgTable("requirement_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   requirementId: varchar("requirement_id").notNull(),
@@ -899,6 +927,11 @@ export const insertDailyMetricsSnapshotSchema = createInsertSchema(dailyMetricsS
 
 export const insertUserActivitySchema = createInsertSchema(userActivities).omit({
   id: true,
+});
+
+export const insertConsentLogSchema = createInsertSchema(consentLogs).omit({
+  id: true,
+  acceptedAt: true,
 });
 
 export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
@@ -978,6 +1011,8 @@ export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertSavedJob = z.infer<typeof insertSavedJobSchema>;
 export type SavedJob = typeof savedJobs.$inferSelect;
+export type InsertCandidateApplicationComment = z.infer<typeof insertCandidateApplicationCommentSchema>;
+export type CandidateApplicationComment = typeof candidateApplicationComments.$inferSelect;
 export type InsertNudge = z.infer<typeof insertNudgeSchema>;
 export type Nudge = typeof nudges.$inferSelect;
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
@@ -1047,6 +1082,8 @@ export type InsertRecruiterJob = z.infer<typeof insertRecruiterJobSchema>;
 export type RecruiterJob = typeof recruiterJobs.$inferSelect;
 export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
 export type UserActivity = typeof userActivities.$inferSelect;
+export type InsertConsentLog = z.infer<typeof insertConsentLogSchema>;
+export type ConsentLog = typeof consentLogs.$inferSelect;
 export type InsertRequirementAssignment = z.infer<typeof insertRequirementAssignmentSchema>;
 export type RequirementAssignment = typeof requirementAssignments.$inferSelect;
 export type InsertResumeSubmission = z.infer<typeof insertResumeSubmissionSchema>;

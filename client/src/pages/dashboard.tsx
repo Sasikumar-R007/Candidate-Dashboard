@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
 import Sidebar from '@/components/dashboard/sidebar';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import TabNavigation from '@/components/dashboard/tab-navigation';
@@ -10,19 +11,76 @@ import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import EditViewProfile from '@/pages/edit-view-profile';
 import { useProfile } from '@/hooks/use-profile';
+import { useJobApplications } from '@/hooks/use-job-applications';
 import { MessageCircle, HelpCircle } from 'lucide-react';
-import { useCandidateAuth } from '@/contexts/auth-context';
 import { ChatDock } from '@/components/chat/chat-dock';
 
 import DashboardHeader from '@/components/dashboard/dashboard-header';
+import CandidatePlatformWelcomeModal from '@/components/candidate-dashboard/candidate-platform-welcome-modal';
+import RecruiterTaggedJobConsentModal from '@/components/candidate-dashboard/recruiter-tagged-job-consent-modal';
+import { logConsent } from '@/lib/consent-log';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [sidebarTab, setSidebarTab] = useState('my-jobs');
   const [activeTab, setActiveTab] = useState('my-jobs');
   const [, setLocation] = useLocation();
   const { data: profile, isLoading } = useProfile();
-  const candidate = useCandidateAuth();
+  const { data: jobApplications = [], isLoading: jobsLoading } = useJobApplications({
+    enabled: !!profile,
+  });
   const [chatOpen, setChatOpen] = useState(false);
+
+  const pendingTaggedApplications = useMemo(
+    () =>
+      (jobApplications || []).filter((app) => {
+        const src = String(app.source || '').toLowerCase();
+        return src === 'recruiter_tagged' && (app as { isCandidateConfirmed?: boolean }).isCandidateConfirmed === false;
+      }),
+    [jobApplications],
+  );
+
+  const activeTaggedApplication = pendingTaggedApplications[0] ?? null;
+  const platformConsentAccepted = profile?.platformConsentAccepted === true;
+
+  const showTaggedConsentModal =
+    !!profile &&
+    !jobsLoading &&
+    !!activeTaggedApplication;
+  const showPlatformConsentModal =
+    !!profile &&
+    !jobsLoading &&
+    !platformConsentAccepted &&
+    !showTaggedConsentModal;
+
+  const handleConsentAccept = async () => {
+    if (!profile?.id) return;
+    const ok = await logConsent({
+      user_id: profile.id,
+      role: "candidate",
+      consent_type: "platform_consent",
+      policy_version: "2026-05-10",
+    });
+    if (ok) {
+      await queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+    } else {
+      toast({
+        title: "Could not save agreement",
+        description: "Check your connection and try again. Your agreement was not recorded.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTaggedConsentConfirmed = () => {
+    void queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+  };
+
+  useEffect(() => {
+    if (showTaggedConsentModal || showPlatformConsentModal) setChatOpen(false);
+  }, [showTaggedConsentModal, showPlatformConsentModal]);
 
   // Navigation Guard: Redirect to onboarding if not completed
   useEffect(() => {
@@ -49,6 +107,17 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg text-red-500">Profile not found</div>
+      </div>
+    );
+  }
+
+  if (jobsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-lg text-gray-600">Loading your applications…</div>
+        </div>
       </div>
     );
   }
@@ -181,9 +250,30 @@ export default function Dashboard() {
     }
   };
 
+  const anyConsentBlocking = showTaggedConsentModal || showPlatformConsentModal;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
-      <div className="flex h-screen overflow-hidden">
+      <RecruiterTaggedJobConsentModal
+        open={showTaggedConsentModal}
+        candidateProfileId={profile?.id}
+        application={
+          activeTaggedApplication
+            ? {
+                id: activeTaggedApplication.id,
+                jobTitle: activeTaggedApplication.jobTitle,
+                company: activeTaggedApplication.company,
+              }
+            : null
+        }
+        onConfirmed={handleTaggedConsentConfirmed}
+      />
+      <CandidatePlatformWelcomeModal open={showPlatformConsentModal} onAccept={handleConsentAccept} />
+
+      <div
+        className={`flex h-screen overflow-hidden ${anyConsentBlocking ? "pointer-events-none select-none" : ""}`}
+        aria-hidden={anyConsentBlocking}
+      >
         <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
         <div className="flex-1 flex flex-col overflow-hidden ml-16 bg-gray-50">
           {renderSidebarContent()}
@@ -192,7 +282,8 @@ export default function Dashboard() {
         {/* Floating Chat Button */}
         <button
           onClick={() => setChatOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
+          disabled={anyConsentBlocking}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg transition-all duration-200 hover:scale-110 hover:bg-purple-700 disabled:pointer-events-none disabled:opacity-0"
           data-testid="button-floating-chat"
           aria-label="Open Chat"
         >
@@ -202,7 +293,7 @@ export default function Dashboard() {
 
       {/* Chat Dock Component */}
       <ChatDock 
-        open={chatOpen} 
+        open={chatOpen && !anyConsentBlocking} 
         onClose={() => setChatOpen(false)}
         userName="Support Team"
       />

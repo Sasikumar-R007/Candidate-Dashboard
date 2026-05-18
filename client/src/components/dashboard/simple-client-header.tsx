@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { ChevronDown, User, Settings, LogOut, HelpCircle } from "lucide-react";
-import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, User, Settings, LogOut, HelpCircle, Bell, Zap, Trophy, Briefcase, X } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
@@ -14,26 +13,113 @@ interface SimpleClientHeaderProps {
   clientName?: string;
   clientEmail?: string;
   onHelpClick?: () => void;
+  nudgeCount?: number;
+  closureCount?: number;
+  onOpenNudges?: () => void;
+  onOpenClosures?: () => void;
 }
+
+type EmployeeNotificationItem = {
+  id: string;
+  line: string;
+  createdAt?: string | null;
+  isUnread?: boolean;
+};
+
+type EmployeeNotificationFeed = {
+  role: string;
+  newRequirements: EmployeeNotificationItem[];
+  nudges: EmployeeNotificationItem[];
+  escalatedNudges: EmployeeNotificationItem[];
+  closures: EmployeeNotificationItem[];
+  newCandidateApplied: EmployeeNotificationItem[];
+  unreadCount: number;
+};
 
 export default function SimpleClientHeader({ 
   companyName = "Loading...",
   clientName,
   clientEmail,
-  onHelpClick
+  onHelpClick,
+  nudgeCount = 0,
+  closureCount = 0,
+  onOpenNudges,
+  onOpenClosures
 }: SimpleClientHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationTab, setNotificationTab] = useState<string>('all');
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
-  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { logout } = useAuth();
   const employee = useEmployeeAuth();
   
   const userName = clientName || employee?.name || "Client User";
   const userEmail = clientEmail || employee?.email || "";
-  const userImage = "/api/placeholder/32/32";
+
+  const { data: employeeFeed } = useQuery<EmployeeNotificationFeed>({
+    queryKey: ["/api/employee/notifications-feed"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employee/notifications-feed", {});
+      return await res.json();
+    },
+    staleTime: 0,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    initialData: {
+      role: "client",
+      newRequirements: [],
+      nudges: [],
+      escalatedNudges: [],
+      closures: [],
+      newCandidateApplied: [],
+      unreadCount: 0,
+    },
+  });
+
+  const notificationTabs = useMemo(
+    () => [
+      { id: "all", label: "All" },
+      { id: "newProfiles", label: "New Profiles" },
+      { id: "nudges", label: "Nudges" },
+      { id: "closures", label: "Closures" },
+    ],
+    []
+  );
+
+  useEffect(() => {
+    if (!notificationTabs.some((tab) => tab.id === notificationTab)) {
+      setNotificationTab(notificationTabs[0]?.id || "all");
+    }
+  }, [notificationTabs, notificationTab]);
+
+  const notificationRows = useMemo(() => {
+    const rows: Array<{ key: string; kind: string; line: string; createdAt?: string | null; isUnread?: boolean }> = [];
+    const pushRows = (kind: string, items: EmployeeNotificationItem[]) => {
+      items.forEach((item) => rows.push({ key: `${kind}-${item.id}`, kind, line: item.line, createdAt: item.createdAt, isUnread: item.isUnread }));
+    };
+    pushRows("newProfile", employeeFeed?.newCandidateApplied || []);
+    pushRows("nudge", employeeFeed?.nudges || []);
+    pushRows("closure", employeeFeed?.closures || []);
+
+    const filtered = notificationTab === "all"
+      ? rows
+      : rows.filter((row) =>
+          (notificationTab === "newProfiles" && row.kind === "newProfile") ||
+          (notificationTab === "nudges" && row.kind === "nudge") ||
+          (notificationTab === "closures" && row.kind === "closure")
+        );
+
+    return filtered.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+  }, [employeeFeed, notificationTab]);
+
+  const headerUnreadCount = Math.max(employeeFeed?.unreadCount ?? 0, nudgeCount + closureCount);
   
   // Logout mutation for client (employee)
   const logoutMutation = useMutation({
@@ -82,11 +168,6 @@ export default function SimpleClientHeader({
     setShowProfileSettings(true);
   };
 
-  const handleAccountSettings = () => {
-    setShowUserDropdown(false);
-    setShowProfileSettings(true); // For now, account settings opens the same modal
-  };
-
   const handlePasswordChange = () => {
     setShowUserDropdown(false);
     setIsChangePasswordModalOpen(true);
@@ -97,7 +178,7 @@ export default function SimpleClientHeader({
         {/* Company Name */}
         <h1 className="text-lg font-semibold text-gray-900">{companyName}</h1>
         
-        {/* Right side - Help and User Profile */}
+        {/* Right side - Help, Notifications and User Profile */}
         <div className="flex items-center gap-4">
           {/* Help Button */}
           <button 
@@ -108,6 +189,25 @@ export default function SimpleClientHeader({
             <HelpCircle size={16} />
             <span className="text-sm">Help</span>
           </button>
+
+          {/* Notifications */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowUserDropdown(false);
+                setShowNotifications((prev) => !prev);
+              }}
+              className="relative flex items-center justify-center h-10 w-10 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200"
+              data-testid="button-client-notifications"
+            >
+              <Bell size={18} />
+              {headerUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                  {headerUnreadCount}
+                </span>
+              )}
+            </button>
+          </div>
           
           {/* User Dropdown */}
           <div className="relative">
@@ -157,6 +257,15 @@ export default function SimpleClientHeader({
                 {/* Menu Items */}
                 <div className="py-2">
                   <button 
+                    onClick={handleProfileSettings}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                    data-testid="button-client-profile-settings"
+                  >
+                    <User size={16} />
+                    <span>Profile Settings</span>
+                  </button>
+
+                  <button 
                     onClick={handlePasswordChange}
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                     data-testid="button-client-change-password"
@@ -182,6 +291,91 @@ export default function SimpleClientHeader({
           </div>
         </div>
       </div>
+
+      {showNotifications && (
+        <>
+          <button
+            className="fixed inset-0 z-40 bg-black/20"
+            onClick={() => setShowNotifications(false)}
+            aria-label="Close notifications"
+          />
+          <div className="fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-semibold text-slate-900">Notifications</h3>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close notifications"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-200 px-4 py-3">
+              <div className="flex flex-wrap gap-2">
+                {notificationTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setNotificationTab(tab.id)}
+                    className={`rounded-full px-4 py-1.5 text-sm font-medium ${
+                      notificationTab === tab.id
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              {notificationRows.length === 0 ? (
+                <p className="px-3 py-8 text-center text-sm text-slate-500">
+                  {notificationTab === "all" && "No notifications yet."}
+                  {notificationTab === "newProfiles" && "No new profile notifications yet."}
+                  {notificationTab === "nudges" && "No nudge notifications yet."}
+                  {notificationTab === "closures" && "No closure notifications yet."}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {notificationRows.map((row) => {
+                    const icon = row.kind === "newProfile" ? Briefcase : row.kind === "closure" ? Trophy : Zap;
+                    const Icon = icon;
+                    return (
+                      <button
+                        key={row.key}
+                        className={`w-full rounded-2xl border px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50 ${
+                          row.isUnread ? "border-cyan-200 bg-cyan-50/60" : "border-slate-200 bg-white"
+                        }`}
+                        onClick={() => {
+                          if (row.kind === "nudge") onOpenNudges?.();
+                          if (row.kind === "closure") onOpenClosures?.();
+                          setShowNotifications(false);
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 rounded-lg bg-slate-100 p-2 text-slate-600">
+                            <Icon size={15} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-slate-800">{row.line}</p>
+                            {row.createdAt && (
+                              <p className="mt-1 text-xs text-slate-500">
+                                {new Date(row.createdAt).toLocaleString("en-GB")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
       
       <SignOutDialog
         open={showSignOutDialog}

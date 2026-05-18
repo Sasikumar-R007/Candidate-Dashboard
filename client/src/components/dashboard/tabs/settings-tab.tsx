@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { LegalPoliciesSettingsCard } from "@/components/dashboard/legal-policies-settings-card";
 
 interface SettingsTabProps {
   onOpenSupport?: () => void;
@@ -264,6 +265,8 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
             </div>
           </CardContent>
         </Card>
+
+        <LegalPoliciesSettingsCard variant="dashboard" />
 
         {/* Security & Account Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

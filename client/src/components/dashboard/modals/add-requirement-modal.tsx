@@ -211,10 +211,18 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.position || !formData.criticality || !formData.toughness || !formData.company || !formData.spoc) {
+    if (!formData.position || !formData.criticality || !formData.toughness || !formData.company || !formData.spoc || !formData.teamLead || formData.teamLead === 'Unassigned') {
       toast({
         title: "Missing Fields",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!jdFilePreviewUrl && !jdFile) {
+      toast({
+        title: "Missing JD",
+        description: "Please upload a JD file.",
         variant: "destructive",
       });
       return;
@@ -520,7 +528,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
               
               <div className="space-y-2">
                 <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Team Leader
+                  Team Leader *
                 </Label>
                 <Select 
                   value={formData.teamLead} 
@@ -528,10 +536,9 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   disabled={isLoadingEmployees}
                 >
                   <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-team-lead">
-                    <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team lead"} />
+                    <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team lead *"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Unassigned">Unassigned</SelectItem>
                     {teamLeads.map(lead => (
                       <SelectItem key={lead.id} value={lead.name}>{lead.name}</SelectItem>
                     ))}
@@ -598,7 +605,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
 
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              JD File(Optional)
+              JD File *
             </Label>
             {jdFilePreviewUrl ? (
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">

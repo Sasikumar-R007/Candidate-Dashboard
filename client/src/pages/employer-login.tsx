@@ -31,7 +31,7 @@ export default function EmployerLogin() {
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { user, isLoading: isAuthLoading, isVerified, setUser } = useAuth();
+  const { user, isLoading: isAuthLoading, isVerified, verifySession } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
   const {
@@ -64,12 +64,10 @@ export default function EmployerLogin() {
       }
 
       if (result.success && result.employee) {
-        setUser({
-          type: 'employee',
-          data: result.employee
-        });
-
-        sessionStorage.setItem('employee', JSON.stringify(result.employee));
+        const sessionOk = await verifySession();
+        if (!sessionOk) {
+          throw new Error("Session could not be verified after login. Please try again.");
+        }
 
         toast({
           title: "Login Successful",
@@ -123,7 +121,13 @@ export default function EmployerLogin() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Modern SaaS Design with Gradient - Matching Landing Page Theme */}
-      <div className="hidden lg:flex lg:w-1/2 h-screen relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #F5F3FF, #E8E4FF, #8776FF)' }}>
+      <div
+        className="hidden lg:flex lg:w-1/2 h-screen relative overflow-hidden"
+        style={{
+          background:
+            "radial-gradient(circle at 18% 18%, rgba(96, 165, 250, 0.35), transparent 28%), radial-gradient(circle at 82% 78%, rgba(14, 165, 233, 0.28), transparent 32%), linear-gradient(135deg, #0B1F5E 0%, #1D4ED8 48%, #2563EB 100%)",
+        }}
+      >
         {/* Content overlay */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* StaffOS logo at top left */}
@@ -133,60 +137,60 @@ export default function EmployerLogin() {
               alt="StaffOS Logo"
               className="h-10 w-10 rounded-lg object-contain"
             />
-            <span className="text-xl font-bold text-gray-900">StaffOS</span>
+            <span className="text-xl font-bold text-white">StaffOS</span>
           </div>
           
           {/* Main content area */}
           <div className="flex-1 flex flex-col justify-center space-y-8 max-w-lg">
             {/* Main heading */}
             <div className="space-y-4">
-              <h1 className="text-4xl lg:text-5xl font-bold leading-tight text-gray-900">
+              <h1 className="text-4xl lg:text-5xl font-bold leading-tight text-white">
                 Powerful Hiring
-                <span className="block text-purple-600">
+                <span className="block text-blue-200">
                   Analytics Platform
                 </span>
               </h1>
-              <p className="text-lg text-gray-700 leading-relaxed">
+              <p className="text-lg text-blue-100/90 leading-relaxed">
                 Transform your recruitment with data-driven insights. Track performance, optimize workflows, and make smarter hiring decisions.
               </p>
             </div>
             
             {/* Feature highlights */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-purple-600" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg shadow-blue-950/20">
+                <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-blue-100" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Real-time Analytics</h3>
-                  <p className="text-sm text-gray-700">Track hiring metrics and KPIs instantly</p>
+                  <h3 className="font-semibold text-white">Real-time Analytics</h3>
+                  <p className="text-sm text-blue-100/80">Track hiring metrics and KPIs instantly</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-purple-600" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg shadow-blue-950/20">
+                <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center">
+                  <Users className="w-6 h-6 text-blue-100" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Team Performance</h3>
-                  <p className="text-sm text-gray-700">Monitor and improve recruiter productivity</p>
+                  <h3 className="font-semibold text-white">Team Performance</h3>
+                  <p className="text-sm text-blue-100/80">Monitor and improve recruiter productivity</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg shadow-blue-950/20">
+                <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-blue-100" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Smart Insights</h3>
-                  <p className="text-sm text-gray-700">AI-powered recommendations for success</p>
+                  <h3 className="font-semibold text-white">Smart Insights</h3>
+                  <p className="text-sm text-blue-100/80">AI-powered recommendations for success</p>
                 </div>
               </div>
             </div>
           </div>
           
           {/* Trust indicator */}
-          <div className="flex items-center space-x-2 text-gray-700 text-sm">
+          <div className="flex items-center space-x-2 text-blue-100/85 text-sm">
             <Shield className="w-4 h-4" />
             <span>Enterprise-grade security & compliance</span>
           </div>
@@ -240,7 +244,7 @@ export default function EmployerLogin() {
                   id="email"
                   type="email"
                   placeholder="you@company.com"
-                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
+                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                   data-testid="input-email"
                   {...register("email", {
                     required: "Email is required",
@@ -262,7 +266,7 @@ export default function EmployerLogin() {
                 <PasswordInput
                   id="password"
                   placeholder="Enter your password"
-                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
+                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                   data-testid="input-password"
                   {...register("password", {
                     required: "Password is required",
@@ -282,7 +286,7 @@ export default function EmployerLogin() {
               <button
                 type="button"
                 onClick={handleForgotPassword}
-                className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors font-poppins"
+                className="text-sm text-[#2563EB] hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors font-poppins"
                 data-testid="button-forgot-password"
               >
                 Forgot Password?
@@ -293,7 +297,7 @@ export default function EmployerLogin() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-purple-600/20 transition-all font-poppins"
+              className="w-full h-12 bg-[#2563EB] hover:bg-blue-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all font-poppins"
               data-testid="button-login"
             >
               {isLoading ? "Signing in..." : "Sign In"}

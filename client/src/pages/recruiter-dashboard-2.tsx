@@ -23,12 +23,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchBar } from '@/components/ui/search-bar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight, Clock, Zap, AlertTriangle } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight, Clock, Zap, AlertTriangle, Send } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useDashboardSync } from "@/lib/dashboard-sync";
+import {
+  CandidateCommentsSession,
+  type CandidateCommentsSessionApplicant,
+} from "@/components/dashboard/candidate-comments-session";
+import {
+  RECRUITER_PIPELINE_STAGE_ORDER,
+  buildPipelineSessionList,
+  mapRecruiterPipelineCandidate,
+} from "@/lib/pipeline-session-utils";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
-import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ChatDock } from '@/components/chat/chat-dock';
 import { ChatModal } from '@/components/chat/admin-chat-modal';
 import { useToast } from '@/hooks/use-toast';
@@ -130,8 +141,12 @@ export default function RecruiterDashboard2() {
   const [isCeoCommandsModalOpen, setIsCeoCommandsModalOpen] = useState(false);
   const [isApplicantOverviewModalOpen, setIsApplicantOverviewModalOpen] = useState(false);
   const [applicantSearchQuery, setApplicantSearchQuery] = useState('');
-  const [isCandidateProfileModalOpen, setIsCandidateProfileModalOpen] = useState(false);
-  const [selectedPipelineCandidate, setSelectedPipelineCandidate] = useState<any>(null);
+  const [isInviteConfirmModalOpen, setIsInviteConfirmModalOpen] = useState(false);
+  const [applicantToInvite, setApplicantToInvite] = useState<any>(null);
+  const [pipelineView, setPipelineView] = useState<"board" | "candidate-session">("board");
+  const [sessionApplicationId, setSessionApplicationId] = useState<string | null>(null);
+  const [sessionApplicantSnapshot, setSessionApplicantSnapshot] =
+    useState<CandidateCommentsSessionApplicant | null>(null);
   const [isClosureFormModalOpen, setIsClosureFormModalOpen] = useState(false);
   const [selectedCandidateForClosure, setSelectedCandidateForClosure] = useState<any>(null);
   const [closureFormData, setClosureFormData] = useState({
@@ -264,17 +279,42 @@ export default function RecruiterDashboard2() {
 
   // Query for job counts
   const { data: jobCounts } = useQuery<{ total: number, active: number, closed: number, draft: number }>({
-    queryKey: ['/api/recruiter/jobs/counts']
+    queryKey: ['/api/recruiter/jobs/counts'],
+    refetchOnWindowFocus: true,
   });
 
   // Query for candidate counts
   const { data: candidateCounts } = useQuery<{ total: number, active: number, inactive: number }>({
-    queryKey: ['/api/recruiter/candidates/counts']
+    queryKey: ['/api/recruiter/candidates/counts'],
+    refetchOnWindowFocus: true,
   });
 
   // Query for all job applications
   const { data: allApplications = [] } = useQuery<any[]>({
-    queryKey: ['/api/recruiter/applications']
+    queryKey: ['/api/recruiter/applications'],
+    // Refetch when this tab regains focus so a fresh tag from the Source
+    // Resume tab is reflected even without the cross-tab broadcast.
+    refetchOnWindowFocus: true,
+    // Live-poll every 30s while the dashboard is visible. The candidate
+    // registers/logs in on their own device, so we can't broadcast that
+    // event â€” polling is what flips the Onboard button to disabled
+    // (`isUsingStaffOS = true`) shortly after the candidate verifies.
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+    // Treat data as stale immediately so the polled refetch actually fires
+    // (the global default is `staleTime: Infinity`).
+    staleTime: 0,
+  });
+
+  // Refresh Applicant Overview & counts the moment another tab (e.g. the
+  // "Source Resume" page) tags a candidate to a requirement.
+  useDashboardSync(queryClient, {
+    eventTypes: ['applications:changed', 'candidates:changed'],
+    queryKeys: [
+      ['/api/recruiter/applications'],
+      ['/api/recruiter/jobs/counts'],
+      ['/api/recruiter/candidates/counts'],
+    ],
   });
 
   // Fetch interviews from backend - must be defined before useMemo/useEffect that use it
@@ -311,6 +351,8 @@ export default function RecruiterDashboard2() {
       const isUnreviewed = !app.status ||
         app.status === 'In Process' ||
         app.status === 'In-Process' ||
+        app.status === 'Evaluating' ||
+        app.status === 'Resume Review' ||
         app.status === 'Applied' ||
         app.status === '';
       return isSelfApplied && isUnreviewed;
@@ -356,6 +398,44 @@ export default function RecruiterDashboard2() {
       // The error will be logged but we don't show toast to avoid interrupting workflow
     }
   });
+
+  const sendInviteMutation = useMutation({
+    mutationFn: async (applicant: any) => {
+      const response = await apiRequest('POST', `/api/recruiter/applications/${applicant.id}/invite`, {});
+      return response.json();
+    },
+    onSuccess: (_data, applicant) => {
+      toast({
+        title: "Invite Sent",
+        description: `Invite email has been sent to ${applicant.candidateName}.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Invite Failed",
+        description: error?.message || "Could not send invite email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleInviteClick = (applicant: any) => {
+    if (applicant.isUsingStaffOS) return;
+    setApplicantToInvite(applicant);
+    setIsInviteConfirmModalOpen(true);
+  };
+
+  const handleConfirmInvite = () => {
+    if (!applicantToInvite) return;
+    sendInviteMutation.mutate(applicantToInvite);
+    setIsInviteConfirmModalOpen(false);
+    setApplicantToInvite(null);
+  };
+
+  const handleCancelInvite = () => {
+    setIsInviteConfirmModalOpen(false);
+    setApplicantToInvite(null);
+  };
 
   // Helper function to get current quarter
   const getCurrentQuarter = () => {
@@ -466,10 +546,9 @@ export default function RecruiterDashboard2() {
       'L3': 'View candidates in L3 round. You can mark interview results.',
       'L2': 'View candidates in L2 round. You can mark interview results.',
       'L1': 'View candidates in L1 round. You can mark interview results.',
-      'ASSIGNMENT': 'View candidates in assignment stage. You can review assignments.',
-      'INTRO_CALL': 'View candidates in intro call stage. You can schedule calls.',
+      'SCREENING': 'View candidates in screening stage. You can proceed with intro call and assignment checks.',
       'SHORTLISTED': 'View shortlisted candidates. You can move them to next stage.',
-      'SOURCED': 'View sourced candidates. You can shortlist them.'
+      'EVALUATING': 'View candidates under evaluation before screening.'
     };
 
     alert(`${stage}\n\n${stageActions[stage] || 'Manage candidates in this stage.'}`);
@@ -604,7 +683,7 @@ export default function RecruiterDashboard2() {
       const endDateTime = `${year}${month}${day}T${String(endHours).padStart(2, '0')}${String(endMins).padStart(2, '0')}00`;
 
       // Build event details
-      const eventText = `Interview: ${candidateName} – ${position}`;
+      const eventText = `Interview: ${candidateName} â€“ ${position}`;
       const eventDetails = `Candidate: ${candidateName}\nPosition: ${position}\nClient: ${client}\nInterview Type: ${interviewType}\nScheduled via StaffOS`;
 
       // Determine location based on interview type
@@ -721,7 +800,7 @@ export default function RecruiterDashboard2() {
   const recruitingTeam = ['Priya', 'Amit', 'Sowmiya', 'Rajesh', 'Kavitha', 'Vinay'];
 
   // Status options for dropdowns
-  const statuses = ['In-Process', 'Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Closure', 'Screened Out'];
+  const statuses = ['Resume Review', 'Shortlisted', 'Screening', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Closure', 'Screened Out'];
   const rejectionReasons = [
     'Skills not aligned',
     'Experience mismatch',
@@ -741,7 +820,7 @@ export default function RecruiterDashboard2() {
     'Experience mismatch': 'Thank you for your interest. We are currently moving forward with candidates whose experience aligns more closely with this role.',
     'Interview performance below expectations': 'Thank you for taking the time to interview. We will not be moving forward at this stage as we are looking for a closer alignment with the role requirements.',
     'Role / tech stack mismatch': 'Thank you for your time. This role requires specific experience in certain technologies, and we are prioritizing candidates with that alignment.',
-    'Cultural fit concerns': 'Thank you for your time during the process. We are proceeding with candidates who more closely align with the team’s working style and requirements.',
+    'Cultural fit concerns': 'Thank you for your time during the process. We are proceeding with candidates who more closely align with the teamâ€™s working style and requirements.',
     'Compensation not aligned': 'Thank you for your interest. At this stage, we are unable to align on the compensation expectations for this role.',
     'Notice period / availability issue': 'Thank you for your time. The role requires a joining timeline that we are unable to align on currently.',
     'Location constraint': 'Thank you for your interest. This role requires a specific location or work setup, and we are proceeding with candidates aligned to that requirement.',
@@ -769,8 +848,11 @@ export default function RecruiterDashboard2() {
 
       // Map backend status to UI-friendly format
       const statusMap: Record<string, string> = {
-        'In Process': 'In-Process',
-        'In-Process': 'In-Process',
+        'In Process': 'Resume Review',
+        'In-Process': 'Resume Review',
+        'Evaluating': 'Resume Review',
+        'Resume Review': 'Resume Review',
+        'Screening': 'Screening',
         'Shortlisted': 'Shortlisted',
         'Rejected': 'Rejected',
         'Screened Out': 'Screened Out',
@@ -782,7 +864,7 @@ export default function RecruiterDashboard2() {
         'Closure': 'Closure',
         'Selected': 'Selected',
         'Interview Scheduled': 'L1',
-        'Applied': 'In-Process'
+        'Applied': 'Resume Review'
       };
 
       // Get candidate name - prioritize candidateName from app, fallback to profile lookup
@@ -799,7 +881,7 @@ export default function RecruiterDashboard2() {
         company: app.company || 'N/A',
         roleApplied: app.jobTitle || 'N/A',
         submission: app.source === 'recruiter_tagged' ? 'Uploaded' : 'Inbound',
-        currentStatus: statusMap[app.status] || app.status || 'In-Process',
+        currentStatus: statusMap[app.status] || app.status || 'Resume Review',
         email: app.candidateEmail || null,
         phone: app.candidatePhone || null,
         location: app.location || 'N/A',
@@ -810,6 +892,7 @@ export default function RecruiterDashboard2() {
         rating: 4.0,
         resumeFile: app.resumeFile || null,
         profileId: app.profileId || null,
+        isUsingStaffOS: app.isUsingStaffOS || false,
         appliedDate: app.appliedDate || null,
         statusNote: app.statusNote || null,
         rejectionReason: app.rejectionReason || null
@@ -889,10 +972,8 @@ export default function RecruiterDashboard2() {
 
     // Each status maps to exactly one pipeline column to prevent duplicates
     const stageMapping: Record<string, string[]> = {
-      'Sourced': ['In-Process', 'Sourced'],
+      'Screening': ['Evaluating', 'Resume Review', 'Screening', 'Intro Call', 'Assignment'],
       'Shortlisted': ['Shortlisted'],
-      'Intro Call': ['Intro Call'],
-      'Assignment': ['Assignment'],
       'L1': ['L1'],
       'L2': ['L2'],
       'L3': ['L3'],
@@ -915,10 +996,8 @@ export default function RecruiterDashboard2() {
     };
 
     return {
-      sourced: getCandidatesForStage('Sourced'),
+      screening: getCandidatesForStage('Screening'),
       shortlisted: getCandidatesForStage('Shortlisted'),
-      introCall: getCandidatesForStage('Intro Call'),
-      assignment: getCandidatesForStage('Assignment'),
       level1: getCandidatesForStage('L1'),
       level2: getCandidatesForStage('L2'),
       level3: getCandidatesForStage('L3'),
@@ -956,10 +1035,37 @@ export default function RecruiterDashboard2() {
     });
   }, [applicantData, applicantStatusOverrides, autoArchivedIds, rejectedAtOverrides, updateStatusMutation]);
 
-  // Handle clicking on a pipeline candidate
+  const pipelineSessionList = useMemo(
+    () =>
+      buildPipelineSessionList(
+        getPipelineCandidatesByStage,
+        RECRUITER_PIPELINE_STAGE_ORDER,
+        (c) =>
+          mapRecruiterPipelineCandidate(c, applicantStatusOverrides[c.id] || c.currentStatus),
+      ),
+    [getPipelineCandidatesByStage, applicantStatusOverrides],
+  );
+
+  const buildSessionApplicantSnapshot = (candidate: any): CandidateCommentsSessionApplicant =>
+    mapRecruiterPipelineCandidate(candidate, applicantStatusOverrides[candidate.id] || candidate.currentStatus);
+
+  // Open full Candidate Comments Session (replaces the small profile popup)
   const handlePipelineCandidateClick = (candidate: any) => {
-    setSelectedPipelineCandidate(candidate);
-    setIsCandidateProfileModalOpen(true);
+    if (!candidate?.id) return;
+    setSessionApplicationId(candidate.id);
+    setSessionApplicantSnapshot(buildSessionApplicantSnapshot(candidate));
+    setPipelineView("candidate-session");
+  };
+
+  const handleSelectSessionApplicant = (applicant: CandidateCommentsSessionApplicant) => {
+    setSessionApplicationId(applicant.id);
+    setSessionApplicantSnapshot(applicant);
+  };
+
+  const handleCloseCandidateSession = () => {
+    setPipelineView("board");
+    setSessionApplicationId(null);
+    setSessionApplicantSnapshot(null);
   };
 
   // Use API data for pending meetings and CEO commands
@@ -1044,7 +1150,7 @@ export default function RecruiterDashboard2() {
       const finalNoteBase = reason === 'Other (please specify)' && otherReasonText.trim()
         ? otherReasonText.trim()
         : message;
-      const finalNote = `${finalNoteBase}\n\n[[REJECT_STAGE:${selectedCandidate.currentStatus || 'In-Process'}]] [[REJECTED_AT:${new Date().toISOString()}]]`;
+      const finalNote = `${finalNoteBase}\n\n[[REJECT_STAGE:${selectedCandidate.currentStatus || 'Resume Review'}]] [[REJECTED_AT:${new Date().toISOString()}]]`;
 
       setApplicantStatusOverrides(prev => ({
         ...prev,
@@ -1052,7 +1158,7 @@ export default function RecruiterDashboard2() {
       }));
       setRejectedStageOverrides(prev => ({
         ...prev,
-        [selectedCandidate.id]: selectedCandidate.currentStatus || 'In-Process'
+        [selectedCandidate.id]: selectedCandidate.currentStatus || 'Resume Review'
       }));
       setRejectedAtOverrides(prev => ({
         ...prev,
@@ -1261,6 +1367,7 @@ export default function RecruiterDashboard2() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/nudges'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
       toast({
         title: "Nudge updated",
         description: "Successfully marked as contacted.",
@@ -1458,7 +1565,7 @@ export default function RecruiterDashboard2() {
                     {getEffectiveApplicantData().length > 5 && (
                       <button
                         onClick={() => setIsApplicantOverviewModalOpen(true)}
-                        className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
+                        className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm font-medium transition-colors"
                         data-testid="button-view-all-applicants"
                       >
                         View More
@@ -1507,6 +1614,7 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-6 font-medium text-gray-700">Role Applied</th>
                             <th className="text-left py-3 px-6 font-medium text-gray-700">Submission</th>
                             <th className="text-left py-3 px-6 font-medium text-gray-700">Current Status</th>
+                            <th className="text-left py-3 px-6 font-medium text-gray-700">Onboard</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1558,6 +1666,27 @@ export default function RecruiterDashboard2() {
                                       </SelectContent>
                                     </Select>
                                   </div>
+                                </td>
+                                <td className="py-3 px-6">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 w-8 p-0"
+                                          onClick={() => handleInviteClick(applicant)}
+                                          disabled={applicant.isUsingStaffOS}
+                                          data-testid={`button-onboard-${applicant.id}`}
+                                        >
+                                          <Send className="h-4 w-4 shrink-0" strokeWidth={2.25} />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{applicant.isUsingStaffOS ? 'Candidate is already using StaffOS' : 'Invite to StaffOS'}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </td>
                               </tr>
                             );
@@ -1666,7 +1795,7 @@ export default function RecruiterDashboard2() {
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                             <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '12px' }} />
                             <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                            <Tooltip
+                            <RechartsTooltip
                               contentStyle={{
                                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                 border: '1px solid #e5e7eb',
@@ -2007,6 +2136,7 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">No. of Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
@@ -2017,7 +2147,7 @@ export default function RecruiterDashboard2() {
                         <tbody>
                           {isLoadingRequirements ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500">
+                              <td colSpan={9} className="py-8 text-center text-gray-500">
                                 <div className="flex items-center justify-center gap-2">
                                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
                                   <span>Loading requirements...</span>
@@ -2026,7 +2156,7 @@ export default function RecruiterDashboard2() {
                             </tr>
                           ) : filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500">
+                              <td colSpan={9} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet. Requirements will appear here once your Team Lead assigns them.'}
                               </td>
                             </tr>
@@ -2062,6 +2192,7 @@ export default function RecruiterDashboard2() {
                                   </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.noOfPositions ?? 1}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">
                                     {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
                                       <span className="text-cyan-500">Unassigned</span>
@@ -2136,6 +2267,7 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">No. of Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
@@ -2146,7 +2278,7 @@ export default function RecruiterDashboard2() {
                         <tbody>
                           {filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500">
+                              <td colSpan={9} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet.'}
                               </td>
                             </tr>
@@ -2181,6 +2313,7 @@ export default function RecruiterDashboard2() {
                                   </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.noOfPositions ?? 1}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">
                                     {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
                                       <span className="text-cyan-500">Unassigned</span>
@@ -2502,8 +2635,8 @@ export default function RecruiterDashboard2() {
     { key: 'level1', display: 'Level 1' },
     { key: 'level2', display: 'Level 2' },
     { key: 'level3', display: 'Level 3' },
-    { key: 'finalRound', display: 'Final Round' },
     { key: 'hrRound', display: 'HR Round' },
+    { key: 'finalRound', display: 'Final Round' },
     { key: 'offerStage', display: 'Offer Stage' },
     { key: 'closure', display: 'Closure' }
   ];
@@ -2511,6 +2644,25 @@ export default function RecruiterDashboard2() {
   const renderPipelineContent = () => {
     // Closure report data fetched from backend (Revenue Mappings provided by Admin)
     const closureReportData = closureReports;
+
+    if (pipelineView === "candidate-session" && sessionApplicationId) {
+      return (
+        <div className="flex min-h-screen">
+          <div className="ml-16 flex min-h-0 flex-1 flex-col bg-white">
+            <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
+            <div className="h-[calc(100vh-64px)] min-h-0 overflow-hidden">
+              <CandidateCommentsSession
+                applicationId={sessionApplicationId}
+                fallbackApplicant={sessionApplicantSnapshot}
+                pipelineApplicants={pipelineSessionList}
+                onSelectApplicant={handleSelectSessionApplicant}
+                onBack={handleCloseCandidateSession}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="flex min-h-screen">
@@ -2652,159 +2804,18 @@ export default function RecruiterDashboard2() {
               </div>
 
 
-              {/* Candidate Profile Modal */}
-              {selectedPipelineCandidate && (
-                <Dialog open={isCandidateProfileModalOpen} onOpenChange={setIsCandidateProfileModalOpen}>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-                        Candidate Profile
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 p-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
-                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.candidateName}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Position</label>
-                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.roleApplied || selectedPipelineCandidate.jobTitle || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
-                          <div className="flex items-center gap-2">
-                            <Mail size={16} className="text-gray-500 dark:text-gray-400" />
-                            {selectedPipelineCandidate.email ? (
-                              <a
-                                href={`mailto:${selectedPipelineCandidate.email}`}
-                                className="text-base text-blue-600 dark:text-blue-400 hover:underline"
-                              >
-                                {selectedPipelineCandidate.email}
-                              </a>
-                            ) : (
-                              <p className="text-base text-gray-900 dark:text-white">N/A</p>
-                            )}
-                            {selectedPipelineCandidate.email && (
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(selectedPipelineCandidate.email);
-                                  toast({ title: "Email copied!", description: "Email address copied to clipboard" });
-                                }}
-                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                data-testid="button-copy-email"
-                              >
-                                <Copy size={14} className="text-gray-500 dark:text-gray-400" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
-                          <div className="flex items-center gap-2">
-                            <Phone size={16} className="text-gray-500 dark:text-gray-400" />
-                            <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.phone || 'N/A'}</p>
-                            {selectedPipelineCandidate.phone && (
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(selectedPipelineCandidate.phone);
-                                  toast({ title: "Phone copied!", description: "Phone number copied to clipboard" });
-                                }}
-                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                data-testid="button-copy-phone"
-                              >
-                                <Copy size={14} className="text-gray-500 dark:text-gray-400" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
-                          <p className="text-base text-gray-900 dark:text-white">
-                            {applicantStatusOverrides[selectedPipelineCandidate.id] || selectedPipelineCandidate.currentStatus || selectedPipelineCandidate.status || 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Applied On</label>
-                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.appliedOn || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Experience</label>
-                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.experience || 'N/A'}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Skills</label>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {(selectedPipelineCandidate.skills || []).map((skill: string, index: number) => (
-                            <span key={index} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded">
-                              {skill}
-                            </span>
-                          ))}
-                          {(!selectedPipelineCandidate.skills || selectedPipelineCandidate.skills.length === 0) && (
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">No skills listed</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <Button
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => {
-                            // Check for resumeFile first
-                            if (selectedPipelineCandidate.resumeFile) {
-                              let resumeUrl = selectedPipelineCandidate.resumeFile;
-                              // Fix URL if needed
-                              if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
-                                resumeUrl = '/' + resumeUrl;
-                              }
-                              window.open(resumeUrl, '_blank');
-                            } 
-                            // Check for profileId to navigate to candidate profile page
-                            else if (selectedPipelineCandidate.profileId) {
-                              window.open(`/candidate-profile/${selectedPipelineCandidate.profileId}`, '_blank');
-                            }
-                            // Check for resumeUrl as fallback
-                            else if (selectedPipelineCandidate.resumeUrl) {
-                              let resumeUrl = selectedPipelineCandidate.resumeUrl;
-                              if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
-                                resumeUrl = '/' + resumeUrl;
-                              }
-                              window.open(resumeUrl, '_blank');
-                            } 
-                            else {
-                              toast({ title: "Resume not available", description: "No resume file is attached for this candidate", variant: "destructive" });
-                            }
-                          }}
-                          data-testid="button-view-resume"
-                        >
-                          <FileText size={16} className="mr-2" />
-                          View Resume
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
             </div>
 
             {/* Right Sidebar with Stats - Matching Admin/TL Design */}
             <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
               <div className="p-4 space-y-1">
-                <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-sourced">{getPipelineCandidatesByStage.sourced.length}</span>
-                </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
                 </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-introcall">{getPipelineCandidatesByStage.introCall.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded">
-                  <span className="text-sm font-medium text-gray-800 dark:text-white">ASSIGNMENT</span>
-                  <span className="text-lg font-bold text-gray-800 dark:text-white" data-testid="count-assignment">{getPipelineCandidatesByStage.assignment.length}</span>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SCREENING</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-screening">{getPipelineCandidatesByStage.screening.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
                   <span className="text-sm font-medium text-white">LEVEL 1</span>
@@ -2922,7 +2933,7 @@ export default function RecruiterDashboard2() {
                             tick={{ fill: '#6b7280' }}
                             label={{ value: 'Closures', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
                           />
-                          <Tooltip
+                          <RechartsTooltip
                             contentStyle={{
                               backgroundColor: '#ffffff',
                               border: '1px solid #e5e7eb',
@@ -3377,7 +3388,7 @@ export default function RecruiterDashboard2() {
                         height={100}
                       />
                       <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                      <Tooltip
+                      <RechartsTooltip
                         contentStyle={{
                           backgroundColor: 'rgba(255, 255, 255, 0.95)',
                           border: '1px solid #e5e7eb',
@@ -3854,7 +3865,7 @@ export default function RecruiterDashboard2() {
                   className="text-red-500 hover:text-red-700 font-bold text-2xl"
                   data-testid="button-close-applicants-modal"
                 >
-                  ×
+                  Ã—
                 </button>
               </div>
             </div>
@@ -3869,6 +3880,7 @@ export default function RecruiterDashboard2() {
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Role Applied</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Submission</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Current Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Onboard</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3933,11 +3945,146 @@ export default function RecruiterDashboard2() {
                               </Select>
                             </div>
                           </td>
+                          <td className="py-3 px-4">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 w-8 p-0"
+                                    onClick={() => handleInviteClick(applicant)}
+                                    disabled={applicant.isUsingStaffOS}
+                                    data-testid={`button-onboard-modal-${applicant.id}`}
+                                  >
+                                    <Send className="h-4 w-4 shrink-0" strokeWidth={2.25} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{applicant.isUsingStaffOS ? 'Candidate is already using StaffOS' : 'Invite to StaffOS'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </td>
                         </tr>
                       );
                     })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite to StaffOS Confirmation Modal */}
+      {isInviteConfirmModalOpen && applicantToInvite && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[60] p-4 animate-in fade-in duration-200"
+          onClick={handleCancelInvite}
+          data-testid="invite-confirm-overlay"
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 fade-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="invite-confirm-modal"
+          >
+            <div className="relative px-6 pt-7 pb-5 bg-gradient-to-br from-blue-50 via-white to-indigo-50 border-b border-gray-100">
+              <button
+                onClick={handleCancelInvite}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-white/80 rounded-full p-1.5 transition-colors"
+                aria-label="Close"
+                data-testid="button-close-invite-confirm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-200">
+                  <Send className="h-6 w-6 shrink-0 text-white" strokeWidth={2.25} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Invite to StaffOS
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Send an onboarding invite to this candidate.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-semibold text-sm">
+                    {(applicantToInvite.candidateName || '?')
+                      .split(' ')
+                      .map((n: string) => n[0])
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase() || '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-sm font-semibold text-gray-900 truncate"
+                      data-testid="invite-confirm-candidate-name"
+                    >
+                      {applicantToInvite.candidateName || 'Unknown Candidate'}
+                    </p>
+                    {applicantToInvite.email ? (
+                      <p
+                        className="text-xs text-gray-500 truncate"
+                        data-testid="invite-confirm-candidate-email"
+                      >
+                        {applicantToInvite.email}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-600">
+                        No email on file
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 mt-4 leading-relaxed">
+                We'll email{' '}
+                <span className="font-medium text-gray-900">
+                  {applicantToInvite.candidateName || 'this candidate'}
+                </span>{' '}
+                a secure link to set up their StaffOS account and complete
+                onboarding.
+              </p>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancelInvite}
+                disabled={sendInviteMutation.isPending}
+                className="h-9"
+                data-testid="button-cancel-invite"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmInvite}
+                disabled={sendInviteMutation.isPending || !applicantToInvite.email}
+                className="h-9 bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                data-testid="button-confirm-invite"
+              >
+                {sendInviteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 shrink-0" strokeWidth={2.25} />
+                    Send Invite
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
@@ -3956,7 +4103,7 @@ export default function RecruiterDashboard2() {
                 className="text-red-500 hover:text-red-700 font-bold text-2xl"
                 data-testid="button-close-meetings-modal"
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -3997,7 +4144,7 @@ export default function RecruiterDashboard2() {
                 className="text-red-500 hover:text-red-700 font-bold text-2xl"
                 data-testid="button-close-commands-modal"
               >
-                ×
+                Ã—
               </button>
             </div>
 

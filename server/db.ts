@@ -223,7 +223,8 @@ export async function ensureRequirementManagementColumns() {
     ALTER TABLE job_applications
     ADD COLUMN IF NOT EXISTS "last_nudged_at" timestamp,
     ADD COLUMN IF NOT EXISTS "status_note" text,
-    ADD COLUMN IF NOT EXISTS "withdraw_reason" text
+    ADD COLUMN IF NOT EXISTS "withdraw_reason" text,
+    ADD COLUMN IF NOT EXISTS "is_candidate_confirmed" boolean DEFAULT true
   `);
 
   await pool.query(`
@@ -251,5 +252,22 @@ export async function ensureRequirementManagementColumns() {
     ADD COLUMN IF NOT EXISTS escalation_level text DEFAULT 'recruiter',
     ADD COLUMN IF NOT EXISTS last_escalated_at timestamp NOT NULL DEFAULT now(),
     ADD COLUMN IF NOT EXISTS responded_at timestamp
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS candidate_application_comments (
+      id varchar(255) PRIMARY KEY DEFAULT gen_random_uuid(),
+      application_id varchar(255) NOT NULL,
+      author_employee_id varchar(255) NOT NULL,
+      author_name text NOT NULL,
+      author_role text NOT NULL,
+      body text NOT NULL,
+      created_at timestamp NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_candidate_application_comments_application_id
+    ON candidate_application_comments (application_id)
   `);
 }

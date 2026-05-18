@@ -37,6 +37,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { broadcastDashboardEvent } from "@/lib/dashboard-sync";
 import { useAuth } from "@/contexts/auth-context";
 import type { Employee } from "@shared/schema";
 import {
@@ -1046,6 +1047,8 @@ interface DatabaseCandidate {
   resumeFile?: string;
   resumeText?: string; // Raw resume text for better searchability
   addedBy?: string;
+  password?: string;
+  isVerified?: boolean;
 }
 
 interface CandidateDisplay {
@@ -1164,7 +1167,7 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTi
     createdAt: dbCandidate.createdAt, // Store for reactive calculation
     // Show "DB" tag only for candidates uploaded via Master Database (has resumeFile or addedBy)
     // Direct registrations (no resumeFile and no addedBy) should not have any tag
-    isFromDatabase: !!(dbCandidate.resumeFile || dbCandidate.addedBy),
+    isFromDatabase: !!(dbCandidate.resumeFile || dbCandidate.addedBy) && (!dbCandidate.password || dbCandidate.password === '') && !dbCandidate.isVerified,
   };
 }
 
@@ -1599,7 +1602,17 @@ const SourceResume = () => {
   // Track tagged candidates (those already in applications)
   const taggedCandidates = useMemo(() => {
     if (!allApplications || allApplications.length === 0) return new Set<string>();
-    return new Set(allApplications.map((app: any) => app.candidateEmail?.toLowerCase()).filter(Boolean));
+    
+    // Only consider applications that are active (not rejected/archived)
+    const activeApplications = allApplications.filter((app: any) => {
+      const status = app.status?.toLowerCase() || '';
+      return !status.includes('reject') && 
+             !status.includes('screened out') && 
+             !status.includes('archived') && 
+             !status.includes('withdraw');
+    });
+    
+    return new Set(activeApplications.map((app: any) => app.candidateEmail?.toLowerCase()).filter(Boolean));
   }, [allApplications]);
 
   // Update current time every minute for reactive lastSeen calculation
@@ -2223,7 +2236,7 @@ const SourceResume = () => {
           resumeText: c.resumeText,
           createdAt: c.createdAt,
           lastSeen, // Add calculated lastSeen
-          isFromDatabase: !!(c.resumeFile || c.addedBy),
+          isFromDatabase: !!(c.resumeFile || c.addedBy) && (!c.password || c.password === '') && !c.isVerified,
         } as CandidateWithScore;
       });
       
@@ -2653,6 +2666,12 @@ const SourceResume = () => {
         description: "Candidate tagged to requirement successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      // Notify other open tabs (e.g. the recruiter dashboard that opened this
+      // page) so their Applicant Overview refreshes without a manual reload.
+      broadcastDashboardEvent({
+        type: "applications:changed",
+        source: "source-resume",
+      });
     },
     onError: (error: any) => {
       toast({

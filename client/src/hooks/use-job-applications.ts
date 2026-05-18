@@ -2,9 +2,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { JobApplication, InsertJobApplication } from "@shared/schema";
 
-export function useJobApplications() {
+export function useJobApplications(options?: { enabled?: boolean }) {
   return useQuery<JobApplication[]>({
     queryKey: ["/api/job-applications"],
+    enabled: options?.enabled ?? true,
   });
 }
 

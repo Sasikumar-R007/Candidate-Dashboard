@@ -19,6 +19,7 @@ import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-
 import AddUserModal from '@/components/dashboard/modals/add-user-modal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
+import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import { SearchBar } from '@/components/ui/search-bar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,15 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  CandidateCommentsSession,
+  type CandidateCommentsSessionApplicant,
+} from "@/components/dashboard/candidate-comments-session";
+import {
+  ADMIN_PIPELINE_STAGE_ORDER,
+  buildPipelineSessionList,
+  mapAdminPipelineCandidate,
+} from "@/lib/pipeline-session-utils";
 import { useEmployeeAuth } from "@/contexts/auth-context";
 import GaugeComponent from 'react-gauge-component';
 import PerformanceGauge from '@/components/dashboard/performance-gauge';
@@ -96,16 +106,6 @@ const requirementsData = [
   { id: 14, position: "QA Tester", criticality: "LOW", company: "TechCorp", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Arun" },
   { id: 15, position: "DevOps Engineer", criticality: "HIGH", company: "Netflix", spoc: "Sarah Connor", talentAdvisor: "John Smith", teamLead: "Arun" }
 ];
-
-// Admin profile will be fetched from API - fallback data matching server
-const initialAdminProfile = {
-  name: "John Mathew",
-  role: "CEO",
-  email: "john@scalingtheory.com",
-  phone: "90347 59099",
-  bannerImage: null as string | null,
-  profilePicture: null as string | null
-};
 
 const teamsData = [
   {
@@ -749,320 +749,6 @@ function ImpactMetricsEditor() {
     </>
   );
 }
-
-// Admin Settings Section Component
-function AdminSettingsSection({
-  adminProfile,
-  pipelineAutoRefreshEnabled,
-  setPipelineAutoRefreshEnabled,
-  pipelineRefreshSeconds,
-  setPipelineRefreshSeconds,
-  adminDefaultPerformancePeriod,
-  setAdminDefaultPerformancePeriod,
-}: {
-  adminProfile: typeof initialAdminProfile;
-  pipelineAutoRefreshEnabled: boolean;
-  setPipelineAutoRefreshEnabled: (value: boolean) => void;
-  pipelineRefreshSeconds: string;
-  setPipelineRefreshSeconds: (value: string) => void;
-  adminDefaultPerformancePeriod: string;
-  setAdminDefaultPerformancePeriod: (value: string) => void;
-}) {
-  const queryClient = useQueryClient();
-  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
-  const [avgDaysValue, setAvgDaysValue] = useState<string>("");
-
-  // Fetch impact metrics
-  const { data: metrics, isLoading } = useQuery({
-    queryKey: ['/api/admin/impact-metrics'],
-  });
-
-  // Create mutation for initial metrics
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/admin/impact-metrics', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/impact-metrics'] });
-      toast({ title: "Success", description: "Feedback Turn Around Avg Days updated successfully" });
-      setIsEditingFeedback(false);
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create impact metrics", variant: "destructive" });
-    },
-  });
-
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, value }: { id: string; value: number }) => {
-      const response = await apiRequest('PUT', `/api/admin/impact-metrics/${id}`, { feedbackTurnAroundAvgDays: value });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/impact-metrics'] });
-      toast({ title: "Success", description: "Feedback Turn Around Avg Days updated successfully" });
-      setIsEditingFeedback(false);
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update Feedback Turn Around Avg Days", variant: "destructive" });
-    },
-  });
-
-  const currentMetrics = (metrics && metrics.length > 0 && metrics[0]) || {
-    speedToHire: 0,
-    revenueImpactOfDelay: 0,
-    clientNps: 0,
-    candidateNps: 0,
-    feedbackTurnAround: 0,
-    feedbackTurnAroundAvgDays: 5,
-    firstYearRetentionRate: 0,
-    fulfillmentRate: 0,
-    revenueRecovered: 0,
-  };
-
-  const handleEditClick = () => {
-    setAvgDaysValue(currentMetrics.feedbackTurnAroundAvgDays.toString());
-    setIsEditingFeedback(true);
-  };
-
-  const handleSave = async () => {
-    const value = parseFloat(avgDaysValue);
-    if (isNaN(value)) {
-      toast({ title: "Error", description: "Please enter a valid number", variant: "destructive" });
-      return;
-    }
-
-    // If no metrics exist, create one first
-    if (!metrics || metrics.length === 0) {
-      const defaultMetrics = {
-        speedToHire: 15,
-        revenueImpactOfDelay: 75000,
-        clientNps: 60,
-        candidateNps: 70,
-        feedbackTurnAround: 2,
-        feedbackTurnAroundAvgDays: value,
-        firstYearRetentionRate: 90,
-        fulfillmentRate: 20,
-        revenueRecovered: 1.5,
-      };
-      await createMutation.mutateAsync(defaultMetrics);
-      return;
-    }
-
-    // Otherwise, update existing metrics
-    if (metrics[0]) {
-      updateMutation.mutate({ id: metrics[0].id, value });
-    }
-  };
-
-  const handleCancel = () => {
-    setIsEditingFeedback(false);
-    setAvgDaysValue("");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="px-6 py-6 flex items-center justify-center h-full">
-        <div className="text-center text-gray-500">Loading admin settings...</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-6 py-6 space-y-4 overflow-auto">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Admin Settings</h2>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="bg-white dark:bg-gray-800">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-lg text-gray-900 dark:text-white">Admin Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 p-4 text-sm text-gray-600 dark:text-gray-300">
-            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
-              <div className="text-xs uppercase tracking-wide text-slate-500">Name</div>
-              <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{adminProfile.name}</div>
-            </div>
-            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
-              <div className="text-xs uppercase tracking-wide text-slate-500">Role</div>
-              <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{adminProfile.role}</div>
-            </div>
-            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
-              <div className="text-xs uppercase tracking-wide text-slate-500">Email</div>
-              <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{adminProfile.email}</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-gray-800">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-lg text-gray-900 dark:text-white">Dashboard Preferences</CardTitle>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Saved for this browser on the admin dashboard.</p>
-          </CardHeader>
-          <CardContent className="grid gap-4 p-4">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-              <div>
-                <div className="text-sm font-medium text-slate-900 dark:text-white">Pipeline auto refresh</div>
-                <div className="text-xs text-slate-500">Keep admin pipeline refreshed automatically.</div>
-              </div>
-              <Checkbox
-                checked={pipelineAutoRefreshEnabled}
-                onCheckedChange={(checked) => setPipelineAutoRefreshEnabled(checked === true)}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">Pipeline refresh interval</Label>
-              <Select value={pipelineRefreshSeconds} onValueChange={setPipelineRefreshSeconds}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">Every 10 sec</SelectItem>
-                  <SelectItem value="20">Every 20 sec</SelectItem>
-                  <SelectItem value="30">Every 30 sec</SelectItem>
-                  <SelectItem value="60">Every 60 sec</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">Default performance graph period</Label>
-              <Select value={adminDefaultPerformancePeriod} onValueChange={setAdminDefaultPerformancePeriod}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Impact Metrics Section */}
-      <Card className="bg-white dark:bg-gray-800">
-        <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-lg text-gray-900 dark:text-white">Impact Metrics</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Only Feedback Turn Around's Avg Days can be edited</p>
-        </CardHeader>
-        <CardContent className="p-3">
-          <div className="grid grid-cols-4 gap-4">
-            {/* Speed to Hire - Read Only */}
-            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-              <div className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">Speed to Hire value</div>
-              <div className="text-3xl font-bold text-red-900 dark:text-red-300 mb-1">{currentMetrics.speedToHire}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Days faster*</div>
-            </div>
-
-            {/* Revenue Impact of Delay - Read Only */}
-            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-              <div className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">Revenue Impact Of Delay</div>
-              <div className="text-3xl font-bold text-red-900 dark:text-red-300 mb-1">{currentMetrics.revenueImpactOfDelay}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Lost per Role*</div>
-            </div>
-
-            {/* Client NPS - Read Only */}
-            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-              <div className="text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">Client NPS</div>
-              <div className="text-3xl font-bold text-purple-900 dark:text-purple-300 mb-1">{currentMetrics.clientNps}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Net Promoter Score*</div>
-            </div>
-
-            {/* Candidate NPS - Read Only */}
-            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-              <div className="text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">Candidate NPS</div>
-              <div className="text-3xl font-bold text-purple-900 dark:text-purple-300 mb-1">{currentMetrics.candidateNps}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Net Promoter Score*</div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-4 mt-4">
-            {/* Feedback Turn Around - Avg Days Editable */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800 relative">
-              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">Feedback Turn Around</div>
-              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.feedbackTurnAround}</div>
-              {isEditingFeedback ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600 dark:text-gray-400">days (Avg.</span>
-                    <Input
-                      type="number"
-                      value={avgDaysValue}
-                      onChange={(e) => setAvgDaysValue(e.target.value)}
-                      className="h-7 w-16 text-sm"
-                      data-testid="input-feedback-turnaround-avg"
-                      autoFocus
-                    />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">days)*</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      onClick={handleSave}
-                      disabled={updateMutation.isPending}
-                      className="text-xs h-7"
-                      data-testid="button-save-feedback"
-                    >
-                      {updateMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleCancel}
-                      className="text-xs h-7"
-                      data-testid="button-cancel-feedback"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">days (Avg. {currentMetrics.feedbackTurnAroundAvgDays} days)*</div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleEditClick}
-                    className="absolute top-2 right-2 h-6 w-6 hover-elevate"
-                    data-testid="button-edit-feedback"
-                  >
-                    <EditIcon className="h-3 w-3" />
-                  </Button>
-                </>
-              )}
-            </div>
-
-            {/* First Year Retention Rate - Read Only */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">First Year Retention Rate</div>
-              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.firstYearRetentionRate}%</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">&nbsp;</div>
-            </div>
-
-            {/* Fulfillment Rate - Read Only */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">Fulfillment Rate</div>
-              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.fulfillmentRate}%</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">&nbsp;</div>
-            </div>
-
-            {/* Revenue Recovered - Read Only */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">Revenue Recovered</div>
-              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.revenueRecovered} L</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Gained per hire*</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const employee = useEmployeeAuth();
@@ -1115,11 +801,15 @@ export default function AdminDashboard() {
   const initialSidebarTab = () => {
     const saved = sessionStorage.getItem('adminDashboardSidebarTab');
     sessionStorage.removeItem('adminDashboardSidebarTab');
-    const allowedTabs = new Set(['dashboard', 'requirements', 'pipeline', 'metrics', 'master-data', 'performance', 'report', 'user-management']);
+    const allowedTabs = new Set(['dashboard', 'requirements', 'pipeline', 'metrics', 'master-data', 'performance', 'report', 'nudges', 'user-management']);
     return saved && allowedTabs.has(saved) ? saved : 'dashboard';
   };
 
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
+  const [pipelineView, setPipelineView] = useState<"board" | "candidate-session">("board");
+  const [sessionApplicationId, setSessionApplicationId] = useState<string | null>(null);
+  const [sessionApplicantSnapshot, setSessionApplicantSnapshot] =
+    useState<CandidateCommentsSessionApplicant | null>(null);
 
   // Restore activeTab from sessionStorage for proper back navigation
   const initialActiveTab = () => {
@@ -1129,7 +819,6 @@ export default function AdminDashboard() {
   };
 
   const [activeTab, setActiveTab] = useState(initialActiveTab());
-  const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
   const [requirementsVisible, setRequirementsVisible] = useState(10);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
@@ -1284,8 +973,11 @@ export default function AdminDashboard() {
         }
 
         const statusMap: Record<string, string> = {
-          'In Process': 'In-Process',
-          'In-Process': 'In-Process',
+          'In Process': 'Resume Review',
+          'In-Process': 'Resume Review',
+          'Evaluating': 'Resume Review',
+          'Resume Review': 'Resume Review',
+          'Screening': 'Screening',
           'Shortlisted': 'Shortlisted',
           'Rejected': 'Rejected',
           'Reviewed': 'Reviewed',
@@ -1297,7 +989,7 @@ export default function AdminDashboard() {
           'HR Round': 'HR Round',
           'Selected': 'Selected',
           'Interview Scheduled': 'L1',
-          'Applied': 'In-Process',
+          'Applied': 'Resume Review',
           'Intro Call': 'Intro Call',
           'Assignment': 'Assignment',
           'Offer Stage': 'Offer Stage',
@@ -1315,7 +1007,7 @@ export default function AdminDashboard() {
           company: app.company || 'N/A',
           roleApplied: app.roleApplied || app.jobTitle || 'N/A',
           jobTitle: app.jobTitle || app.roleApplied || 'N/A',
-          currentStatus: statusMap[app.currentStatus || app.status] || app.currentStatus || app.status || 'In-Process',
+          currentStatus: statusMap[app.currentStatus || app.status] || app.currentStatus || app.status || 'Resume Review',
           email: app.candidateEmail || 'N/A',
           phone: app.candidatePhone || 'N/A',
           location: app.location || 'N/A',
@@ -1396,10 +1088,8 @@ export default function AdminDashboard() {
     );
 
     const stageMapping: Record<string, string[]> = {
-      'Sourced': ['In-Process', 'Sourced'],
+      'Screening': ['Evaluating', 'Resume Review', 'Screening', 'Intro Call', 'Assignment'],
       'Shortlisted': ['Shortlisted'],
-      'Intro Call': ['Intro Call'],
-      'Assignment': ['Assignment'],
       'L1': ['L1'],
       'L2': ['L2'],
       'L3': ['L3'],
@@ -1417,10 +1107,8 @@ export default function AdminDashboard() {
     };
 
     return {
-      sourced: getCandidatesForStage('Sourced'),
+      screening: getCandidatesForStage('Screening'),
       shortlisted: getCandidatesForStage('Shortlisted'),
-      introCall: getCandidatesForStage('Intro Call'),
-      assignment: getCandidatesForStage('Assignment'),
       level1: getCandidatesForStage('L1'),
       level2: getCandidatesForStage('L2'),
       level3: getCandidatesForStage('L3'),
@@ -1432,6 +1120,35 @@ export default function AdminDashboard() {
       rejected: getCandidatesForStage('Rejected')
     };
   }, [filteredPipelineApplicants]);
+
+  const adminPipelineSessionList = useMemo(
+    () =>
+      buildPipelineSessionList(
+        getPipelineCandidatesByStage,
+        ADMIN_PIPELINE_STAGE_ORDER,
+        (c) => mapAdminPipelineCandidate(c),
+      ),
+    [getPipelineCandidatesByStage],
+  );
+
+  const handlePipelineCandidateClick = (candidate: any) => {
+    if (!candidate?.id) return;
+    const snapshot = mapAdminPipelineCandidate(candidate);
+    setSessionApplicationId(snapshot.id);
+    setSessionApplicantSnapshot(snapshot);
+    setPipelineView("candidate-session");
+  };
+
+  const handleSelectSessionApplicant = (applicant: CandidateCommentsSessionApplicant) => {
+    setSessionApplicationId(applicant.id);
+    setSessionApplicantSnapshot(applicant);
+  };
+
+  const handleCloseCandidateSession = () => {
+    setPipelineView("board");
+    setSessionApplicationId(null);
+    setSessionApplicantSnapshot(null);
+  };
 
   // Revenue mapping state for editing
   const [editingRevenueMapping, setEditingRevenueMapping] = useState<any>(null);
@@ -4911,23 +4628,6 @@ export default function AdminDashboard() {
     }));
   };
 
-  // Fetch admin profile on component mount
-  useEffect(() => {
-    const fetchAdminProfile = async () => {
-      try {
-        const response = await apiRequest('GET', '/api/admin/profile');
-        if (response.ok) {
-          const profile = await response.json();
-          setAdminProfile(profile);
-        }
-      } catch (error) {
-        console.error('Failed to fetch admin profile:', error);
-      }
-    };
-
-    fetchAdminProfile();
-  }, []);
-
   const renderTeamSection = () => (
     <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto admin-scrollbar">
       {/* Use the new TeamBoxes component - this replaces all the old team display logic */}
@@ -5816,15 +5516,13 @@ export default function AdminDashboard() {
 
         // Pipeline stages with display names
         const pipelineStages = [
-          { key: 'sourced', display: 'Sourced' },
           { key: 'shortlisted', display: 'Shortlisted' },
-          { key: 'introCall', display: 'Intro Call' },
-          { key: 'assignment', display: 'Assignment' },
+          { key: 'screening', display: 'Screening' },
           { key: 'level1', display: 'Level 1' },
           { key: 'level2', display: 'Level 2' },
           { key: 'level3', display: 'Level 3' },
-          { key: 'finalRound', display: 'Final Round' },
           { key: 'hrRound', display: 'HR Round' },
+          { key: 'finalRound', display: 'Final Round' },
           { key: 'offerStage', display: 'Offer Stage' },
           { key: 'closure', display: 'Closure' }
         ];
@@ -5956,6 +5654,15 @@ export default function AdminDashboard() {
                                   return (
                                     <div
                                       key={candidate.id || index}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                          e.preventDefault();
+                                          handlePipelineCandidateClick(candidate);
+                                        }
+                                      }}
                                       className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
                                       data-testid={`pipeline-${stage.key}-candidate-${index}`}
                                     >
@@ -6023,18 +5730,11 @@ export default function AdminDashboard() {
                       <span className="font-bold text-lg text-black" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
                     </div>
 
-                    {/* INTRO CALL */}
+                    {/* SCREENING */}
                     <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#C2EED0' }}>
-                      <span className="font-semibold text-black">I</span>
-                      <span className="text-sm text-black">NTRO CALL</span>
-                      <span className="font-bold text-lg text-black" data-testid="count-introcall">{getPipelineCandidatesByStage.introCall.length}</span>
-                    </div>
-
-                    {/* ASSIGNMENT */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#B5E1C1' }}>
-                      <span className="font-semibold text-black">A</span>
-                      <span className="text-sm text-black">SSIGNMENT</span>
-                      <span className="font-bold text-lg text-black" data-testid="count-assignment">{getPipelineCandidatesByStage.assignment.length}</span>
+                      <span className="font-semibold text-black">S</span>
+                      <span className="text-sm text-black">CREENING</span>
+                      <span className="font-bold text-lg text-black" data-testid="count-screening">{getPipelineCandidatesByStage.screening.length}</span>
                     </div>
 
                     {/* L1 */}
@@ -7067,6 +6767,20 @@ export default function AdminDashboard() {
   }, [sidebarTab]);
 
   const renderSidebarContent = () => {
+    if (pipelineView === "candidate-session" && sessionApplicationId) {
+      return (
+        <div className="h-full min-h-0 overflow-hidden bg-white">
+          <CandidateCommentsSession
+            applicationId={sessionApplicationId}
+            fallbackApplicant={sessionApplicantSnapshot}
+            pipelineApplicants={adminPipelineSessionList}
+            onSelectApplicant={handleSelectSessionApplicant}
+            onBack={handleCloseCandidateSession}
+          />
+        </div>
+      );
+    }
+
     switch (sidebarTab) {
       case 'dashboard':
         // Dashboard shows the Team section with tabs (team, requirements, pipeline, etc.)
@@ -7077,21 +6791,15 @@ export default function AdminDashboard() {
             </div>
           </div>
         );
+      case 'nudges':
+        return (
+          <div className="px-6 py-6 h-full overflow-y-auto admin-scrollbar">
+            <ActiveNudgesTable />
+          </div>
+        );
       case 'user-management':
         // User Management is a separate section - render it directly
         return renderUserManagementContent();
-      case 'settings':
-        return (
-          <AdminSettingsSection
-            adminProfile={adminProfile}
-            pipelineAutoRefreshEnabled={pipelineAutoRefreshEnabled}
-            setPipelineAutoRefreshEnabled={setPipelineAutoRefreshEnabled}
-            pipelineRefreshSeconds={pipelineRefreshSeconds}
-            setPipelineRefreshSeconds={setPipelineRefreshSeconds}
-            adminDefaultPerformancePeriod={adminDefaultPerformancePeriod}
-            setAdminDefaultPerformancePeriod={setAdminDefaultPerformancePeriod}
-          />
-        );
       case 'requirements':
         return (
           <div className="h-full flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -7320,6 +7028,12 @@ export default function AdminDashboard() {
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleManageRequirement(requirement)}>
                                       Manage
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedJD(requirement);
+                                      setIsJDPreviewModalOpen(true);
+                                    }}>
+                                      View JD
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleReassign(requirement)}>
                                       Reassign
@@ -7638,8 +7352,8 @@ export default function AdminDashboard() {
                         { key: 'level1', display: 'Level 1' },
                         { key: 'level2', display: 'Level 2' },
                         { key: 'level3', display: 'Level 3' },
-                        { key: 'finalRound', display: 'Final Round' },
                         { key: 'hrRound', display: 'HR Round' },
+                        { key: 'finalRound', display: 'Final Round' },
                         { key: 'offerStage', display: 'Offer Stage' },
                         { key: 'closure', display: 'Closure' }
                       ].map((stage) => {
@@ -7698,6 +7412,15 @@ export default function AdminDashboard() {
                                   return (
                                     <div
                                       key={candidate.id || index}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                          e.preventDefault();
+                                          handlePipelineCandidateClick(candidate);
+                                        }
+                                      }}
                                       className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
                                     >
                                       {/* Card Content */}
@@ -7812,21 +7535,13 @@ export default function AdminDashboard() {
             {/* Right Sidebar with Live Stats */}
             <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-y-auto admin-scrollbar">
               <div className="p-4 space-y-1">
-                <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.sourced.length}</span>
-                </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.shortlisted.length}</span>
                 </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.introCall.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ASSIGNMENT</span>
-                  <span className="text-lg font-bold text-gray-800 dark:text-white">{getPipelineCandidatesByStage.assignment.length}</span>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SCREENING</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.screening.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
                   <span className="text-sm font-medium text-white">L1</span>
@@ -9325,6 +9040,7 @@ export default function AdminDashboard() {
         <AdminTopHeader
           companyName="Scaling Theory"
           onHelpClick={() => setIsChatOpen(true)}
+          onOpenNudgesTab={() => setSidebarTab("nudges")}
         />
       </div>
       <div className="flex flex-1">
@@ -10713,6 +10429,7 @@ export default function AdminDashboard() {
                     position: req.position || jdToAdd.role || '',
                     company: req.company || '',
                     spoc: req.spoc || jdToAdd.spocName || '',
+                    noOfPositions: req.noOfPositions || 1,
                     jdFile: req.jdFile || null,
                     jdText: req.jdText || null,
                   });
@@ -11357,6 +11074,12 @@ export default function AdminDashboard() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleManageRequirement(requirement)}>
                                   Manage
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedJD(requirement);
+                                  setIsJDPreviewModalOpen(true);
+                                }}>
+                                  View JD
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleReassign(requirement)}>
                                   Reassign

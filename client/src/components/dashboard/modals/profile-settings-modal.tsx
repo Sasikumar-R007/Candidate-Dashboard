@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Camera, Mail, Pencil, Settings, Shield, UserCircle } from "lucide-react";
+import { LegalPoliciesSettingsCard } from "@/components/dashboard/legal-policies-settings-card";
+import { Link } from "wouter";
 import { useAuth, useCandidateAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
-import { apiRequest, apiFileUpload } from "@/lib/queryClient";
+import { apiRequest, apiFileUpload, queryClient } from "@/lib/queryClient";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -215,6 +217,9 @@ export function ProfileSettingsModal({
         });
       }
       window.dispatchEvent(new CustomEvent("profile-updated"));
+      if (employee?.role === "client") {
+        await queryClient.invalidateQueries({ queryKey: ["/api/client/profile"] });
+      }
       toast({
         title: "Success",
         description: "Profile updated successfully.",
@@ -442,9 +447,14 @@ export function ProfileSettingsModal({
                     {isSavingProfile ? "Saving..." : "Save Profile"}
                   </Button>
                 </div>
+
+                {employee && !isAdmin ? (
+                  <LegalPoliciesSettingsCard variant="modal" queryEnabled={open} className="rounded-2xl" />
+                ) : null}
               </div>
             ) : (
               <div className="space-y-6">
+                <LegalPoliciesSettingsCard variant="modal" queryEnabled={open} className="rounded-2xl" />
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">System Settings</h3>
                   <p className="text-sm text-slate-500">Keep this focused on the few admin settings that actually affect daily operations.</p>
@@ -565,6 +575,22 @@ export function ProfileSettingsModal({
                     </CardContent>
                   </Card>
                 </div>
+
+                {isAdmin ? (
+                  <Card className="border-slate-200 bg-white shadow-none">
+                    <CardContent className="space-y-3 p-5">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">Agreement &amp; consent logs</h4>
+                        <p className="text-sm text-slate-500">
+                          Open the read-only audit page for platform, job, client, and employee agreement acceptances.
+                        </p>
+                      </div>
+                      <Button variant="outline" className="h-11 rounded-xl" asChild>
+                        <Link href="/admin/consent-logs">Open consent logs</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : null}
 
                 <Card className="border-slate-200 bg-white shadow-none">
                   <CardContent className="space-y-4 p-5">

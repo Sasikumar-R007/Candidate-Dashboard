@@ -1,5 +1,4 @@
-import { Link, useLocation } from "wouter";
-import { Briefcase, FileText, GitBranch, MessageCircle, ChevronRight, LogOut, HelpCircle, Zap } from "lucide-react";
+import { Briefcase, FileText, GitBranch, ChevronRight, LogOut, Zap } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -18,53 +17,41 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
-  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { logout } = useAuth();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Client Workspace', icon: Briefcase },
-    { id: 'requirements', label: 'Pipeline', icon: GitBranch },
-    { id: 'reports', label: 'Reports', icon: FileText },
-    { id: 'chat', label: 'Chat System', icon: MessageCircle },
-    { id: 'nudges', label: 'Nudges', icon: Zap }
+    { id: "dashboard", label: "Client Workspace", icon: Briefcase },
+    { id: "requirements", label: "Pipeline", icon: GitBranch },
+    { id: "reports", label: "Reports", icon: FileText },
+    { id: "nudges", label: "Nudges", icon: Zap },
   ];
 
-  // Logout mutation for employees (clients)
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/auth/employee-logout', {});
+      const res = await apiRequest("POST", "/api/auth/employee-logout", {});
       return await res.json();
     },
     onSuccess: () => {
-      // Use auth context logout to clear session
       logout();
-      // Clear any stored session data
       localStorage.clear();
       sessionStorage.clear();
-      
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
-      
-      // Navigate to home page and prevent back navigation
-      window.location.href = '/';
+      window.location.href = "/";
     },
-    onError: (error: any) => {
-      // Even on error, clear session locally
+    onError: () => {
       logout();
       localStorage.clear();
       sessionStorage.clear();
-      
       toast({
         title: "Logged out",
         description: "You have been signed out (session cleared locally).",
       });
-      
-      // Navigate to home page and prevent back navigation
-      window.location.href = '/';
-    }
+      window.location.href = "/";
+    },
   });
 
   const handleLogout = () => {
@@ -76,199 +63,176 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
     setShowSignOutDialog(false);
   };
 
+  const collapse = () => {
+    setIsExpanded(false);
+    onExpandedChange?.(false);
+  };
+
+  const expand = () => {
+    setIsExpanded(true);
+    onExpandedChange?.(true);
+  };
+
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId);
     if (isExpanded) {
-      setIsExpanded(false);
+      collapse();
     }
   };
 
   return (
     <>
-      {/* Main Sidebar - Collapsed State */}
-      <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-visible fixed left-0 top-0 z-50 flex flex-col">
-        {/* Logo Section */}
-        <div className="h-16 flex items-center justify-center border-b border-slate-700">
-          <img 
-            src={staffosLogo} 
-            alt="StaffOS Logo" 
-            className="w-10 h-10 object-cover rounded-full"
-          />
-        </div>
-
-        {/* Navigation Items - Icons Only */}
-        <nav className="flex-1 py-4">
-          {menuItems.map((item) => {
-            const IconComponent = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <div
-                key={item.id}
-                className="relative"
-                onMouseEnter={() => setHoveredItem(item.id)}
-                onMouseLeave={() => setHoveredItem(null)}
-              >
-                <button
-                  onClick={() => handleTabClick(item.id)}
-                  className={`w-full h-12 flex items-center justify-center transition-all duration-200 relative ${
-                    isActive 
-                      ? 'bg-slate-800' 
-                      : 'hover:bg-slate-800'
-                  }`}
-                  data-testid={`button-nav-${item.id}`}
-                >
-                  {/* Active indicator - left vertical bar */}
-                  {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400"></div>
-                  )}
-                  
-                  {/* Single Icon */}
-                  <IconComponent 
-                    size={20} 
-                    className={isActive ? 'text-cyan-400' : 'text-slate-400 hover:text-white'}
-                  />
-                  
-                  {/* Tooltip - Only show when collapsed */}
-                  {hoveredItem === item.id && !isExpanded && (
-                    <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
-                      <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
-                      <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
-                        {item.label}
-                      </div>
-                    </div>
-                  )}
-                </button>
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Logout Button for Collapsed State */}
-        <div className="border-t border-slate-700">
-          <div
-            className="relative"
-            onMouseEnter={() => setHoveredItem('logout')}
-            onMouseLeave={() => setHoveredItem(null)}
-          >
-            <button
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="w-full h-12 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
-              data-testid="button-client-logout-collapsed"
-            >
-              <LogOut size={20} />
-              
-              {/* Tooltip */}
-              {hoveredItem === 'logout' && !isExpanded && (
-                <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
-                  <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
-                  <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
-                    {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
-                  </div>
-                </div>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Menu Toggle */}
-        <div className="border-t border-slate-700">
-          <button
-            onClick={() => {
-              setIsExpanded(!isExpanded);
-              onExpandedChange?.(!isExpanded);
-            }}
-            className="w-full h-12 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            data-testid="button-menu-toggle"
-          >
-            <ChevronRight size={20} className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-      </div>
-
-      {/* Dim Overlay when sidebar is expanded */}
-      {isExpanded && (
-        <div 
-          className="fixed inset-0 bg-black/30 z-30"
-          onClick={() => {
-            setIsExpanded(false);
-            onExpandedChange?.(false);
-          }}
-        />
-      )}
-
-    {/* Expanded Sidebar Overlay - Icons + Text */}
-    {isExpanded && (
-      <div className="fixed left-16 top-0 h-screen w-64 bg-slate-900 text-white z-40 shadow-2xl border-r border-slate-700">
-        <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="h-16 flex items-center justify-between px-6 border-b border-slate-700">
-            <h2 className="text-lg font-semibold">Client Workspace</h2>
-            <button
-              onClick={() => setIsExpanded(false)}
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <ChevronRight size={20} className="rotate-180" />
-            </button>
+      {!isExpanded ? (
+        <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-visible fixed left-0 top-0 z-50 flex flex-col">
+          <div className="h-16 flex items-center justify-center border-b border-slate-700">
+            <img src={staffosLogo} alt="StaffOS Logo" className="w-10 h-10 object-cover rounded-full" />
           </div>
 
-          {/* Navigation Items - Icons + Text (when expanded) */}
-          <nav className="flex-1 py-4 px-2">
+          <nav className="flex-1 py-4">
             {menuItems.map((item) => {
               const IconComponent = item.icon;
               const isActive = activeTab === item.id;
               return (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => handleTabClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-2 relative ${
-                    isActive
-                      ? 'bg-slate-800 text-cyan-400'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                  data-testid={`button-nav-expanded-${item.id}`}
+                  className="relative"
+                  onMouseEnter={() => setHoveredItem(item.id)}
+                  onMouseLeave={() => setHoveredItem(null)}
                 >
-                  {/* Active indicator - rounded rectangle on right */}
-                  {isActive && (
-                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-cyan-400 rounded-l-lg"></div>
-                  )}
-                  <IconComponent 
-                    size={20} 
-                    className={isActive ? 'text-cyan-400' : 'text-slate-300'}
-                  />
-                  <span className={`font-medium ${isActive ? 'text-cyan-400' : 'text-slate-300'}`}>
-                    {item.label}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabClick(item.id)}
+                    className={`w-full h-12 flex items-center justify-center transition-all duration-200 relative ${
+                      isActive ? "bg-slate-800" : "hover:bg-slate-800"
+                    }`}
+                    data-testid={`button-nav-${item.id}`}
+                  >
+                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400" />}
+                    <IconComponent
+                      size={20}
+                      className={isActive ? "text-cyan-400" : "text-slate-400 hover:text-white"}
+                    />
+                    {hoveredItem === item.id && (
+                      <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
+                        <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                        <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
+                          {item.label}
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                </div>
               );
             })}
           </nav>
 
-          {/* Logout Button for Expanded State */}
-          <div className="border-t border-slate-700 p-4">
-            <button
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
-              data-testid="button-client-logout-expanded"
+          <div className="border-t border-slate-700">
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredItem("logout")}
+              onMouseLeave={() => setHoveredItem(null)}
             >
-              <LogOut size={20} />
-              <span className="font-medium">
-                {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
-              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
+                className="w-full h-12 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                data-testid="button-client-logout-collapsed"
+              >
+                <LogOut size={20} />
+                {hoveredItem === "logout" && (
+                  <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
+                    <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                    <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
+                      {logoutMutation.isPending ? "Signing out…" : "Sign Out"}
+                    </div>
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-700">
+            <button
+              type="button"
+              onClick={expand}
+              className="w-full h-12 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              data-testid="button-menu-toggle"
+            >
+              <ChevronRight size={20} />
             </button>
           </div>
         </div>
-      </div>
-    )}
+      ) : (
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 z-[55]"
+            onClick={collapse}
+            aria-hidden
+          />
+          <div className="fixed left-0 top-0 z-[60] flex h-screen w-64 flex-col border-r border-slate-700 bg-slate-900 text-white shadow-2xl">
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-700 px-4">
+              <div className="flex min-w-0 items-center gap-2">
+                <img src={staffosLogo} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                <h2 className="truncate text-sm font-semibold leading-tight">Client Workspace</h2>
+              </div>
+              <button
+                type="button"
+                onClick={collapse}
+                className="shrink-0 rounded p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                aria-label="Close menu"
+              >
+                <ChevronRight size={20} className="rotate-180" />
+              </button>
+            </div>
 
-      {/* Sign Out Dialog */}
-      <SignOutDialog
-        open={showSignOutDialog}
-        onOpenChange={setShowSignOutDialog}
-        onConfirm={confirmLogout}
-      />
+            <nav className="flex-1 overflow-y-auto py-3 px-2">
+              {menuItems.map((item) => {
+                const IconComponent = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleTabClick(item.id)}
+                    className={`relative mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors ${
+                      isActive
+                        ? "bg-slate-800 text-cyan-400"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                    data-testid={`button-nav-expanded-${item.id}`}
+                  >
+                    {isActive && (
+                      <div className="absolute right-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-l-lg bg-cyan-400" />
+                    )}
+                    <IconComponent size={20} className={isActive ? "text-cyan-400" : "text-slate-300"} />
+                    <span className={`text-sm font-medium ${isActive ? "text-cyan-400" : "text-slate-300"}`}>
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="shrink-0 border-t border-slate-700 p-3">
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white disabled:opacity-50"
+                data-testid="button-client-logout-expanded"
+              >
+                <LogOut size={20} />
+                <span className="text-sm font-medium">
+                  {logoutMutation.isPending ? "Signing out…" : "Sign Out"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      <SignOutDialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog} onConfirm={confirmLogout} />
     </>
   );
 }
-

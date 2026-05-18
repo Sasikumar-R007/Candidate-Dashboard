@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, ChevronRight, User, LogOut, Building2, UserCog, Zap } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -31,7 +31,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     { id: 'performance', label: 'Performance', icon: Trophy },
     { id: 'report', label: 'Report', icon: FileBarChart },
     { id: 'nudges', label: 'Nudges', icon: Zap },
-    { id: 'user-management', label: 'User Management', icon: UserCog }
+    { id: 'user-management', label: 'User Management', icon: UserCog },
   ];
 
   // Logout mutation for employees (admin)

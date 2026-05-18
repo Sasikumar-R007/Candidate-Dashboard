@@ -57,6 +57,8 @@ import {
   type InsertInterviewTracker,
   type Nudge,
   type InsertNudge,
+  type CandidateApplicationComment,
+  type InsertCandidateApplicationComment,
 
   users,
   profiles,
@@ -86,6 +88,7 @@ import {
   cashOutflows,
   interviewTracker,
   nudges,
+  candidateApplicationComments,
 
   userActivities
 } from "@shared/schema";
@@ -199,6 +202,11 @@ function normalizeJobApplication(application: any): JobApplication {
     candidateEmail: application.candidate_email || application.candidateEmail,
     candidatePhone: application.candidate_phone || application.candidatePhone,
     workMode: application.work_mode || application.workMode,
+    lastNudgedAt: application.last_nudged_at || application.lastNudgedAt,
+    isCandidateConfirmed:
+      application.is_candidate_confirmed !== undefined
+        ? application.is_candidate_confirmed
+        : (application.isCandidateConfirmed ?? true),
   } as JobApplication;
 }
 
@@ -223,7 +231,7 @@ const jobApplicationColumnCandidates = [
   "id", "profile_id", "recruiter_job_id", "requirement_id", "owner_employee_id", "owner_role",
   "job_title", "company", "job_type", "status", "source", "applied_date", "candidate_name",
   "candidate_email", "candidate_phone", "description", "salary", "location", "work_mode",
-  "experience", "skills", "logo",
+  "experience", "skills", "logo", "last_nudged_at", "is_candidate_confirmed",
 ];
 
 export class DatabaseStorage implements IStorage {
@@ -425,6 +433,7 @@ export class DatabaseStorage implements IStorage {
     setIfAvailable("withdraw_reason", (insertApplication as any).withdrawReason ?? null);
     setIfAvailable("status_note", (insertApplication as any).statusNote ?? null);
     setIfAvailable("rejection_reason", (insertApplication as any).rejectionReason ?? null);
+    setIfAvailable("is_candidate_confirmed", (insertApplication as any).isCandidateConfirmed ?? undefined);
 
     if (!columns.includes("profile_id") || !columns.includes("job_title") || !columns.includes("company")) {
       throw new Error("Missing required job application fields for insert");
@@ -1048,14 +1057,18 @@ export class DatabaseStorage implements IStorage {
     withdrawnRoles: number;
   }> {
     const reqs = await this.getRequirementsByCompany(companyName);
-    // Filter only client-submitted JDs (STR format)
-        const clientReqs = reqs.filter(r => !r.isArchived);
+    const clientReqs = reqs.filter(r => !r.isArchived);
+    const normalizeStatus = (status: string | null | undefined) => (status || '').trim().toLowerCase();
 
-
-    
-    const activeRoles = clientReqs.filter(r => r.status === 'open' || r.status === 'in_progress').length;
-    const pausedRoles = clientReqs.filter(r => r.status === 'paused').length;
-    const withdrawnRoles = clientReqs.filter(r => r.status === 'withdrawn' || r.status === 'cancelled' || r.status === 'closed').length;
+    const activeRoles = clientReqs.filter(r => {
+      const status = normalizeStatus(r.status as any);
+      return status === 'open' || status === 'in_progress' || status === 'in progress' || status === 'active';
+    }).length;
+    const pausedRoles = clientReqs.filter(r => normalizeStatus(r.status as any) === 'paused').length;
+    const withdrawnRoles = clientReqs.filter(r => {
+      const status = normalizeStatus(r.status as any);
+      return status === 'withdrawn' || status === 'cancelled' || status === 'closed' || status === 'completed';
+    }).length;
     const closures = await this.getRevenueMappingsByClientName(companyName);
     
     // Calculate total positions (sum of positions count, or just count of requirements)
@@ -1720,6 +1733,21 @@ export class DatabaseStorage implements IStorage {
 
     const [application] = await this.queryJobApplications(sql`"id" = ${id}`);
     return application || undefined;
+  }
+
+  async getCandidateApplicationComments(applicationId: string): Promise<CandidateApplicationComment[]> {
+    return await db
+      .select()
+      .from(candidateApplicationComments)
+      .where(eq(candidateApplicationComments.applicationId, applicationId))
+      .orderBy(candidateApplicationComments.createdAt);
+  }
+
+  async createCandidateApplicationComment(
+    comment: InsertCandidateApplicationComment,
+  ): Promise<CandidateApplicationComment> {
+    const [row] = await db.insert(candidateApplicationComments).values(comment).returning();
+    return row;
   }
 
   async getRequirementsByTeamLead(teamLeadName: string): Promise<Requirement[]> {

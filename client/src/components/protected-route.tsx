@@ -2,6 +2,9 @@ import { useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
 import type { Employee } from '@shared/schema';
+import EmployeeAgreementFirstLoginModal from '@/components/employee-dashboard/employee-agreement-first-login-modal';
+import { logConsent } from '@/lib/consent-log';
+import { toast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,7 +19,7 @@ export function ProtectedRoute({
   redirectTo = '/employer-login',
   userType = 'any'
 }: ProtectedRouteProps) {
-  const { user, isLoading, isVerified } = useAuth();
+  const { user, isLoading, isVerified, verifySession } = useAuth();
   const [, setLocation] = useLocation();
 
   const authState = useMemo(() => {
@@ -45,6 +48,50 @@ export function ProtectedRoute({
 
     return { status: 'authorized' as const };
   }, [user, isLoading, isVerified, allowedRoles, redirectTo, userType]);
+
+  const shouldGateEmployeeAgreement = useMemo(() => {
+    if (authState.status !== 'authorized' || !user || user.type !== 'employee') {
+      return false;
+    }
+
+    const employee = user.data as Employee & { employeeAgreementAccepted?: boolean };
+    const normalizedRole = String(employee.role || '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_');
+    const gatedRoles = new Set([
+      'recruiter',
+      'talent_advisor',
+      'ta',
+      'teamlead',
+      'team_leader',
+      'teamleader',
+      'tl',
+      'admin',
+    ]);
+    return gatedRoles.has(normalizedRole) && employee.employeeAgreementAccepted !== true;
+  }, [authState.status, user]);
+
+  const handleAcceptEmployeeAgreement = async () => {
+    if (user?.type !== 'employee') return;
+    const employee = user.data as Employee;
+    if (!employee?.id) return;
+    const ok = await logConsent({
+      user_id: employee.id,
+      role: "employee",
+      consent_type: "employee_agreement",
+      policy_version: "2026-05-10",
+    });
+    if (ok) {
+      await verifySession();
+    } else {
+      toast({
+        title: "Could not save agreement",
+        description: "Check your connection or try again. If this keeps happening, contact support.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     // Immediately redirect if not authorized (no delay)
@@ -79,5 +126,18 @@ export function ProtectedRoute({
   }
 
   // Only render children when status is explicitly 'authorized'
-  return <>{children}</>;
+  return (
+    <>
+      <EmployeeAgreementFirstLoginModal
+        open={shouldGateEmployeeAgreement}
+        onAccept={handleAcceptEmployeeAgreement}
+      />
+      <div
+        className={shouldGateEmployeeAgreement ? "pointer-events-none select-none" : ""}
+        aria-hidden={shouldGateEmployeeAgreement}
+      >
+        {children}
+      </div>
+    </>
+  );
 }

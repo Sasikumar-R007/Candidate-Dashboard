@@ -106,6 +106,8 @@ export default function ActiveNudgesTable() {
 
   const { data: nudges = [], isLoading: isLoadingNudges } = useQuery<Nudge[]>({
     queryKey: ['/api/nudges'],
+    staleTime: 0,
+    refetchInterval: 15_000,
   });
 
   const respondMutation = useMutation({
@@ -115,6 +117,7 @@ export default function ActiveNudgesTable() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/nudges'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
       setLocalUpdatedNudges(prev => new Set(prev).add(variables.id));
       toast({
         title: "Success",

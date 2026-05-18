@@ -36,6 +36,15 @@ import { SearchBar } from '@/components/ui/search-bar';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
 import type { Requirement, Employee } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
+import {
+  CandidateCommentsSession,
+  type CandidateCommentsSessionApplicant,
+} from '@/components/dashboard/candidate-comments-session';
+import {
+  TL_PIPELINE_STAGE_ORDER,
+  buildPipelineSessionList,
+  mapTeamLeaderPipelineCandidate,
+} from '@/lib/pipeline-session-utils';
 
 // Helper function to format numbers in Indian currency format
 const formatIndianCurrency = (value: number): string => {
@@ -154,6 +163,10 @@ export default function TeamLeaderDashboard() {
   const [teamMembersSearch, setTeamMembersSearch] = useState('');
   const [selectedPipelineRecruiter, setSelectedPipelineRecruiter] = useState<string>('all');
   const [pipelineDate, setPipelineDate] = useState<Date | null>(null);
+  const [pipelineView, setPipelineView] = useState<"board" | "candidate-session">("board");
+  const [sessionApplicationId, setSessionApplicationId] = useState<string | null>(null);
+  const [sessionApplicantSnapshot, setSessionApplicantSnapshot] =
+    useState<CandidateCommentsSessionApplicant | null>(null);
   
   const [teamChatMessages, setTeamChatMessages] = useState([
     { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
@@ -232,10 +245,9 @@ export default function TeamLeaderDashboard() {
       'L3': 'View candidates in L3 interview. You can reject or move forward.',
       'L2': 'View candidates in L2 interview. You can reject or move forward.',
       'L1': 'View candidates in L1 interview. You can reject or move forward.',
-      'ASSIGNMENT': 'View candidates with assignments. You can reject or move forward.',
-      'INTRO_CALL': 'View candidates for intro calls. You can reject or schedule calls.',
+      'SCREENING': 'View candidates in screening (intro call + assignment). You can reject or move forward.',
       'SHORTLISTED': 'View shortlisted candidates. You can reject or move forward.',
-      'SOURCED': 'View sourced candidates. You can reject or move to shortlist.'
+      'EVALUATING': 'View candidates under evaluation before screening.'
     };
 
     const message = stageActions[stage as keyof typeof stageActions] || 'View candidates in this stage.';
@@ -895,6 +907,35 @@ export default function TeamLeaderDashboard() {
     
     return stages;
   }, [pipelineData, selectedPipelineRecruiter, pipelineDate]);
+
+  const tlPipelineSessionList = useMemo(
+    () =>
+      buildPipelineSessionList(
+        groupedPipelineCandidates,
+        TL_PIPELINE_STAGE_ORDER,
+        (c) => mapTeamLeaderPipelineCandidate(c),
+      ),
+    [groupedPipelineCandidates],
+  );
+
+  const handlePipelineCandidateClick = (candidate: any) => {
+    if (!candidate?.id) return;
+    const snapshot = mapTeamLeaderPipelineCandidate(candidate);
+    setSessionApplicationId(snapshot.id);
+    setSessionApplicantSnapshot(snapshot);
+    setPipelineView("candidate-session");
+  };
+
+  const handleSelectSessionApplicant = (applicant: CandidateCommentsSessionApplicant) => {
+    setSessionApplicationId(applicant.id);
+    setSessionApplicantSnapshot(applicant);
+  };
+
+  const handleCloseCandidateSession = () => {
+    setPipelineView("board");
+    setSessionApplicationId(null);
+    setSessionApplicantSnapshot(null);
+  };
   
   // Handle immediate refetch when switching to pipeline tab
   useEffect(() => {
@@ -1452,6 +1493,7 @@ export default function TeamLeaderDashboard() {
                           <th className="text-left p-3 font-semibold text-gray-700">Criticality</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Company</th>
                           <th className="text-left p-3 font-semibold text-gray-700">SPOC</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">No. of Positions</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
                           <th className="text-left p-3 font-semibold text-gray-700">JD</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Actions</th>
@@ -1460,13 +1502,13 @@ export default function TeamLeaderDashboard() {
                       <tbody>
                         {isLoadingRequirements ? (
                           <tr>
-                            <td colSpan={7} className="p-6 text-center text-gray-600">
+                            <td colSpan={8} className="p-6 text-center text-gray-600">
                               Loading requirements...
                             </td>
                           </tr>
                         ) : visibleRequirementsData.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="p-6 text-center text-gray-600">
+                            <td colSpan={8} className="p-6 text-center text-gray-600">
                               No requirements assigned to you yet.
                             </td>
                           </tr>
@@ -1512,6 +1554,7 @@ export default function TeamLeaderDashboard() {
                               </td>
                               <td className="p-3 text-gray-900">{requirement.company}</td>
                               <td className="p-3 text-gray-900">{requirement.spoc}</td>
+                              <td className="p-3 text-gray-900">{requirement.noOfPositions ?? 1}</td>
                               <td className="p-3 text-gray-900">
                                 {requirement.needsTalentAdvisorReassignment && requirement.talentAdvisor ? (
                                   <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
@@ -1887,13 +1930,32 @@ export default function TeamLeaderDashboard() {
     { key: 'L1', display: 'Level 1' },
     { key: 'L2', display: 'Level 2' },
     { key: 'L3', display: 'Level 3' },
-    { key: 'Final Round', display: 'Final Round' },
     { key: 'HR Round', display: 'HR Round' },
+    { key: 'Final Round', display: 'Final Round' },
     { key: 'Offer Stage', display: 'Offer Stage' },
     { key: 'Closure', display: 'Closure' }
   ];
 
   const renderPipelineContent = () => {
+    if (pipelineView === "candidate-session" && sessionApplicationId) {
+      return (
+        <div className="flex h-full">
+          <div className="ml-16 flex min-h-0 flex-1 flex-col bg-white">
+            <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
+            <div className="h-[calc(100vh-64px)] min-h-0 overflow-hidden">
+              <CandidateCommentsSession
+                applicationId={sessionApplicationId}
+                fallbackApplicant={sessionApplicantSnapshot}
+                pipelineApplicants={tlPipelineSessionList}
+                onSelectApplicant={handleSelectSessionApplicant}
+                onBack={handleCloseCandidateSession}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-full">
         {/* Middle Pipeline Content - Scrollable */}
@@ -1990,6 +2052,15 @@ export default function TeamLeaderDashboard() {
                                 return (
                                   <div
                                     key={candidate.id || index}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => handlePipelineCandidateClick(candidate)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        handlePipelineCandidateClick(candidate);
+                                      }
+                                    }}
                                     className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
                                     data-testid={`pipeline-${stage.key}-candidate-${index}`}
                                   >
@@ -2043,14 +2114,6 @@ export default function TeamLeaderDashboard() {
         <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-hidden">
           <div className="p-4 space-y-1">
             <button 
-              onClick={() => handlePipelineStageClick('SOURCED')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors cursor-pointer"
-              data-testid="button-pipeline-sourced"
-            >
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{pipelineCounts.SOURCED || 0}</span>
-            </button>
-            <button 
               onClick={() => handlePipelineStageClick('SHORTLISTED')}
               className="w-full flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded hover:bg-green-300 dark:hover:bg-green-700 transition-colors cursor-pointer"
               data-testid="button-pipeline-shortlisted"
@@ -2059,20 +2122,12 @@ export default function TeamLeaderDashboard() {
               <span className="text-lg font-bold text-gray-900 dark:text-white">{pipelineCounts.SHORTLISTED || 0}</span>
             </button>
             <button 
-              onClick={() => handlePipelineStageClick('INTRO_CALL')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded hover:bg-green-400 dark:hover:bg-green-600 transition-colors cursor-pointer"
-              data-testid="button-pipeline-intro-call"
+              onClick={() => handlePipelineStageClick('SCREENING')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors cursor-pointer"
+              data-testid="button-pipeline-screening"
             >
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{pipelineCounts.INTRO_CALL || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('ASSIGNMENT')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded hover:bg-green-500 dark:hover:bg-green-500 transition-colors cursor-pointer"
-              data-testid="button-pipeline-assignment"
-            >
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ASSIGNMENT</span>
-              <span className="text-lg font-bold text-gray-800 dark:text-white">{pipelineCounts.ASSIGNMENT || 0}</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SCREENING</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">{(pipelineCounts.INTRO_CALL || 0) + (pipelineCounts.ASSIGNMENT || 0) + (pipelineCounts.SCREENING || 0)}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('L1')}
@@ -3688,6 +3743,7 @@ export default function TeamLeaderDashboard() {
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Criticality</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Company</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">SPOC</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">No. of Positions</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Talent Advisor</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Status</th>
                   </tr>
@@ -3712,6 +3768,7 @@ export default function TeamLeaderDashboard() {
                       </td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.company}</td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.spoc || '-'}</td>
+                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.noOfPositions ?? 1}</td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.talentAdvisor || 'Unassigned'}</td>
                       <td className="p-3 border border-gray-300">
                         <span className={`text-xs font-semibold px-2 py-1 rounded ${

@@ -142,7 +142,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, initialEmail = ""
           <div className="bg-white/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 backdrop-blur-sm border border-white/10">
             {step === "email" && <Mail size={24} className="text-blue-400" />}
             {step === "otp" && <ShieldCheck size={24} className="text-green-400" />}
-            {step === "reset" && <Lock size={24} className="text-purple-400" />}
+            {step === "reset" && <Lock size={24} className="text-[#2563EB]" />}
             {step === "success" && <CheckCircle2 size={24} className="text-emerald-400" />}
           </div>
           <DialogTitle className="text-xl font-bold mb-1 tracking-tight">
@@ -233,7 +233,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, initialEmail = ""
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="h-11 bg-slate-50 border-slate-200 rounded-xl focus:ring-purple-500 text-sm placeholder:text-slate-300"
+                  className="h-11 bg-slate-50 border-slate-200 rounded-xl focus:ring-[#2563EB] text-sm placeholder:text-slate-300"
                   required
                 />
               </div>
@@ -244,14 +244,14 @@ export default function ForgotPasswordModal({ isOpen, onClose, initialEmail = ""
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="h-11 bg-slate-50 border-slate-200 rounded-xl focus:ring-purple-500 text-sm placeholder:text-slate-300"
+                  className="h-11 bg-slate-50 border-slate-200 rounded-xl focus:ring-[#2563EB] text-sm placeholder:text-slate-300"
                   required
                 />
               </div>
               <Button 
                 type="submit" 
                 disabled={isLoading || !newPassword}
-                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-sm shadow-md shadow-purple-200 transition-all"
+                className="w-full h-11 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow-md shadow-blue-200 transition-all"
               >
                 {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : "Update Password"}
               </Button>

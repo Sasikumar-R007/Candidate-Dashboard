@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -33,6 +34,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NudgeIcon } from '@/components/ui/nudge-icon';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import CandidateApplicationConsentModal from "@/components/candidate-dashboard/candidate-application-consent-modal";
+import { logConsent } from "@/lib/consent-log";
 
 // Helper function to calculate days ago from a date
 function calculateDaysAgo(date: Date | string): string {
@@ -83,6 +86,8 @@ const PIPELINE_STAGES = [
 const mapStatusToStage = (status: string | null): string => {
   if (!status) return 'Applied';
   const s = status.toLowerCase();
+  // Archived/withdrawn applications should be shown only in Archives, never in pipeline columns.
+  if (s.includes('archived') || s.includes('withdrawn')) return 'Archived';
   // "In Process" and "Applied" should both map to "Applied" stage for recent applications
   if (s.includes('applied') || s.includes('new') || s.includes('process')) return 'Applied';
   if (s === 'l1' || s === 'l2' || s.includes('review')) return 'In-Review';
@@ -159,13 +164,14 @@ export default function MyJobsTab({
   const [withdrawApp, setWithdrawApp] = useState<JobApplication | null>(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState<string>("");
-  const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
+  const [showApplicationConsent, setShowApplicationConsent] = useState(false);
   const [pendingApplyJob, setPendingApplyJob] = useState<JobSuggestion | null>(null);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [isMetricsExpanded, setIsMetricsExpanded] = useState(true);
   const [showWithdrawSuccess, setShowWithdrawSuccess] = useState(false);
   const [withdrawText, setWithdrawText] = useState("");
+  const [confirmChecks, setConfirmChecks] = useState<Record<string, boolean>>({});
   const jobsPerPage = 3;
   
   const { data: jobApplications = [], isLoading } = useJobApplications();
@@ -222,6 +228,31 @@ export default function MyJobsTab({
     }
   });
 
+  const confirmApplicationMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      const res = await apiRequest("POST", `/api/candidate/applications/${applicationId}/confirm`, {});
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Failed to confirm application" }));
+        throw new Error(errorData.message || "Failed to confirm application");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/job-applications'] });
+      toast({
+        title: "Application confirmed",
+        description: "Your application has been added to your pipeline.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to confirm application",
+        variant: "destructive",
+      });
+    }
+  });
+
   const confirmWithdraw = async () => {
     if (!withdrawApp || !withdrawReason) return;
     const finalReason = withdrawReason === "Others (please specify)" ? withdrawText : withdrawReason;
@@ -272,6 +303,21 @@ export default function MyJobsTab({
     });
     return map;
   }, [jobApplications, tick]);
+
+  const pendingConfirmations = useMemo(
+    () =>
+      jobApplications.filter(
+        (app) =>
+          String(app.source || "").toLowerCase() === "recruiter_tagged" &&
+          (app as any).isCandidateConfirmed === false,
+      ),
+    [jobApplications],
+  );
+
+  const confirmedApplications = useMemo(
+    () => jobApplications.filter(app => (app as any).isCandidateConfirmed !== false),
+    [jobApplications]
+  );
 
   // Create a Set of applied jobs for fast lookup
   const appliedJobs = new Set(
@@ -406,37 +452,64 @@ export default function MyJobsTab({
   };
 
 
-  const confirmApplyJob = async () => {
-    if (pendingApplyJob) {
-      try {
-        await applyJobMutation.mutateAsync({
-          jobTitle: pendingApplyJob.title,
-          company: pendingApplyJob.company,
-          jobType: pendingApplyJob.type,
-          description: pendingApplyJob.description,
-          salary: pendingApplyJob.salary,
-          location: pendingApplyJob.location,
-          workMode: pendingApplyJob.workMode,
-          experience: pendingApplyJob.experience,
-          skills: JSON.stringify(pendingApplyJob.skills),
-          logo: pendingApplyJob.logo
-        });
-        
-        toast({
-          title: "Application submitted",
-          description: "Recruiters will be contacting you shortly regarding your application.",
-        });
-        setShowApplyConfirmation(false);
-        setPendingApplyJob(null);
-        if (selectedJob) setShowJobModal(false);
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error?.message || "Failed to submit application",
-          variant: "destructive",
-        });
-      }
+  const confirmApplyAfterConsent = async () => {
+    if (!pendingApplyJob || !profile?.id) {
+      toast({
+        title: "Missing information",
+        description: "Please wait for your profile to load and try again.",
+        variant: "destructive",
+      });
+      return;
     }
+    const ok = await logConsent({
+      user_id: profile.id,
+      role: "candidate",
+      consent_type: "job_consent",
+      policy_version: "2026-05-10",
+    });
+    if (!ok) {
+      toast({
+        title: "Could not record consent",
+        description: "Check your connection and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await applyJobMutation.mutateAsync({
+        jobTitle: pendingApplyJob.title,
+        company: pendingApplyJob.company,
+        jobType: pendingApplyJob.type,
+        description: pendingApplyJob.description,
+        salary: pendingApplyJob.salary,
+        location: pendingApplyJob.location,
+        workMode: pendingApplyJob.workMode,
+        experience: pendingApplyJob.experience,
+        skills: JSON.stringify(pendingApplyJob.skills),
+        logo: pendingApplyJob.logo,
+        recruiterJobId: pendingApplyJob.id,
+      });
+
+      toast({
+        title: "Application submitted",
+        description: "Recruiters will be contacting you shortly regarding your application.",
+      });
+      setShowApplicationConsent(false);
+      setPendingApplyJob(null);
+      setShowJobModal(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to submit application",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openApplicationConsentFromModal = () => {
+    if (!selectedJob) return;
+    setPendingApplyJob(selectedJob);
+    setShowApplicationConsent(true);
   };
 
   const handleNudge = async (application: JobApplication) => {
@@ -483,10 +556,70 @@ export default function MyJobsTab({
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-800">Applied Jobs</h2>
             </div>
+
+            {pendingConfirmations.length > 0 && (
+              <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-900">Pending confirmations</h3>
+                    <p className="text-[12px] text-amber-800">
+                      A recruiter tagged you to the following requirement(s). Please confirm to add them to your pipeline.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold bg-white/70 border border-amber-200 text-amber-900 px-2 py-1 rounded-full">
+                    {pendingConfirmations.length}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {pendingConfirmations.map((app) => {
+                    const checked = !!confirmChecks[app.id];
+                    const canConfirm = checked && !confirmApplicationMutation.isPending;
+                    return (
+                      <div key={app.id} className="bg-white rounded-md border border-amber-100 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-[13px] font-bold text-gray-900 truncate">{app.jobTitle}</div>
+                            <div className="text-[12px] text-gray-600 truncate">{app.company}</div>
+                            <div className="text-[11px] text-gray-500 mt-1">
+                              Tagged on {formatDate(app.appliedDate)}
+                            </div>
+                          </div>
+                          <Button
+                            className="bg-[#4F00FF] hover:bg-[#3D00CC] text-white text-[11px] h-8 font-bold rounded-[6px]"
+                            disabled={!canConfirm}
+                            onClick={() => confirmApplicationMutation.mutate(app.id)}
+                          >
+                            {confirmApplicationMutation.isPending ? "Confirming..." : "Confirm"}
+                          </Button>
+                        </div>
+
+                        <div className="mt-3 flex items-start gap-2">
+                          <Checkbox
+                            id={`confirm-${app.id}`}
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              const next = v === true;
+                              setConfirmChecks(prev => ({ ...prev, [app.id]: next }));
+                            }}
+                          />
+                          <label
+                            htmlFor={`confirm-${app.id}`}
+                            className="text-[12px] text-gray-700 leading-snug cursor-pointer select-none"
+                          >
+                            I confirm to apply for this job through StaffOS
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             
             <div className="flex gap-4 overflow-x-auto pb-6 min-h-[400px] custom-scrollbar">
               {PIPELINE_STAGES.map((stage) => {
-                const stageApplications = jobApplications.filter(app => mapStatusToStage(app.status) === stage);
+                const stageApplications = confirmedApplications.filter(app => mapStatusToStage(app.status) === stage);
                 
                 return (
                   <div key={stage} className="flex-shrink-0 w-[250px]">
@@ -710,7 +843,7 @@ export default function MyJobsTab({
               })}
             </div>
 
-            {jobApplications.length === 0 && (
+            {confirmedApplications.length === 0 && pendingConfirmations.length === 0 && (
               <div className="text-center py-20 text-gray-500">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
                   <Archive className="w-8 h-8 text-gray-300" />
@@ -1098,7 +1231,7 @@ export default function MyJobsTab({
                 {selectedJob && savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Saved' : 'Save'}
               </Button>
               <Button 
-                onClick={() => selectedJob && handleApplyJob(selectedJob)}
+                onClick={() => selectedJob && openApplicationConsentFromModal()}
                 disabled={selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)}
                 className={`px-6 py-2 rounded font-medium border-0 text-sm ${
                   selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
@@ -1114,39 +1247,16 @@ export default function MyJobsTab({
         </div>
       )}
 
-      {/* Apply Confirmation Dialog */}
-      <Dialog open={showApplyConfirmation} onOpenChange={setShowApplyConfirmation}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Confirm Application</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to apply for <span className="font-medium">{pendingApplyJob?.title}</span> at <span className="font-medium">{pendingApplyJob?.company}</span>?
-            </p>
-            <p className="text-sm text-gray-500">
-              Recruiters will be contacting you shortly regarding your application.
-            </p>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowApplyConfirmation(false)}
-              className="px-4 py-2 rounded"
-              data-testid="button-cancel-apply"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmApplyJob}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-              data-testid="button-confirm-apply"
-            >
-              Confirm Application
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CandidateApplicationConsentModal
+        open={showApplicationConsent}
+        jobTitle={pendingApplyJob?.title}
+        company={pendingApplyJob?.company}
+        onCancel={() => {
+          setShowApplicationConsent(false);
+          setPendingApplyJob(null);
+        }}
+        onConfirm={confirmApplyAfterConsent}
+      />
 
       {/* View Applied Job Details Modal */}
       {showApplicationModal && selectedApplication && (

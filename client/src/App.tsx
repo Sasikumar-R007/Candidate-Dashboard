@@ -17,6 +17,7 @@ import CandidateResumeUpload from "@/pages/candidate-resume-upload";
 import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminConsentLogsPage from "@/pages/admin-consent-logs";
 import RecruiterDashboard2 from "@/pages/recruiter-dashboard-2";
 import ClientDashboard from "@/pages/client-dashboard";
 import SourceResume from "@/pages/source-resume";
@@ -33,6 +34,10 @@ import SetupSupport from "@/pages/setup-support";
 import SupportDashboard from "@/pages/support-dashboard";
 import SupportLogin from "@/pages/support-login";
 import CandidateProfile from "@/pages/candidate-profile";
+import PrivacyPolicyPage from "@/pages/privacy-policy";
+import PlatformTermsPage from "@/pages/platform-terms";
+import ClientAgreementPage from "@/pages/client-agreement";
+import EmployeeAgreementPage from "@/pages/employee-agreement";
 
 
 function Router() {
@@ -47,6 +52,11 @@ function Router() {
       <Route path="/candidate-login" component={CandidateLogin} />
       <Route path="/candidate-registration" component={CandidateRegistration} />
       <Route path="/candidate/upload-resume" component={CandidateResumeUpload} />
+      <Route path="/privacy-policy" component={PrivacyPolicyPage} />
+      <Route path="/platform-terms" component={PlatformTermsPage} />
+      <Route path="/terms-of-use" component={PlatformTermsPage} />
+      <Route path="/client-access-agreement" component={ClientAgreementPage} />
+      <Route path="/employee-agreement" component={EmployeeAgreementPage} />
       
       <Route path="/candidate">
         <ProtectedRoute userType="candidate">
@@ -54,15 +64,29 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/team-leader" component={TeamLeaderDashboard} />
+      <Route path="/team-leader">
+        <ProtectedRoute userType="employee" allowedRoles={["teamLead", "team_leader", "admin"]}>
+          <TeamLeaderDashboard />
+        </ProtectedRoute>
+      </Route>
       
+      <Route path="/admin/consent-logs">
+        <ProtectedRoute userType="employee" allowedRoles={["admin"]}>
+          <AdminConsentLogsPage />
+        </ProtectedRoute>
+      </Route>
+
       <Route path="/admin">
         <ProtectedRoute userType="employee" allowedRoles={["admin"]}>
           <AdminDashboard />
         </ProtectedRoute>
       </Route>
       
-      <Route path="/recruiter" component={RecruiterDashboard2} />
+      <Route path="/recruiter">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <RecruiterDashboard2 />
+        </ProtectedRoute>
+      </Route>
       
       <Route path="/client" component={ClientDashboard} />
       

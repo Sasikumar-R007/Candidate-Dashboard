@@ -25,17 +25,9 @@ import ProfileStrength from '@/components/dashboard/profile-strength';
 import { useQuery } from '@tanstack/react-query';
 import type { RecruiterJob } from "@shared/schema";
 import { calculateProfileCompletion } from '@/lib/profile-utils';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import CandidateApplicationConsentModal from "@/components/candidate-dashboard/candidate-application-consent-modal";
+import { logConsent } from "@/lib/consent-log";
 
 interface JobBoardTabProps {
   onNavigateToSettings?: () => void;
@@ -135,7 +127,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [jobFilter, setJobFilter] = useState<'all' | 'hot' | 'saved'>('all');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
+  const [showApplicationConsent, setShowApplicationConsent] = useState(false);
   const [jobToApply, setJobToApply] = useState<JobListing | null>(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   
@@ -231,7 +223,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
     }
   };
 
-  const handleApply = async (job: JobListing) => {
+  const handleApply = async (job: JobListing): Promise<boolean> => {
     try {
       await applyJobMutation.mutateAsync({
         jobTitle: job.title, company: job.company, jobType: job.type,
@@ -241,8 +233,40 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
         logo: job.logo, recruiterJobId: job.recruiterJobId || job.id,
       });
       toast({ title: "Applied successfully", description: `You have applied to ${job.company}` });
+      return true;
     } catch (e) {
       toast({ title: "Error", description: "Failed to apply", variant: "destructive" });
+      return false;
+    }
+  };
+
+  const handleApplicationConsentConfirm = async () => {
+    if (!profile?.id || !jobToApply) {
+      toast({
+        title: "Missing profile",
+        description: "Please try again after your profile loads.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const ok = await logConsent({
+      user_id: profile.id,
+      role: "candidate",
+      consent_type: "job_consent",
+      policy_version: "2026-05-10",
+    });
+    if (!ok) {
+      toast({
+        title: "Could not record consent",
+        description: "Check your connection and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const applied = await handleApply(jobToApply);
+    if (applied) {
+      setShowApplicationConsent(false);
+      setJobToApply(null);
     }
   };
 
@@ -835,7 +859,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                             onClick={() => {
                               if (isApplied) return;
                               setJobToApply(selectedJob);
-                              setIsApplyDialogOpen(true);
+                              setShowApplicationConsent(true);
                             }}
                             disabled={applyJobMutation.isPending || isApplied}
                             className={`rounded-xl px-8 h-10 font-bold text-[12px] transition-none flex items-center gap-2 shadow-sm ${isApplied ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-none' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
@@ -863,31 +887,16 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
       </div>
       
       {/* Confirmation Dialog */}
-      <AlertDialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
-        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl p-10 max-w-md font-poppins">
-          <AlertDialogHeader>
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 mx-auto">
-              <MousePointer2 size={32} />
-            </div>
-            <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center tracking-tight mb-2">Confirm Application</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm font-medium text-gray-500 text-center leading-relaxed mb-6">
-              You are about to apply for the <span className="text-blue-600 font-bold">{jobToApply?.title}</span> position at <span className="text-blue-600 font-bold">{jobToApply?.company}</span>. 
-              Are you sure you want to proceed with this application?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-col gap-3">
-            <AlertDialogAction 
-              onClick={() => jobToApply && handleApply(jobToApply)}
-              className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-6 shadow-lg shadow-blue-100 transition-all active:scale-[0.98]"
-            >
-              Confirm and apply
-            </AlertDialogAction>
-            <AlertDialogCancel className="w-full rounded-2xl border-none bg-gray-50 text-gray-400 text-xs font-bold py-6 hover:bg-gray-100 transition-all">
-              Cancel
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CandidateApplicationConsentModal
+        open={showApplicationConsent && !!jobToApply}
+        jobTitle={jobToApply?.title}
+        company={jobToApply?.company}
+        onCancel={() => {
+          setShowApplicationConsent(false);
+          setJobToApply(null);
+        }}
+        onConfirm={handleApplicationConsentConfirm}
+      />
     </div>
     
     {/* Archive Modal */}

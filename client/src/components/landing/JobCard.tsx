@@ -1,4 +1,4 @@
-import { Users, MapPin, Briefcase, Banknote, Clock, Rocket } from "lucide-react";
+import { Users, Briefcase, Clock, Rocket } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
@@ -10,25 +10,38 @@ interface JobCardProps {
   job: RecruiterJob;
 }
 
+const accent = {
+  badgeBg: "bg-sky-50",
+  badgeText: "text-sky-800",
+  btn: "bg-[#1E6BFF] hover:bg-blue-700",
+  initialsBg: "bg-sky-100",
+  initialsText: "text-[#1E40AF]",
+};
+
 export function JobCard({ job }: JobCardProps) {
   const [isLaunching, setIsLaunching] = useState(false);
 
-  const primarySkills = typeof job.primarySkills === 'string' 
-    ? JSON.parse(job.primarySkills) 
-    : (Array.isArray(job.primarySkills) ? job.primarySkills : []);
+  const primarySkills =
+    typeof job.primarySkills === "string"
+      ? JSON.parse(job.primarySkills)
+      : Array.isArray(job.primarySkills)
+        ? job.primarySkills
+        : [];
 
-  const timeDisplay = job.postedDate 
-    ? formatDistanceToNow(new Date(job.postedDate), { addSuffix: true }).replace('about ', '')
+  const timeDisplay = job.postedDate
+    ? formatDistanceToNow(new Date(job.postedDate), { addSuffix: true }).replace("about ", "")
     : "recently";
 
   const initials = job.companyName
     ? job.companyName
-        .split(' ')
-        .map(n => n[0])
-        .join('')
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
         .toUpperCase()
         .substring(0, 2)
     : "??";
+
+  const industry = job.jobCategory?.trim() || "IT Services";
 
   const handleApplyClick = () => {
     setIsLaunching(true);
@@ -39,130 +52,135 @@ export function JobCard({ job }: JobCardProps) {
 
   return (
     <div className="relative h-full w-full">
-      <motion.div 
+      <motion.div
         animate={isLaunching ? { opacity: 0.4, scale: 0.98, filter: "blur(4px)" } : {}}
-        className="bg-white rounded-[24px] p-6 shadow-[0_12px_40px_rgba(31,38,135,0.06)] border border-gray-100/60 flex flex-col h-full relative group transition-all duration-300 hover:bg-[#F9FAFB]/80 border-none"
+        className="group relative flex h-full flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-gray-300 hover:shadow-md"
       >
-        {/* Header Section */}
-        <div className="flex gap-4 items-start mb-5">
-          {/* Logo with Orange Glow */}
+        <div className="mb-4 flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <div className="absolute -inset-0.5 bg-[#F89252] rounded-[18px] blur-[1px] opacity-20" />
-            <div className="relative w-14 h-14 bg-[#1A1A1A] rounded-[16px] flex items-center justify-center overflow-hidden border border-white/5 shadow-inner">
+            <div
+              className={`relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-sky-100 ${accent.initialsBg}`}
+            >
               {job.companyLogo ? (
-                <img src={job.companyLogo} alt={job.companyName} className="w-full h-full object-cover" />
+                <img src={job.companyLogo} alt={job.companyName} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-white font-bold text-xl uppercase tracking-tighter">{initials}</span>
+                <span className={`text-sm font-bold uppercase tracking-tight ${accent.initialsText}`}>
+                  {initials}
+                </span>
               )}
             </div>
           </div>
-          
-          <div className="pt-0.5">
-            <h3 className="text-lg font-bold text-[#2D3748] leading-tight mb-0.5 tracking-tight">{job.role}</h3>
-            <p className="text-[#9F7AEA] font-semibold text-sm">
-              {job.companyName}
+
+          <div className="min-w-0 pt-0.5">
+            <h3 className="text-sm font-bold leading-tight text-gray-900">{job.companyName}</h3>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {job.location || "Remote"} · {industry}
             </p>
           </div>
         </div>
 
-        {/* Info Pills Row */}
-        <div className="flex flex-wrap gap-2 mb-5">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3F0FF] text-[#7C3AED] text-[11px] font-medium">
-            <MapPin className="w-3 h-3" />
-            {job.location || "Remote"}
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3F0FF] text-[#7C3AED] text-[11px] font-medium">
-            <Briefcase className="w-3 h-3" />
-            {job.workMode || "On-site"}
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3F0FF] text-[#7C3AED] text-[11px] font-medium">
-            <Clock className="w-3 h-3" />
+        <h4 className="mb-3 text-base font-bold leading-snug text-gray-900">{job.role}</h4>
+
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <span
+            className={`inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-600`}
+          >
+            Full-time
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-600`}
+          >
+            <Clock className="h-3 w-3 opacity-70" />
             {job.experience ? `${job.experience} yrs` : "0+ yrs"}
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3F0FF] text-[#7C3AED] text-[11px] font-medium">
-            <Banknote className="w-3 h-3" />
-            {job.salaryPackage || "₹ 5.5 LPA"}
-          </div>
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-600`}
+          >
+            <Briefcase className="h-3 w-3 opacity-70" />
+            {job.workMode || "On-site"}
+          </span>
         </div>
 
-        {/* Separator & Description */}
-        <div className="w-full h-[1px] bg-gray-50 mb-4" />
+        <div className="mb-3 h-px w-full bg-gray-100" />
 
-        <div className="mb-5 flex-grow">
-          <p className="text-[#718096] text-[13px] line-clamp-2 leading-relaxed font-normal">
-            {job.roleDefinitions || job.aboutCompany || `Building next-gen solutions combining design, development, and innovation.`}
+        <div className="mb-3 min-h-[2.5rem] flex-grow">
+          <p className="line-clamp-2 text-xs leading-relaxed text-gray-500">
+            {job.roleDefinitions ||
+              job.aboutCompany ||
+              `Building next-gen solutions combining design, development, and innovation.`}
           </p>
         </div>
 
-        {/* Skills Pills */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="mb-4 flex flex-wrap gap-1.5">
           {primarySkills.slice(0, 4).map((skill: string, index: number) => (
-            <Badge 
-              key={index} 
-              variant="secondary" 
-              className="bg-[#F3F0FF] text-[#7C3AED] border-none px-3 py-1 rounded-lg font-bold text-[10px]"
+            <Badge
+              key={index}
+              variant="secondary"
+              className={`rounded-md border-0 px-2 py-0.5 text-[10px] font-semibold ${accent.badgeBg} ${accent.badgeText}`}
             >
               {skill}
             </Badge>
           ))}
           {primarySkills.length > 4 && (
-             <Badge variant="secondary" className="bg-[#F3F0FF] text-[#7C3AED] border-none px-2 py-1 rounded-lg font-bold text-[10px]">
-               +{primarySkills.length - 4}
-             </Badge>
+            <Badge
+              variant="secondary"
+              className={`rounded-md border-0 px-2 py-0.5 text-[10px] font-semibold ${accent.badgeBg} ${accent.badgeText}`}
+            >
+              +{primarySkills.length - 4}
+            </Badge>
           )}
         </div>
 
-        {/* Footer info & compact button */}
-        <div className="space-y-4 mt-auto">
-          <div className="flex items-center justify-between text-[#A0AEC0] font-medium text-[12px]">
-            <div className="flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 opacity-60" />
-              <span>{job.applicationCount || 0} applied</span>
-            </div>
-            
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 opacity-60" />
-              <span>{timeDisplay}</span>
-            </div>
+        <div className="mt-auto border-t border-gray-100 pt-3">
+          <div className="mb-2 flex items-center justify-between text-[10px] text-gray-400">
+            <span className="flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {job.applicationCount || 0} applied
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {timeDisplay}
+            </span>
           </div>
-          
-          <Button 
-            onClick={handleApplyClick}
-            disabled={isLaunching}
-            className="bg-[#9F7AEA] hover:bg-[#805AD5] text-white rounded-[10px] w-full py-5 font-bold text-base shadow-md shadow-purple-100/50 transition-all active:scale-95 border-none"
-          >
-            {isLaunching ? "Launching..." : "Apply Now"}
-          </Button>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-bold text-gray-900">{job.salaryPackage || "₹ 5.5 LPA"}</p>
+            <Button
+              onClick={handleApplyClick}
+              disabled={isLaunching}
+              className={`h-9 shrink-0 rounded-[6px] border-0 px-4 text-xs font-bold text-white shadow-sm transition-all active:scale-[0.98] sm:text-sm ${accent.btn}`}
+            >
+              {isLaunching ? "…" : "Apply Now"}
+            </Button>
+          </div>
         </div>
       </motion.div>
 
-      {/* Rocket Launch Overlay */}
       <AnimatePresence>
         {isLaunching && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none overflow-hidden">
-             <motion.div
-               initial={{ y: 80, opacity: 0, scale: 0.8 }}
-               animate={{ y: -600, opacity: 1, scale: 1 }}
-               transition={{ duration: 1, ease: "easeIn" }}
-               className="relative z-10"
-             >
-                <Rocket className="w-16 h-16 text-[#9F7AEA] fill-[#9F7AEA] shadow-[0_0_30px_rgba(159,122,234,0.4)]" />
-                <motion.div 
-                  animate={{ height: [10, 30, 10], opacity: [0.5, 1, 0.5] }}
-                  transition={{ repeat: Infinity, duration: 0.1 }}
-                  className="absolute top-full left-1/2 -translate-x-1/2 w-3 bg-gradient-to-b from-[#9F7AEA] to-transparent rounded-full"
-                />
-             </motion.div>
+          <div className="pointer-events-none absolute inset-0 z-50 flex flex-col items-center justify-center overflow-hidden">
+            <motion.div
+              initial={{ y: 80, opacity: 0, scale: 0.8 }}
+              animate={{ y: -600, opacity: 1, scale: 1 }}
+              transition={{ duration: 1, ease: "easeIn" }}
+              className="relative z-10"
+            >
+              <Rocket className="h-14 w-14 fill-[#1E6BFF] text-[#1E6BFF] shadow-[0_0_24px_rgba(30,107,255,0.35)]" />
+              <motion.div
+                animate={{ height: [10, 28, 10], opacity: [0.5, 1, 0.5] }}
+                transition={{ repeat: Infinity, duration: 0.1 }}
+                className="absolute left-1/2 top-full w-2.5 -translate-x-1/2 rounded-full bg-gradient-to-b from-[#1E6BFF] to-transparent"
+              />
+            </motion.div>
 
-             {[...Array(6)].map((_, i) => (
-               <motion.div
-                 key={i}
-                 initial={{ scale: 0.2, opacity: 0, y: 30, x: (i - 3) * 10 }}
-                 animate={{ scale: 2 + i, opacity: [0, 0.4, 0], y: 80, x: (i - 3) * 20 }}
-                 transition={{ duration: 0.8, delay: i * 0.05 }}
-                 className="absolute bottom-1/4 w-10 h-10 bg-purple-100/30 rounded-full blur-2xl"
-               />
-             ))}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ scale: 0.2, opacity: 0, y: 30, x: (i - 3) * 10 }}
+                animate={{ scale: 2 + i, opacity: [0, 0.35, 0], y: 80, x: (i - 3) * 20 }}
+                transition={{ duration: 0.8, delay: i * 0.05 }}
+                className="absolute bottom-1/4 h-10 w-10 rounded-full bg-sky-100/40 blur-2xl"
+              />
+            ))}
           </div>
         )}
       </AnimatePresence>

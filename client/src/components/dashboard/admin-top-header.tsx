@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { ChevronDown, User, Settings, LogOut, HelpCircle, Bell, MessageCircle, Briefcase, Users, CheckCircle, Calendar } from "lucide-react";
-import { Link, useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { ChevronDown, Settings, KeyRound, LogOut, HelpCircle, Bell, MessageCircle, Briefcase, Users, CheckCircle, Calendar } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
@@ -14,7 +13,34 @@ interface AdminTopHeaderProps {
   companyName?: string;
   onHelpClick?: () => void;
   hideHelpButton?: boolean;
+  /** Admin only: switches dashboard sidebar to the Nudges session */
+  onOpenNudgesTab?: () => void;
 }
+
+type AdminNotificationFeed = {
+  closures: Array<{ id: string; line: string; createdAt: string | null }>;
+  adminNudges: Array<{ id: string; line: string; createdAt: string | null; isUnread: boolean }>;
+  clientEscalations: Array<{ id: string; line: string; createdAt: string | null; isUnread: boolean }>;
+  unreadAdminNudges: number;
+  unreadClientEscalations: number;
+};
+
+type EmployeeNotificationItem = {
+  id: string;
+  line: string;
+  createdAt: string | null;
+  isUnread: boolean;
+};
+
+type EmployeeNotificationFeed = {
+  role: string;
+  newRequirements: EmployeeNotificationItem[];
+  nudges: EmployeeNotificationItem[];
+  escalatedNudges: EmployeeNotificationItem[];
+  closures: EmployeeNotificationItem[];
+  newCandidateApplied: EmployeeNotificationItem[];
+  unreadCount: number;
+};
 
 function getActivityIcon(type: string) {
   switch (type) {
@@ -48,20 +74,30 @@ function getRelativeTime(dateString: string): string {
   return date.toLocaleDateString();
 }
 
-export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpClick, hideHelpButton = false }: AdminTopHeaderProps) {
+export default function AdminTopHeader({
+  companyName = "Scaling Theory",
+  onHelpClick,
+  hideHelpButton = false,
+  onOpenNudgesTab,
+}: AdminTopHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationTab, setNotificationTab] = useState<string>('all');
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [profileModalView, setProfileModalView] = useState<"profile" | "settings">("profile");
   const [profileData, setProfileData] = useState<any>(null);
-  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { logout } = useAuth();
   const employee = useEmployeeAuth();
-  
-  const userRole = employee?.role || 'admin';
-  
+  const queryClient = useQueryClient();
+
+  const userRole = employee?.role || "admin";
+  const isAdmin = userRole === "admin";
+  const isTL = userRole === "team_leader";
+  const isTA = userRole === "recruiter" || userRole === "talent_advisor" || userRole === "ta";
+
   const { data: activities = [], isLoading: activitiesLoading } = useQuery<UserActivity[]>({
     queryKey: ['/api/user-activities', userRole],
     queryFn: async () => {
@@ -73,6 +109,12 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
     refetchInterval: 30000,
   });
   
+  useEffect(() => {
+    if (showNotifications && (isAdmin || isTL || isTA)) {
+      queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
+    }
+  }, [showNotifications, isAdmin, isTL, isTA, queryClient]);
+
   useEffect(() => {
     const loadProfileData = async () => {
       if (!employee?.role) return;
@@ -125,13 +167,16 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
       if (showUserDropdown && !target.closest('.user-dropdown-container')) {
         setShowUserDropdown(false);
       }
+      if (showNotifications && !target.closest('.notification-panel-container')) {
+        setShowNotifications(false);
+      }
     };
 
-    if (showUserDropdown) {
+    if (showUserDropdown || showNotifications) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showUserDropdown]);
+  }, [showUserDropdown, showNotifications]);
   
   const userName = profileData?.name || employee?.name || "Admin User";
   const userEmail = profileData?.email || employee?.email || "";
@@ -153,6 +198,132 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   };
   
   const displayRole = getRoleDisplayName(userRole);
+
+  const {
+    data: employeeFeed,
+    isLoading: feedLoading,
+    isError: feedError,
+  } = useQuery<EmployeeNotificationFeed>({
+    queryKey: ["/api/employee/notifications-feed"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employee/notifications-feed", {});
+      return res.json();
+    },
+    enabled: isAdmin || isTL || isTA,
+    staleTime: 0,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
+
+  const markNudgeReadMutation = useMutation({
+    mutationFn: async (nudgeId: string) => {
+      const res = await apiRequest("PATCH", `/api/admin/notifications/nudges/${nudgeId}/read`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
+    },
+  });
+
+  const headerUnreadCount = employeeFeed?.unreadCount ?? 0;
+
+  const notificationTabs = useMemo(() => {
+    if (isAdmin) {
+      return [
+        { id: "all", label: "All" },
+        { id: "closures", label: "Closures" },
+        { id: "nudges", label: "Nudges" },
+        { id: "escalations", label: "Escalations" },
+      ];
+    }
+    if (isTL) {
+      return [
+        { id: "newRequirements", label: "New Requirements" },
+        { id: "nudges", label: "Nudges" },
+        { id: "escalatedNudges", label: "Escalated Nudges" },
+        { id: "closures", label: "Closures" },
+      ];
+    }
+    return [
+      { id: "newRequirements", label: "New Requirements" },
+      { id: "nudges", label: "Nudges" },
+      { id: "escalatedNudges", label: "Escalated Nudges" },
+      { id: "closures", label: "Closures" },
+      { id: "newCandidateApplied", label: "New Candidate Applied" },
+    ];
+  }, [isAdmin, isTL]);
+
+  useEffect(() => {
+    if (!notificationTabs.some((t) => t.id === notificationTab)) {
+      setNotificationTab(notificationTabs[0]?.id || "all");
+    }
+  }, [notificationTabs, notificationTab]);
+
+  type FeedRow = EmployeeNotificationItem & { key: string; kind: string; nudgeId?: string; sort: number };
+
+  const mergedRows = useMemo<FeedRow[]>(() => {
+    if (!employeeFeed) return [];
+    const rows: FeedRow[] = [];
+
+    const pushRows = (kind: string, items: EmployeeNotificationItem[], includeNudgeId = false) => {
+      for (const item of items) {
+        rows.push({
+          key: `${kind}-${item.id}`,
+          kind,
+          line: item.line,
+          createdAt: item.createdAt,
+          isUnread: item.isUnread,
+          nudgeId: includeNudgeId ? item.id : undefined,
+          sort: item.createdAt ? new Date(item.createdAt).getTime() : 0,
+          id: item.id,
+        });
+      }
+    };
+
+    if (isAdmin) {
+      pushRows("closure", employeeFeed.closures);
+      pushRows("nudge", employeeFeed.nudges, true);
+      pushRows("escalation", employeeFeed.escalatedNudges);
+    } else if (isTL) {
+      pushRows("newRequirement", employeeFeed.newRequirements);
+      pushRows("nudge", employeeFeed.nudges);
+      pushRows("escalatedNudge", employeeFeed.escalatedNudges);
+      pushRows("closure", employeeFeed.closures);
+    } else {
+      pushRows("newRequirement", employeeFeed.newRequirements);
+      pushRows("nudge", employeeFeed.nudges);
+      pushRows("escalatedNudge", employeeFeed.escalatedNudges);
+      pushRows("closure", employeeFeed.closures);
+      pushRows("newCandidate", employeeFeed.newCandidateApplied);
+    }
+    return rows.sort((a, b) => b.sort - a.sort);
+  }, [employeeFeed, isAdmin, isTL]);
+
+  const filteredRows = useMemo(() => {
+    if (notificationTab === "all") return mergedRows;
+    if (notificationTab === "closures") return mergedRows.filter((r) => r.kind === "closure");
+    if (notificationTab === "nudges") return mergedRows.filter((r) => r.kind === "nudge");
+    if (notificationTab === "escalations") return mergedRows.filter((r) => r.kind === "escalation");
+    if (notificationTab === "newRequirements") return mergedRows.filter((r) => r.kind === "newRequirement");
+    if (notificationTab === "escalatedNudges") return mergedRows.filter((r) => r.kind === "escalatedNudge");
+    if (notificationTab === "newCandidateApplied") return mergedRows.filter((r) => r.kind === "newCandidate");
+    return mergedRows;
+  }, [mergedRows, notificationTab]);
+
+  const openNudgesAndClose = async (opts?: { markNudgeReadId?: string }) => {
+    if (opts?.markNudgeReadId) {
+      try {
+        await markNudgeReadMutation.mutateAsync(opts.markNudgeReadId);
+      } catch {
+        /* still navigate */
+      }
+    }
+    setShowNotifications(false);
+    sessionStorage.setItem("adminDashboardSidebarTab", "nudges");
+    void queryClient.invalidateQueries({ queryKey: ["/api/nudges"] });
+    onOpenNudgesTab?.();
+  };
   
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -207,7 +378,7 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   };
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 relative z-30 sticky top-0">
+    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 z-30 sticky top-0">
       <div className="flex items-center min-w-0">
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate pl-2">
           {companyName}
@@ -224,6 +395,134 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
             <HelpCircle size={16} />
             <span className="text-sm">Help</span>
           </button>
+        )}
+
+        {(isAdmin || isTL || isTA) && (
+          <div className="relative notification-panel-container">
+            <button
+              type="button"
+              onClick={() => {
+                setShowUserDropdown(false);
+                setShowNotifications((prev) => !prev);
+              }}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              aria-label="Notifications"
+              data-testid="button-header-notification"
+            >
+              <Bell size={20} strokeWidth={2} />
+              {headerUnreadCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-800" />
+              )}
+            </button>
+
+            {showNotifications && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px]"
+                  aria-label="Close notifications"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <div className="notification-panel-container fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900">
+                  <div className="border-b border-slate-100 px-5 pb-3 pt-4 dark:border-slate-800">
+                    <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                      Notifications
+                    </h3>
+                    <div className="mt-3 overflow-x-auto">
+                      <div className="flex w-max min-w-full rounded-xl bg-slate-100/90 p-1 dark:bg-slate-800/80">
+                        {notificationTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setNotificationTab(tab.id)}
+                          className={`relative shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition ${
+                            notificationTab === tab.id
+                              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                              : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                        </button>
+                      ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+                    {feedLoading && (
+                      <p className="px-3 py-8 text-center text-sm text-slate-500">Loading…</p>
+                    )}
+                    {feedError && !feedLoading && (
+                      <p className="px-3 py-6 text-center text-sm text-amber-700 dark:text-amber-400">
+                        Notifications could not be loaded. Please refresh and try again.
+                      </p>
+                    )}
+                    {!feedLoading && !feedError && filteredRows.length === 0 && (
+                      <p className="px-3 py-8 text-center text-sm text-slate-500">No notifications yet.</p>
+                    )}
+                    {!feedLoading &&
+                      !feedError &&
+                      filteredRows.map((row) => {
+                        const initials = row.line.replace(/^\[/, "").charAt(0).toUpperCase() || "?";
+                        const sub =
+                          row.kind === "newRequirement"
+                            ? "New requirement"
+                            : row.kind === "newCandidate"
+                              ? "New candidate applied"
+                              : row.kind === "closure"
+                            ? "New closure"
+                            : row.kind === "escalation"
+                              ? "Escalated to client"
+                              : row.kind === "escalatedNudge"
+                                ? "Escalated nudge"
+                                : "Nudge notification";
+                        return (
+                          <div
+                            key={row.key}
+                            className={`group relative mb-1 flex items-stretch gap-3 rounded-2xl px-3 py-3 pr-2 transition ${
+                              row.isUnread
+                                ? "bg-violet-50/80 dark:bg-violet-950/30"
+                                : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                            }`}
+                          >
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-semibold text-white">
+                              {initials}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold leading-snug text-slate-900 dark:text-slate-100">
+                                {row.line}
+                              </p>
+                              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{sub}</p>
+                              {row.createdAt && (
+                                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                                  {getRelativeTime(row.createdAt)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex shrink-0 flex-row items-center gap-2 self-center">
+                              {isAdmin && row.kind === "nudge" && row.nudgeId && (
+                                <button
+                                  type="button"
+                                  onClick={() => void openNudgesAndClose({ markNudgeReadId: row.nudgeId })}
+                                  className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60"
+                                  disabled={markNudgeReadMutation.isPending}
+                                >
+                                  Act
+                                </button>
+                              )}
+                              {row.isUnread && (
+                                <span className="h-2 w-2 shrink-0 rounded-full bg-violet-600" aria-hidden />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                </div>
+              </>
+            )}
+          </div>
         )}
 
         <div className="relative user-dropdown-container">
@@ -282,8 +581,8 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
                   className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                   data-testid="button-profile-settings"
                 >
-                  <User size={17} />
-                  <span>Profile Edit</span>
+                  <Settings size={17} />
+                  <span>Profile Settings</span>
                 </button>
 
                 <button
@@ -291,18 +590,23 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
                   className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                   data-testid="button-change-password"
                 >
-                  <Settings size={17} />
+                  <KeyRound size={17} />
                   <span>Change Password</span>
                 </button>
 
-                <button
-                  type="button"
-                  disabled
-                  className="flex w-full cursor-not-allowed items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-400 opacity-70"
-                >
-                  <Bell size={17} />
-                  <span>Notification</span>
-                </button>
+                {(isAdmin || isTL || isTA) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      setShowNotifications(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  >
+                    <Bell size={17} />
+                    <span>Notifications</span>
+                  </button>
+                )}
 
                 <div className="my-2 border-t border-slate-200" />
 
