@@ -1,4 +1,5 @@
 import type { AuthUser } from "@/contexts/auth-context";
+import { isClientPortalRole } from "@shared/client-roles";
 
 export function getDefaultRouteForAuthUser(user: AuthUser | null): string | null {
   if (!user) {
@@ -19,11 +20,12 @@ export function getDefaultRouteForAuthUser(user: AuthUser | null): string | null
     case "recruiter":
     case "talent_advisor":
       return "/recruiter";
-    case "client":
-      return "/client";
     case "support":
       return "/support-dashboard";
     default:
+      if (isClientPortalRole(employeeRole)) {
+        return "/client";
+      }
       return null;
   }
 }

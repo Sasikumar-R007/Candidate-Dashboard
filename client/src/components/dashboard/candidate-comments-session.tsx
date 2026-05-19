@@ -130,15 +130,15 @@ function normalizeResumeUrl(resumeFile?: string | null): string | null {
   return resumeUrl;
 }
 
-function roleBadgeClass(role: string, dark = false): string {
+function roleBadgeClass(role: string, onMutedPanel = false): string {
   const r = role.toLowerCase();
-  if (dark) {
-    if (r === "admin") return "bg-violet-500/25 text-violet-200";
-    if (r === "tl") return "bg-amber-500/25 text-amber-200";
-    if (r === "ta") return "bg-blue-500/25 text-blue-200";
-    if (r === "client") return "bg-emerald-500/25 text-emerald-200";
-    if (r === "hr") return "bg-pink-500/25 text-pink-200";
-    return "bg-gray-600/50 text-gray-300";
+  if (onMutedPanel) {
+    if (r === "admin") return "bg-violet-100 text-violet-800";
+    if (r === "tl") return "bg-amber-100 text-amber-900";
+    if (r === "ta") return "bg-blue-100 text-blue-800";
+    if (r === "client") return "bg-emerald-100 text-emerald-800";
+    if (r === "hr") return "bg-pink-100 text-pink-900";
+    return "bg-gray-200 text-gray-700";
   }
   if (r === "admin") return "bg-violet-100 text-violet-800";
   if (r === "tl") return "bg-amber-100 text-amber-800";
@@ -180,21 +180,21 @@ function SalaryDetailsBar({ salaryText }: { salaryText: string }) {
   return (
     <div
       className={cn(
-        "mx-4 mb-2 mt-2 shrink-0 border border-amber-900/30 bg-[#1a1f28] px-3 py-2.5",
+        "mx-4 mb-2 mt-2 shrink-0 border border-gray-300 bg-gray-200/70 px-3 py-2.5",
         BTN_RADIUS,
       )}
       data-testid="salary-details-bar"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <IndianRupee className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-300">Salary Details</span>
+          <IndianRupee className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Salary Details</span>
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  className="flex h-5 w-5 shrink-0 items-center justify-center text-amber-400 transition-colors hover:text-amber-300"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-700"
                   aria-label="Salary confidentiality notice"
                 >
                   <Info className="h-3.5 w-3.5" />
@@ -212,7 +212,7 @@ function SalaryDetailsBar({ salaryText }: { salaryText: string }) {
             </Tooltip>
           </TooltipProvider>
         </div>
-        <span className="shrink-0 text-sm font-medium text-amber-100" data-testid="text-salary-details-sample">
+        <span className="shrink-0 text-sm font-medium text-gray-800" data-testid="text-salary-details-sample">
           {salaryText}
         </span>
       </div>
@@ -752,23 +752,23 @@ export function CandidateCommentsSession({
         </section>
 
         <section
-          className="flex w-[42%] min-w-0 flex-col bg-[#0f1117] text-gray-100"
+          className="flex w-[42%] min-w-0 flex-col bg-gray-100 text-gray-900"
           aria-label="Candidate Comments"
         >
           <SectionHeader
             title="Comments"
-            dark
+            mutedPanel
             right={
               clientReject ? (
                 isRejected ? (
-                  <span className="text-xs font-medium text-red-400">Rejected</span>
+                  <span className="text-xs font-medium text-red-600">Rejected</span>
                 ) : clientReject.canReject ? (
                   showRejectForm ? (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className={cn("h-8 text-xs text-gray-400 hover:text-gray-200", BTN_RADIUS)}
+                      className={cn("h-8 text-xs text-gray-600 hover:text-gray-900", BTN_RADIUS)}
                       onClick={() => {
                         setShowRejectForm(false);
                         setRejectReason("");
@@ -782,7 +782,7 @@ export function CandidateCommentsSession({
                       variant="outline"
                       size="sm"
                       className={cn(
-                        "h-8 border-red-500/60 bg-transparent text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300",
+                        "h-8 border-red-300 bg-white text-xs text-red-600 hover:bg-red-50 hover:text-red-700",
                         BTN_RADIUS,
                       )}
                       onClick={() => setShowRejectForm(true)}
@@ -796,13 +796,13 @@ export function CandidateCommentsSession({
             }
           />
           {showRejectForm && clientReject?.canReject && !isRejected && (
-            <div className="shrink-0 space-y-2 border-b border-gray-800 bg-[#12151c] px-4 py-3">
+            <div className="shrink-0 space-y-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
               <Textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Enter rejection reason..."
                 className={cn(
-                  "min-h-[72px] resize-none border-gray-700 bg-[#161a22] text-sm text-gray-100 placeholder:text-gray-500",
+                  "min-h-[72px] resize-none border-gray-300 bg-white text-sm text-gray-900 placeholder:text-gray-400",
                   BTN_RADIUS,
                 )}
                 data-testid="textarea-session-reject-reason"
@@ -840,16 +840,16 @@ export function CandidateCommentsSession({
               <div className="space-y-6">
                 {commentsByDay.map((group) => (
                   <div key={group.label}>
-                    <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                    <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-wider text-gray-500">
                       {group.label}
                     </p>
                     <div className="space-y-4">
                       {group.items.map((comment) => (
                         <article key={comment.id} className="flex gap-3" data-testid={`comment-${comment.id}`}>
-                          <AvatarInitials name={comment.authorName} size="sm" dark />
+                          <AvatarInitials name={comment.authorName} size="sm" />
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-medium text-gray-100">{comment.authorName}</span>
+                              <span className="text-sm font-medium text-gray-900">{comment.authorName}</span>
                               <span
                                 className={cn(
                                   "px-1.5 py-0.5 text-[10px] font-semibold uppercase",
@@ -863,7 +863,7 @@ export function CandidateCommentsSession({
                                 {formatCommentTime(comment.createdAt)}
                               </span>
                             </div>
-                            <p className="mt-1 whitespace-pre-wrap text-sm text-gray-300">{comment.body}</p>
+                            <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{comment.body}</p>
                           </div>
                         </article>
                       ))}
@@ -875,15 +875,15 @@ export function CandidateCommentsSession({
             )}
           </div>
 
-          <div className="shrink-0 border-t border-gray-800 bg-[#0a0c10] px-4 py-3">
-            <p className="mb-2 text-[11px] text-gray-500">
+          <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="mb-2 text-[11px] text-gray-600">
               {apiMode === "client"
                 ? "Comments are shared with your hiring team on this application."
                 : "Comments are visible only to your team on this application."}
             </p>
             <div
               className={cn(
-                "flex items-center gap-2 border border-gray-700 bg-[#161a22] px-3 py-1.5",
+                "flex items-center gap-2 border border-gray-300 bg-white px-3 py-1.5 shadow-sm",
                 BTN_RADIUS,
               )}
             >
@@ -891,7 +891,7 @@ export function CandidateCommentsSession({
                 placeholder="Write to your team…"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                className="h-9 flex-1 border-0 bg-transparent pl-3 pr-0 text-sm text-gray-100 shadow-none placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-9 flex-1 border-0 bg-transparent pl-3 pr-0 text-sm text-gray-900 shadow-none placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0"
                 data-testid="input-candidate-comment"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -919,7 +919,7 @@ export function CandidateCommentsSession({
               </button>
             </div>
             {posterName && (
-              <p className="mt-1.5 text-[11px] text-gray-400">Posting as {posterName}</p>
+              <p className="mt-1.5 text-[11px] text-gray-500">Posting as {posterName}</p>
             )}
           </div>
         </section>
@@ -965,18 +965,18 @@ function SectionHeader({
   title,
   left,
   right,
-  dark = false,
+  mutedPanel = false,
 }: {
   title: string;
   left?: ReactNode;
   right?: ReactNode;
-  dark?: boolean;
+  mutedPanel?: boolean;
 }) {
   return (
     <div
       className={cn(
         "flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5",
-        dark ? "border-gray-800" : "border-gray-200",
+        mutedPanel ? "border-gray-200 bg-gray-50/80" : "border-gray-200",
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -984,7 +984,7 @@ function SectionHeader({
         <h2
           className={cn(
             "truncate text-xs font-semibold uppercase tracking-wider",
-            dark ? "text-gray-400" : "text-gray-600",
+            mutedPanel ? "text-gray-600" : "text-gray-600",
           )}
         >
           {title}

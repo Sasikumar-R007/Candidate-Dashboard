@@ -11,6 +11,7 @@ import { Link } from "wouter";
 import { useAuth, useCandidateAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest, apiFileUpload, queryClient } from "@/lib/queryClient";
+import { isClientPortalRole } from "@shared/client-roles";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -75,7 +76,7 @@ export function ProfileSettingsModal({
     if (employee?.role === "admin") return "/api/admin/profile";
     if (employee?.role === "team_leader") return "/api/team-leader/profile";
     if (employee?.role === "recruiter" || employee?.role === "talent_advisor") return "/api/recruiter/profile";
-    if (employee?.role === "client") return "/api/client/profile";
+    if (isClientPortalRole(employee?.role)) return "/api/client/profile";
     if (candidate) return "/api/candidate/profile";
     return null;
   }, [candidate, employee?.role]);
@@ -84,7 +85,7 @@ export function ProfileSettingsModal({
     if (employee?.role === "admin") return "/api/admin/upload/profile";
     if (employee?.role === "team_leader") return "/api/team-leader/upload/profile";
     if (employee?.role === "recruiter" || employee?.role === "talent_advisor") return "/api/recruiter/upload/profile";
-    if (employee?.role === "client") return "/api/client/upload/profile";
+    if (isClientPortalRole(employee?.role)) return "/api/client/upload/profile";
     return "/api/upload/profile";
   }, [employee?.role]);
 
@@ -217,7 +218,7 @@ export function ProfileSettingsModal({
         });
       }
       window.dispatchEvent(new CustomEvent("profile-updated"));
-      if (employee?.role === "client") {
+      if (isClientPortalRole(employee?.role)) {
         await queryClient.invalidateQueries({ queryKey: ["/api/client/profile"] });
       }
       toast({

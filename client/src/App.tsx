@@ -38,6 +38,7 @@ import PrivacyPolicyPage from "@/pages/privacy-policy";
 import PlatformTermsPage from "@/pages/platform-terms";
 import ClientAgreementPage from "@/pages/client-agreement";
 import EmployeeAgreementPage from "@/pages/employee-agreement";
+import ClientInvitePage from "@/pages/client-invite";
 
 
 function Router() {
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/platform-terms" component={PlatformTermsPage} />
       <Route path="/terms-of-use" component={PlatformTermsPage} />
       <Route path="/client-access-agreement" component={ClientAgreementPage} />
+      <Route path="/client-invite" component={ClientInvitePage} />
       <Route path="/employee-agreement" component={EmployeeAgreementPage} />
       
       <Route path="/candidate">

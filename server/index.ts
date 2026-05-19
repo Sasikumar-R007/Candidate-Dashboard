@@ -4,9 +4,13 @@ import { createServer as createNetServer } from "node:net";
 import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
 import { registerRoutes } from "./routes";
-import { ensureRequirementManagementColumns } from "./db";
+import { ensureRequirementManagementColumns, pool } from "./db";
+import {
+  ensureClientOrgSchema,
+  migrateLegacyClientLogins,
+  migrateClientEmployeeIdFormats,
+} from "./client-org";
 
 function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -88,60 +92,12 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Session configuration with PostgreSQL store for persistence
+// Session configuration with PostgreSQL store for persistence (shared app pool)
 const PgSession = connectPgSimple(session);
-
-// Fix incomplete Render database hostnames
-// Render internal URLs sometimes don't include the full domain
-function fixRenderDatabaseUrl(url: string | undefined): string {
-  if (!url) return '';
-  
-  // Check if this looks like a Render database hostname (dpg-xxxxx-xxxxx)
-  const renderHostnamePattern = /@(dpg-[a-z0-9]+-[a-z0-9]+)(?:\/|$|:)/i;
-  const match = url.match(renderHostnamePattern);
-  
-  if (match && !url.includes('.singapore-postgres.render.com') && !url.includes('.oregon-postgres.render.com') && !url.includes('.frankfurt-postgres.render.com')) {
-    // This is a Render database hostname without the full domain
-    // Try to detect the region from environment or default to singapore
-    // Common Render regions: singapore, oregon, frankfurt
-    const region = process.env.RENDER_DB_REGION || 'singapore';
-    const fullHostname = `${match[1]}.${region}-postgres.render.com`;
-    const fixedUrl = url.replace(match[1], fullHostname);
-    console.warn(`Fixed incomplete Render database hostname: ${match[1]} -> ${fullHostname}`);
-    return fixedUrl;
-  }
-  
-  return url;
-}
-
-// Fix the DATABASE_URL if needed
-const fixedDatabaseUrl = fixRenderDatabaseUrl(process.env.DATABASE_URL);
-
-// Check if this is a local database (localhost or 127.0.0.1)
-const isLocalDatabase = fixedDatabaseUrl.includes('localhost') || 
-                        fixedDatabaseUrl.includes('127.0.0.1') ||
-                        (!fixedDatabaseUrl.includes('neon.tech') && 
-                         !fixedDatabaseUrl.includes('render.com') &&
-                         !fixedDatabaseUrl.includes('sslmode=require'));
-
-// Configure session pool with appropriate SSL settings
-const sessionPoolConfig: any = {
-  connectionString: fixedDatabaseUrl,
-};
-
-if (isLocalDatabase) {
-  // For local PostgreSQL, disable SSL
-  sessionPoolConfig.ssl = false;
-} else {
-  // For cloud databases (Neon, etc.), use SSL
-  sessionPoolConfig.ssl = { rejectUnauthorized: false };
-}
-
-const sessionPool = new pg.Pool(sessionPoolConfig);
 
 app.use(session({
   store: new PgSession({
-    pool: sessionPool,
+    pool,
     tableName: 'session',
     createTableIfMissing: true,
   }),
@@ -195,6 +151,21 @@ app.use((req, res, next) => {
     log("Requirement management columns verified.", "db");
   } catch (error) {
     console.error("Failed to verify requirement management columns:", error);
+  }
+
+  try {
+    await ensureClientOrgSchema();
+    log("Client org schema verified.", "db");
+    const migration = await migrateLegacyClientLogins();
+    if (migration.migrated > 0) {
+      log(`Migrated ${migration.migrated} legacy client login(s).`, "db");
+    }
+    const idMigration = await migrateClientEmployeeIdFormats();
+    if (idMigration.updated > 0) {
+      log(`Normalized ${idMigration.updated} client employee ID(s).`, "db");
+    }
+  } catch (error) {
+    console.error("Failed to initialize client org schema/migration:", error);
   }
 
   const server = await registerRoutes(app);

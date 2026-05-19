@@ -60,9 +60,10 @@ const isLocalDatabase = fixedDatabaseUrl.includes('localhost') ||
 
 // Parse connection string and remove SSL requirements for local databases
 let connectionConfig: any = {
-  max: process.env.NODE_ENV === 'production' ? 10 : 5,
+  // Single shared pool (app + sessions). Remote DBs need headroom for parallel dashboard loads.
+  max: process.env.NODE_ENV === 'production' ? 20 : 15,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: isLocalDatabase ? 5000 : 20000,
 };
 
 // Try to parse the connection string for better password handling

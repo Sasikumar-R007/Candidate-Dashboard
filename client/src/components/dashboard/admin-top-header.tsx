@@ -203,6 +203,7 @@ export default function AdminTopHeader({
     data: employeeFeed,
     isLoading: feedLoading,
     isError: feedError,
+    refetch: refetchNotificationFeed,
   } = useQuery<EmployeeNotificationFeed>({
     queryKey: ["/api/employee/notifications-feed"],
     queryFn: async () => {
@@ -210,10 +211,10 @@ export default function AdminTopHeader({
       return res.json();
     },
     enabled: isAdmin || isTL || isTA,
-    staleTime: 0,
+    staleTime: 30_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
-    retry: 1,
+    retry: 2,
   });
 
   const markNudgeReadMutation = useMutation({
@@ -226,8 +227,6 @@ export default function AdminTopHeader({
     },
   });
 
-  const headerUnreadCount = employeeFeed?.unreadCount ?? 0;
-
   const notificationTabs = useMemo(() => {
     if (isAdmin) {
       return [
@@ -239,6 +238,7 @@ export default function AdminTopHeader({
     }
     if (isTL) {
       return [
+        { id: "all", label: "All" },
         { id: "newRequirements", label: "New Requirements" },
         { id: "nudges", label: "Nudges" },
         { id: "escalatedNudges", label: "Escalated Nudges" },
@@ -246,6 +246,7 @@ export default function AdminTopHeader({
       ];
     }
     return [
+      { id: "all", label: "All" },
       { id: "newRequirements", label: "New Requirements" },
       { id: "nudges", label: "Nudges" },
       { id: "escalatedNudges", label: "Escalated Nudges" },
@@ -310,6 +311,12 @@ export default function AdminTopHeader({
     if (notificationTab === "newCandidateApplied") return mergedRows.filter((r) => r.kind === "newCandidate");
     return mergedRows;
   }, [mergedRows, notificationTab]);
+
+  const headerUnreadCount = useMemo(() => {
+    const fromRows = mergedRows.filter((r) => r.isUnread).length;
+    const fromFeed = employeeFeed?.unreadCount ?? 0;
+    return Math.max(fromFeed, fromRows);
+  }, [mergedRows, employeeFeed]);
 
   const openNudgesAndClose = async (opts?: { markNudgeReadId?: string }) => {
     if (opts?.markNudgeReadId) {
@@ -452,16 +459,30 @@ export default function AdminTopHeader({
                     {feedLoading && (
                       <p className="px-3 py-8 text-center text-sm text-slate-500">Loading…</p>
                     )}
-                    {feedError && !feedLoading && (
-                      <p className="px-3 py-6 text-center text-sm text-amber-700 dark:text-amber-400">
-                        Notifications could not be loaded. Please refresh and try again.
+                    {feedError && !feedLoading && !employeeFeed && (
+                      <div className="px-3 py-6 text-center">
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                          Notifications could not be loaded.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void refetchNotificationFeed()}
+                          className="mt-3 text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    )}
+                    {feedError && !feedLoading && employeeFeed && filteredRows.length > 0 && (
+                      <p className="mx-3 mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                        Showing last loaded notifications. Pull to refresh if something looks out of date.
                       </p>
                     )}
-                    {!feedLoading && !feedError && filteredRows.length === 0 && (
+                    {!feedLoading && (!feedError || employeeFeed) && filteredRows.length === 0 && (
                       <p className="px-3 py-8 text-center text-sm text-slate-500">No notifications yet.</p>
                     )}
                     {!feedLoading &&
-                      !feedError &&
+                      (!feedError || !!employeeFeed) &&
                       filteredRows.map((row) => {
                         const initials = row.line.replace(/^\[/, "").charAt(0).toUpperCase() || "?";
                         const sub =

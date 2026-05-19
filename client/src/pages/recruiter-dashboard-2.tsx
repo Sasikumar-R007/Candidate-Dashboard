@@ -44,6 +44,7 @@ import { ChatDock } from '@/components/chat/chat-dock';
 import { ChatModal } from '@/components/chat/admin-chat-modal';
 import { useToast } from '@/hooks/use-toast';
 import { useEmployeeAuth } from '@/contexts/auth-context';
+import { PaperPlaneNudgeIcon } from '@/components/landing/paper-plane-nudge-icon';
 
 // Helper function to calculate elapsed working hours
 function getElapsedWorkingHours(startDateStr: string | Date): number {
@@ -86,6 +87,62 @@ function formatRemainingWorkingTime(elapsedHours: number, maxHours = 6): string 
   const mins = Math.floor((remainingHours - hours) * 60);
   if (hours === 0 && mins === 0) return "Escalated";
   return `${hours} hrs ${mins} mins`;
+}
+
+const APPLICANT_STATUS_STYLES: Record<string, { trigger: string; item: string }> = {
+  'Resume Review': {
+    trigger: 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100 hover:border-slate-300',
+    item: 'focus:bg-slate-100 focus:text-slate-800',
+  },
+  Shortlisted: {
+    trigger: 'bg-green-50 text-green-800 border-green-200 hover:bg-green-100 hover:border-green-300',
+    item: 'focus:bg-green-100 focus:text-green-800',
+  },
+  Screening: {
+    trigger: 'bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 hover:border-sky-300',
+    item: 'focus:bg-sky-100 focus:text-sky-800',
+  },
+  L1: {
+    trigger: 'bg-cyan-50 text-cyan-800 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300',
+    item: 'focus:bg-cyan-100 focus:text-cyan-800',
+  },
+  L2: {
+    trigger: 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 hover:border-blue-300',
+    item: 'focus:bg-blue-100 focus:text-blue-800',
+  },
+  L3: {
+    trigger: 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300',
+    item: 'focus:bg-indigo-100 focus:text-indigo-800',
+  },
+  'Final Round': {
+    trigger: 'bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100 hover:border-violet-300',
+    item: 'focus:bg-violet-100 focus:text-violet-800',
+  },
+  'HR Round': {
+    trigger: 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100 hover:border-purple-300',
+    item: 'focus:bg-purple-100 focus:text-purple-800',
+  },
+  Selected: {
+    trigger: 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100 hover:border-teal-300',
+    item: 'focus:bg-teal-100 focus:text-teal-800',
+  },
+  Closure: {
+    trigger: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300',
+    item: 'focus:bg-emerald-100 focus:text-emerald-800',
+  },
+  'Screened Out': {
+    trigger: 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100 hover:border-red-300',
+    item: 'focus:bg-red-100 focus:text-red-800',
+  },
+};
+
+function getApplicantStatusStyles(status: string) {
+  return (
+    APPLICANT_STATUS_STYLES[status] ?? {
+      trigger: 'bg-gray-50 text-gray-800 border-gray-200 hover:bg-gray-100 hover:border-gray-300',
+      item: 'focus:bg-gray-100 focus:text-gray-800',
+    }
+  );
 }
 
 export default function RecruiterDashboard2() {
@@ -1242,9 +1299,9 @@ export default function RecruiterDashboard2() {
   };
 
   // Use API data for recruiter context
-  const { data: recruiterProfile } = useQuery({
+  const { data: recruiterProfile, isLoading: isLoadingRecruiterProfile } = useQuery({
     queryKey: ['/api/recruiter/profile'],
-  }) as { data: any };
+  }) as { data: any; isLoading: boolean };
   const userName = recruiterProfile?.name || employee?.name || "Recruiter User";
   const userRole = employee?.role || 'recruiter';
 
@@ -1322,7 +1379,7 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/requirements'],
     staleTime: 0,
     refetchOnWindowFocus: true,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   });
 
   const requirementsTableData = recruiterRequirements;
@@ -1453,7 +1510,7 @@ export default function RecruiterDashboard2() {
     return { counts, breakdowns, pendingDistribution, closedDistribution };
   }, [activeRequirements]);
 
-  if (!recruiterProfile) {
+  if (isLoadingRecruiterProfile && !recruiterProfile && !employee) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center justify-center">
@@ -1653,13 +1710,19 @@ export default function RecruiterDashboard2() {
                                       onValueChange={(value) => handleStatusChange(applicant, value)}
                                       disabled={isUpdating}
                                     >
-                                      <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
-                                        }`}>
+                                      <SelectTrigger
+                                        className={`w-36 h-8 text-sm font-medium border transition-all duration-300 ${getApplicantStatusStyles(applicant.currentStatus).trigger} ${isUpdating ? 'opacity-50 cursor-wait' : ''
+                                          }`}
+                                      >
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
                                         {statuses.map((status) => (
-                                          <SelectItem key={status} value={status} className="transition-colors hover:bg-blue-50">
+                                          <SelectItem
+                                            key={status}
+                                            value={status}
+                                            className={`transition-colors ${getApplicantStatusStyles(status).item}`}
+                                          >
                                             {status}
                                           </SelectItem>
                                         ))}
@@ -1679,7 +1742,7 @@ export default function RecruiterDashboard2() {
                                           disabled={applicant.isUsingStaffOS}
                                           data-testid={`button-onboard-${applicant.id}`}
                                         >
-                                          <Send className="h-4 w-4 shrink-0" strokeWidth={2.25} />
+                                          <PaperPlaneNudgeIcon className="h-4 w-4 shrink-0" />
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
@@ -3931,13 +3994,19 @@ export default function RecruiterDashboard2() {
                                 onValueChange={(value) => handleStatusChange(applicant, value)}
                                 disabled={isUpdating}
                               >
-                                <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
-                                  }`}>
+                                <SelectTrigger
+                                  className={`w-36 h-8 text-sm font-medium border transition-all duration-300 ${getApplicantStatusStyles(applicant.currentStatus).trigger} ${isUpdating ? 'opacity-50 cursor-wait' : ''
+                                    }`}
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {statuses.map((status) => (
-                                    <SelectItem key={status} value={status} className="transition-colors hover:bg-blue-50">
+                                    <SelectItem
+                                      key={status}
+                                      value={status}
+                                      className={`transition-colors ${getApplicantStatusStyles(status).item}`}
+                                    >
                                       {status}
                                     </SelectItem>
                                   ))}
@@ -3957,7 +4026,7 @@ export default function RecruiterDashboard2() {
                                     disabled={applicant.isUsingStaffOS}
                                     data-testid={`button-onboard-modal-${applicant.id}`}
                                   >
-                                    <Send className="h-4 w-4 shrink-0" strokeWidth={2.25} />
+                                    <PaperPlaneNudgeIcon className="h-4 w-4 shrink-0" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>

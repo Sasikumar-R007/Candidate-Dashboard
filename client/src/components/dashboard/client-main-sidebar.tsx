@@ -1,31 +1,42 @@
-import { Briefcase, FileText, GitBranch, ChevronRight, LogOut, Zap } from "lucide-react";
-import { useState } from "react";
+import { ChevronRight, LogOut } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import staffosLogo from "@/assets/staffos logo 2.png";
+import {
+  getClientPortalNav,
+  normalizeClientPortalTab,
+  type ClientPortalTabId,
+} from "@/lib/client-portal-nav";
 
 interface ClientMainSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onExpandedChange?: (expanded: boolean) => void;
+  isClientAdmin?: boolean;
 }
 
-export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedChange }: ClientMainSidebarProps) {
+export default function ClientMainSidebar({
+  activeTab,
+  onTabChange,
+  onExpandedChange,
+  isClientAdmin = false,
+}: ClientMainSidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { toast } = useToast();
   const { logout } = useAuth();
 
-  const menuItems = [
-    { id: "dashboard", label: "Client Workspace", icon: Briefcase },
-    { id: "requirements", label: "Pipeline", icon: GitBranch },
-    { id: "reports", label: "Reports", icon: FileText },
-    { id: "nudges", label: "Nudges", icon: Zap },
-  ];
+  const menuItems = useMemo(
+    () => getClientPortalNav(isClientAdmin),
+    [isClientAdmin],
+  );
+
+  const normalizedActive = normalizeClientPortalTab(activeTab);
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -73,12 +84,74 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
     onExpandedChange?.(true);
   };
 
-  const handleTabClick = (tabId: string) => {
+  const handleTabClick = (tabId: ClientPortalTabId) => {
     onTabChange(tabId);
     if (isExpanded) {
       collapse();
     }
   };
+
+  const renderNavButtons = (expanded: boolean) =>
+    menuItems.map((item) => {
+      const IconComponent = item.icon;
+      const isActive = normalizedActive === item.id;
+
+      if (expanded) {
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => handleTabClick(item.id)}
+            className={`relative mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors ${
+              isActive
+                ? "bg-slate-800 text-cyan-400"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
+            data-testid={`button-nav-expanded-${item.id}`}
+          >
+            {isActive && (
+              <div className="absolute right-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-l-lg bg-cyan-400" />
+            )}
+            <IconComponent size={20} className={isActive ? "text-cyan-400" : "text-slate-300"} />
+            <span className={`text-sm font-medium ${isActive ? "text-cyan-400" : "text-slate-300"}`}>
+              {item.label}
+            </span>
+          </button>
+        );
+      }
+
+      return (
+        <div
+          key={item.id}
+          className="relative"
+          onMouseEnter={() => setHoveredItem(item.id)}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
+          <button
+            type="button"
+            onClick={() => handleTabClick(item.id)}
+            className={`w-full h-12 flex items-center justify-center transition-all duration-200 relative ${
+              isActive ? "bg-slate-800" : "hover:bg-slate-800"
+            }`}
+            data-testid={`button-nav-${item.id}`}
+          >
+            {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400" />}
+            <IconComponent
+              size={20}
+              className={isActive ? "text-cyan-400" : "text-slate-400 hover:text-white"}
+            />
+            {hoveredItem === item.id && (
+              <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
+                <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
+                  {item.label}
+                </div>
+              </div>
+            )}
+          </button>
+        </div>
+      );
+    });
 
   return (
     <>
@@ -88,43 +161,7 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
             <img src={staffosLogo} alt="StaffOS Logo" className="w-10 h-10 object-cover rounded-full" />
           </div>
 
-          <nav className="flex-1 py-4">
-            {menuItems.map((item) => {
-              const IconComponent = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <div
-                  key={item.id}
-                  className="relative"
-                  onMouseEnter={() => setHoveredItem(item.id)}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleTabClick(item.id)}
-                    className={`w-full h-12 flex items-center justify-center transition-all duration-200 relative ${
-                      isActive ? "bg-slate-800" : "hover:bg-slate-800"
-                    }`}
-                    data-testid={`button-nav-${item.id}`}
-                  >
-                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400" />}
-                    <IconComponent
-                      size={20}
-                      className={isActive ? "text-cyan-400" : "text-slate-400 hover:text-white"}
-                    />
-                    {hoveredItem === item.id && (
-                      <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
-                        <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
-                        <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
-                          {item.label}
-                        </div>
-                      </div>
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-          </nav>
+          <nav className="flex-1 py-4">{renderNavButtons(false)}</nav>
 
           <div className="border-t border-slate-700">
             <div
@@ -186,33 +223,7 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto py-3 px-2">
-              {menuItems.map((item) => {
-                const IconComponent = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleTabClick(item.id)}
-                    className={`relative mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors ${
-                      isActive
-                        ? "bg-slate-800 text-cyan-400"
-                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                    }`}
-                    data-testid={`button-nav-expanded-${item.id}`}
-                  >
-                    {isActive && (
-                      <div className="absolute right-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-l-lg bg-cyan-400" />
-                    )}
-                    <IconComponent size={20} className={isActive ? "text-cyan-400" : "text-slate-300"} />
-                    <span className={`text-sm font-medium ${isActive ? "text-cyan-400" : "text-slate-300"}`}>
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+            <nav className="flex-1 overflow-y-auto py-3 px-2">{renderNavButtons(true)}</nav>
 
             <div className="shrink-0 border-t border-slate-700 p-3">
               <button

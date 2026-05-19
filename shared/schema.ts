@@ -273,6 +273,8 @@ export const requirements = pgTable("requirements", {
   createdAt: text("created_at").notNull(),
   jdFile: text("jd_file"), // JD file URL for client-submitted JDs
   jdText: text("jd_text"), // JD text content for client-submitted JDs
+  /** Client Member assigned to handle this requirement (one per requirement). */
+  assignedClientMemberId: varchar("assigned_client_member_id"),
 });
 
 export const archivedRequirements = pgTable("archived_requirements", {
@@ -362,6 +364,39 @@ export const employees = pgTable("employees", {
   // Profile media (for dashboard display)
   profilePicture: text("profile_picture"),
   bannerImage: text("banner_image"),
+
+  /** Master Data clients.id — company this client user belongs to */
+  clientCompanyId: varchar("client_company_id"),
+  /** Optional department label for member organization (does not affect assignments). */
+  clientDepartmentId: varchar("client_department_id"),
+  /** Client member: whether this user may view salary details (enforced in UI later). */
+  canSeeSalaryDetails: boolean("can_see_salary_details").default(false),
+});
+
+export const clientDepartments = pgTable("client_departments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientCompanyId: varchar("client_company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull(),
+});
+
+export const clientInvites = pgTable("client_invites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientCompanyId: varchar("client_company_id").notNull(),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  /** client_admin (StaffOS Admin only) or client_member (Client Admin) */
+  inviteRole: text("invite_role").notNull(),
+  token: text("token").notNull().unique(),
+  status: text("status").notNull().default("pending"), // pending, accepted, expired, revoked
+  invitedByEmployeeId: varchar("invited_by_employee_id").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  acceptedAt: text("accepted_at"),
+  createdAt: text("created_at").notNull(),
+  clientDepartmentId: varchar("client_department_id"),
+  canSeeSalaryDetails: boolean("can_see_salary_details").default(false),
 });
 
 export const candidates = pgTable("candidates", {
@@ -733,6 +768,14 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
 });
 
+export const insertClientDepartmentSchema = createInsertSchema(clientDepartments).omit({
+  id: true,
+});
+
+export const insertClientInviteSchema = createInsertSchema(clientInvites).omit({
+  id: true,
+});
+
 export const insertImpactMetricsSchema = createInsertSchema(impactMetrics).omit({
   id: true,
 });
@@ -1054,6 +1097,10 @@ export type UserActivity = typeof userActivities.$inferSelect;
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
+export type InsertClientDepartment = z.infer<typeof insertClientDepartmentSchema>;
+export type ClientDepartment = typeof clientDepartments.$inferSelect;
+export type InsertClientInvite = z.infer<typeof insertClientInviteSchema>;
+export type ClientInvite = typeof clientInvites.$inferSelect;
 export type InsertImpactMetrics = z.infer<typeof insertImpactMetricsSchema>;
 export type ImpactMetrics = typeof impactMetrics.$inferSelect;
 export type InsertSupportConversation = z.infer<typeof insertSupportConversationSchema>;

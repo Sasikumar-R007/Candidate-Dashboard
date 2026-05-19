@@ -383,3 +383,81 @@ Team StaffOS
     return false;
   }
 }
+
+export interface ClientMemberInviteEmailData {
+  name: string;
+  email: string;
+  companyName: string;
+  inviteUrl: string;
+  expiresInDays: number;
+}
+
+export async function sendClientMemberInviteEmail(
+  data: ClientMemberInviteEmailData,
+): Promise<boolean> {
+  try {
+    const { client: resend, fromEmail } = await getUncachableResendClient();
+    const senderEmail = fromEmail || "StaffOS <onboarding@resend.dev>";
+
+    const emailContent = `
+Hi ${data.name},
+
+You have been invited to join ${data.companyName} on StaffOS as a Client Member.
+
+Accept your invitation and set your password using this link (valid for ${data.expiresInDays} days):
+${data.inviteUrl}
+
+If you did not expect this invitation, you can ignore this email.
+
+Warm regards,
+Team StaffOS
+    `.trim();
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #1a1a1a; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background-color: #f9f9f9; }
+    .button { display: inline-block; background-color: #4F46E5; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>StaffOS Client Invitation</h1></div>
+    <div class="content">
+      <p>Hi ${data.name},</p>
+      <p>You have been invited to join <strong>${data.companyName}</strong> on StaffOS as a Client Member.</p>
+      <p><a class="button" href="${data.inviteUrl}" target="_blank" rel="noopener noreferrer">Accept invitation</a></p>
+      <p style="font-size: 14px; color: #666;">Or copy this link: ${data.inviteUrl}</p>
+      <p style="font-size: 14px; color: #666;">This link expires in ${data.expiresInDays} days.</p>
+    </div>
+    <div class="footer"><p>Team StaffOS</p></div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    const result = await resend.emails.send({
+      from: senderEmail,
+      to: data.email,
+      subject: `You're invited to ${data.companyName} on StaffOS`,
+      text: emailContent,
+      html: htmlContent,
+    });
+
+    if (result.error) {
+      console.error("[Client Invite Email] Resend error:", result.error);
+      return false;
+    }
+    console.log(`[Client Invite Email] Sent to ${data.email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending client member invite email:", error);
+    return false;
+  }
+}

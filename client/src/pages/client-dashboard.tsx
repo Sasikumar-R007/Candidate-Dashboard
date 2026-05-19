@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw, UserCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,16 @@ import {
   CandidateCommentsSession,
   type CandidateCommentsSessionApplicant,
 } from '@/components/dashboard/candidate-comments-session';
+import { isClientPortalRole, isClientAdminRole } from "@shared/client-roles";
+import {
+  isClientPortalTabAllowed,
+  normalizeClientPortalTab,
+} from "@/lib/client-portal-nav";
+import { ClientTeamTab } from "@/components/client-dashboard/client-team-tab";
+import { ClientSettingsTab } from "@/components/client-dashboard/client-settings-tab";
+import { ClientRequirementAssignModal } from "@/components/client-dashboard/client-requirement-assign-modal";
+import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
+import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
 import {
   buildPipelineSessionList,
   CLIENT_PIPELINE_STAGE_ORDER,
@@ -44,7 +54,7 @@ import {
 export default function ClientDashboard() {
   const { logout } = useAuth();
   const { toast } = useToast();
-  const [sidebarTab, setSidebarTab] = useState('dashboard');
+  const [sidebarTab, setSidebarTab] = useState('overview');
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [sharedProfilesOpen, setSharedProfilesOpen] = useState(false);
   const [sharedProfilesRequirementId, setSharedProfilesRequirementId] = useState<string | null>(null);
@@ -310,10 +320,6 @@ export default function ClientDashboard() {
     queryKey: ['/api/client/closures'],
     placeholderData: []
   });
-  const { data: activeNudges = [] } = useQuery({
-    queryKey: ['/api/nudges'],
-    placeholderData: []
-  });
 
   const computedDashboardStats = useMemo(() => {
     const roles = Array.isArray(allRolesData) ? (allRolesData as any[]) : [];
@@ -346,11 +352,45 @@ export default function ClientDashboard() {
   const employee = useEmployeeAuth();
   const userName = clientProfile?.name || employee?.name || "Client User";
   const userRole = employee?.role || 'client';
-  const isClientRole = String(employee?.role || '').toLowerCase() === 'client';
+  const isClientPortalUser = isClientPortalRole(employee?.role);
+  const isClientAdmin =
+    isClientAdminRole(employee?.role) ||
+    (clientProfile as { isClientAdmin?: boolean } | undefined)?.isClientAdmin === true;
+
+  const { data: activeNudges = [] } = useQuery({
+    queryKey: ['/api/nudges', isClientAdmin],
+    enabled: isClientAdmin,
+    placeholderData: [],
+  });
+
   const [showClientAgreementModal, setShowClientAgreementModal] = useState(false);
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignRequirement, setAssignRequirement] = useState<{
+    id: string;
+    title: string;
+    memberId: string | null;
+  } | null>(null);
+
+  const handleSidebarTabChange = (tab: string) => {
+    const normalized = normalizeClientPortalTab(tab);
+    if (isClientPortalTabAllowed(normalized, isClientAdmin)) {
+      setSidebarTab(normalized);
+    } else {
+      setSidebarTab('overview');
+    }
+  };
 
   useEffect(() => {
-    if (!isClientRole) {
+    const normalized = normalizeClientPortalTab(sidebarTab);
+    if (!isClientPortalTabAllowed(normalized, isClientAdmin)) {
+      setSidebarTab('overview');
+    }
+  }, [isClientAdmin, sidebarTab]);
+
+  useEffect(() => {
+    if (!isClientPortalUser) {
       setShowClientAgreementModal(false);
       return;
     }
@@ -358,7 +398,34 @@ export default function ClientDashboard() {
       return;
     }
     setShowClientAgreementModal(clientProfile.clientAgreementAccepted !== true);
-  }, [isClientRole, isLoadingProfile, clientProfile]);
+  }, [isClientPortalUser, isLoadingProfile, clientProfile]);
+
+  const clientHeaderProps = useMemo(
+    () => ({
+      companyName:
+        (clientProfile as { company?: string })?.company ||
+        (isLoadingProfile ? "Loading..." : "Company"),
+      clientName: (clientProfile as { name?: string })?.name || employee?.name || undefined,
+      clientEmail: (clientProfile as { email?: string })?.email || employee?.email || undefined,
+      displayEmployeeId:
+        employee?.employeeId || (clientProfile as { employeeId?: string })?.employeeId || null,
+      isClientAdmin,
+      onHelpClick: () => setIsHelpChatOpen(true),
+      portalNudges: isClientAdmin ? activeNudges : [],
+      onOpenNudges: () => handleSidebarTabChange("nudges"),
+      onOpenClosures: () => setIsClosureModalOpen(true),
+      onOpenProfileSettings: () => setProfileSettingsOpen(true),
+      onOpenChangePassword: () => setChangePasswordOpen(true),
+    }),
+    [
+      clientProfile,
+      isLoadingProfile,
+      employee,
+      isClientAdmin,
+      activeNudges,
+      allClosureReports,
+    ],
+  );
 
   const handleClientAgreementAccept = async () => {
     if (!employee?.id) return;
@@ -689,8 +756,9 @@ export default function ClientDashboard() {
   };
 
   const renderMainContent = () => {
+    const activeTab = normalizeClientPortalTab(sidebarTab);
     if (
-      sidebarTab === 'requirements' &&
+      activeTab === 'pipeline' &&
       pipelineView === 'candidate-session' &&
       sessionApplicationId
     ) {
@@ -716,21 +784,13 @@ export default function ClientDashboard() {
       );
     }
 
-    switch (sidebarTab) {
+    switch (activeTab) {
+      case 'overview':
       case 'dashboard':
         return (
           <div className="h-full overflow-y-auto">
             {/* Simple Client Header */}
-            <SimpleClientHeader
-              companyName={(clientProfile as any)?.company || (isLoadingProfile ? 'Loading...' : 'Company')}
-              clientName={(clientProfile as any)?.name || undefined}
-              clientEmail={(clientProfile as any)?.email || undefined}
-              onHelpClick={() => setIsHelpChatOpen(true)}
-              nudgeCount={Array.isArray(activeNudges) ? activeNudges.length : 0}
-              closureCount={Array.isArray(allClosureReports) ? allClosureReports.length : 0}
-              onOpenNudges={() => setSidebarTab('nudges')}
-              onOpenClosures={() => setIsClosureModalOpen(true)}
-            />
+            <SimpleClientHeader {...clientHeaderProps} />
 
             <div className="px-6 py-6 space-y-6">
               {/* Stats Cards - Individual Cards Design (Image 2) */}
@@ -793,10 +853,24 @@ export default function ClientDashboard() {
               {/* Nudge Escalation Table */}
               <ActiveNudgesTable />
 
-              {/* Roles & Status Table - Redesigned (Image 2) */}
+            </div>
+          </div>
+        );
+
+      case 'req_jd':
+        return (
+          <div className="h-full overflow-y-auto">
+            <SimpleClientHeader {...clientHeaderProps} />
+            <div className="px-6 py-6 space-y-6">
+              {!isClientAdmin && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  View-only access. Contact your Client Admin to create or update requirements.
+                </p>
+              )}
+              {/* Requirements / JD */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-lg font-bold text-gray-900">Roles & Status</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Requirements / JD</h3>
                   <Button
                     type="button"
                     variant="outline"
@@ -820,17 +894,20 @@ export default function ClientDashboard() {
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Profile Shared</th>
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Last Active</th>
+                        {isClientAdmin && (
+                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Assign</th>
+                        )}
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider"></th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {isLoadingRoles ? (
                         <tr>
-                          <td colSpan={9} className="px-6 py-8 text-center text-gray-500">Loading roles...</td>
+                          <td colSpan={isClientAdmin ? 10 : 9} className="px-6 py-8 text-center text-gray-500">Loading roles...</td>
                         </tr>
                       ) : rolesData.length === 0 ? (
                         <tr>
-                          <td colSpan={9} className="px-6 py-8 text-center text-gray-500">No roles found. Upload a JD to get started.</td>
+                          <td colSpan={isClientAdmin ? 10 : 9} className="px-6 py-8 text-center text-gray-500">No roles found. Upload a JD to get started.</td>
                         </tr>
                       ) : (
                         rolesData.map((role, index) => {
@@ -867,6 +944,39 @@ export default function ClientDashboard() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-center">{role.profilesShared}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.lastActive}</td>
+                              {isClientAdmin && (
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 gap-1 px-2"
+                                    title={
+                                      (role as { assignedMemberName?: string }).assignedMemberName
+                                        ? `Assigned: ${(role as { assignedMemberName?: string }).assignedMemberName}`
+                                        : "Assign member"
+                                    }
+                                    onClick={() => {
+                                      const fullRole = (allRolesData as any[]).find(
+                                        (r) => r.roleId === role.roleId,
+                                      ) || role;
+                                      setAssignRequirement({
+                                        id: fullRole.id || fullRole.roleId,
+                                        title: fullRole.position || fullRole.role || "Requirement",
+                                        memberId: fullRole.assignedClientMemberId || null,
+                                      });
+                                      setAssignModalOpen(true);
+                                    }}
+                                  >
+                                    <UserCheck className="h-4 w-4 text-blue-600" />
+                                    {(role as { assignedMemberName?: string | null }).assignedMemberName && (
+                                      <span className="max-w-[72px] truncate text-xs text-gray-600">
+                                        {(role as { assignedMemberName?: string }).assignedMemberName}
+                                      </span>
+                                    )}
+                                  </Button>
+                                </td>
+                              )}
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -894,34 +1004,37 @@ export default function ClientDashboard() {
                                       <Users className="mr-2 h-4 w-4" />
                                       Shared Profiles
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                      const fullRole = (allRolesData as any[]).find(r => r.roleId === role.roleId);
-                                      setSelectedRoleForEdit(fullRole || role);
-                                      // Initialize edit form with current values
-                                      setEditJdPosition(fullRole?.role || role?.role || '');
-                                      setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
-                                      setEditJdText(fullRole?.jdText || role?.jdText || '');
-                                      setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || '');
-                                      setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || '');
-                                      setEditKnowledgeOnly(fullRole?.knowledgeOnly || role?.knowledgeOnly || '');
-                                      setEditSpecialInstructions(fullRole?.specialInstructions || role?.specialInstructions || '');
-                                      setEditJdFile(null);
-                                      if (editJdFilePreviewUrl) {
-                                        URL.revokeObjectURL(editJdFilePreviewUrl);
-                                      }
-                                      setEditJdFilePreviewUrl(null);
-                                      setIsEditRoleModalOpen(true);
-                                    }}>
-                                      <Edit3 className="mr-2 h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => setRoleToDelete(role.roleId)}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
+                                    {isClientAdmin && (
+                                      <>
+                                        <DropdownMenuItem onClick={() => {
+                                          const fullRole = (allRolesData as any[]).find(r => r.roleId === role.roleId);
+                                          setSelectedRoleForEdit(fullRole || role);
+                                          setEditJdPosition(fullRole?.role || role?.role || '');
+                                          setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
+                                          setEditJdText(fullRole?.jdText || role?.jdText || '');
+                                          setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || '');
+                                          setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || '');
+                                          setEditKnowledgeOnly(fullRole?.knowledgeOnly || role?.knowledgeOnly || '');
+                                          setEditSpecialInstructions(fullRole?.specialInstructions || role?.specialInstructions || '');
+                                          setEditJdFile(null);
+                                          if (editJdFilePreviewUrl) {
+                                            URL.revokeObjectURL(editJdFilePreviewUrl);
+                                          }
+                                          setEditJdFilePreviewUrl(null);
+                                          setIsEditRoleModalOpen(true);
+                                        }}>
+                                          <Edit3 className="mr-2 h-4 w-4" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => setRoleToDelete(role.roleId)}
+                                          className="text-red-600 focus:text-red-600"
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </td>
@@ -934,7 +1047,7 @@ export default function ClientDashboard() {
                 </div>
               </div>
 
-              {/* JD Upload Section - Redesigned (Image 3) */}
+              {isClientAdmin && (
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-bold text-gray-900">JD Upload</h3>
@@ -1152,29 +1265,24 @@ export default function ClientDashboard() {
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </div>
         );
 
+      case 'pipeline':
       case 'requirements':
         return (
           <div className="flex h-full min-h-0 flex-col">
-            <SimpleClientHeader
-              companyName={(clientProfile as any)?.company || (isLoadingProfile ? 'Loading...' : 'Company')}
-              clientName={(clientProfile as any)?.name || undefined}
-              clientEmail={(clientProfile as any)?.email || undefined}
-              onHelpClick={() => setIsHelpChatOpen(true)}
-              nudgeCount={Array.isArray(activeNudges) ? activeNudges.length : 0}
-              closureCount={Array.isArray(allClosureReports) ? allClosureReports.length : 0}
-              onOpenNudges={() => setSidebarTab('nudges')}
-              onOpenClosures={() => setIsClosureModalOpen(true)}
-            />
+            <SimpleClientHeader {...clientHeaderProps} />
             <div className="flex min-h-0 flex-1">
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="space-y-6 p-6">
                   {/* Pipeline Header with Filters - Matching Image Design */}
                   <div className="flex flex-shrink-0 justify-between items-center">
-                    <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {isClientAdmin ? 'Pipeline & Closures' : 'Pipeline'}
+                    </h2>
                     <div className="flex items-center gap-3">
                       {/* Requirement Filter */}
                       <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
@@ -1304,7 +1412,7 @@ export default function ClientDashboard() {
                     </div>
                   </div>
 
-                  {/* Closure Reports Table */}
+                  {isClientAdmin && (
                   <Card>
                     <CardHeader className="border-b border-gray-200 bg-gray-50">
                       <div className="flex justify-between items-center">
@@ -1354,6 +1462,7 @@ export default function ClientDashboard() {
                       </div>
                     </CardContent>
                   </Card>
+                  )}
                 </div>
               </div>
 
@@ -1388,14 +1497,7 @@ export default function ClientDashboard() {
           <div className="flex flex-col h-full">
             {/* Simple Client Header */}
             <div className="print:hidden">
-              <SimpleClientHeader
-                companyName={(clientProfile as any)?.company || 'Loading...'}
-                onHelpClick={() => setIsHelpChatOpen(true)}
-                nudgeCount={Array.isArray(activeNudges) ? activeNudges.length : 0}
-                closureCount={Array.isArray(allClosureReports) ? allClosureReports.length : 0}
-                onOpenNudges={() => setSidebarTab('nudges')}
-                onOpenClosures={() => setIsClosureModalOpen(true)}
-              />
+              <SimpleClientHeader {...clientHeaderProps} />
             </div>
             <div className="flex flex-1 overflow-hidden">
               {/* Main Content Area */}
@@ -1849,6 +1951,27 @@ export default function ClientDashboard() {
           </div>
         );
 
+      case 'team':
+        return (
+          <div className="flex h-full min-h-0 flex-col">
+            <SimpleClientHeader {...clientHeaderProps} />
+            <ClientTeamTab />
+          </div>
+        );
+
+      case 'settings':
+        return (
+          <div className="flex h-full min-h-0 flex-col">
+            <SimpleClientHeader {...clientHeaderProps} />
+            <ClientSettingsTab
+              companyName={(clientProfile as any)?.company}
+              userName={userName}
+              userEmail={(clientProfile as any)?.email}
+              isClientAdmin={isClientAdmin}
+            />
+          </div>
+        );
+
       case 'nudges':
         return (
           <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
@@ -1961,7 +2084,7 @@ export default function ClientDashboard() {
     );
   }
 
-  const blockClientDashboard = isClientRole && showClientAgreementModal;
+  const blockClientDashboard = isClientPortalUser && showClientAgreementModal;
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -1976,14 +2099,15 @@ export default function ClientDashboard() {
         {/* Client Sidebar with Toggle */}
         <ClientMainSidebar
           activeTab={sidebarTab}
-          onTabChange={setSidebarTab}
+          onTabChange={handleSidebarTabChange}
           onExpandedChange={setIsSidebarExpanded}
+          isClientAdmin={isClientAdmin}
         />
 
         {/* Main Content Area */}
         <div className="flex min-h-0 flex-1 ml-16">
           {/* Middle Section */}
-          <div className={`${sidebarTab === 'dashboard' ? 'flex-1' : 'w-full'} flex h-full min-h-0 flex-col overflow-hidden bg-white`}>
+          <div className={`${normalizeClientPortalTab(sidebarTab) === 'overview' ? 'flex-1' : 'w-full'} flex h-full min-h-0 flex-col overflow-hidden bg-white`}>
             {renderMainContent()}
           </div>
 
@@ -2903,6 +3027,22 @@ export default function ClientDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ProfileSettingsModal
+        open={profileSettingsOpen}
+        onOpenChange={setProfileSettingsOpen}
+      />
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
+      <ClientRequirementAssignModal
+        open={assignModalOpen}
+        onOpenChange={setAssignModalOpen}
+        requirementId={assignRequirement?.id ?? null}
+        requirementTitle={assignRequirement?.title}
+        currentMemberId={assignRequirement?.memberId}
+      />
 
       {/* Chat Support */}
       <ChatDock

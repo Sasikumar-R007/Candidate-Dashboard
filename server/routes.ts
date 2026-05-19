@@ -15,6 +15,42 @@ import path from "path";
 import "./types"; // Import session types
 import { db } from "./db";
 
+/** Public URL for client-member invite links (must match where the Vite app is served). */
+function resolveClientInviteBaseUrl(req: Request): string {
+  const fromEnv = (process.env.FRONTEND_URL || process.env.CLIENT_FRONTEND_URL || "")
+    .trim()
+    .replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+
+  if (process.env.NODE_ENV === "production") {
+    const host = req.get("host");
+    if (host) return `https://${host}`;
+    return "https://staffos.io";
+  }
+
+  const origin = req.get("origin");
+  if (origin) {
+    try {
+      const u = new URL(origin);
+      return `${u.protocol}//${u.host}`;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const referer = req.get("referer");
+  if (referer) {
+    try {
+      const u = new URL(referer);
+      return `${u.protocol}//${u.host}`;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return "http://localhost:5173";
+}
+
 function calculateQuartersSince(joiningDate: string | Date | null | undefined): number {
   if (!joiningDate) return 0;
   const join = new Date(joiningDate);
@@ -68,6 +104,29 @@ import {
   normalizeSkills,
   parseAndNormalizeSkills
 } from "./source-resume-search";
+import {
+  isClientPortalRole,
+  isClientAdminRole,
+} from "@shared/client-roles";
+import {
+  resolveClientCompanyForEmployee,
+  getJobApplicationsScopedToClientEmployee,
+  clientEmployeeCanAccessApplication,
+  getClientScopedRequirements,
+  clientNudgeInScope,
+} from "./client-org";
+import {
+  getClientTeamContext,
+  createClientDepartment,
+  createClientMemberInvite,
+  createClientTeamMember,
+  updateClientTeamMember,
+  deleteClientTeamMember,
+  assignRequirementToClientMember,
+  getClientInvitePreview,
+  acceptClientMemberInvite,
+} from "./client-team";
+import { sendClientMemberInviteEmail } from "./email-service";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -260,6 +319,30 @@ function calculateWorkingHours(start: Date, end: Date): number {
   return totalMinutes / 60;
 }
 
+let lastNudgeEscalationSyncAt = 0;
+let nudgeEscalationSyncInFlight: Promise<void> | null = null;
+
+/** Throttled sync so notification feed requests do not block on every nudge update. */
+async function maybeSyncActiveNudgeEscalations(): Promise<void> {
+  const now = Date.now();
+  if (now - lastNudgeEscalationSyncAt < 60_000) return;
+  if (nudgeEscalationSyncInFlight) {
+    await nudgeEscalationSyncInFlight;
+    return;
+  }
+  nudgeEscalationSyncInFlight = (async () => {
+    try {
+      await syncActiveNudgeEscalations();
+      lastNudgeEscalationSyncAt = Date.now();
+    } catch (error) {
+      console.error("[nudges] Escalation sync failed (feed will use current levels):", error);
+    } finally {
+      nudgeEscalationSyncInFlight = null;
+    }
+  })();
+  await nudgeEscalationSyncInFlight;
+}
+
 async function syncActiveNudgeEscalations(): Promise<void> {
   const allNudges = await storage.getActiveNudges();
   const now = new Date();
@@ -393,7 +476,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
   const isTL = role === "team_leader";
   const isAdmin = role === "admin";
 
-  await syncActiveNudgeEscalations();
+  await maybeSyncActiveNudgeEscalations();
   const [allNudges, allEmployees, allRevenueMappings, allRequirements, allApplications] = await Promise.all([
     storage.getActiveNudges(),
     storage.getAllEmployees(),
@@ -537,31 +620,33 @@ async function buildEmployeeNotificationsFeed(employee: any) {
     };
   }
 
-  if (role === "client") {
-    const allClients = await storage.getAllClients();
-    const linkedClient = allClients.find((c: any) =>
-      !c.isLoginOnly &&
-      (
-        (c.employeeId && c.employeeId === employee.employeeId) ||
-        (c.email && employee.email && c.email.toLowerCase() === employee.email.toLowerCase())
-      )
-    );
-    const clientCompanyName = (linkedClient?.brandName || employee.name || "").trim();
-    const normalizedClientCompany = clientCompanyName.toLowerCase();
+  if (isClientPortalRole(role)) {
+    const { companyName, requirements: clientRequirements, memberRequirementIds } =
+      await getClientScopedRequirements({
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      });
 
-    const clientRequirements = allRequirements.filter((r) =>
-      (r.company || "").trim().toLowerCase() === normalizedClientCompany
-    );
+    const normalizedClientCompany = (companyName || "").trim().toLowerCase();
     const clientRequirementIds = new Set(clientRequirements.map((r) => r.id));
     const clientRequirementPositions = new Set(
-      clientRequirements.map((r) => (r.position || "").trim().toLowerCase()).filter(Boolean)
+      clientRequirements.map((r) => (r.position || "").trim().toLowerCase()).filter(Boolean),
+    );
+
+    const applicationById = new Map(
+      allApplications.map((app: any) => [app.id, app]),
     );
 
     const nudges = allNudges
-      .filter((n) =>
-        !n.isResponded &&
-        n.escalationLevel === "client" &&
-        (n.company || "").trim().toLowerCase() === normalizedClientCompany
+      .filter(
+        (n) =>
+          !n.isResponded &&
+          n.escalationLevel === "client" &&
+          clientNudgeInScope(n, companyName, memberRequirementIds, applicationById),
       )
       .map((n) => ({
         id: n.id,
@@ -570,8 +655,16 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         isUnread: !n.isRead,
       }));
 
-    const closures = [...allRevenueMappings]
-      .filter((rm) => (rm.clientName || "").trim().toLowerCase() === normalizedClientCompany)
+    let revenueClosures = [...allRevenueMappings].filter(
+      (rm) => (rm.clientName || "").trim().toLowerCase() === normalizedClientCompany,
+    );
+    if (memberRequirementIds !== null) {
+      revenueClosures = revenueClosures.filter((rm) =>
+        clientRequirementPositions.has((rm.position || "").trim().toLowerCase()),
+      );
+    }
+
+    const closures = revenueClosures
       .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
       .slice(0, 100)
       .map((rm) => {
@@ -589,6 +682,10 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         if (!isShortlistedApplicationStatus(app.status)) return false;
 
         const reqId = (app.requirementId || "").trim();
+        if (memberRequirementIds !== null) {
+          return !!reqId && memberRequirementIds.has(reqId);
+        }
+
         const appCompany = (app.company || "").trim().toLowerCase();
         const appRole = (app.jobTitle || app.requirementPosition || "").trim().toLowerCase();
 
@@ -1360,117 +1457,31 @@ async function resolveApplicationCandidateDetails(application: {
 
 // Authentication middleware for client routes ONLY
 function requireClientAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.employeeId || req.session.employeeRole !== 'client') {
+  if (!req.session.employeeId || !isClientPortalRole(req.session.employeeRole)) {
     return res.status(403).json({ message: "Access denied. Client authentication required." });
   }
   next();
 }
 
-/** Resolve Master Data client for a logged-in client employee (shared by client dashboard APIs). */
-async function findCompanyForEmployee(employee: any) {
-  const clients = await storage.getAllClients();
-  if (!employee) return undefined;
-
-  const emEmail = (employee.email || "").trim().toLowerCase();
-  const emHumanId = (employee.employeeId || "").trim();
-  const emName = (employee.name || "").trim().toLowerCase();
-
-  if (emHumanId && (emHumanId.includes("SPOC") || emHumanId.includes("POC"))) {
-    const companyCodeMatch = emHumanId.match(/^(.+?)(?:SPOC|POC)/);
-    if (companyCodeMatch) {
-      const companyCode = companyCodeMatch[1];
-      const company = clients.find((c) => c.clientCode === companyCode && !c.isLoginOnly);
-      if (company) return company;
-    }
+function requireClientAdminAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.employeeId || !isClientAdminRole(req.session.employeeRole)) {
+    return res.status(403).json({ message: "Access denied. Client Admin privileges required." });
   }
-
-  const linkedClient = clients.find(
-    (c: any) =>
-      !c.isLoginOnly &&
-      ((c.employeeId && String(c.employeeId).trim() === emHumanId) ||
-        (c.email && emEmail && String(c.email).trim().toLowerCase() === emEmail))
-  );
-  if (linkedClient) return linkedClient;
-
-  const byName = clients.find(
-    (c: any) =>
-      !c.isLoginOnly &&
-      emName &&
-      (String(c.brandName || "").trim().toLowerCase() === emName ||
-        String(c.incorporatedName || "").trim().toLowerCase() === emName)
-  );
-  if (byName) return byName;
-
-  return undefined;
+  next();
 }
 
-/**
- * Job applications this client should see: linked requirement, company name variants,
- * role title match to a client requirement, or recruiter job (company + role) bridge.
- */
-async function getJobApplicationsScopedToClient(employee: any): Promise<{
-  client: Awaited<ReturnType<typeof findCompanyForEmployee>>;
-  companyName: string;
-  clientRequirements: Awaited<ReturnType<typeof storage.getRequirementsByCompany>>;
-  applications: any[];
-}> {
-  const client = await findCompanyForEmployee(employee);
-  const companyName = client?.brandName || employee.name;
+const findCompanyForEmployee = resolveClientCompanyForEmployee;
 
-  const clientRequirements = await storage.getRequirementsByCompany(companyName);
-  const clientRequirementIds = new Set(clientRequirements.map((req: any) => req.id));
-  const clientRequirementPositions = new Set(
-    clientRequirements.map((req: any) => (req.position || "").trim().toLowerCase()).filter(Boolean)
-  );
-
-  const clientCompanyNames = new Set<string>();
-  const addCompany = (n?: string | null) => {
-    const v = (n || "").trim().toLowerCase();
-    if (v) clientCompanyNames.add(v);
-  };
-  addCompany(companyName);
-  addCompany(client?.brandName);
-  addCompany((client as any)?.incorporatedName);
-  addCompany(employee?.name);
-  for (const r of clientRequirements) addCompany((r as any).company);
-
-  const allApplications = await storage.getAllJobApplications();
-  let allRecruiterJobs: any[] = [];
-  try {
-    allRecruiterJobs = await storage.getAllRecruiterJobs();
-  } catch {
-    allRecruiterJobs = [];
-  }
-  const recruiterJobById = new Map(allRecruiterJobs.map((j: any) => [j.id, j]));
-
-  const inScope = (app: any) => {
-    const reqId = (app.requirementId || "").trim();
-    if (reqId && clientRequirementIds.has(reqId)) return true;
-
-    const appCompany = (app.company || "").trim().toLowerCase();
-    if (appCompany && clientCompanyNames.has(appCompany)) return true;
-
-    const appRole = (app.jobTitle || app.roleApplied || "").trim().toLowerCase();
-    if (appRole && clientRequirementPositions.has(appRole)) return true;
-
-    const jobId = (app.recruiterJobId || "").trim();
-    if (jobId) {
-      const job = recruiterJobById.get(jobId) as any;
-      if (job) {
-        const jc = (job.companyName || "").trim().toLowerCase();
-        const jr = (job.role || "").trim().toLowerCase();
-        if (jc && clientCompanyNames.has(jc) && jr && clientRequirementPositions.has(jr)) return true;
-      }
-    }
-    return false;
-  };
-
-  return {
-    client,
-    companyName,
-    clientRequirements,
-    applications: allApplications.filter(inScope),
-  };
+async function getJobApplicationsScopedToClient(employee: any) {
+  return getJobApplicationsScopedToClientEmployee({
+    id: employee.id,
+    role: employee.role,
+    name: employee.name,
+    email: employee.email,
+    employeeId: employee.employeeId,
+    clientCompanyId: employee.clientCompanyId,
+    clientDepartmentId: employee.clientDepartmentId,
+  });
 }
 
 function serializeApplicationComment(comment: {
@@ -1496,16 +1507,32 @@ function serializeApplicationComment(comment: {
 }
 
 async function clientCanAccessJobApplication(
-  employee: { id: string; name?: string | null },
+  employee: {
+    id: string;
+    role?: string;
+    name?: string | null;
+    email?: string;
+    employeeId?: string | null;
+    clientCompanyId?: string | null;
+  },
   applicationId: string,
 ): Promise<{ allowed: boolean; application?: Awaited<ReturnType<typeof storage.getJobApplicationById>> }> {
   const application = await storage.getJobApplicationById(applicationId);
   if (!application) {
     return { allowed: false };
   }
-  const { applications } = await getJobApplicationsScopedToClient(employee);
-  const allowed = applications.some((app: { id?: string }) => app.id === applicationId);
-  return { allowed, application };
+  const allowed = await clientEmployeeCanAccessApplication(
+    {
+      id: employee.id,
+      role: employee.role || "",
+      name: employee.name || "",
+      email: employee.email || "",
+      employeeId: employee.employeeId,
+      clientCompanyId: employee.clientCompanyId,
+    },
+    application,
+  );
+  return { allowed, application: allowed ? application : undefined };
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1688,7 +1715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         const er = String(employee.role || "").toLowerCase();
         if (role === "client") {
-          if (er !== "client" || consent_type !== "client_agreement") {
+          if (!isClientPortalRole(er) || consent_type !== "client_agreement") {
             return res.status(400).json({ message: "Invalid client consent request" });
           }
         } else if (role === "employee") {
@@ -1754,7 +1781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(401).json({ message: "Not authenticated" });
         }
         const er = String(employee.role || "").toLowerCase();
-        if (er === "client") {
+        if (isClientPortalRole(er)) {
           const clientAgreementAt = await getLatestConsentAcceptedAtIso(employee.id, "client_agreement");
           return res.json({
             userType: "client",
@@ -1886,8 +1913,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter for Actionable Nudges only (Current level's turn and not responded)
       if (role === 'admin') {
         activeNudges = updatedNudges.filter(n => !n.isResponded && n.escalationLevel === 'admin');
-      } else if (role === 'client') {
-        activeNudges = updatedNudges.filter(n => !n.isResponded && n.escalationLevel === 'client');
+      } else if (isClientPortalRole(role)) {
+        const { companyName, memberRequirementIds } = await getClientScopedRequirements({
+          id: employee.id,
+          role: employee.role,
+          name: employee.name,
+          email: employee.email,
+          employeeId: employee.employeeId,
+          clientCompanyId: employee.clientCompanyId,
+        });
+        const allApps = await storage.getAllJobApplications();
+        const applicationById = new Map(allApps.map((a: any) => [a.id, a]));
+        activeNudges = updatedNudges.filter(
+          (n) =>
+            !n.isResponded &&
+            n.escalationLevel === "client" &&
+            clientNudgeInScope(n, companyName, memberRequirementIds, applicationById),
+        );
       } else if (role === 'team_leader') {
         const allEmployees = await storage.getAllEmployees();
         const teamMemberKeys = new Set<string>();
@@ -1938,7 +1980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (n.isResponded && n.escalationLevel === 'admin') || 
           (['client'].includes(n.escalationLevel || ''))
         );
-      } else if (role === 'client') {
+      } else if (isClientPortalRole(role)) {
         // Client sees nudges they responded to
         logNudges = allNudges.filter(n => n.isResponded && n.escalationLevel === 'client');
       } else if (role === 'team_leader') {
@@ -6261,11 +6303,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Recruiter role required." });
       }
 
-      // Get all employees to find reporting manager's name
-      const allEmployees = await storage.getAllEmployees();
       let reportingToName = '-';
       if (employee.reportingTo) {
-        const manager = allEmployees.find(emp => emp.employeeId === employee.reportingTo);
+        const manager = await storage.getEmployeeByEmployeeId(employee.reportingTo);
         if (manager) {
           reportingToName = manager.name;
         }
@@ -6330,10 +6370,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Return the updated profile in the expected format
-      const allEmployees = await storage.getAllEmployees();
       let reportingToName = '-';
       if (updatedEmployee.reportingTo) {
-        const manager = allEmployees.find(emp => emp.employeeId === updatedEmployee.reportingTo);
+        const manager = await storage.getEmployeeByEmployeeId(updatedEmployee.reportingTo);
         if (manager) {
           reportingToName = manager.name;
         }
@@ -6477,7 +6516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get aggregated target data for recruiter/TA based on their individual target mappings
-  app.get("/api/recruiter/aggregated-targets", async (req, res) => {
+  app.get("/api/recruiter/aggregated-targets", requireEmployeeAuth, async (req, res) => {
     try {
       const session = req.session as any;
       if (!session?.employeeId) {
@@ -9562,26 +9601,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Generate employee ID for SPOC (e.g., STCL001SPOC01)
-      // Format: {clientCode}SPOC{number}
-      // IMPORTANT: This endpoint ONLY creates an employee record (SPOC login profile)
-      // It does NOT create any client record - client records are only created via Master Data "New Client"
+      // Client Admin ID: {clientCode}A (e.g. STCL001A)
+      const { formatClientAdminEmployeeId } = await import("@shared/client-ids");
+      const employeeId = formatClientAdminEmployeeId(selectedCompany.clientCode);
       const existingEmployees = await storage.getAllEmployees();
-      const spocEmployees = existingEmployees.filter(emp =>
-        emp.employeeId?.startsWith(selectedCompany.clientCode + 'SPOC')
+      const idTaken = existingEmployees.some(
+        (emp) =>
+          emp.employeeId?.toUpperCase() === employeeId.toUpperCase() &&
+          emp.clientCompanyId !== selectedCompany.id,
       );
-      const nextSpocNumber = String(spocEmployees.length + 1).padStart(2, '0');
-      const employeeId = `${selectedCompany.clientCode}SPOC${nextSpocNumber}`;
+      if (idTaken) {
+        return res.status(409).json({
+          message: `Employee ID ${employeeId} is already in use.`,
+        });
+      }
 
       // Create employee profile for SPOC login (linked to company)
-      // SECURITY: Always set role to "client" on server-side to prevent privilege escalation
-      // NOTE: We do NOT create any client record here - only the employee login profile
+      const existingAdmins = existingEmployees.filter(
+        (emp) =>
+          emp.clientCompanyId === selectedCompany.id &&
+          isClientAdminRole(emp.role) &&
+          emp.isActive,
+      );
+      if (existingAdmins.length > 0) {
+        return res.status(409).json({
+          message:
+            "This company already has an active Client Admin. Deactivate the existing admin before creating a new one.",
+        });
+      }
+
+      // SECURITY: Always set role to client_admin on server-side
       const employeeData = {
         employeeId: employeeId,
         name: validatedData.name,
         email: validatedData.email,
         password: validatedData.password,
-        role: "client",
+        role: CLIENT_ADMIN_ROLE,
+        clientCompanyId: selectedCompany.id,
         phone: validatedData.phoneNumber,
         department: "Client",
         joiningDate: validatedData.joiningDate,
@@ -9597,7 +9653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('No client record created - SPOC login profile only');
 
         res.status(201).json({
-          message: "SPOC login profile created successfully",
+          message: "Client Admin login created successfully",
           employee: createdEmployee,
           company: {
             id: selectedCompany.id,
@@ -13869,24 +13925,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      const client = await findCompanyForEmployee(employee);
-      const companyName = client?.brandName || employee.name;
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      };
+      const { requirements: allRequirements } = await getClientScopedRequirements(authEmp);
 
       const period = req.query.period as string || 'monthly';
       const dateStr = req.query.date as string;
       const roleId = req.query.role as string;
 
-      // Get all requirements for this client
-      let allRequirements = await storage.getRequirements();
-      allRequirements = allRequirements.filter((req: any) => req.company === companyName);
-
+      let scopedRequirements = allRequirements;
       if (roleId && roleId !== 'all') {
-        allRequirements = allRequirements.filter((req: any) => req.id === roleId);
+        scopedRequirements = scopedRequirements.filter((req: any) => req.id === roleId);
       }
 
       // Get all applications for these requirements
       const allApplications = await storage.getAllJobApplications();
-      const clientRequirementIds = new Set(allRequirements.map((req: any) => req.id));
+      const clientRequirementIds = new Set(scopedRequirements.map((req: any) => req.id));
       const clientApplications = allApplications.filter((app: any) =>
         app.requirementId && clientRequirementIds.has(app.requirementId)
       );
@@ -13945,7 +14005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate Time to 1st Submission
       let timeToFirstSubmission = 0;
-      const firstSubmissions = allRequirements.map((req: any) => {
+      const firstSubmissions = scopedRequirements.map((req: any) => {
         const firstApp = filteredApplications
           .filter((app: any) => app.requirementId === req.id)
           .sort((a: any, b: any) => new Date(a.appliedDate).getTime() - new Date(b.appliedDate).getTime())[0];
@@ -14041,24 +14101,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      const client = await findCompanyForEmployee(employee);
-      const companyName = client?.brandName || employee.name;
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      };
+      const { requirements: allRequirements } = await getClientScopedRequirements(authEmp);
 
       const period = req.query.period as string || 'monthly';
       const dateStr = req.query.date as string;
       const roleId = req.query.role as string;
 
-      // Get all requirements for this client
-      let allRequirements = await storage.getRequirements();
-      allRequirements = allRequirements.filter((req: any) => req.company === companyName);
-
+      let scopedRequirements = allRequirements;
       if (roleId && roleId !== 'all') {
-        allRequirements = allRequirements.filter((req: any) => req.id === roleId);
+        scopedRequirements = scopedRequirements.filter((req: any) => req.id === roleId);
       }
 
       // Get all applications
       const allApplications = await storage.getAllJobApplications();
-      const clientRequirementIds = new Set(allRequirements.map((req: any) => req.id));
+      const clientRequirementIds = new Set(scopedRequirements.map((req: any) => req.id));
       let clientApplications = allApplications.filter((app: any) =>
         app.requirementId && clientRequirementIds.has(app.requirementId)
       );
@@ -14189,6 +14253,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
+      if (!isClientAdminRole(employee.role)) {
+        return res.json([
+          {
+            speedToHire: 0,
+            revenueImpactOfDelay: 0,
+            clientNps: 0,
+            candidateNps: 0,
+            feedbackTurnAround: 0,
+            firstYearRetentionRate: 0,
+            fulfillmentRate: 0,
+            revenueRecovered: 0,
+          },
+        ]);
+      }
+
       // Get impact metrics (can be global or client-specific)
       const allMetrics = await storage.getImpactMetrics();
 
@@ -14232,9 +14311,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get client company
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      };
+
+      if (!isClientAdminRole(employee.role)) {
+        const { requirements } = await getClientScopedRequirements(authEmp);
+        const allApplications = await storage.getAllJobApplications();
+        const reqIds = new Set(requirements.map((r) => r.id));
+        const normalizeStatus = (value: string | null | undefined) =>
+          (value || "").trim().toLowerCase();
+        const totalPositions = requirements.reduce(
+          (sum, r) => sum + Math.max(1, Number(r.noOfPositions) || 1),
+          0,
+        );
+        const activeRoles = requirements.filter((r) => {
+          const s = normalizeStatus(r.status);
+          return s === "open" || s === "in_progress" || s === "active";
+        }).length;
+        const pausedRoles = requirements.filter(
+          (r) => normalizeStatus(r.status) === "paused",
+        ).length;
+        const withdrawnRoles = requirements.filter((r) => {
+          const s = normalizeStatus(r.status);
+          return (
+            s === "withdrawn" ||
+            s === "cancelled" ||
+            s === "closed" ||
+            s === "completed"
+          );
+        }).length;
+        const scopedApps = allApplications.filter(
+          (a) => a.requirementId && reqIds.has(a.requirementId),
+        );
+        const successfulHires = scopedApps.filter((a) => {
+          const s = normalizeStatus(a.status);
+          return (
+            s.includes("joined") ||
+            s.includes("hired") ||
+            s.includes("offer accepted") ||
+            s.includes("closure")
+          );
+        }).length;
+
+        return res.json({
+          rolesAssigned: requirements.length,
+          totalPositions,
+          activeRoles,
+          pausedRoles,
+          withdrawnRoles,
+          successfulHires,
+        });
+      }
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-
       const stats = await storage.getClientDashboardStats(companyName);
       res.json(stats);
     } catch (error) {
@@ -14259,12 +14395,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allRequirements = await storage.getRequirementsByCompany(companyName);
       console.log('All requirements for company:', allRequirements.length);
 
-      // Return ALL requirements for the client's company (not just STR format)
-      // This includes all JDs uploaded by the client
-      const clientJDs = allRequirements.filter((req: any) => {
-        // Include all requirements that are not archived
-        return !req.isArchived;
-      }).sort((a: any, b: any) => {
+      // Return company requirements (admin: all; member: assigned only)
+      let clientJDs = allRequirements.filter((req: any) => !req.isArchived);
+      if (!isClientAdminRole(employee.role)) {
+        clientJDs = clientJDs.filter(
+          (req: any) => req.assignedClientMemberId === employee.id,
+        );
+      }
+      clientJDs = clientJDs.sort((a: any, b: any) => {
         const aTime = new Date(a.createdAt || 0).getTime();
         const bTime = new Date(b.createdAt || 0).getTime();
         return bTime - aTime;
@@ -14274,6 +14412,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all job applications to count profiles shared per requirement
       const allApplications = await storage.getAllJobApplications();
+
+      const allEmployeesForAssign = await storage.getAllEmployees();
+      const assigneeNameById = new Map<string, string>();
+      for (const e of allEmployeesForAssign) {
+        if (
+          client?.id &&
+          e.clientCompanyId === client.id &&
+          (e.role || "").toLowerCase() === "client_member"
+        ) {
+          assigneeNameById.set(e.id, e.name);
+        }
+      }
 
       // Transform requirements for client view
       const rolesData = await Promise.all(clientJDs.map(async (req) => {
@@ -14320,7 +14470,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           specialInstructions: req.specialInstructions || null,
           createdAt: req.createdAt || null,
           sharedOnRaw: req.createdAt || null,
-          lastActiveRaw: lastActiveDate || null
+          lastActiveRaw: lastActiveDate || null,
+          assignedClientMemberId: req.assignedClientMemberId || null,
+          assignedMemberName: req.assignedClientMemberId
+            ? assigneeNameById.get(req.assignedClientMemberId) || null
+            : null,
         };
       }));
 
@@ -14506,9 +14660,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      };
+
+      if (!isClientAdminRole(employee.role)) {
+        const { requirements } = await getClientScopedRequirements(authEmp);
+        const reqIds = new Set(requirements.map((r) => r.id));
+        const allApplications = await storage.getAllJobApplications();
+        const scoped = allApplications.filter(
+          (a) => a.requirementId && reqIds.has(a.requirementId),
+        );
+        const total = scoped.length;
+        const offerDrop = scoped.filter((a) =>
+          (a.status || "").toLowerCase().includes("offer drop"),
+        ).length;
+        const rejected = scoped.filter((a) => {
+          const s = (a.status || "").toLowerCase();
+          return s.includes("reject") || s.includes("declin") || s.includes("screened out");
+        }).length;
+        return res.json({
+          offerDropRate: total ? Math.round((offerDrop / total) * 100) : 0,
+          rejectionRate: total ? Math.round((rejected / total) * 100) : 0,
+        });
+      }
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-
       const dropRates = await storage.getClientDropRates(companyName);
       res.json(dropRates);
     } catch (error) {
@@ -14680,8 +14863,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Update Requirement - Allow client to update their own requirement
-  app.patch("/api/client/requirements/:id", requireClientAuth, async (req, res) => {
+  // Client Update Requirement - Client Admin only
+  app.patch("/api/client/requirements/:id", requireClientAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -14737,7 +14920,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
 
-      const closuresByClientName = await storage.getRevenueMappingsByClientName(companyName);
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      };
+      const { requirements: scopedReqs, memberRequirementIds } =
+        await getClientScopedRequirements(authEmp);
+
+      let closuresByClientName = await storage.getRevenueMappingsByClientName(companyName);
+      if (memberRequirementIds !== null) {
+        const assignedPositions = new Set(
+          scopedReqs.map((r) => (r.position || "").trim().toLowerCase()).filter(Boolean),
+        );
+        closuresByClientName = closuresByClientName.filter((c) =>
+          assignedPositions.has((c.position || "").trim().toLowerCase()),
+        );
+      }
 
       const { applications: scopedApplications } = await getJobApplicationsScopedToClient(employee);
 
@@ -14792,6 +14994,242 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public client invite (no auth)
+  app.get("/api/client/invites/validate", async (req, res) => {
+    try {
+      const token = String(req.query.token || "").trim();
+      const preview = await getClientInvitePreview(token);
+      if (!preview.valid) {
+        return res.status(400).json({ valid: false, message: preview.message });
+      }
+      res.json({ valid: true, ...preview });
+    } catch (error) {
+      console.error("Validate client invite error:", error);
+      res.status(500).json({ valid: false, message: "Failed to validate invite" });
+    }
+  });
+
+  app.post("/api/client/invites/accept", async (req, res) => {
+    try {
+      const bodySchema = z.object({
+        token: z.string().min(1),
+        password: z.string().min(6),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Token and password (min 6 chars) are required" });
+      }
+      const result = await acceptClientMemberInvite(
+        parsed.data.token,
+        parsed.data.password,
+      );
+      res.json({
+        success: true,
+        message: "Account created. You can sign in now.",
+        email: result.email,
+      });
+    } catch (error: any) {
+      console.error("Accept client invite error:", error);
+      res.status(400).json({
+        message: error.message || "Failed to accept invitation",
+      });
+    }
+  });
+
+  // Client Team — admin only
+  app.get("/api/client/team", requireClientAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      const ctx = await getClientTeamContext(employee);
+      if (!ctx) {
+        return res.status(404).json({ message: "Company not linked" });
+      }
+      res.json(ctx);
+    } catch (error) {
+      console.error("Get client team error:", error);
+      res.status(500).json({ message: "Failed to load team" });
+    }
+  });
+
+  app.post("/api/client/team/departments", requireClientAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      const bodySchema = z.object({
+        name: z.string().trim().min(1),
+        description: z.string().optional(),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Department name is required" });
+      }
+      const dept = await createClientDepartment(employee, parsed.data);
+      res.status(201).json(dept);
+    } catch (error) {
+      console.error("Create client department error:", error);
+      res.status(500).json({ message: "Failed to create department" });
+    }
+  });
+
+  app.post("/api/client/team/members", requireClientAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      const bodySchema = z.object({
+        name: z.string().trim().min(1),
+        email: z.string().email(),
+        departmentId: z.string().trim().min(1),
+        canSeeSalaryDetails: z.boolean(),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message:
+            "Name, email, department, and salary visibility preference are required",
+        });
+      }
+      const member = await createClientTeamMember(employee, parsed.data);
+      res.status(201).json(member);
+    } catch (error: any) {
+      console.error("Create client team member error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to add member",
+      });
+    }
+  });
+
+  app.patch("/api/client/team/members/:id", requireClientAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      const bodySchema = z.object({
+        name: z.string().trim().min(1),
+        email: z.string().email(),
+        departmentId: z.string().trim().min(1),
+        canSeeSalaryDetails: z.boolean(),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message:
+            "Name, email, department, and salary visibility preference are required",
+        });
+      }
+      const member = await updateClientTeamMember(
+        employee,
+        req.params.id,
+        parsed.data,
+      );
+      res.json(member);
+    } catch (error: any) {
+      console.error("Update client team member error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to update member",
+      });
+    }
+  });
+
+  app.delete("/api/client/team/members/:id", requireClientAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      await deleteClientTeamMember(employee, req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete client team member error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to delete member",
+      });
+    }
+  });
+
+  app.post("/api/client/team/invites", requireClientAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      const bodySchema = z.object({
+        name: z.string().trim().min(1),
+        email: z.string().email(),
+        departmentId: z.string().optional(),
+        canSeeSalaryDetails: z.boolean().optional(),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Name and valid email are required" });
+      }
+      const baseUrl = resolveClientInviteBaseUrl(req);
+      const { invite, inviteUrl } = await createClientMemberInvite(
+        employee,
+        parsed.data,
+        baseUrl,
+      );
+
+      const company = await findCompanyForEmployee(employee);
+      const emailSent = await sendClientMemberInviteEmail({
+        name: parsed.data.name,
+        email: parsed.data.email,
+        companyName: company?.brandName || "your company",
+        inviteUrl,
+        expiresInDays: 7,
+      });
+
+      res.status(201).json({ invite, inviteUrl, emailSent });
+    } catch (error: any) {
+      console.error("Create client invite error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to create invite",
+      });
+    }
+  });
+
+  app.patch(
+    "/api/client/team/requirements/:id/assign",
+    requireClientAdminAuth,
+    async (req, res) => {
+      try {
+        const employee = await storage.getEmployeeById(req.session.employeeId!);
+        if (!employee) {
+          return res.status(404).json({ message: "Client not found" });
+        }
+        const bodySchema = z.object({
+          memberId: z.string().nullable().optional(),
+        });
+        const parsed = bodySchema.safeParse(req.body);
+        if (!parsed.success) {
+          return res.status(400).json({ message: "Invalid assignment payload" });
+        }
+        const memberId =
+          parsed.data.memberId === undefined || parsed.data.memberId === ""
+            ? null
+            : parsed.data.memberId;
+        const updated = await assignRequirementToClientMember(
+          employee,
+          req.params.id,
+          memberId,
+        );
+        res.json(updated);
+      } catch (error: any) {
+        console.error("Assign requirement member error:", error);
+        res.status(400).json({
+          message: error.message || "Failed to assign member",
+        });
+      }
+    },
+  );
+
   // Client Profile - Get current client's profile with linked client details
   app.get("/api/client/profile", requireClientAuth, async (req, res) => {
     try {
@@ -14812,6 +15250,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: employee.email,
         phone: employee.phone,
         role: employee.role,
+        clientRole: employee.role,
+        isClientAdmin: isClientAdminRole(employee.role),
+        clientCompanyId: employee.clientCompanyId || client?.id || null,
         employeeId: employee.employeeId,
         department: employee.department || null,
         joiningDate: employee.joiningDate || null,
@@ -15072,8 +15513,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Upload JD File
-  app.post("/api/client/upload-jd-file", requireClientAuth, upload.single('jdFile'), async (req, res) => {
+  // Client Upload JD File — Client Admin only
+  app.post("/api/client/upload-jd-file", requireClientAdminAuth, upload.single('jdFile'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -15091,8 +15532,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Delete Requirement - Allow client to delete their own requirements (STR format)
-  app.delete("/api/client/requirements/:id", requireClientAuth, async (req, res) => {
+  // Client Delete Requirement — Client Admin only
+  app.delete("/api/client/requirements/:id", requireClientAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -15126,7 +15567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client Parse JD - Extract information from JD file or text
   // Client Parse JD - Extract information from JD file or text
-  app.post("/api/client/parse-jd", requireClientAuth, (req, res, next) => {
+  app.post("/api/client/parse-jd", requireClientAdminAuth, (req, res, next) => {
     // Check if it's a file upload or JSON
     const contentType = req.headers['content-type'] || '';
     if (contentType.includes('multipart/form-data')) {
@@ -15216,8 +15657,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Submit JD - Create a requirement from client's job description
-  app.post("/api/client/submit-jd", requireClientAuth, async (req, res) => {
+  // Client Submit JD — Client Admin only
+  app.post("/api/client/submit-jd", requireClientAdminAuth, async (req, res) => {
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
       if (!employee) {

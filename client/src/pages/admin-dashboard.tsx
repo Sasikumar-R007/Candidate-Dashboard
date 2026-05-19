@@ -35,7 +35,35 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus, CheckCircle2, Trash2, RotateCcw, Eye, FileText, Folder, AlertTriangle } from "lucide-react";
+import {
+  CalendarIcon,
+  EditIcon,
+  Mail,
+  Phone,
+  Send,
+  FilePlus,
+  CalendarCheck,
+  Search,
+  UserPlus,
+  Users,
+  ExternalLink,
+  HelpCircle,
+  MoreVertical,
+  Download,
+  Edit2,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  CheckCircle2,
+  Trash2,
+  RotateCcw,
+  Eye,
+  FileText,
+  Folder,
+  AlertTriangle,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
@@ -1493,11 +1521,16 @@ export default function AdminDashboard() {
 
   // Filter employees for User Management based on selected tab and search
   const userManagementEmployees = useMemo(() => {
-    let filtered = employees.filter((emp: any) =>
-      emp.role === 'team_leader' ||
-      emp.role === 'recruiter' ||
-      emp.role === 'client'
-    );
+    let filtered = employees.filter((emp: any) => {
+      const role = (emp.role || "").toLowerCase();
+      return (
+        role === "team_leader" ||
+        role === "recruiter" ||
+        role === "client" ||
+        role === "client_admin" ||
+        role === "client_member"
+      );
+    });
 
     // Filter by selected tab
     if (userManagementTab === 'team_leaders') {
@@ -1505,7 +1538,10 @@ export default function AdminDashboard() {
     } else if (userManagementTab === 'talent_advisors') {
       filtered = filtered.filter((emp: any) => emp.role === 'recruiter');
     } else if (userManagementTab === 'clients') {
-      filtered = filtered.filter((emp: any) => emp.role === 'client');
+      filtered = filtered.filter((emp: any) => {
+        const role = (emp.role || "").toLowerCase();
+        return role === "client" || role === "client_admin" || role === "client_member";
+      });
     }
     // 'all' shows everything
 
@@ -3263,9 +3299,8 @@ export default function AdminDashboard() {
 
   const handleUnifiedUserSubmit = (userData: any) => {
     const role = userData.role?.toLowerCase() || '';
-    if (role === 'client') {
+    if (role === "client" || role === "client_admin") {
       if (editingUser) {
-        // For updates, we might need a different handler
         handleAddClientCredentials(userData);
       } else {
         handleAddClientCredentials(userData);
@@ -4639,7 +4674,8 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Target & Incentives</CardTitle>
             <Button
-              className="h-10 rounded-[6px] bg-cyan-400 px-7 text-base font-medium text-slate-900 hover:bg-cyan-500"
+              variant="outline"
+              className="h-7 rounded-[6px] border-blue-600 px-3 text-xs font-medium text-blue-600 shadow-none hover:bg-blue-50 dark:hover:bg-blue-900/20"
               onClick={() => setIsTargetModalOpen(true)}
               data-testid="button-view-all-targets"
             >
@@ -6913,7 +6949,7 @@ export default function AdminDashboard() {
                                     className="text-xs p-2"
                                     title="Add to Requirement"
                                   >
-                                    <Send className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                    <FilePlus className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                   </Button>
                                 </td>
                               </tr>
@@ -10772,7 +10808,14 @@ export default function AdminDashboard() {
           setIsAddClientCredentialsModalOpen(false);
           setEditingUser(null);
         }}
-        editData={editingUser && (editingUser.role === 'Client' || editingUser.role === 'client') ? editingUser : null}
+        editData={
+          editingUser &&
+          ["client", "client_admin", "Client", "Client Admin"].includes(
+            String(editingUser.role || ""),
+          )
+            ? editingUser
+            : null
+        }
         onSubmit={editingUser ? handleUpdateUser : handleAddClientCredentials}
       />
 
@@ -13354,7 +13397,7 @@ export default function AdminDashboard() {
                             className="text-xs p-2"
                             title="Add to Requirement"
                           >
-                            <Send className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                            <FilePlus className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                           </Button>
                         </td>
                       </tr>

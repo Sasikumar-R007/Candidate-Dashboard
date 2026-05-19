@@ -75,29 +75,18 @@ export default function EmployerLogin() {
         });
 
         setTimeout(() => {
-          switch (result.employee.role) {
-            case 'recruiter':
-              navigate("/recruiter");
-              break;
-            case 'team_leader':
-              navigate("/team-leader");
-              break;
-            case 'client':
-              navigate("/client");
-              break;
-            case 'admin':
-              navigate("/admin");
-              break;
-            case 'support':
-              navigate("/support-dashboard");
-              break;
-            default:
-              toast({
-                title: "Unknown Role",
-                description: "Your account role is not recognized. Please contact admin.",
-                variant: "destructive",
-              });
-              break;
+          const route = getDefaultRouteForAuthUser({
+            type: "employee",
+            data: result.employee,
+          });
+          if (route) {
+            navigate(route);
+          } else {
+            toast({
+              title: "Unknown Role",
+              description: "Your account role is not recognized. Please contact admin.",
+              variant: "destructive",
+            });
           }
         }, 300);
       } else {

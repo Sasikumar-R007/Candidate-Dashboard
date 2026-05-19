@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 interface AddClientCredentialsModalProps {
   isOpen: boolean;
@@ -73,7 +74,7 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
       ...formData,
       id: editData?.id || `STCL${String(Date.now()).slice(-3)}`,
       name: `${formData.firstName} ${formData.lastName}`.trim(),
-      role: "client"
+      role: "client_admin",
     };
     
     onSubmit(submitData);
@@ -99,8 +100,11 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
       <DialogContent className="max-w-lg mx-auto bg-white rounded-lg shadow-lg my-4">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            {editData ? "Edit Client" : "Add New Client"}
+            {editData ? "Edit Client Admin" : "Add Client Admin"}
           </DialogTitle>
+          <p className="text-sm text-gray-500 px-6 -mt-2">
+            One active Client Admin per company. Members are invited from the client Team tab.
+          </p>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">

@@ -130,6 +130,12 @@ function normalizeEmployee(emp: any): Employee {
     lastLoginAt: emp.last_login_at || emp.lastLoginAt,
     profilePicture: emp.profile_picture || emp.profilePicture,
     bannerImage: emp.banner_image || emp.bannerImage,
+    clientCompanyId: emp.client_company_id || emp.clientCompanyId || null,
+    clientDepartmentId: emp.client_department_id || emp.clientDepartmentId || null,
+    canSeeSalaryDetails:
+      emp.can_see_salary_details !== undefined
+        ? emp.can_see_salary_details
+        : emp.canSeeSalaryDetails,
   } as Employee;
 }
 
@@ -233,6 +239,29 @@ const jobApplicationColumnCandidates = [
   "candidate_email", "candidate_phone", "description", "salary", "location", "work_mode",
   "experience", "skills", "logo", "last_nudged_at", "is_candidate_confirmed",
 ];
+
+const EMPLOYEE_BY_ID_CACHE_TTL_MS = 60_000;
+const employeeByIdCache = new Map<string, { employee: Employee; expires: number }>();
+
+function getCachedEmployeeById(id: string): Employee | null {
+  const entry = employeeByIdCache.get(id);
+  if (!entry || entry.expires <= Date.now()) {
+    if (entry) employeeByIdCache.delete(id);
+    return null;
+  }
+  return entry.employee;
+}
+
+function setCachedEmployeeById(id: string, employee: Employee | undefined) {
+  if (!employee) {
+    employeeByIdCache.delete(id);
+    return;
+  }
+  employeeByIdCache.set(id, {
+    employee,
+    expires: Date.now() + EMPLOYEE_BY_ID_CACHE_TTL_MS,
+  });
+}
 
 export class DatabaseStorage implements IStorage {
   private otpStorage: Map<string, { otp: string; expiry: Date; email: string }> = new Map();
@@ -585,13 +614,18 @@ export class DatabaseStorage implements IStorage {
 
   // Employee methods
   async getEmployeeById(id: string): Promise<Employee | undefined> {
+    const cached = getCachedEmployeeById(id);
+    if (cached) return cached;
+
     try {
       const result = await db.execute(sql`
         SELECT *
         FROM employees 
         WHERE id = ${id}
       `);
-      return result.rows[0] ? normalizeEmployee(result.rows[0]) : undefined;
+      const employee = result.rows[0] ? normalizeEmployee(result.rows[0]) : undefined;
+      setCachedEmployeeById(id, employee);
+      return employee;
     } catch (error) {
       console.error('Database error in getEmployeeById:', error);
       throw error;
@@ -638,8 +672,8 @@ export class DatabaseStorage implements IStorage {
     const employeeData = {
       ...insertEmployee,
       password: hashedPassword,
-      isActive: true,
-      createdAt: new Date().toISOString()
+      isActive: insertEmployee.isActive ?? true,
+      createdAt: new Date().toISOString(),
     };
 
     const [employee] = await db.insert(employees).values(employeeData).returning();
@@ -668,6 +702,7 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(employees.id, id))
       .returning();
+    employeeByIdCache.delete(id);
     return employee || undefined;
   }
 
