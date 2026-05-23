@@ -5,6 +5,7 @@ import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
+import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-description-details-modal';
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
@@ -158,6 +159,17 @@ export default function RecruiterDashboard2() {
   };
 
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
+
+  useEffect(() => {
+    const handleNotificationNavigate = (event: Event) => {
+      const detail = (event as CustomEvent<{ tab?: string; storageKey?: string }>).detail;
+      if (detail?.storageKey && detail.storageKey !== "recruiterDashboardSidebarTab") return;
+      if (detail?.tab) setSidebarTab(detail.tab);
+    };
+    window.addEventListener("staffos-notification-navigate", handleNotificationNavigate);
+    return () => window.removeEventListener("staffos-notification-navigate", handleNotificationNavigate);
+  }, []);
+
   const [updateModalNudge, setUpdateModalNudge] = useState<any>(null);
   const [updateDropdown1, setUpdateDropdown1] = useState("");
   const [updateDropdown2, setUpdateDropdown2] = useState("");
@@ -2278,7 +2290,7 @@ export default function RecruiterDashboard2() {
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">
-                                    {req.jdText ? (
+                                    {req.jdText || req.jdFile ? (
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -2399,7 +2411,7 @@ export default function RecruiterDashboard2() {
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">
-                                    {req.jdText ? (
+                                    {req.jdText || req.jdFile ? (
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -2948,15 +2960,8 @@ export default function RecruiterDashboard2() {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Performance Graph Section */}
               <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quarterly Performance</h3>
-                  <button
-                    onClick={() => setIsClosureDetailsModalOpen(true)}
-                    className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
-                    data-testid="button-view-more-closures"
-                  >
-                    View More
-                  </button>
                 </div>
                 <div className="p-6">
                   <div className="h-72">
@@ -3041,6 +3046,15 @@ export default function RecruiterDashboard2() {
                 {/* Table Header */}
                 <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Closure Details</h3>
+                  <button
+                    type="button"
+                    onClick={() => setIsClosureDetailsModalOpen(true)}
+                    disabled={allClosureDetails.length === 0}
+                    className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    data-testid="button-view-more-closures"
+                  >
+                    View More
+                  </button>
                 </div>
 
                 {/* Table Content */}
@@ -4230,65 +4244,13 @@ export default function RecruiterDashboard2() {
         </div>
       )}
 
-      {/* JD Details Modal */}
-      {isJDDetailsModalOpen && selectedJD && (
-        <Dialog open={isJDDetailsModalOpen} onOpenChange={setIsJDDetailsModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-gray-900">Requirement Details</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-6 mt-4">
-              {/* Requirement Details */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Requirement Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.position}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Company</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.company}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">SPOC</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.spoc}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Criticality</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.criticality}-{selectedJD.toughness || 'Medium'}</p>
-                  </div>
-                  {selectedJD.talentAdvisor && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Talent Advisor</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.talentAdvisor}</p>
-                    </div>
-                  )}
-                  {selectedJD.teamLead && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Team Lead</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.teamLead}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* JD Text Content */}
-              {selectedJD.jdText && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description</h3>
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">
-                      {selectedJD.jdText}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <JobDescriptionDetailsModal
+        open={isJDDetailsModalOpen}
+        onOpenChange={setIsJDDetailsModalOpen}
+        data={selectedJD}
+        variant="delivery"
+        subtitle="Review the job description for this requirement."
+      />
 
       {/* Chat Support Modal */}
       <ChatDock

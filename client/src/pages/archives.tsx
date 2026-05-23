@@ -7,6 +7,8 @@ import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEmployeeAuth } from '@/contexts/auth-context';
+import { isClientPortalRole } from '@shared/client-roles';
+import { apiRequest } from '@/lib/queryClient';
 
 const getCriticalityColor = (criticality: string) => {
   switch (criticality) {
@@ -42,7 +44,13 @@ export default function Archives() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('requirements');
 
+  const isClientPortal = isClientPortalRole(employee?.role);
+
   const archivedRequirementsEndpoint = useMemo(() => {
+    if (isClientPortal) {
+      return '/api/client/archived-requirements';
+    }
+
     if (employee?.role === 'team_leader' || employee?.role === 'teamLead') {
       return '/api/team-leader/archived-requirements';
     }
@@ -52,16 +60,16 @@ export default function Archives() {
     }
 
     return '/api/admin/archived-requirements';
-  }, [employee?.role]);
+  }, [employee?.role, isClientPortal]);
 
   // Fetch archived requirements from API
   const { data: allArchivedRequirements = [], isLoading: isLoadingRequirements } = useQuery({
     queryKey: [archivedRequirementsEndpoint],
     queryFn: async () => {
       try {
-        const response = await fetch(archivedRequirementsEndpoint, {
-          credentials: 'include'
-        });
+        const response = isClientPortal
+          ? await apiRequest('GET', archivedRequirementsEndpoint)
+          : await fetch(archivedRequirementsEndpoint, { credentials: 'include' });
         if (!response.ok) {
           console.warn('Failed to fetch archived requirements:', response.status);
           return [];
@@ -77,26 +85,38 @@ export default function Archives() {
     retry: 1,
     staleTime: 0,
     refetchOnWindowFocus: true,
-    refetchInterval: 5000
+    refetchInterval: isClientPortal ? false : 5000,
   });
 
   const archivedRequirements = allArchivedRequirements;
 
+  const archivedCandidatesQueryKey = isClientPortal
+    ? ['/api/client/archived-candidates']
+    : ['recruiter', 'archived-candidates'];
+
   // Fetch archived candidates (applications with status Screened Out, Rejected, or Archived)
   const { data: archivedCandidates = [], isLoading: isLoadingCandidates } = useQuery({
-    queryKey: ['recruiter', 'archived-candidates'],
+    queryKey: archivedCandidatesQueryKey,
     queryFn: async () => {
       try {
+        if (isClientPortal) {
+          const response = await apiRequest('GET', '/api/client/archived-candidates');
+          if (!response.ok) {
+            console.warn('Failed to fetch archived candidates:', response.status);
+            return [];
+          }
+          const data = await response.json();
+          return Array.isArray(data) ? data : [];
+        }
+
         const response = await fetch('/api/recruiter/applications', {
           credentials: 'include'
         });
         if (!response.ok) {
-          // Return empty array if request fails instead of throwing
           console.warn('Failed to fetch archived candidates:', response.status);
           return [];
         }
         const allApplications = await response.json();
-        // Filter for archived statuses
         if (!Array.isArray(allApplications)) {
           return [];
         }
@@ -111,6 +131,7 @@ export default function Archives() {
         return [];
       }
     },
+    enabled: !!employee,
     retry: 1,
     refetchOnWindowFocus: false
   });
@@ -161,7 +182,7 @@ export default function Archives() {
       return;
     }
 
-    if (employee?.role === 'client') {
+    if (isClientPortal) {
       setLocation('/client');
       return;
     }

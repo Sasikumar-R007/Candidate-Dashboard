@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   ArrowLeft,
   Briefcase,
@@ -58,6 +58,7 @@ export type CandidateCommentsSessionApplicant = {
   experience?: string;
   skills?: string[];
   resumeFile?: string | null;
+  profilePicture?: string | null;
 };
 
 type SessionApplication = {
@@ -79,6 +80,7 @@ type SessionApplication = {
   currentRole?: string | null;
   skills?: string[];
   resumeFile?: string | null;
+  profilePicture?: string | null;
   linkedinUrl?: string | null;
   education?: string | null;
   highestQualification?: string | null;
@@ -112,22 +114,41 @@ type ApplicationComment = {
   createdAt: string;
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
+function normalizeUploadAssetUrl(
+  filePath?: string | null,
+  defaultSubdir = "uploads",
+): string | null {
+  if (!filePath) return null;
+  let url = filePath.trim();
+  if (!url) return null;
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  if (!url.startsWith("/")) {
+    if (url.startsWith("uploads/")) url = `/${url}`;
+    else url = `/${defaultSubdir}/${url}`;
+  }
+
+  return `${API_BASE_URL}${url}`;
+}
+
 function normalizeResumeUrl(resumeFile?: string | null): string | null {
-  if (!resumeFile) return null;
-  let resumeUrl = resumeFile;
-  if (resumeUrl.startsWith("http://") || resumeUrl.startsWith("https://")) {
-    try {
-      resumeUrl = new URL(resumeUrl).pathname;
-    } catch {
-      const match = resumeUrl.match(/\/uploads\/.*/);
-      if (match) resumeUrl = match[0];
-    }
-  }
-  if (!resumeUrl.startsWith("/uploads")) {
-    if (resumeUrl.startsWith("uploads/")) resumeUrl = `/${resumeUrl}`;
-    else if (!resumeUrl.startsWith("/")) resumeUrl = `/uploads/resumes/${resumeUrl}`;
-  }
-  return resumeUrl;
+  return normalizeUploadAssetUrl(resumeFile, "uploads/resumes");
+}
+
+function normalizeProfilePictureUrl(profilePicture?: string | null): string | null {
+  return normalizeUploadAssetUrl(profilePicture, "uploads/profiles");
+}
+
+function formatAppliedDaysAgo(dateInput?: string | Date | null): string | null {
+  if (!dateInput) return null;
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(date.getTime())) return null;
+  return formatDistanceToNow(date, { addSuffix: true });
 }
 
 function roleBadgeClass(role: string, onMutedPanel = false): string {
@@ -148,7 +169,7 @@ function roleBadgeClass(role: string, onMutedPanel = false): string {
   return "bg-gray-100 text-gray-700";
 }
 
-const SAMPLE_SALARY_DISPLAY = "₹18,00,000 CTC · ₹22,00,000 Expected";
+const SAMPLE_SALARY_DISPLAY = "₹18,00,000 Current CTC · ₹22,00,000 Expected CTC";
 
 const SALARY_CONFIDENTIAL_TOOLTIP =
   "Confidential: Do not share salary details in this comment chat.";
@@ -378,8 +399,15 @@ export function CandidateCommentsSession({
   const skills =
     app?.skills?.length ? app.skills : fallbackApplicant?.skills?.length ? fallbackApplicant.skills : [];
   const resumeUrl = normalizeResumeUrl(app?.resumeFile || fallbackApplicant?.resumeFile);
+  const profilePictureUrl = normalizeProfilePictureUrl(
+    app?.profilePicture || fallbackApplicant?.profilePicture,
+  );
   const isPdf = (resumeUrl?.toLowerCase() || "").endsWith(".pdf");
   const profilePageId = app?.candidateRecordId || app?.profileId;
+  const appliedRoleTitle =
+    app?.jobTitle || fallbackApplicant?.roleApplied || fallbackApplicant?.jobTitle || null;
+  const appliedCompanyName = app?.company || fallbackApplicant?.company || null;
+  const appliedDaysAgo = formatAppliedDaysAgo(app?.appliedDate);
   const educationLabel = formatEducation(app);
   const ctcLabel = formatCtc(app?.ctc, app?.ectc);
   const location = app?.location || fallbackApplicant?.location;
@@ -502,28 +530,29 @@ export function CandidateCommentsSession({
             >
               <div
                 className={cn(
-                  "mb-5 flex min-h-[96px] overflow-hidden border border-gray-200 bg-gray-50 shadow-sm",
+                  "mb-5 flex min-h-[112px] overflow-hidden border border-gray-200 bg-gray-50 shadow-sm",
                   BTN_RADIUS,
                 )}
               >
-                <div className="flex min-w-0 flex-1 flex-col justify-center p-4 pr-3">
-                  <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4 pr-3">
+                  <div className="flex items-start justify-between gap-2">
                     <h2
-                      className="min-w-0 text-xl font-semibold text-gray-900"
+                      className="min-w-0 flex-1 text-xl font-semibold leading-tight text-gray-900"
                       data-testid="text-session-candidate-name"
                     >
                       {displayName}
                     </h2>
                     {pipelineStage ? <PipelineStageBadge status={pipelineStage} /> : null}
                   </div>
-                  <p className="text-sm text-blue-600">{roleTitle}</p>
-                  <p className="text-sm text-gray-600">{companyName}</p>
-                  {applicationSource && (
-                    <div className="mt-2">
-                      <SourceBadge source={applicationSource} />
-                    </div>
-                  )}
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <p className="text-sm leading-snug text-gray-600">
+                    <span className="text-gray-500">Current: </span>
+                    <span className="font-medium text-blue-700">{roleTitle}</span>
+                    {companyName && companyName !== "—" ? (
+                      <span className="text-gray-600"> at {companyName}</span>
+                    ) : null}
+                  </p>
+                  {applicationSource && <SourceBadge source={applicationSource} />}
+                  <div className="flex flex-wrap gap-2">
                     {email && (
                       <QuickAction icon={<Mail className="h-3.5 w-3.5" />} label="Email" href={`mailto:${email}`} />
                     )}
@@ -547,69 +576,65 @@ export function CandidateCommentsSession({
                     )}
                   </div>
                 </div>
-                <div className="flex w-[104px] shrink-0 items-center justify-center self-stretch border-l border-gray-200 bg-white p-2">
+
+                {(appliedRoleTitle || appliedCompanyName) && (
                   <div
-                    className={cn("aspect-square h-[88px] w-[88px] shrink-0 overflow-hidden", BTN_RADIUS)}
+                    className="flex w-[min(11rem,34%)] max-w-[200px] shrink-0 flex-col justify-center border-l border-blue-100 bg-blue-50/80 px-3 py-3 text-right"
+                    data-testid="session-applied-requirement"
                   >
-                    <AvatarInitials name={displayName} variant="card" />
+                    <p className="text-xs font-medium text-blue-800">Applied for</p>
+                    <p className="mt-1 text-sm font-semibold leading-snug text-gray-900">
+                      {appliedRoleTitle || "Role not specified"}
+                    </p>
+                    {appliedCompanyName && (
+                      <p className="mt-0.5 text-sm font-medium leading-snug text-gray-700">
+                        {appliedCompanyName}
+                      </p>
+                    )}
+                    {appliedDaysAgo && (
+                      <p
+                        className="mt-1.5 text-xs font-medium text-blue-700"
+                        data-testid="text-applied-days-ago"
+                      >
+                        {appliedDaysAgo}
+                      </p>
+                    )}
                   </div>
+                )}
+
+                <div className="flex w-[min(38%,148px)] max-w-[148px] shrink-0 self-stretch border-l border-gray-200 bg-white p-2">
+                  <CandidateProfilePhoto
+                    name={displayName}
+                    imageUrl={profilePictureUrl}
+                    className="h-full w-full"
+                  />
                 </div>
               </div>
 
-              <DetailCard title="Contact">
-                <ContactRow
-                  icon={<Mail className="h-4 w-4" />}
-                  label="Email"
-                  value={email}
-                  href={email ? `mailto:${email}` : undefined}
-                  onCopy={
-                    email
-                      ? () => {
-                          navigator.clipboard.writeText(email);
-                          toast({ title: "Email copied" });
-                        }
-                      : undefined
-                  }
-                />
-                <ContactRow
-                  icon={<Phone className="h-4 w-4" />}
-                  label="Phone"
-                  value={phone || undefined}
-                  href={phone ? `tel:${phone}` : undefined}
-                  onCopy={
-                    phone
-                      ? () => {
-                          navigator.clipboard.writeText(phone);
-                          toast({ title: "Phone copied" });
-                        }
-                      : undefined
-                  }
-                />
-                <ContactRow icon={<MapPin className="h-4 w-4" />} label="Location" value={location} />
-                {app?.preferredLocation && (
-                  <ContactRow
-                    icon={<MapPin className="h-4 w-4" />}
-                    label="Preferred location"
-                    value={app.preferredLocation}
-                  />
-                )}
-                {app?.portfolioUrl && (
-                  <ContactRow
-                    icon={<ExternalLink className="h-4 w-4" />}
-                    label="Portfolio"
-                    value={app.portfolioUrl}
-                    href={app.portfolioUrl}
-                  />
-                )}
-                {app?.websiteUrl && (
-                  <ContactRow
-                    icon={<ExternalLink className="h-4 w-4" />}
-                    label="Website"
-                    value={app.websiteUrl}
-                    href={app.websiteUrl}
-                  />
-                )}
-              </DetailCard>
+              <ContactDetailCard
+                email={email}
+                phone={phone}
+                location={location}
+                preferredLocation={app?.preferredLocation}
+                portfolioUrl={app?.portfolioUrl}
+                websiteUrl={app?.websiteUrl}
+                onCopyEmail={
+                  email
+                    ? () => {
+                        navigator.clipboard.writeText(email);
+                        toast({ title: "Email copied" });
+                      }
+                    : undefined
+                }
+                onCopyPhone={
+                  phone
+                    ? () => {
+                        navigator.clipboard.writeText(phone);
+                        toast({ title: "Phone copied" });
+                      }
+                    : undefined
+                }
+              />
 
               {app?.workSummary && (
                 <DetailCard title="Work summary">
@@ -1084,6 +1109,166 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+function CandidateProfilePhoto({
+  name,
+  imageUrl,
+  className,
+}: {
+  name: string;
+  imageUrl?: string | null;
+  className?: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImage = Boolean(imageUrl) && !imgFailed;
+
+  return (
+    <div
+      className={cn(
+        "relative min-h-[96px] w-full overflow-hidden bg-white",
+        BTN_RADIUS,
+        className,
+      )}
+      data-testid="session-candidate-profile-photo"
+    >
+      {showImage ? (
+        <img
+          src={imageUrl!}
+          alt={name}
+          className="h-full w-full object-cover"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <AvatarInitials name={name} variant="card" />
+      )}
+    </div>
+  );
+}
+
+function ContactDetailCard({
+  email,
+  phone,
+  location,
+  preferredLocation,
+  portfolioUrl,
+  websiteUrl,
+  onCopyEmail,
+  onCopyPhone,
+}: {
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  preferredLocation?: string | null;
+  portfolioUrl?: string | null;
+  websiteUrl?: string | null;
+  onCopyEmail?: () => void;
+  onCopyPhone?: () => void;
+}) {
+  type ContactItem = {
+    key: string;
+    icon: ReactNode;
+    label: string;
+    value?: string | null;
+    href?: string;
+    onCopy?: () => void;
+    isLink?: boolean;
+  };
+
+  const items: ContactItem[] = [
+    {
+      key: "email",
+      icon: <Mail className="h-4 w-4" />,
+      label: "Email",
+      value: email,
+      href: email ? `mailto:${email}` : undefined,
+      onCopy: onCopyEmail,
+    },
+    {
+      key: "phone",
+      icon: <Phone className="h-4 w-4" />,
+      label: "Phone",
+      value: phone,
+      href: phone ? `tel:${phone}` : undefined,
+      onCopy: onCopyPhone,
+    },
+    {
+      key: "location",
+      icon: <MapPin className="h-4 w-4" />,
+      label: "Location",
+      value: location,
+    },
+    ...(preferredLocation
+      ? [
+          {
+            key: "preferred",
+            icon: <MapPin className="h-4 w-4" />,
+            label: "Preferred location",
+            value: preferredLocation,
+          } as ContactItem,
+        ]
+      : []),
+    ...(portfolioUrl
+      ? [
+          {
+            key: "portfolio",
+            icon: <ExternalLink className="h-4 w-4" />,
+            label: "Portfolio",
+            value: portfolioUrl,
+            href: portfolioUrl,
+            isLink: true,
+          } as ContactItem,
+        ]
+      : []),
+    ...(websiteUrl
+      ? [
+          {
+            key: "website",
+            icon: <ExternalLink className="h-4 w-4" />,
+            label: "Website",
+            value: websiteUrl,
+            href: websiteUrl,
+            isLink: true,
+          } as ContactItem,
+        ]
+      : []),
+  ];
+
+  const useTwoColumns = items.length > 4;
+  const primaryItems = useTwoColumns ? items.filter((i) => !i.isLink) : items;
+  const linkItems = useTwoColumns ? items.filter((i) => i.isLink) : [];
+
+  return (
+    <DetailCard title="Contact">
+      <div className={cn(useTwoColumns ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "space-y-0")}>
+        <div className={useTwoColumns ? "space-y-0" : undefined}>
+          {primaryItems.map((item) => (
+            <ContactRow
+              key={item.key}
+              icon={item.icon}
+              label={item.label}
+              value={item.value}
+              href={item.href}
+              onCopy={item.onCopy}
+            />
+          ))}
+        </div>
+        {linkItems.length > 0 && (
+          <div className={cn(useTwoColumns && "border-l border-gray-100 pl-4 sm:pl-4")}>
+            {linkItems.map((item) => (
+              <ContactRow
+                key={item.key}
+                icon={item.icon}
+                label={item.label}
+                value={item.value}
+                href={item.href}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </DetailCard>
+  );
+}
+
 function AvatarInitials({
   name,
   size,
@@ -1091,7 +1276,7 @@ function AvatarInitials({
   dark = false,
 }: {
   name: string;
-  size: "sm" | "lg";
+  size?: "sm" | "lg";
   variant?: "round" | "card";
   dark?: boolean;
 }) {
@@ -1117,7 +1302,7 @@ function AvatarInitials({
     );
   }
 
-  const sizeClass = size === "lg" ? "h-14 w-14 text-lg" : "h-9 w-9 text-xs";
+  const sizeClass = size === "lg" ? "h-14 w-14 text-lg" : size === "sm" ? "h-9 w-9 text-xs" : "h-9 w-9 text-xs";
   return (
     <div
       className={cn(

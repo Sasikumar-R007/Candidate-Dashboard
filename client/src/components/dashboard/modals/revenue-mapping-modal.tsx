@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateAdminPerformanceQueries } from "@/lib/admin-performance-queries";
 
 interface RevenueMappingModalProps {
   isOpen: boolean;
@@ -172,7 +173,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue-mappings"] });
+      invalidateAdminPerformanceQueries(queryClient);
       toast({
         title: "Success",
         description: editingRevenueMapping ? "Revenue mapping updated successfully" : "Revenue mapping created successfully",

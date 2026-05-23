@@ -18,10 +18,18 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const fullUrl = createApiUrl(url);
+  const methodUpper = method.toUpperCase();
+  const canHaveBody = methodUpper !== "GET" && methodUpper !== "HEAD";
+  const hasBody =
+    canHaveBody &&
+    data !== undefined &&
+    data !== null &&
+    !(typeof data === "object" && Object.keys(data as object).length === 0);
+
   const res = await fetch(fullUrl, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers: hasBody ? { "Content-Type": "application/json" } : {},
+    body: hasBody ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
 

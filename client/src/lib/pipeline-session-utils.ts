@@ -100,6 +100,7 @@ export function mapRecruiterPipelineCandidate(
     experience: candidate.experience,
     skills: candidate.skills,
     resumeFile: candidate.resumeFile,
+    profilePicture: candidate.profilePicture ?? candidate.profile_picture ?? null,
   };
 }
 
@@ -120,6 +121,7 @@ export function mapAdminPipelineCandidate(
     experience: candidate.experience,
     skills: candidate.skills,
     resumeFile: candidate.resumeFile,
+    profilePicture: candidate.profilePicture ?? candidate.profile_picture ?? null,
   };
 }
 
@@ -137,6 +139,7 @@ export function mapTeamLeaderPipelineCandidate(candidate: any): CandidateComment
     experience: candidate.experience,
     skills: candidate.skills,
     resumeFile: candidate.resumeFile,
+    profilePicture: candidate.profilePicture ?? candidate.profile_picture ?? null,
   };
 }
 
@@ -152,6 +155,7 @@ export function mapClientPipelineCandidate(candidate: any): CandidateCommentsSes
     phone: candidate.phone ?? candidate.candidatePhone,
     location: candidate.location,
     experience: candidate.experience,
+    profilePicture: candidate.profilePicture ?? candidate.profile_picture ?? null,
     skills: candidate.skills,
     resumeFile: candidate.resumeFile,
   };

@@ -9,10 +9,10 @@ import { useQuery } from "@tanstack/react-query";
 
 interface TeamMember {
   id: string;
+  employeeId?: string;
   name: string;
   email?: string;
   salary: string;
-  year: string;
   profilesCount: string;
   position?: string;
   department?: string;
@@ -72,7 +72,6 @@ export default function TeamLeaderSidebar() {
                 {filteredMembers.map((member: TeamMember, index: number) => {
                   const isTeamLead = member.position?.includes('Leader') || member.position?.includes('TL');
                   const memberSalary = member.salary || "0";
-                  const memberYear = member.year || `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
                   const memberCount = member.profilesCount || member.closures || 0;
                   
                   return (
@@ -116,10 +115,9 @@ export default function TeamLeaderSidebar() {
                               <span className="text-xs text-gray-500 dark:text-gray-400">(TL)</span>
                             )}
                           </div>
-                          <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-0.5">
+                          <p className="text-xs font-medium text-green-600 dark:text-green-400">
                             ₹{memberSalary.toString().replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{memberYear}</p>
                         </div>
                       </div>
                       
@@ -157,8 +155,8 @@ export default function TeamLeaderSidebar() {
           
           {selectedMember && (
             <div className="space-y-6">
-              <div className="flex items-center space-x-4 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
-                <div className="relative">
+              <div className="flex items-start gap-4 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+                <div className="relative flex-shrink-0">
                   {selectedMember.profilePicture ? (
                     <img 
                       src={selectedMember.profilePicture} 
@@ -173,8 +171,20 @@ export default function TeamLeaderSidebar() {
                     </div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-member-name">{selectedMember.name}</h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-member-name">
+                      {selectedMember.name}
+                    </h3>
+                    {selectedMember.employeeId && (
+                      <span
+                        className="inline-flex rounded-[4px] border border-blue-200 bg-white px-2 py-0.5 text-xs font-bold text-blue-700 shadow-sm dark:border-blue-800 dark:bg-gray-900 dark:text-blue-300"
+                        data-testid="text-member-employee-id"
+                      >
+                        {selectedMember.employeeId}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-lg text-gray-600 dark:text-gray-300" data-testid="text-member-position">{selectedMember.position || 'Recruiter'}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{selectedMember.department || 'Recruitment'}</p>
                 </div>
@@ -199,9 +209,9 @@ export default function TeamLeaderSidebar() {
                   </div>
                   
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Year</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Profile ID</p>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {selectedMember.year}
+                      {selectedMember.employeeId || '-'}
                     </p>
                   </div>
                 </div>

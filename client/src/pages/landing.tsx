@@ -479,7 +479,7 @@ export default function Landing() {
         <div className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6 sm:py-12">
           <div className="mb-8">
             <div className="mb-4 text-4xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-              STAFFOS...
+              StaffOS...
             </div>
             <div className="flex gap-3">
               <a

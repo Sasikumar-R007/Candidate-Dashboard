@@ -129,7 +129,7 @@ function Router() {
       </Route>
       
       <Route path="/archives">
-        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin", "client", "client_admin", "client_member"]}>
           <Archives />
         </ProtectedRoute>
       </Route>

@@ -1512,14 +1512,17 @@ export class MemStorage implements IStorage {
     const requirements = await this.getRequirementsByCompany(companyName);
     const activeRoles = requirements.filter(r => r.status === 'open' || r.status === 'in_progress').length;
     const completedRoles = requirements.filter(r => r.status === 'completed').length;
-    
+    const withdrawnRoles = requirements.filter(
+      (r) => (r.managementStatus || '').trim().toLowerCase() === 'closed',
+    ).length;
+
     return {
       rolesAssigned: requirements.length,
       totalPositions: requirements.reduce((sum, req) => sum + (req.noOfPositions ?? 1), 0),
       activeRoles,
       successfulHires: completedRoles,
       pausedRoles: 0,
-      withdrawnRoles: 0
+      withdrawnRoles,
     };
   }
 

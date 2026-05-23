@@ -75,7 +75,7 @@ export default function EmployeeAgreementPage() {
               <Link href="/employer-login" className="transition hover:text-white hover:underline underline-offset-4">Employee Login</Link>
               <a
                 href="mailto:support@staffos.com"
-                className="rounded-full border border-white bg-white px-4 py-1.5 text-xs font-semibold text-[#3f2ca4] transition hover:bg-transparent hover:text-white"
+                className="rounded-[8px] border border-white bg-white px-4 py-1.5 text-xs font-semibold text-[#3f2ca4] transition hover:bg-transparent hover:text-white"
               >
                 Contact
               </a>

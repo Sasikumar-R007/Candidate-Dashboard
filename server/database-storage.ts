@@ -1100,10 +1100,10 @@ export class DatabaseStorage implements IStorage {
       return status === 'open' || status === 'in_progress' || status === 'in progress' || status === 'active';
     }).length;
     const pausedRoles = clientReqs.filter(r => normalizeStatus(r.status as any) === 'paused').length;
-    const withdrawnRoles = clientReqs.filter(r => {
-      const status = normalizeStatus(r.status as any);
-      return status === 'withdrawn' || status === 'cancelled' || status === 'closed' || status === 'completed';
-    }).length;
+    // StaffOS Admin "Internally Closed" (Manage Requirement → closed), including archived rows
+    const withdrawnRoles = reqs.filter(
+      (r) => (r.managementStatus || '').trim().toLowerCase() === 'closed',
+    ).length;
     const closures = await this.getRevenueMappingsByClientName(companyName);
     
     // Calculate total positions (sum of positions count, or just count of requirements)

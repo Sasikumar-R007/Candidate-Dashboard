@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, User, Settings, LogOut, HelpCircle, Bell, Zap, Trophy, Briefcase, X } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { ChevronDown, User, Settings, LogOut, HelpCircle, Bell } from "lucide-react";
+import NotificationPanel, {
+  type NotificationNavigateSection,
+  type NotificationPanelRow,
+  type NotificationSectionConfig,
+} from "@/components/dashboard/notification-panel";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
@@ -26,6 +31,7 @@ interface SimpleClientHeaderProps {
   portalNudges?: PortalNudge[];
   onOpenNudges?: () => void;
   onOpenClosures?: () => void;
+  onOpenPipeline?: () => void;
   onOpenProfileSettings?: () => void;
   onOpenChangePassword?: () => void;
 }
@@ -47,6 +53,31 @@ type EmployeeNotificationFeed = {
   unreadCount: number;
 };
 
+function getDismissedNotificationsKey(employeeId?: string | null): string | null {
+  return employeeId ? `staffos-dismissed-notifications:${employeeId}` : null;
+}
+
+function readDismissedNotificationKeys(storageKey: string | null): Set<string> {
+  if (!storageKey) return new Set();
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed.filter((k) => typeof k === "string")) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+type NotificationRow = {
+  key: string;
+  kind: string;
+  id: string;
+  line: string;
+  createdAt?: string | null;
+  isUnread?: boolean;
+};
+
 export default function SimpleClientHeader({ 
   companyName = "Loading...",
   clientName,
@@ -57,6 +88,7 @@ export default function SimpleClientHeader({
   portalNudges = [],
   onOpenNudges,
   onOpenClosures,
+  onOpenPipeline,
   onOpenProfileSettings,
   onOpenChangePassword,
 }: SimpleClientHeaderProps) {
@@ -67,7 +99,12 @@ export default function SimpleClientHeader({
   const { toast } = useToast();
   const { logout } = useAuth();
   const employee = useEmployeeAuth();
-  
+  const queryClient = useQueryClient();
+  const dismissedStorageKey = getDismissedNotificationsKey(employee?.id);
+  const [dismissedNotificationKeys, setDismissedNotificationKeys] = useState<Set<string>>(() =>
+    readDismissedNotificationKeys(dismissedStorageKey),
+  );
+
   const userName = clientName || employee?.name || "Client User";
   const userEmail = clientEmail || employee?.email || "";
 
@@ -79,7 +116,7 @@ export default function SimpleClientHeader({
   } = useQuery<EmployeeNotificationFeed>({
     queryKey: ["/api/employee/notifications-feed"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/employee/notifications-feed", {});
+      const res = await apiRequest("GET", "/api/employee/notifications-feed");
       return await res.json();
     },
     staleTime: 30_000,
@@ -113,7 +150,7 @@ export default function SimpleClientHeader({
   const portalNudgeItems = useMemo<EmployeeNotificationItem[]>(() => {
     return (portalNudges || []).map((n) => ({
       id: n.id,
-      line: `[${n.candidateName || "Candidate"} - ${n.jobTitle || "Role"}]`,
+      line: [n.candidateName || "Candidate", n.jobTitle || "Role"].filter(Boolean).join(" - "),
       createdAt:
         n.createdAt == null
           ? null
@@ -124,13 +161,39 @@ export default function SimpleClientHeader({
     }));
   }, [portalNudges]);
 
+  const dismissNotificationMutation = useMutation({
+    mutationFn: async ({ kind, id }: { kind: string; id: string }) => {
+      const res = await apiRequest("PATCH", "/api/employee/notifications/dismiss", { kind, id });
+      return res.json();
+    },
+    onSuccess: () => {
+      void refetchNotificationFeed();
+      queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
+    },
+  });
+
+  const dismissNotification = (row: NotificationRow) => {
+    setDismissedNotificationKeys((prev) => {
+      const next = new Set(prev);
+      next.add(row.key);
+      if (dismissedStorageKey) {
+        localStorage.setItem(dismissedStorageKey, JSON.stringify(Array.from(next)));
+      }
+      return next;
+    });
+    if (row.kind === "nudge") {
+      dismissNotificationMutation.mutate({ kind: row.kind, id: row.id });
+    }
+  };
+
   const allNotificationRows = useMemo(() => {
-    const rows: Array<{ key: string; kind: string; line: string; createdAt?: string | null; isUnread?: boolean }> = [];
+    const rows: NotificationRow[] = [];
     const pushRows = (kind: string, items: EmployeeNotificationItem[]) => {
       items.forEach((item) =>
         rows.push({
           key: `${kind}-${item.id}`,
           kind,
+          id: item.id,
           line: item.line,
           createdAt: item.createdAt,
           isUnread: item.isUnread,
@@ -148,23 +211,27 @@ export default function SimpleClientHeader({
     });
   }, [employeeFeed, portalNudgeItems]);
 
-  const notificationRows = useMemo(() => {
-    if (notificationTab === "all") return allNotificationRows;
-    return allNotificationRows.filter(
-      (row) =>
-        (notificationTab === "newProfiles" && row.kind === "newProfile") ||
-        (notificationTab === "nudges" && row.kind === "nudge") ||
-        (notificationTab === "closures" && row.kind === "closure"),
-    );
-  }, [allNotificationRows, notificationTab]);
+  const visibleNotificationRows = useMemo(
+    () => allNotificationRows.filter((row) => !dismissedNotificationKeys.has(row.key)),
+    [allNotificationRows, dismissedNotificationKeys],
+  );
+
+  const panelRows = useMemo((): NotificationPanelRow[] => visibleNotificationRows, [visibleNotificationRows]);
+
+  const handlePanelNavigate = (section: NotificationNavigateSection) => {
+    setShowNotifications(false);
+    if (section === "closures") onOpenClosures?.();
+    if (section === "nudges") onOpenNudges?.();
+    if (section === "newCandidates") onOpenPipeline?.();
+  };
 
   const headerUnreadCount = useMemo(() => {
-    const fromRows = allNotificationRows.filter((r) => r.isUnread).length;
+    const fromRows = visibleNotificationRows.filter((r) => r.isUnread).length;
     if (employeeFeed && !feedError) {
       return Math.max(employeeFeed.unreadCount, fromRows);
     }
     return fromRows;
-  }, [allNotificationRows, employeeFeed, feedError]);
+  }, [visibleNotificationRows, employeeFeed, feedError]);
   
   // Logout mutation for client (employee)
   const logoutMutation = useMutation({
@@ -360,100 +427,19 @@ export default function SimpleClientHeader({
             onClick={() => setShowNotifications(false)}
             aria-label="Close notifications"
           />
-          <div className="fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h3 className="text-lg font-semibold text-slate-900">Notifications</h3>
-              <button
-                onClick={() => setShowNotifications(false)}
-                className="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Close notifications"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="border-b border-slate-200 px-4 py-3">
-              <div className="flex flex-wrap gap-2">
-                {notificationTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setNotificationTab(tab.id)}
-                    className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-                      notificationTab === tab.id
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-4">
-              {feedLoading && (
-                <p className="px-3 py-8 text-center text-sm text-slate-500">Loading…</p>
-              )}
-              {feedError && !feedLoading && !employeeFeed && portalNudgeItems.length === 0 && (
-                <div className="px-3 py-6 text-center">
-                  <p className="text-sm text-amber-700">Notifications could not be loaded.</p>
-                  <button
-                    type="button"
-                    onClick={() => void refetchNotificationFeed()}
-                    className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
-                  >
-                    Try again
-                  </button>
-                </div>
-              )}
-              {!feedLoading &&
-                (!feedError || employeeFeed || portalNudgeItems.length > 0) &&
-                notificationRows.length === 0 && (
-                <p className="px-3 py-8 text-center text-sm text-slate-500">
-                  {notificationTab === "all" && "No notifications yet."}
-                  {notificationTab === "newProfiles" && "No new profile notifications yet."}
-                  {notificationTab === "nudges" && "No nudge notifications yet."}
-                  {notificationTab === "closures" && "No closure notifications yet."}
-                </p>
-              )}
-              {!feedLoading &&
-                (!feedError || employeeFeed || portalNudgeItems.length > 0) &&
-                notificationRows.length > 0 && (
-                <div className="space-y-3">
-                  {notificationRows.map((row) => {
-                    const icon = row.kind === "newProfile" ? Briefcase : row.kind === "closure" ? Trophy : Zap;
-                    const Icon = icon;
-                    return (
-                      <button
-                        key={row.key}
-                        className={`w-full rounded-2xl border px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50 ${
-                          row.isUnread ? "border-cyan-200 bg-cyan-50/60" : "border-slate-200 bg-white"
-                        }`}
-                        onClick={() => {
-                          if (row.kind === "nudge") onOpenNudges?.();
-                          if (row.kind === "closure") onOpenClosures?.();
-                          setShowNotifications(false);
-                        }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 rounded-lg bg-slate-100 p-2 text-slate-600">
-                            <Icon size={15} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-slate-800">{row.line}</p>
-                            {row.createdAt && (
-                              <p className="mt-1 text-xs text-slate-500">
-                                {new Date(row.createdAt).toLocaleString("en-GB")}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+          <div className="fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col overflow-hidden rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+            <NotificationPanel
+              rows={panelRows}
+              tabs={notificationTabs}
+              sections={notificationSections}
+              activeTab={notificationTab}
+              onTabChange={setNotificationTab}
+              isLoading={feedLoading}
+              isError={feedError && !employeeFeed && portalNudgeItems.length === 0}
+              onRetry={() => void refetchNotificationFeed()}
+              onDismiss={dismissNotification}
+              onNavigate={(section) => handlePanelNavigate(section)}
+            />
           </div>
         </>
       )}

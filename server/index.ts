@@ -5,7 +5,7 @@ import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
-import { ensureRequirementManagementColumns, pool } from "./db";
+import { ensureRequirementManagementColumns, pool, verifyPoolConnection } from "./db";
 import {
   ensureClientOrgSchema,
   migrateLegacyClientLogins,
@@ -92,60 +92,103 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Session configuration with PostgreSQL store for persistence (shared app pool)
-const PgSession = connectPgSimple(session);
+function registerRequestLogging() {
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const path = req.path;
+    let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-app.use(session({
-  store: new PgSession({
-    pool,
-    tableName: 'session',
-    createTableIfMissing: true,
-  }),
-  name: 'staffos.sid', // Unique session cookie name for this app
-  secret: process.env.SESSION_SECRET || 'staffos-secret-key-change-in-production',
-  resave: false, // Don't resave unchanged sessions
-  saveUninitialized: false, // Don't save empty sessions
-  rolling: false, // Don't reset expiration on activity (better for multi-user)
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true, // Prevent XSS attacks
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // CSRF protection
-    path: '/' // Ensure cookie is available for all routes
-  }
-}));
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      if (path.startsWith("/api")) {
+        let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+        if (capturedJsonResponse) {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        }
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+        if (logLine.length > 80) {
+          logLine = logLine.slice(0, 79) + "…";
+        }
 
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        log(logLine);
       }
+    });
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
+    next();
   });
+}
 
-  next();
-});
+async function registerSessionMiddleware() {
+  const PgSession = connectPgSimple(session);
+  const dbReady = await verifyPoolConnection();
+
+  if (!dbReady) {
+    const message =
+      "Could not connect to PostgreSQL. Check DATABASE_URL, network/VPN, and that the database is running.";
+    if (process.env.NODE_ENV === "production") {
+      console.error(`[db] ${message}`);
+      process.exit(1);
+    }
+    console.warn(`[db] ${message}`);
+    console.warn(
+      "[db] Using in-memory sessions for this dev run. Logins will not persist across server restarts.",
+    );
+    app.use(
+      session({
+        name: "staffos.sid",
+        secret: process.env.SESSION_SECRET || "staffos-secret-key-change-in-production",
+        resave: false,
+        saveUninitialized: false,
+        rolling: false,
+        cookie: {
+          secure: false,
+          httpOnly: true,
+          maxAge: 24 * 60 * 60 * 1000,
+          sameSite: "lax",
+          path: "/",
+        },
+      }),
+    );
+    return;
+  }
+
+  log("PostgreSQL connected — using persistent session store.", "db");
+  app.use(
+    session({
+      store: new PgSession({
+        pool,
+        tableName: "session",
+        createTableIfMissing: true,
+        pruneSessionInterval: 60 * 15,
+        errorLog: (err: Error) => {
+          console.error("[session] PostgreSQL session store error:", err.message);
+        },
+      }),
+      name: "staffos.sid",
+      secret: process.env.SESSION_SECRET || "staffos-secret-key-change-in-production",
+      resave: false,
+      saveUninitialized: false,
+      rolling: false,
+      cookie: {
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+      },
+    }),
+  );
+}
 
 (async () => {
+  await registerSessionMiddleware();
+  registerRequestLogging();
   try {
     await ensureRequirementManagementColumns();
     log("Requirement management columns verified.", "db");
@@ -217,4 +260,7 @@ app.use((req, res, next) => {
       log(`Frontend URL: ${process.env.FRONTEND_URL}`);
     }
   });
-})();
+})().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
+});

@@ -6,6 +6,7 @@ import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamBoxes from '@/components/dashboard/team-boxes';
 import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
+import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-description-details-modal';
 import TargetMappingModal from '@/components/dashboard/modals/target-mapping-modal';
 import RevenueMappingModal from '@/components/dashboard/modals/revenue-mapping-modal';
 import TeamPerformanceTableModal from '@/components/dashboard/modals/team-performance-modal';
@@ -20,6 +21,8 @@ import AddUserModal from '@/components/dashboard/modals/add-user-modal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
+import NudgeLogsTab from "@/components/dashboard/tabs/nudges-tab";
+import { invalidateAdminPerformanceQueries } from "@/lib/admin-performance-queries";
 import { SearchBar } from '@/components/ui/search-bar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +50,6 @@ import {
   UserPlus,
   Users,
   ExternalLink,
-  HelpCircle,
   MoreVertical,
   Download,
   Edit2,
@@ -71,6 +73,15 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  REPORT_MONTHS,
+  REPORT_QUARTERS,
+  cashOutflowMatchesPeriod,
+  isDateInReportPeriod,
+  getReportPeriodValidationError,
+  type ReportPeriodSelection,
+} from "@/lib/report-period";
+import { hasNewAdminNudges, markAdminNudgesAsSeen } from "@/lib/admin-nudge-indicator";
 import {
   CandidateCommentsSession,
   type CandidateCommentsSessionApplicant,
@@ -1189,7 +1200,7 @@ export default function AdminDashboard() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue-mappings"] });
+      invalidateAdminPerformanceQueries(queryClient);
       toast({
         title: "Success",
         description: "Revenue mapping deleted successfully",
@@ -1216,11 +1227,14 @@ export default function AdminDashboard() {
   const [isCeoMeetingsModalOpen, setIsCeoMeetingsModalOpen] = useState(false);
   const [isCreateMessageModalOpen, setIsCreateMessageModalOpen] = useState(false);
   const [isCreateMeetingModalOpen, setIsCreateMeetingModalOpen] = useState(false);
+  const [isPendingMeetingsCollapsed, setIsPendingMeetingsCollapsed] = useState(false);
+  const [isMessageStatusCollapsed, setIsMessageStatusCollapsed] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [meetingFor, setMeetingFor] = useState('');
   const [meetingWith, setMeetingWith] = useState('');
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedClientMetricsClientId, setSelectedClientMetricsClientId] = useState<string>("all");
   const [meetingType, setMeetingType] = useState('');
   const [meetingDate, setMeetingDate] = useState<Date | undefined>();
   const [meetingTime, setMeetingTime] = useState('');
@@ -1392,6 +1406,10 @@ export default function AdminDashboard() {
   // Report tab state
   const [teamsReportType, setTeamsReportType] = useState('');
   const [teamsPeriod, setTeamsPeriod] = useState('');
+  const [teamsReportMonth, setTeamsReportMonth] = useState('January');
+  const [teamsReportQuarter, setTeamsReportQuarter] = useState('Q1');
+  const [teamsReportYear, setTeamsReportYear] = useState(String(new Date().getFullYear()));
+  const [teamsWeekStart, setTeamsWeekStart] = useState<Date | undefined>();
   const [teamsCustomDate, setTeamsCustomDate] = useState<Date | undefined>();
   const [teamsFileFormat, setTeamsFileFormat] = useState('pdf');
 
@@ -1401,6 +1419,12 @@ export default function AdminDashboard() {
     closureReports: true,
     teamPerformance: true
   });
+  const [reportsPeriod, setReportsPeriod] = useState('');
+  const [reportsReportMonth, setReportsReportMonth] = useState('January');
+  const [reportsReportQuarter, setReportsReportQuarter] = useState('Q1');
+  const [reportsReportYear, setReportsReportYear] = useState(String(new Date().getFullYear()));
+  const [reportsWeekStart, setReportsWeekStart] = useState<Date | undefined>();
+  const [reportsCustomDate, setReportsCustomDate] = useState<Date | undefined>();
   const [reportsTeam, setReportsTeam] = useState('');
   const [reportsPriority, setReportsPriority] = useState('');
   const [reportsType, setReportsType] = useState('');
@@ -1411,6 +1435,13 @@ export default function AdminDashboard() {
 
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
   const [downloadSection, setDownloadSection] = useState<'teams' | 'reports' | 'general'>('teams');
+  const [reportGenerating, setReportGenerating] = useState<{
+    active: boolean;
+    message: string;
+    progress: number;
+    done?: boolean;
+  } | null>(null);
+  const [nudgeSeenVersion, setNudgeSeenVersion] = useState(0);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -1579,8 +1610,43 @@ export default function AdminDashboard() {
 
   // Fetch impact metrics for Client Metrics modal
   const impactMetricsQuery = useQuery<any[]>({
-    queryKey: ['/api/admin/impact-metrics']
+    queryKey: ['/api/admin/impact-metrics', selectedClientMetricsClientId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedClientMetricsClientId !== "all") {
+        params.append("clientId", selectedClientMetricsClientId);
+      }
+      const suffix = params.toString() ? `?${params.toString()}` : "";
+      const response = await apiRequest("GET", `/api/admin/impact-metrics${suffix}`);
+      return response.json();
+    }
   });
+  const { data: activeNudgesForIndicator = [] } = useQuery<any[]>({
+    queryKey: ['/api/nudges'],
+    refetchInterval: 30_000,
+  });
+  const hasUnreadNudges = useMemo(
+    () => hasNewAdminNudges(activeNudgesForIndicator),
+    [activeNudgesForIndicator, nudgeSeenVersion],
+  );
+
+  const teamsPeriodSelection = useMemo<ReportPeriodSelection>(() => ({
+    period: teamsPeriod as ReportPeriodSelection['period'],
+    month: teamsReportMonth,
+    quarter: teamsReportQuarter,
+    year: teamsReportYear,
+    weekStart: teamsWeekStart,
+    customDate: teamsCustomDate,
+  }), [teamsPeriod, teamsReportMonth, teamsReportQuarter, teamsReportYear, teamsWeekStart, teamsCustomDate]);
+
+  const reportsPeriodSelection = useMemo<ReportPeriodSelection>(() => ({
+    period: reportsPeriod as ReportPeriodSelection['period'],
+    month: reportsReportMonth,
+    quarter: reportsReportQuarter,
+    year: reportsReportYear,
+    weekStart: reportsWeekStart,
+    customDate: reportsCustomDate,
+  }), [reportsPeriod, reportsReportMonth, reportsReportQuarter, reportsReportYear, reportsWeekStart, reportsCustomDate]);
 
   // Filtered data using useMemo for search functionality
   const filteredTargetMappings = useMemo(() => {
@@ -1843,6 +1909,9 @@ export default function AdminDashboard() {
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
+
+  const displayPerformanceMetrics =
+    sidebarTab === "performance" ? performancePageMetrics : performanceMetrics;
 
   // Fetch team performance data from API
   const { data: teamPerformanceData = [], isLoading: isLoadingTeamPerformance } = useQuery<Array<{
@@ -3117,10 +3186,10 @@ export default function AdminDashboard() {
     }
 
     const actionLabel = manageRequirementAction === 'closed'
-      ? 'Position Closed'
+      ? 'Internally Closed'
       : manageRequirementAction === 'resume'
-        ? 'Resume Requirement'
-        : 'Client Hold';
+        ? 'Resume Sourcing'
+        : 'Hold/ Frozen';
     const confirmed = window.confirm(`This requirement will be marked as ${actionLabel}. Do you want to continue?`);
     if (!confirmed) return;
 
@@ -3199,17 +3268,17 @@ export default function AdminDashboard() {
   const getManageActionLabels = () => {
     if (selectedRequirement?.managementStatus === 'hold') {
       return {
-        primary: 'Resume Requirement',
+        primary: 'Resume Sourcing',
         primaryValue: 'resume' as const,
-        secondary: 'Position Closed',
+        secondary: 'Internally Closed',
         secondaryValue: 'closed' as const,
       };
     }
 
     return {
-      primary: 'Client Hold',
+      primary: 'Hold/ Frozen',
       primaryValue: 'hold' as const,
-      secondary: 'Position Closed',
+      secondary: 'Internally Closed',
       secondaryValue: 'closed' as const,
     };
   };
@@ -3765,7 +3834,7 @@ export default function AdminDashboard() {
               throw new Error(deleteResult.message || 'Failed to delete revenue mapping');
             }
 
-            queryClient.invalidateQueries({ queryKey: ['/api/admin/revenue-mappings'] });
+            invalidateAdminPerformanceQueries(queryClient);
 
             toast({
               title: "Success",
@@ -4028,13 +4097,18 @@ export default function AdminDashboard() {
     setShowDownloadConfirm(true);
   };
 
-  const handleConfirmDownload = () => {
+  const handleConfirmDownload = async () => {
     let fileFormat = '';
     let reportDetails = '';
 
     if (downloadSection === 'teams') {
       fileFormat = teamsFileFormat;
       reportDetails = `Teams Report - ${teamsReportType || 'N/A'} - ${teamsPeriod || 'N/A'}`;
+      if (!teamsReportType || !teamsPeriod) {
+        toast({ title: "Missing fields", description: "Select report type and period.", variant: "destructive" });
+        setShowDownloadConfirm(false);
+        return;
+      }
     } else if (downloadSection === 'reports') {
       fileFormat = reportsFileFormat;
       const selectedReports = Object.entries(reportsCheckboxes)
@@ -4042,9 +4116,19 @@ export default function AdminDashboard() {
         .map(([key, _]) => key)
         .join(', ');
       reportDetails = `Reports - ${selectedReports} - Team: ${reportsTeam || 'All'} - Priority: ${reportsPriority || 'All'}`;
+      if (!reportsPeriod) {
+        toast({ title: "Missing fields", description: "Select a period for custom reports.", variant: "destructive" });
+        setShowDownloadConfirm(false);
+        return;
+      }
     } else {
       fileFormat = generalFileFormat;
       reportDetails = `General Report - ${generalReportType || 'N/A'}`;
+      if (!generalReportType) {
+        toast({ title: "Missing fields", description: "Select a general report type.", variant: "destructive" });
+        setShowDownloadConfirm(false);
+        return;
+      }
     }
 
     if (!fileFormat) {
@@ -4056,6 +4140,26 @@ export default function AdminDashboard() {
       setShowDownloadConfirm(false);
       return;
     }
+
+    setShowDownloadConfirm(false);
+
+    const periodSelection =
+      downloadSection === 'teams'
+        ? teamsPeriodSelection
+        : downloadSection === 'reports'
+          ? reportsPeriodSelection
+          : null;
+    if (periodSelection) {
+      const periodErr = getReportPeriodValidationError(periodSelection);
+      if (periodErr) {
+        toast({ title: "Missing period details", description: periodErr, variant: "destructive" });
+        return;
+      }
+    }
+
+    setReportGenerating({ active: true, message: "Generating report…", progress: 12 });
+    await new Promise((r) => setTimeout(r, 60));
+    setReportGenerating({ active: true, message: "Collecting records…", progress: 45 });
 
     // For PDF, generate HTML and use browser print to PDF
     if (fileFormat === 'pdf') {
@@ -4092,53 +4196,10 @@ export default function AdminDashboard() {
         
         // Add actual data based on report type
         if (teamsReportType === 'cash-outflows') {
-          // Filter cash outflows based on period
-          let filteredCashOutflows = cashoutData;
-          const now = new Date();
-          
-          if (teamsPeriod === 'monthly') {
-            const currentMonth = now.getMonth() + 1;
-            const currentYear = now.getFullYear();
-            filteredCashOutflows = cashoutData.filter((item: any) => {
-              const monthMap: Record<string, number> = {
-                'january': 1, 'february': 2, 'march': 3, 'april': 4,
-                'may': 5, 'june': 6, 'july': 7, 'august': 8,
-                'september': 9, 'october': 10, 'november': 11, 'december': 12,
-                'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
-                'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
-                'oct': 10, 'nov': 11, 'dec': 12
-              };
-              const monthNum = typeof item.month === 'string' 
-                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
-                : parseInt(String(item.month)) || 0;
-              return monthNum === currentMonth && parseInt(item.year) === currentYear;
-            });
-          } else if (teamsPeriod === 'quarterly') {
-            const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
-            const currentYear = now.getFullYear();
-            const quarterMonths: Record<number, number[]> = {
-              1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12]
-            };
-            const monthsInQuarter = quarterMonths[currentQuarter] || [];
-            const monthMap: Record<string, number> = {
-              'january': 1, 'february': 2, 'march': 3, 'april': 4,
-              'may': 5, 'june': 6, 'july': 7, 'august': 8,
-              'september': 9, 'october': 10, 'november': 11, 'december': 12,
-              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
-              'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
-              'oct': 10, 'nov': 11, 'dec': 12
-            };
-            filteredCashOutflows = cashoutData.filter((item: any) => {
-              const monthNum = typeof item.month === 'string'
-                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
-                : parseInt(String(item.month)) || 0;
-              return monthsInQuarter.includes(monthNum) && parseInt(item.year) === currentYear;
-            });
-          } else if (teamsPeriod === 'yearly') {
-            const currentYear = now.getFullYear();
-            filteredCashOutflows = cashoutData.filter((item: any) => parseInt(item.year) === currentYear);
-          }
-          
+          const filteredCashOutflows = cashoutData.filter((item: any) =>
+            cashOutflowMatchesPeriod(item, teamsPeriodSelection),
+          );
+
           htmlContent += `
             <h2 style="margin-top: 30px; color: #333;">Cash Outflows Data</h2>
             <table>
@@ -4216,7 +4277,10 @@ export default function AdminDashboard() {
               filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Archived');
             }
           }
-          
+          filteredRequirements = filteredRequirements.filter((req: any) =>
+            isDateInReportPeriod(req.createdAt, reportsPeriodSelection),
+          );
+
           htmlContent += `
             <h2 style="margin-top: 30px; color: #333;">Requirements Data</h2>
             <table>
@@ -4255,7 +4319,10 @@ export default function AdminDashboard() {
         }
 
         // Pipeline report section
-        if (selectedReports.includes('pipeline') && pipelineApplicantData.length > 0) {
+        const filteredPipeline = pipelineApplicantData.filter((app: any) =>
+          isDateInReportPeriod(app.appliedOn, reportsPeriodSelection),
+        );
+        if (selectedReports.includes('pipeline') && filteredPipeline.length > 0) {
           htmlContent += `
             <h2 style="margin-top: 40px; color: #333;">Pipeline Data</h2>
             <table>
@@ -4273,7 +4340,7 @@ export default function AdminDashboard() {
               <tbody>
           `;
 
-          pipelineApplicantData.forEach((app: any) => {
+          filteredPipeline.forEach((app: any) => {
             htmlContent += `
               <tr>
                 <td>${app.appliedOn || '-'}</td>
@@ -4294,7 +4361,10 @@ export default function AdminDashboard() {
         }
 
         // Closure reports section
-        if (selectedReports.includes('closureReports') && closureReportsData.length > 0) {
+        const filteredClosures = closureReportsData.filter((report: any) =>
+          isDateInReportPeriod(report.offeredDate || report.joinedDate, reportsPeriodSelection),
+        );
+        if (selectedReports.includes('closureReports') && filteredClosures.length > 0) {
           htmlContent += `
             <h2 style="margin-top: 40px; color: #333;">Closure Reports</h2>
             <table>
@@ -4313,7 +4383,7 @@ export default function AdminDashboard() {
               <tbody>
           `;
 
-          closureReportsData.forEach((report: any) => {
+          filteredClosures.forEach((report: any) => {
             htmlContent += `
               <tr>
                 <td>${report.candidate || '-'}</td>
@@ -4335,7 +4405,10 @@ export default function AdminDashboard() {
         }
 
         // Team performance section
-        if (selectedReports.includes('teamPerformance') && teamPerformanceData.length > 0) {
+        const filteredTeamPerf = teamPerformanceData.filter((item: any) =>
+          isDateInReportPeriod(item.joiningDate, reportsPeriodSelection),
+        );
+        if (selectedReports.includes('teamPerformance') && filteredTeamPerf.length > 0) {
           htmlContent += `
             <h2 style="margin-top: 40px; color: #333;">Team Performance</h2>
             <table>
@@ -4352,7 +4425,7 @@ export default function AdminDashboard() {
               <tbody>
           `;
 
-          teamPerformanceData.forEach((item: any) => {
+          filteredTeamPerf.forEach((item: any) => {
             htmlContent += `
               <tr>
                 <td>${item.talentAdvisor || '-'}</td>
@@ -4450,6 +4523,9 @@ export default function AdminDashboard() {
         }
       }
 
+      setReportGenerating({ active: true, message: "Building document…", progress: 78 });
+      await new Promise((r) => setTimeout(r, 40));
+
       htmlContent += `
           </div>
           <p style="margin-top: 30px; color: #666; font-size: 12px;">Generated on ${new Date().toLocaleString()}</p>
@@ -4495,53 +4571,10 @@ export default function AdminDashboard() {
 
       if (downloadSection === 'teams') {
         if (teamsReportType === 'cash-outflows') {
-          // Filter cash outflows based on period
-          let filteredCashOutflows = cashoutData;
-          const now = new Date();
-          
-          if (teamsPeriod === 'monthly') {
-            const currentMonth = now.getMonth() + 1;
-            const currentYear = now.getFullYear();
-            filteredCashOutflows = cashoutData.filter((item: any) => {
-              const monthMap: Record<string, number> = {
-                'january': 1, 'february': 2, 'march': 3, 'april': 4,
-                'may': 5, 'june': 6, 'july': 7, 'august': 8,
-                'september': 9, 'october': 10, 'november': 11, 'december': 12,
-                'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
-                'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
-                'oct': 10, 'nov': 11, 'dec': 12
-              };
-              const monthNum = typeof item.month === 'string' 
-                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
-                : parseInt(String(item.month)) || 0;
-              return monthNum === currentMonth && parseInt(item.year) === currentYear;
-            });
-          } else if (teamsPeriod === 'quarterly') {
-            const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
-            const currentYear = now.getFullYear();
-            const quarterMonths: Record<number, number[]> = {
-              1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12]
-            };
-            const monthsInQuarter = quarterMonths[currentQuarter] || [];
-            const monthMap: Record<string, number> = {
-              'january': 1, 'february': 2, 'march': 3, 'april': 4,
-              'may': 5, 'june': 6, 'july': 7, 'august': 8,
-              'september': 9, 'october': 10, 'november': 11, 'december': 12,
-              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
-              'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
-              'oct': 10, 'nov': 11, 'dec': 12
-            };
-            filteredCashOutflows = cashoutData.filter((item: any) => {
-              const monthNum = typeof item.month === 'string'
-                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
-                : parseInt(String(item.month)) || 0;
-              return monthsInQuarter.includes(monthNum) && parseInt(item.year) === currentYear;
-            });
-          } else if (teamsPeriod === 'yearly') {
-            const currentYear = now.getFullYear();
-            filteredCashOutflows = cashoutData.filter((item: any) => parseInt(item.year) === currentYear);
-          }
-          
+          const filteredCashOutflows = cashoutData.filter((item: any) =>
+            cashOutflowMatchesPeriod(item, teamsPeriodSelection),
+          );
+
           csvContent = 'Month,Year,Employees,Salary,Incentive,Tools Cost,Rent,Other Expenses,Total\n';
           filteredCashOutflows.forEach((item: any) => {
             const total = (parseInt(item.salary) || 0) + (parseInt(item.incentive) || 0) + 
@@ -4579,6 +4612,9 @@ export default function AdminDashboard() {
               filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Archived');
             }
           }
+          filteredRequirements = filteredRequirements.filter((req: any) =>
+            isDateInReportPeriod(req.createdAt, reportsPeriodSelection),
+          );
 
           lines.push('Section,Position,Company,Team Lead,Priority,Status,Criticality,Created At');
           filteredRequirements.forEach((req: any) => {
@@ -4900,6 +4936,19 @@ export default function AdminDashboard() {
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => setIsPendingMeetingsCollapsed((prev) => !prev)}
+                  data-testid="button-toggle-pending-meetings"
+                >
+                  {isPendingMeetingsCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={() => setIsCreateMeetingModalOpen(true)}
                   data-testid="button-add-meeting"
                 >
@@ -4917,6 +4966,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </CardHeader>
+          {!isPendingMeetingsCollapsed && (
           <CardContent className="px-6 pb-6">
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
               {nearestMeetings.length === 0 ? (
@@ -5115,6 +5165,7 @@ export default function AdminDashboard() {
               )}
             </div>
           </CardContent>
+          )}
         </Card>
 
         {/* Message Status */}
@@ -5123,6 +5174,19 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Message Status</CardTitle>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => setIsMessageStatusCollapsed((prev) => !prev)}
+                  data-testid="button-toggle-message-status"
+                >
+                  {isMessageStatusCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  )}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -5137,6 +5201,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </CardHeader>
+          {!isMessageStatusCollapsed && (
           <CardContent className="px-6 pb-6">
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
               {isLoadingChatRooms ? (
@@ -5201,6 +5266,7 @@ export default function AdminDashboard() {
               )}
             </div>
           </CardContent>
+          )}
         </Card>
       </div>
     </div>
@@ -5251,6 +5317,7 @@ export default function AdminDashboard() {
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Criticality</th>
+                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Resume Count</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                         </tr>
                       </thead>
@@ -5284,6 +5351,9 @@ export default function AdminDashboard() {
                                   {requirement.criticality}
                                 </span>
                               </div>
+                            </td>
+                            <td className="py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {(requirement as Requirement & { resumeCount?: string }).resumeCount || "00/00"}
                             </td>
                             <td className="py-3 px-3">
                               <DropdownMenu>
@@ -6251,7 +6321,7 @@ export default function AdminDashboard() {
                       onClick={() => setIsPerformanceChartModalOpen(true)}
                       data-testid="button-expand-performance-chart"
                     >
-                      <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Button>
                   </div>
                   <div className="h-[260px]">
@@ -6326,14 +6396,14 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-0.5 bg-green-500"></div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Avg (₹230K)</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Avg (₹{(revenueBenchmark / 1000).toFixed(0)}K)</span>
                     </div>
                   </div>
                   <div className="h-[200px]">
                     <RevenueChart
                       data={revenueData}
                       height="100%"
-                      benchmarkValue={230000}
+                      benchmarkValue={revenueBenchmark}
                     />
                   </div>
                 </div>
@@ -6800,10 +6870,27 @@ export default function AdminDashboard() {
         setActiveTab('team');
       }
     }
+    if (sidebarTab === 'nudges') {
+      markAdminNudgesAsSeen();
+      setNudgeSeenVersion((v) => v + 1);
+    }
   }, [sidebarTab]);
 
+  useEffect(() => {
+    if (
+      pipelineView === "candidate-session" &&
+      !(sidebarTab === "pipeline" || (sidebarTab === "dashboard" && activeTab === "pipeline"))
+    ) {
+      handleCloseCandidateSession();
+    }
+  }, [sidebarTab, activeTab, pipelineView]);
+
   const renderSidebarContent = () => {
-    if (pipelineView === "candidate-session" && sessionApplicationId) {
+    if (
+      (sidebarTab === "pipeline" || (sidebarTab === "dashboard" && activeTab === "pipeline")) &&
+      pipelineView === "candidate-session" &&
+      sessionApplicationId
+    ) {
       return (
         <div className="h-full min-h-0 overflow-hidden bg-white">
           <CandidateCommentsSession
@@ -6829,8 +6916,9 @@ export default function AdminDashboard() {
         );
       case 'nudges':
         return (
-          <div className="px-6 py-6 h-full overflow-y-auto admin-scrollbar">
+          <div className="px-6 py-6 h-full overflow-y-auto admin-scrollbar space-y-6">
             <ActiveNudgesTable />
+            <NudgeLogsTab key="admin-nudge-logs" />
           </div>
         );
       case 'user-management':
@@ -6923,7 +7011,12 @@ export default function AdminDashboard() {
                                 <td className="py-3 px-3 text-gray-900 dark:text-white text-sm whitespace-nowrap">{jd.clientId || 'N/A'}</td>
                                 <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm whitespace-nowrap">{jd.company || 'N/A'}</td>
                                 <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm whitespace-nowrap">{jd.spocName || 'N/A'}</td>
-                                <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm whitespace-nowrap">{jd.role || 'N/A'}</td>
+                                <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
+                                  <div className="whitespace-nowrap">{jd.role || 'N/A'}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                                    {(jd.requirement?.noOfPositions ?? jd.noOfPositions ?? 1)} position{(jd.requirement?.noOfPositions ?? jd.noOfPositions ?? 1) > 1 ? 's' : ''}
+                                  </div>
+                                </td>
                                 <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm whitespace-nowrap">{jd.sharedDate || 'N/A'}</td>
                                 <td className="py-3 px-3 whitespace-nowrap">
                                   <Button
@@ -7005,6 +7098,7 @@ export default function AdminDashboard() {
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Criticality</th>
+                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Resume Count</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                         </tr>
                       </thead>
@@ -7050,6 +7144,9 @@ export default function AdminDashboard() {
                                     {requirement.criticality}
                                   </span>
                                 </div>
+                              </td>
+                              <td className="py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {(requirement as Requirement & { resumeCount?: string }).resumeCount || "00/00"}
                               </td>
                               <td className="py-3 px-3">
                                 <DropdownMenu>
@@ -7945,7 +8042,7 @@ export default function AdminDashboard() {
                           onClick={() => setIsPerformanceChartModalOpen(true)}
                           data-testid="button-expand-performance-chart-alt"
                         >
-                          <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                         </Button>
                       </div>
                       <div className="h-[260px]">
@@ -8037,7 +8134,7 @@ export default function AdminDashboard() {
                     {/* Performance Gauge */}
                     <div className="xl:col-span-3 flex flex-col items-center justify-center">
                       <div className="w-full max-w-sm mx-auto">
-                        <PerformanceGauge value={performanceMetrics.performancePercentage} />
+                        <PerformanceGauge value={performancePageMetrics.performancePercentage} />
                       </div>
 
                       <Button
@@ -8357,9 +8454,95 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
 
+                  {teamsPeriod === 'monthly' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Month</label>
+                        <Select value={teamsReportMonth} onValueChange={setTeamsReportMonth}>
+                          <SelectTrigger className="w-full h-10 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {REPORT_MONTHS.map((m) => (
+                              <SelectItem key={m} value={m}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Year</label>
+                        <Select value={teamsReportYear} onValueChange={setTeamsReportYear}>
+                          <SelectTrigger className="w-full h-10 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
+                              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  {teamsPeriod === 'quarterly' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Quarter</label>
+                        <Select value={teamsReportQuarter} onValueChange={setTeamsReportQuarter}>
+                          <SelectTrigger className="w-full h-10 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {REPORT_QUARTERS.map((q) => (
+                              <SelectItem key={q} value={q}>{q}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Year</label>
+                        <Select value={teamsReportYear} onValueChange={setTeamsReportYear}>
+                          <SelectTrigger className="w-full h-10 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
+                              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  {teamsPeriod === 'weekly' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Week starting</label>
+                      <StandardDatePicker
+                        value={teamsWeekStart}
+                        onChange={setTeamsWeekStart}
+                        placeholder="Select week start date"
+                        className="w-full h-10"
+                      />
+                    </div>
+                  )}
+                  {teamsPeriod === 'yearly' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Year</label>
+                      <Select value={teamsReportYear} onValueChange={setTeamsReportYear}>
+                        <SelectTrigger className="w-full h-10 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
+                            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   {teamsPeriod === 'custom' && (
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Custom Date</label>
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Date</label>
                       <StandardDatePicker
                         value={teamsCustomDate}
                         onChange={setTeamsCustomDate}
@@ -8404,6 +8587,104 @@ export default function AdminDashboard() {
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Select and configure specific report types</p>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto admin-scrollbar space-y-4 p-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Period</label>
+                    <Select value={reportsPeriod} onValueChange={setReportsPeriod}>
+                      <SelectTrigger className="w-full h-10 text-sm" data-testid="select-reports-period">
+                        <SelectValue placeholder="Select Period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="custom">Custom Date</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {reportsPeriod === 'monthly' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Month</label>
+                        <Select value={reportsReportMonth} onValueChange={setReportsReportMonth}>
+                          <SelectTrigger className="w-full h-10 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {REPORT_MONTHS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Year</label>
+                        <Select value={reportsReportYear} onValueChange={setReportsReportYear}>
+                          <SelectTrigger className="w-full h-10 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
+                              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  {reportsPeriod === 'quarterly' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Quarter</label>
+                        <Select value={reportsReportQuarter} onValueChange={setReportsReportQuarter}>
+                          <SelectTrigger className="w-full h-10 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {REPORT_QUARTERS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Year</label>
+                        <Select value={reportsReportYear} onValueChange={setReportsReportYear}>
+                          <SelectTrigger className="w-full h-10 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
+                              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  {reportsPeriod === 'weekly' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Week starting</label>
+                      <StandardDatePicker
+                        value={reportsWeekStart}
+                        onChange={setReportsWeekStart}
+                        placeholder="Select week start date"
+                        className="w-full h-10"
+                      />
+                    </div>
+                  )}
+                  {reportsPeriod === 'yearly' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Year</label>
+                      <Select value={reportsReportYear} onValueChange={setReportsReportYear}>
+                        <SelectTrigger className="w-full h-10 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
+                            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {reportsPeriod === 'custom' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Date</label>
+                      <StandardDatePicker
+                        value={reportsCustomDate}
+                        onChange={setReportsCustomDate}
+                        placeholder="Select date"
+                        className="w-full h-10"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 block mb-3">Select Reports</label>
                     <div className="grid grid-cols-2 gap-3">
@@ -9077,10 +9358,22 @@ export default function AdminDashboard() {
           companyName="Scaling Theory"
           onHelpClick={() => setIsChatOpen(true)}
           onOpenNudgesTab={() => setSidebarTab("nudges")}
+          onNavigateToSection={(section) => {
+            const tabMap: Record<string, string> = {
+              closures: "performance",
+              nudges: "nudges",
+              escalations: "nudges",
+              pipeline: "pipeline",
+              requirements: "requirements",
+              newCandidates: "pipeline",
+            };
+            const next = tabMap[section];
+            if (next) setSidebarTab(next);
+          }}
         />
       </div>
       <div className="flex flex-1">
-        <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+        <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} hasUnreadNudges={hasUnreadNudges} />
         <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
           {renderSidebarContent()}
         </div>
@@ -10954,8 +11247,8 @@ export default function AdminDashboard() {
                   variant={manageRequirementAction === getManageActionLabels().primaryValue ? 'default' : 'outline'}
                   onClick={() => setManageRequirementAction(getManageActionLabels().primaryValue)}
                   className={manageRequirementAction === getManageActionLabels().primaryValue
-                    ? `${getManageActionLabels().primaryValue === 'resume' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-black'} rounded-xl h-11`
-                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 rounded-xl h-11'}
+                    ? `${getManageActionLabels().primaryValue === 'resume' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-black'} rounded-[6px] h-11`
+                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 rounded-[6px] h-11'}
                   data-testid={`button-manage-requirement-${getManageActionLabels().primaryValue}`}
                 >
                   {getManageActionLabels().primary}
@@ -10965,8 +11258,8 @@ export default function AdminDashboard() {
                   variant={manageRequirementAction === getManageActionLabels().secondaryValue ? 'default' : 'outline'}
                   onClick={() => setManageRequirementAction(getManageActionLabels().secondaryValue)}
                   className={manageRequirementAction === getManageActionLabels().secondaryValue
-                    ? 'bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-11'
-                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 rounded-xl h-11'}
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white rounded-[6px] h-11'
+                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 rounded-[6px] h-11'}
                   data-testid={`button-manage-requirement-${getManageActionLabels().secondaryValue}`}
                 >
                   {getManageActionLabels().secondary}
@@ -10996,13 +11289,13 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 onClick={() => setIsManageRequirementModalOpen(false)}
-                className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="rounded-[6px] border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSubmitManageRequirement}
-                className={`${manageRequirementAction === 'closed' ? 'bg-rose-600 hover:bg-rose-700 text-white' : manageRequirementAction === 'resume' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-400 hover:bg-amber-500 text-black'}`}
+                className={`rounded-[6px] ${manageRequirementAction === 'closed' ? 'bg-rose-600 hover:bg-rose-700 text-white' : manageRequirementAction === 'resume' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-400 hover:bg-amber-500 text-black'}`}
                 disabled={!manageRequirementAction || !manageRequirementReason.trim() || updateRequirementMutation.isPending || archiveRequirementMutation.isPending}
               >
                 {updateRequirementMutation.isPending || archiveRequirementMutation.isPending ? 'Submitting...' : manageRequirementAction === 'resume' ? 'Resume' : 'Submit'}
@@ -11045,6 +11338,7 @@ export default function AdminDashboard() {
                     <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
                     <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
                     <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Criticality</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Resume Count</th>
                     <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                   </tr>
                 </thead>
@@ -11064,6 +11358,7 @@ export default function AdminDashboard() {
                     })
                     .map((requirement: Requirement, index: number) => {
                       const criticalityColor = requirement.criticality === 'HIGH' ? 'text-red-600' : requirement.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
+                      const resumeCount = (requirement as Requirement & { resumeCount?: string }).resumeCount || "00/00";
                       return (
                         <tr
                           key={requirement.id}
@@ -11104,6 +11399,9 @@ export default function AdminDashboard() {
                               </span>
                             </div>
                           </td>
+                          <td className="py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {resumeCount}
+                          </td>
                           <td className="py-3 px-3">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -11142,7 +11440,7 @@ export default function AdminDashboard() {
 
       {/* Metrics Modal */}
       <Dialog open={isMetricsModalOpen} onOpenChange={setIsMetricsModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
+        <DialogContent className="max-w-6xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Key Metrics - Full View</DialogTitle>
             <div className="flex gap-2 mt-4">
@@ -11179,7 +11477,7 @@ export default function AdminDashboard() {
             </div>
           </DialogHeader>
           <div className="overflow-y-auto">
-            <div className="h-[600px] mt-4">
+            <div className="h-[420px] mt-4">
               {!keyAspectsData.chartData || keyAspectsData.chartData.length === 0 ? (
                 <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
                   <div className="text-center">
@@ -12594,7 +12892,7 @@ export default function AdminDashboard() {
       <Dialog open={isPerformanceDataModalOpen} onOpenChange={setIsPerformanceDataModalOpen}>
         <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - Quarter {performanceMetrics?.currentQuarter || 'Q1 2024'}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - {displayPerformanceMetrics?.currentQuarter || 'Q1 2024'}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto pr-2 max-h-[calc(85vh-120px)]">
             {/* Performance Summary Cards - Using API data */}
@@ -12603,7 +12901,7 @@ export default function AdminDashboard() {
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Minimum Target</div>
                   <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-min-target">
-                    ₹{(performanceMetrics?.minimumTarget ?? 0).toLocaleString('en-IN')}
+                    ₹{(displayPerformanceMetrics?.minimumTarget ?? 0).toLocaleString('en-IN')}
                   </div>
                 </CardContent>
               </Card>
@@ -12611,10 +12909,10 @@ export default function AdminDashboard() {
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Target Achieved</div>
                   <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-achieved-target">
-                    ₹{(performanceMetrics?.targetAchieved ?? 0).toLocaleString('en-IN')}
+                    ₹{(displayPerformanceMetrics?.targetAchieved ?? 0).toLocaleString('en-IN')}
                   </div>
                   <div className="text-sm text-green-600 dark:text-green-400 font-medium">
-                    {performanceMetrics?.performancePercentage ?? 0}% Performance
+                    {displayPerformanceMetrics?.performancePercentage ?? 0}% Performance
                   </div>
                 </CardContent>
               </Card>
@@ -12622,7 +12920,7 @@ export default function AdminDashboard() {
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Total Closures</div>
                   <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-total-closures">
-                    {performanceMetrics?.closuresCount ?? 0}
+                    {displayPerformanceMetrics?.closuresCount ?? 0}
                   </div>
                 </CardContent>
               </Card>
@@ -12630,7 +12928,7 @@ export default function AdminDashboard() {
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Total Incentives</div>
                   <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-total-incentives">
-                    ₹{(performanceMetrics?.incentiveEarned ?? 0).toLocaleString('en-IN')}
+                    ₹{(displayPerformanceMetrics?.incentiveEarned ?? 0).toLocaleString('en-IN')}
                   </div>
                 </CardContent>
               </Card>
@@ -13006,6 +13304,19 @@ export default function AdminDashboard() {
                     <SelectItem value="daily">Daily</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={selectedClientMetricsClientId} onValueChange={setSelectedClientMetricsClientId}>
+                  <SelectTrigger className="w-44" data-testid="select-client-metrics-client">
+                    <SelectValue placeholder="Client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Clients</SelectItem>
+                    {(clients as any[]).map((client: any) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.brandName || client.incorporatedName || "Unknown"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -13216,127 +13527,13 @@ export default function AdminDashboard() {
         userRole={userRole}
       />
 
-      {/* JD Preview Modal */}
-      <Dialog open={isJDPreviewModalOpen} onOpenChange={setIsJDPreviewModalOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0">
-          <DialogHeader className="px-6 pt-4 pb-3 border-b">
-            <DialogTitle className="text-xl font-semibold">Job Description Details</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-10rem)] px-6 py-4">
-            {selectedJD && (
-              <div className="space-y-4">
-                {/* Header Card */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                      {selectedJD.company?.charAt(0).toUpperCase() || 'C'}
-                    </div>
-                    <div className="flex-1">
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                        {selectedJD.company || 'Company Name'}
-                      </h2>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Job Description Document</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Details Grid - Compact */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">CLIENT ID:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.clientId || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">ROLE ID:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.id || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">POSITION:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.position || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">SPOC NAME:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.spocName || selectedJD.spoc || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">COMPANY:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.company || 'N/A'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">STATUS:</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.status || 'N/A'}</span>
-                  </div>
-                </div>
-
-                {/* JD Document Section */}
-                {(selectedJD.jdFile || selectedJD.jdText) && (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description Document</h3>
-
-                    {/* PDF/DOC Preview */}
-                    {selectedJD.jdFile && (
-                      <div className="mb-4">
-                        {selectedJD.jdFile.toLowerCase().endsWith('.pdf') ? (
-                          <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                            <iframe
-                              src={selectedJD.jdFile}
-                              className="w-full h-[600px]"
-                              title="JD PDF Preview"
-                            />
-                          </div>
-                        ) : (
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Document File</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedJD.jdFile.split('/').pop()}</p>
-                              </div>
-                              <a
-                                href={selectedJD.jdFile}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                                Open Document
-                              </a>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* JD Text Content */}
-                    {selectedJD.jdText && (
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">JD Text Content</label>
-                        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-                          <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">
-                            {selectedJD.jdText}
-                          </pre>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50">
-            <Button
-              onClick={() => setIsJDPreviewModalOpen(false)}
-              className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <JobDescriptionDetailsModal
+        open={isJDPreviewModalOpen}
+        onOpenChange={setIsJDPreviewModalOpen}
+        data={selectedJD}
+        variant="admin"
+        subtitle="Review all JD information before assigning as requirement."
+      />
 
       {/* View More JD Modal */}
       <Dialog open={isViewMoreJDModalOpen} onOpenChange={setIsViewMoreJDModalOpen}>

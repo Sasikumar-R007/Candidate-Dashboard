@@ -7,6 +7,7 @@ import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import TeamLeaderPerformanceGauge from '@/components/dashboard/team-leader-performance-gauge';
 import AllQuartersTargetDialog from '@/components/dashboard/all-quarters-target-dialog';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
+import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-description-details-modal';
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
@@ -31,7 +32,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { ChatDock } from '@/components/chat/chat-dock';
 import { ChatModal } from '@/components/chat/admin-chat-modal';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Legend } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { SearchBar } from '@/components/ui/search-bar';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
 import type { Requirement, Employee } from '@shared/schema';
@@ -61,55 +62,72 @@ const formatMetricCount = (value: number | string | null | undefined): string =>
   return String(Math.max(0, Math.round(safeValue))).padStart(2, '0');
 };
 
-// Performance Chart Component (separate from Admin page)
-interface PerformanceChartProps {
-  data: Array<{ member: string; requirements: number }>;
-  height?: string;
-  benchmarkValue?: number;
+type TeamPerformanceRow = {
+  member: string;
+  requirements: number;
+  profilesDelivered?: number;
+  profilesRequired?: number;
+  closures?: number;
+};
+
+function getPerformanceBadgeStyles(grade?: string) {
+  switch (grade) {
+    case 'A':
+      return { label: 'A', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', title: 'Average performance' };
+    case 'B':
+      return { label: 'B', badgeBg: 'bg-red-100', badgeText: 'text-red-700', title: 'Below target' };
+    default:
+      return { label: 'G', badgeBg: 'bg-green-100', badgeText: 'text-green-700', title: 'Good performance' };
+  }
 }
 
-function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: PerformanceChartProps) {
+interface PerformanceChartProps {
+  data: TeamPerformanceRow[];
+  height?: string;
+}
+
+function PerformanceChart({ data, height = "100%" }: PerformanceChartProps) {
+  const maxVal = Math.max(
+    1,
+    ...data.flatMap((row) => [
+      row.requirements || 0,
+      row.profilesDelivered || 0,
+      row.closures || 0,
+    ]),
+  );
+  const yMax = Math.max(5, Math.ceil(maxVal * 1.15));
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={data}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis 
-          dataKey="member" 
-          stroke="#6b7280" 
-          style={{ fontSize: '11px' }}
-          tick={{ fill: '#6b7280' }}
+        <XAxis
+          dataKey="member"
+          stroke="#6b7280"
+          tick={{ fill: '#6b7280', fontSize: 10 }}
+          interval={0}
+          angle={-25}
+          textAnchor="end"
+          height={52}
         />
-        <YAxis 
-          stroke="#6b7280" 
-          style={{ fontSize: '12px' }}
-          tick={{ fill: '#6b7280' }}
-          ticks={[3, 6, 9, 12, 15]}
-          domain={[0, 15]}
+        <YAxis
+          stroke="#6b7280"
+          tick={{ fill: '#6b7280', fontSize: 11 }}
+          domain={[0, yMax]}
+          allowDecimals={false}
         />
-        <Tooltip 
-          contentStyle={{ 
-            backgroundColor: '#ffffff', 
+        <Tooltip
+          contentStyle={{
+            backgroundColor: '#ffffff',
             border: '1px solid #e5e7eb',
-            borderRadius: '8px'
+            borderRadius: '8px',
           }}
         />
-        <ReferenceLine 
-          y={benchmarkValue} 
-          stroke="#ef4444" 
-          strokeWidth={2}
-          strokeDasharray="5 5"
-          label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
-        />
-        <Line 
-          type="monotone" 
-          dataKey="requirements" 
-          stroke="#22c55e" 
-          strokeWidth={3} 
-          dot={{ fill: '#22c55e', r: 5 }}
-          activeDot={{ r: 7 }}
-          name="Requirements"
-        />
-      </ComposedChart>
+        <Legend wrapperStyle={{ fontSize: '11px' }} />
+        <Bar dataKey="requirements" name="Requirements" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="profilesDelivered" name="Profiles Delivered" fill="#22c55e" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="closures" name="Closures" fill="#a855f7" radius={[3, 3, 0, 0]} />
+      </BarChart>
     </ResponsiveContainer>
   );
 }
@@ -127,10 +145,22 @@ export default function TeamLeaderDashboard() {
   const initialSidebarTab = () => {
     const saved = sessionStorage.getItem('tlDashboardSidebarTab');
     sessionStorage.removeItem('tlDashboardSidebarTab');
+    if (saved === 'chat') return 'dashboard';
     return saved ? saved : 'dashboard';
   };
   
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
+
+  useEffect(() => {
+    const handleNotificationNavigate = (event: Event) => {
+      const detail = (event as CustomEvent<{ tab?: string; storageKey?: string }>).detail;
+      if (detail?.storageKey && detail.storageKey !== "tlDashboardSidebarTab") return;
+      if (detail?.tab) setSidebarTab(detail.tab);
+    };
+    window.addEventListener("staffos-notification-navigate", handleNotificationNavigate);
+    return () => window.removeEventListener("staffos-notification-navigate", handleNotificationNavigate);
+  }, []);
+
   const [selectedChatRoom, setSelectedChatRoom] = useState<string | null>(null);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('team');
@@ -359,6 +389,53 @@ export default function TeamLeaderDashboard() {
     queryKey: ['/api/team-leader/ceo-comments'],
   });
 
+  const combinedCeoFeed = useMemo(() => {
+    const items: Array<{
+      id: string;
+      kind: 'command' | 'message';
+      label: string;
+      text: string;
+      unread?: number;
+      roomId?: string;
+    }> = [];
+
+    tlChatRooms.forEach((room: any) => {
+      const otherParticipant = room.participants?.find((p: any) => p.participantId !== employee?.id);
+      const participantName = otherParticipant?.participantName || 'Unknown';
+      const participantRole = otherParticipant?.participantRole || '';
+      const roleLabel =
+        participantRole === 'recruiter' ? 'TA' : participantRole === 'admin' ? 'Admin' : '';
+      const unreadCount = room.unreadCount || 0;
+      items.push({
+        id: `chat-${room.id}`,
+        kind: 'message',
+        label: `Message · ${participantName}${roleLabel ? ` (${roleLabel})` : ''}`,
+        text:
+          unreadCount > 0
+            ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}`
+            : 'Click to open conversation',
+        unread: unreadCount,
+        roomId: room.id,
+      });
+    });
+
+    if (Array.isArray(ceoComments)) {
+      ceoComments.forEach((comment: any) => {
+        items.push({
+          id: `ceo-${comment.id}`,
+          kind: 'command',
+          label: 'CEO Command',
+          text: comment.comment,
+        });
+      });
+    }
+
+    return items;
+  }, [tlChatRooms, ceoComments, employee?.id]);
+
+  const tlProfileId =
+    (teamLeaderProfile as { employeeId?: string } | undefined)?.employeeId || employee?.employeeId;
+
   // Fetch pipeline data for team leader
   const { data: pipelineData = [], isLoading: isLoadingPipeline, isError: isErrorPipeline, refetch: refetchPipeline } = useQuery<any[]>({
     queryKey: ['/api/team-leader/pipeline', selectedPipelineRecruiter, pipelineDate !== null ? format(pipelineDate, 'yyyy-MM-dd') : 'all'],
@@ -402,7 +479,14 @@ export default function TeamLeaderDashboard() {
   // Fetch closures data from API
   const { data: closureData = [], isLoading: isLoadingClosures } = useQuery<any[]>({
     queryKey: ['/api/team-leader/closures'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/team-leader/closures');
+      if (!response.ok) throw new Error('Failed to fetch closures');
+      return response.json();
+    },
     enabled: !!employee,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const { data: sourcingJobCounts } = useQuery<{ total: number; active: number; closed: number; draft: number }>({
@@ -1027,7 +1111,10 @@ export default function TeamLeaderDashboard() {
   const renderNudgesContent = () => (
     <div className="flex min-h-screen">
       <div className="flex-1 ml-16 bg-gray-50">
-        <AdminTopHeader companyName="Delivery Workspace" hideHelpButton={true} />
+        <AdminTopHeader
+          companyName="Delivery Workspace"
+          onHelpClick={() => setIsHelpChatOpen(true)}
+        />
         <div className="h-[calc(100vh-64px)] overflow-y-auto">
           <NudgesTab />
         </div>
@@ -1045,8 +1132,6 @@ export default function TeamLeaderDashboard() {
         return renderPipelineContent();
       case 'performance':
         return renderPerformanceContent();
-      case 'chat':
-        return renderChatContent();
       case 'nudges':
         return renderNudgesContent();
       default:
@@ -1068,6 +1153,7 @@ export default function TeamLeaderDashboard() {
 
     // Calculate tenure in years
     const tenureYears = stats.tenure ?? "0";
+    const performanceBadge = getPerformanceBadgeStyles(dailyMetrics?.overallPerformance);
 
     return (
       <div className="flex min-h-screen">
@@ -1102,7 +1188,17 @@ export default function TeamLeaderDashboard() {
                         </div>
 
                         <div className="min-w-0">
-                          <h2 className="text-lg font-bold tracking-tight text-slate-900">{stats.name}</h2>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-lg font-bold tracking-tight text-slate-900">{stats.name}</h2>
+                            {tlProfileId ? (
+                              <span
+                                className="inline-flex rounded-[4px] border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold tracking-wide text-blue-800"
+                                data-testid="text-tl-dashboard-profile-id"
+                              >
+                                {tlProfileId}
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="mt-0.5 text-xs font-medium text-slate-500">Team Leader</p>
                         </div>
                       </div>
@@ -1277,7 +1373,14 @@ export default function TeamLeaderDashboard() {
                   <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
                   <div className="flex items-center space-x-2">
                     <Select value={selectedDailyMetricsFilter} onValueChange={setSelectedDailyMetricsFilter}>
-                      <SelectTrigger className="w-32 h-8 text-sm" data-testid="select-daily-metrics-filter">
+                      <SelectTrigger
+                        className={`w-32 h-8 text-sm border-gray-300 ${
+                          selectedDailyMetricsFilter === 'overall'
+                            ? 'bg-gray-200 text-gray-900 font-medium hover:bg-gray-200'
+                            : 'bg-white'
+                        }`}
+                        data-testid="select-daily-metrics-filter"
+                      >
                         <SelectValue placeholder="Overall" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1345,8 +1448,13 @@ export default function TeamLeaderDashboard() {
                     {/* Right section - Overall Performance */}
                     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                       <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-green-600 font-bold text-sm">G</span>
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${performanceBadge.badgeBg}`}
+                          title={performanceBadge.title}
+                        >
+                          <span className={`font-bold text-sm ${performanceBadge.badgeText}`}>
+                            {performanceBadge.label}
+                          </span>
                         </div>
                         <h4 className="text-lg font-semibold text-gray-900">Overall Performance</h4>
                         <Button
@@ -1361,9 +1469,8 @@ export default function TeamLeaderDashboard() {
                       </div>
                       <div className="h-48 mt-2">
                         <PerformanceChart
-                          data={(dailyMetrics?.performanceData as any) || []}
+                          data={(dailyMetrics?.performanceData as TeamPerformanceRow[]) || []}
                           height="100%"
-                          benchmarkValue={10}
                         />
                       </div>
                     </div>
@@ -1431,24 +1538,42 @@ export default function TeamLeaderDashboard() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="bg-slate-800 rounded-lg p-6 text-white space-y-4">
-                      {isLoadingCeoComments ? (
+                      {isLoadingCeoComments || isLoadingChatRooms ? (
                         <div className="text-center py-2 text-cyan-300/60">
                           <div className="animate-spin rounded-full h-6 w-6 border-2 border-cyan-300/30 border-t-cyan-300 mx-auto mb-2"></div>
-                          Loading commands...
+                          Loading commands and messages...
                         </div>
                       ) : isErrorCeoComments ? (
                         <div className="text-center py-2 text-red-400">
                           Failed to load commands
                         </div>
-                      ) : Array.isArray(ceoComments) && ceoComments.length > 0 ? (
-                        ceoComments.slice(0, 3).map((comment: any, index: number) => (
-                          <div key={comment.id || index} className="text-cyan-300 text-sm font-medium" data-testid={`text-ceo-comment-${index}`}>
-                            {comment.comment}
+                      ) : combinedCeoFeed.length > 0 ? (
+                        combinedCeoFeed.slice(0, 4).map((item, index) => (
+                          <div
+                            key={item.id}
+                            className={`text-sm font-medium ${
+                              item.kind === 'message'
+                                ? 'cursor-pointer rounded-md border border-cyan-500/30 bg-slate-700/40 px-3 py-2 text-cyan-100 hover:bg-slate-700/70'
+                                : 'text-cyan-300'
+                            }`}
+                            data-testid={`text-ceo-feed-${index}`}
+                            onClick={() => {
+                              if (item.kind === 'message' && item.roomId) {
+                                setSelectedChatRoom(item.roomId);
+                                setIsChatModalOpen(true);
+                              }
+                            }}
+                          >
+                            <span className="block text-[10px] uppercase tracking-wide text-cyan-400/90 mb-0.5">
+                              {item.label}
+                              {item.unread ? ` · ${item.unread} new` : ''}
+                            </span>
+                            {item.text}
                           </div>
                         ))
                       ) : (
                         <div className="text-cyan-300/60 text-sm">
-                          No CEO commands at the moment
+                          No CEO commands or messages at the moment
                         </div>
                       )}
                     </div>
@@ -1490,10 +1615,10 @@ export default function TeamLeaderDashboard() {
                       <thead>
                         <tr className="border-b border-gray-200 bg-gray-50">
                           <th className="text-left p-3 font-semibold text-gray-700">Positions</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Resume Count</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Criticality</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Company</th>
                           <th className="text-left p-3 font-semibold text-gray-700">SPOC</th>
-                          <th className="text-left p-3 font-semibold text-gray-700">No. of Positions</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
                           <th className="text-left p-3 font-semibold text-gray-700">JD</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Actions</th>
@@ -1517,6 +1642,7 @@ export default function TeamLeaderDashboard() {
                             const isReassigned = requirement.assignmentStatus === "reassigned";
                             const isOnHold = requirement.managementStatus === "hold";
                             const isRecentlyClosed = requirement.managementStatus === "closed" && requirement.isRecentlyClosed;
+                            const positionCount = requirement.noOfPositions ?? 1;
                             return (
                             <tr 
                               key={requirement.id} 
@@ -1525,7 +1651,12 @@ export default function TeamLeaderDashboard() {
                             >
                               <td className="p-3 text-gray-900">
                                 <div className="flex items-center gap-2">
-                                  <span>{requirement.position}</span>
+                                  <div>
+                                    <span className="font-medium text-gray-900">{requirement.position}</span>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {positionCount} position{positionCount !== 1 ? 's' : ''}
+                                    </p>
+                                  </div>
                                   {isRecentlyClosed && (
                                     <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
                                       Closed
@@ -1537,6 +1668,11 @@ export default function TeamLeaderDashboard() {
                                     </span>
                                   )}
                                 </div>
+                              </td>
+                              <td className="p-3">
+                                <span className="text-sm font-bold text-red-900">
+                                  {requirement.resumeCount || '00/00'}
+                                </span>
                               </td>
                               <td className="p-3">
                                 <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
@@ -1554,7 +1690,6 @@ export default function TeamLeaderDashboard() {
                               </td>
                               <td className="p-3 text-gray-900">{requirement.company}</td>
                               <td className="p-3 text-gray-900">{requirement.spoc}</td>
-                              <td className="p-3 text-gray-900">{requirement.noOfPositions ?? 1}</td>
                               <td className="p-3 text-gray-900">
                                 {requirement.needsTalentAdvisorReassignment && requirement.talentAdvisor ? (
                                   <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
@@ -1565,7 +1700,7 @@ export default function TeamLeaderDashboard() {
                                 )}
                               </td>
                               <td className="p-3">
-                                {requirement.jdFile ? (
+                                {requirement.jdFile || requirement.jdText ? (
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1788,77 +1923,13 @@ export default function TeamLeaderDashboard() {
           </Dialog>
         )}
 
-        {/* JD Preview Modal */}
-        {isJDPreviewModalOpen && selectedJD && (
-          <Dialog open={isJDPreviewModalOpen} onOpenChange={setIsJDPreviewModalOpen}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-semibold text-gray-900">JD Preview</DialogTitle>
-              </DialogHeader>
-              
-              <div className="space-y-6 mt-4">
-                {/* Requirement Details */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Requirement Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.position}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Company</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.company}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">SPOC</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.spoc}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Criticality</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.criticality}-{selectedJD.toughness || 'Medium'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* JD Document Section */}
-                {selectedJD.jdFile && (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description Document</h3>
-                    
-                    {/* PDF/DOC Preview */}
-                    {selectedJD.jdFile.toLowerCase().endsWith('.pdf') ? (
-                      <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                        <iframe
-                          src={selectedJD.jdFile}
-                          className="w-full h-[600px]"
-                          title="JD PDF Preview"
-                        />
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Document File</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{selectedJD.jdFile.split('/').pop()}</p>
-                          </div>
-                          <a
-                            href={selectedJD.jdFile}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Open Document
-                          </a>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+        <JobDescriptionDetailsModal
+          open={isJDPreviewModalOpen}
+          onOpenChange={setIsJDPreviewModalOpen}
+          data={selectedJD}
+          variant="delivery"
+          subtitle="Review the job description for this requirement."
+        />
       </div>
     );
   };
@@ -1957,19 +2028,23 @@ export default function TeamLeaderDashboard() {
     }
 
     return (
-      <div className="flex h-full">
-        {/* Middle Pipeline Content - Scrollable */}
-        <div className="flex-1 ml-16 overflow-y-auto admin-scrollbar">
-          <div className="p-6 space-y-6">
-            {/* Pipeline Header */}
-            <div className="flex justify-between items-center mb-4">
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 flex min-h-screen flex-col bg-gray-50">
+          <AdminTopHeader
+            companyName="Delivery Workspace"
+            onHelpClick={() => setIsHelpChatOpen(true)}
+          />
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {/* Pipeline Header */}
+              <div className="flex shrink-0 justify-between items-center border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-3">
                 {/* Team member (TA) selector - shows all recruiters reporting to this TL */}
                 <select 
                   value={selectedPipelineRecruiter}
                   onChange={(e) => setSelectedPipelineRecruiter(e.target.value)}
-                  className="w-48 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm"
+                  className="w-48 cursor-pointer px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm hover:border-blue-400"
                   data-testid="select-pipeline-recruiter"
                 >
                   <option value="all">All Team Members</option>
@@ -1981,14 +2056,14 @@ export default function TeamLeaderDashboard() {
                   value={pipelineDate || undefined}
                   onChange={(date) => setPipelineDate(date || null)}
                   placeholder="Select date"
-                  className="h-10 w-40 rounded"
+                  className="h-10 w-40 rounded cursor-pointer"
                   data-testid="button-pipeline-date-picker"
                 />
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPipelineDate(new Date())}
-                  className="h-10"
+                  className="h-10 cursor-pointer"
                   title="Reset to today"
                 >
                   Today
@@ -1997,27 +2072,28 @@ export default function TeamLeaderDashboard() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setPipelineDate(null)}
-                  className="h-10"
+                  className="h-10 cursor-pointer"
                   title="Show all candidates (clear date filter)"
                 >
                   All
                 </Button>
               </div>
-            </div>
+              </div>
 
-            {/* Pipeline Stages - Kanban Board Layout */}
+              {/* Pipeline Stages - Kanban Board Layout */}
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
             {isLoadingPipeline ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex flex-1 items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
                 <span className="ml-3 text-gray-600">Loading pipeline data...</span>
               </div>
             ) : isErrorPipeline ? (
-              <div className="text-center py-12 text-red-500">
+              <div className="flex flex-1 items-center justify-center text-red-500">
                 Failed to load pipeline data
               </div>
             ) : (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6" style={{ height: 'calc(100vh - 300px)' }}>
-                <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
+                <div className="min-h-0 flex-1 overflow-hidden">
                   <div className="flex gap-1.5 w-full h-full">
                     {pipelineStages.map((stage) => {
                       const candidates = groupedPipelineCandidates[stage.key] || [];
@@ -2107,12 +2183,12 @@ export default function TeamLeaderDashboard() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
+              </div>
+            </div>
 
-        {/* Right Sidebar with Stats - Fixed, Non-scrollable */}
-        <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-hidden">
-          <div className="p-4 space-y-1">
+              {/* Right Sidebar with Stats - Fixed, Non-scrollable */}
+              <div className="w-64 shrink-0 overflow-hidden border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div className="p-4 space-y-1">
             <button 
               onClick={() => handlePipelineStageClick('SHORTLISTED')}
               className="w-full flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded hover:bg-green-300 dark:hover:bg-green-700 transition-colors cursor-pointer"
@@ -2193,6 +2269,8 @@ export default function TeamLeaderDashboard() {
               <span className="text-sm font-medium text-white">OFFER DROP</span>
               <span className="text-lg font-bold text-white">{pipelineCounts.OFFER_DROP || 0}</span>
             </button>
+                </div>
+              </div>
           </div>
         </div>
       </div>
@@ -2219,7 +2297,10 @@ export default function TeamLeaderDashboard() {
                   value={selectedPerformanceMember}
                   onValueChange={setSelectedPerformanceMember}
                 >
-                  <SelectTrigger className="w-48" data-testid="select-performance-member">
+                  <SelectTrigger
+                    className="w-48 border-slate-300 bg-slate-100 text-slate-900 shadow-sm hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                    data-testid="select-performance-member"
+                  >
                     <SelectValue placeholder="Select Team Member" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2240,37 +2321,49 @@ export default function TeamLeaderDashboard() {
                 ) : performanceGraphData?.chartData && performanceGraphData.chartData.length > 0 ? (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={performanceGraphData.chartData}>
+                      <BarChart data={performanceGraphData.chartData} barGap={8}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis 
-                          dataKey="quarter" 
-                          stroke="#6b7280" 
+                        <XAxis
+                          dataKey="quarter"
+                          stroke="#6b7280"
                           style={{ fontSize: '12px' }}
                           tick={{ fill: '#6b7280' }}
                         />
-                        <YAxis 
-                          stroke="#6b7280" 
+                        <YAxis
+                          yAxisId="left"
+                          stroke="#6b7280"
                           style={{ fontSize: '12px' }}
                           tick={{ fill: '#6b7280' }}
+                          allowDecimals={false}
                         />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#ffffff', 
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
+                          stroke="#22c55e"
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#22c55e' }}
+                          allowDecimals={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#ffffff',
                             border: '1px solid #e5e7eb',
-                            borderRadius: '8px'
+                            borderRadius: '8px',
                           }}
                         />
                         <Legend />
-                        <Bar 
-                          dataKey="resumesDelivered" 
-                          name="Resumes Delivered" 
-                          fill="#3b82f6" 
+                        <Bar
+                          yAxisId="left"
+                          dataKey="resumesDelivered"
+                          name="Resumes Delivered"
+                          fill="#3b82f6"
                           radius={[4, 4, 0, 0]}
                         />
-                        <Bar 
-                          dataKey="closures" 
-                          name="Closures" 
-                          fill="#22c55e" 
+                        <Bar
+                          yAxisId="right"
+                          dataKey="closures"
+                          name="Closures"
+                          fill="#22c55e"
                           radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
@@ -2331,99 +2424,6 @@ export default function TeamLeaderDashboard() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderChatContent = () => {
-    const totalUnread = tlChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
-    
-    return (
-      <div className="flex h-screen">
-        <div className="flex-1 ml-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-          <AdminTopHeader companyName="Delivery Workspace" />
-          <div className="flex flex-col h-full p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Messages</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Communicate with Admin and Talent Advisors</p>
-              </div>
-              {totalUnread > 0 && (
-                <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-full">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-semibold text-green-700 dark:text-green-400">
-                    {totalUnread} unread message{totalUnread > 1 ? 's' : ''}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-6 overflow-y-auto">
-              {isLoadingChatRooms ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Loading messages...
-                </div>
-              ) : tlChatRooms.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No messages yet. Wait for Admin or TA to start a conversation.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {tlChatRooms.map((room: any) => {
-                    // Get the other participant (not TL)
-                    const otherParticipant = room.participants?.find((p: any) => p.participantId !== employee?.id);
-                    const participantName = otherParticipant?.participantName || 'Unknown';
-                    const participantRole = otherParticipant?.participantRole || '';
-                    const roleLabel = participantRole === 'recruiter' ? 'TA' : participantRole === 'admin' ? 'Admin' : '';
-                    const timeStr = room.lastMessageAt
-                      ? new Date(room.lastMessageAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-                      : new Date(room.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                    const unreadCount = room.unreadCount || 0;
-
-                    return (
-                      <div
-                        key={room.id}
-                        className={`bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer ${
-                          unreadCount > 0 ? 'border-l-4 border-l-green-500 bg-green-50/30 dark:bg-green-900/10' : ''
-                        }`}
-                        onClick={() => {
-                          setSelectedChatRoom(room.id);
-                          setIsChatModalOpen(true);
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="font-semibold text-gray-900 dark:text-white">
-                                {participantName} {roleLabel && <span className="text-xs text-gray-500">({roleLabel})</span>}
-                              </div>
-                              {unreadCount > 0 && (
-                                <span className="bg-green-500 text-white text-xs font-semibold rounded-full px-2 py-0.5 min-w-[20px] text-center">
-                                  {unreadCount}
-                                </span>
-                              )}
-                            </div>
-                            <div className={`text-sm line-clamp-2 ${
-                              unreadCount > 0 
-                                ? 'text-gray-900 dark:text-white font-medium' 
-                                : 'text-gray-600 dark:text-gray-400'
-                            }`}>
-                              {unreadCount > 0 ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}` : 'Click to view messages'}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {timeStr}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
@@ -2600,7 +2600,7 @@ export default function TeamLeaderDashboard() {
     const teamData = (teamMembers || []).map((member: any) => ({
       name: member.name,
       salary: member.salary || '0 INR',
-      year: member.year || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+      year: member.year || "",
       count: parseInt(member.profilesCount) || 0,
       profilePicture: member.profilePicture
     }));
@@ -2633,7 +2633,6 @@ export default function TeamLeaderDashboard() {
                   <div>
                     <div className="font-medium text-sm text-gray-900">{member.name}</div>
                     <div className="text-xs text-blue-600">{member.salary}</div>
-                    <div className="text-xs text-gray-500">{member.year}</div>
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">{member.count}</div>
@@ -2666,9 +2665,6 @@ export default function TeamLeaderDashboard() {
                           </h3>
                           <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1" data-testid={`text-member-salary-${index}`}>
                             {member.salary}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400" data-testid={`text-member-year-${index}`}>
-                            {member.year}
                           </p>
                         </div>
                         <div className="text-right">
@@ -3324,7 +3320,10 @@ export default function TeamLeaderDashboard() {
                   value={selectedPerformanceMember}
                   onValueChange={setSelectedPerformanceMember}
                 >
-                  <SelectTrigger className="w-[200px]" data-testid="select-performance-member">
+                  <SelectTrigger
+                    className="w-[200px] border-slate-300 bg-slate-100 text-slate-900 shadow-sm hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    data-testid="select-performance-member"
+                  >
                     <SelectValue placeholder="Select Member" />
                   </SelectTrigger>
                   <SelectContent>
@@ -3558,7 +3557,6 @@ export default function TeamLeaderDashboard() {
       <TeamLeaderMainSidebar 
         activeTab={sidebarTab} 
         onTabChange={setSidebarTab} 
-        chatUnreadCount={tlChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0)} 
       />
       {renderMainContent()}
 
@@ -3740,18 +3738,30 @@ export default function TeamLeaderDashboard() {
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Positions</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Resume Count</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Criticality</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Company</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">SPOC</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">No. of Positions</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Talent Advisor</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRequirementsData.map((requirement: any, index) => (
+                  {visibleRequirementsData.map((requirement: any, index) => {
+                    const positionCount = requirement.noOfPositions ?? 1;
+                    return (
                     <tr key={requirement.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.position}</td>
+                      <td className="p-3 text-gray-900 border border-gray-300">
+                        <div className="font-medium">{requirement.position}</div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {positionCount} position{positionCount !== 1 ? 's' : ''}
+                        </p>
+                      </td>
+                      <td className="p-3 border border-gray-300">
+                        <span className="text-sm font-bold text-red-900">
+                          {requirement.resumeCount || '00/00'}
+                        </span>
+                      </td>
                       <td className="p-3 border border-gray-300">
                         <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
                           requirement.criticality.toUpperCase() === 'HIGH' ? 'bg-red-100 text-red-800' :
@@ -3768,7 +3778,6 @@ export default function TeamLeaderDashboard() {
                       </td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.company}</td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.spoc || '-'}</td>
-                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.noOfPositions ?? 1}</td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.talentAdvisor || 'Unassigned'}</td>
                       <td className="p-3 border border-gray-300">
                         <span className={`text-xs font-semibold px-2 py-1 rounded ${
@@ -3778,7 +3787,8 @@ export default function TeamLeaderDashboard() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -3803,21 +3813,24 @@ export default function TeamLeaderDashboard() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex justify-start space-x-4">
+            <div className="flex flex-wrap justify-start gap-4">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Team Performance</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Requirements</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-0.5 bg-red-500"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (10)</span>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Profiles Delivered</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Closures</span>
               </div>
             </div>
             <div className="h-[420px]">
               <PerformanceChart
-                data={(dailyMetrics?.performanceData as any) || []}
+                data={(dailyMetrics?.performanceData as TeamPerformanceRow[]) || []}
                 height="100%"
-                benchmarkValue={10}
               />
             </div>
           </div>
@@ -3998,24 +4011,41 @@ export default function TeamLeaderDashboard() {
           </DialogHeader>
           <div className="p-4">
             <div className="space-y-4">
-              {isLoadingCeoComments ? (
+              {isLoadingCeoComments || isLoadingChatRooms ? (
                 <div className="text-center py-6 text-gray-500">
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600 mr-2"></div>
-                    Loading commands...
+                    Loading commands and messages...
                   </div>
                 </div>
-              ) : ceoComments.length === 0 ? (
+              ) : combinedCeoFeed.length === 0 ? (
                 <div className="text-center py-6 text-gray-500">
-                  No CEO commands at the moment
+                  No CEO commands or messages at the moment
                 </div>
               ) : (
-                ceoComments.map((comment: any) => (
-                  <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{comment.date}</span>
+                combinedCeoFeed.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`rounded-lg p-4 border border-gray-200 dark:border-gray-700 ${
+                      item.kind === 'message'
+                        ? 'bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                        : 'bg-gray-50 dark:bg-gray-800'
+                    }`}
+                    onClick={() => {
+                      if (item.kind === 'message' && item.roomId) {
+                        setSelectedChatRoom(item.roomId);
+                        setIsChatModalOpen(true);
+                        setIsCeoCommentsModalOpen(false);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {item.label}
+                        {item.unread ? ` · ${item.unread} new` : ''}
+                      </span>
                     </div>
-                    <p className="text-gray-900 dark:text-white text-sm font-medium">{comment.comment}</p>
+                    <p className="text-gray-900 dark:text-white text-sm font-medium">{item.text}</p>
                   </div>
                 ))
               )}

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -171,6 +172,9 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
         <div className="p-6 space-y-4">
           <div className="space-y-4">
             <div>
+              <Label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                Team Lead
+              </Label>
               <Select value={teamLeadId} onValueChange={handleTeamLeadChange}>
                 <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800 data-[placeholder]:text-gray-400" data-testid="select-team-lead">
                   <SelectValue placeholder="Team Lead *" />
@@ -186,6 +190,9 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
             </div>
 
             <div>
+              <Label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                Team Member
+              </Label>
               <Select 
                 value={teamMemberId} 
                 onValueChange={setTeamMemberId}
@@ -214,6 +221,9 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
             </div>
 
             <div>
+              <Label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                Quarter
+              </Label>
               <Select value={quarter} onValueChange={setQuarter}>
                 <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800 data-[placeholder]:text-gray-400" data-testid="select-quarter">
                   <SelectValue placeholder="Quarter *" />
@@ -228,6 +238,9 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
             </div>
 
             <div>
+              <Label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                Year
+              </Label>
               <Input
                 type="number"
                 className="bg-gray-50 dark:bg-gray-800 placeholder:text-gray-400"
@@ -239,6 +252,9 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
             </div>
 
             <div>
+              <Label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                Minimum Target
+              </Label>
               <Input
                 type="text"
                 className="bg-gray-50 dark:bg-gray-800 placeholder:text-gray-400"

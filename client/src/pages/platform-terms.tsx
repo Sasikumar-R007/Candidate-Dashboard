@@ -70,9 +70,16 @@ export default function PlatformTermsPage() {
               <span className="text-base font-semibold text-white/95">StaffOS</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-white/90">
-              <Link href="/" className="transition hover:text-white hover:underline underline-offset-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.history.length > 1) window.history.go(-1);
+                  else window.location.href = "/";
+                }}
+                className="transition hover:text-white hover:underline underline-offset-4"
+              >
                 Home
-              </Link>
+              </button>
               <Link href="/candidate-login" className="transition hover:text-white hover:underline underline-offset-4">
                 Login
               </Link>
@@ -81,7 +88,7 @@ export default function PlatformTermsPage() {
               </Link>
               <a
                 href="mailto:support@staffos.com"
-                className="rounded-full border border-white bg-white px-4 py-1.5 text-xs font-semibold text-[#3f2ca4] transition hover:bg-transparent hover:text-white"
+                className="rounded-[8px] border border-white bg-white px-4 py-1.5 text-xs font-semibold text-[#3f2ca4] transition hover:bg-transparent hover:text-white"
               >
                 Contact
               </a>

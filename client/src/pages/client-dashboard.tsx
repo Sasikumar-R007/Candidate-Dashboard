@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw, UserCheck } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw, UserCheck, Archive } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +41,7 @@ import {
   normalizeClientPortalTab,
 } from "@/lib/client-portal-nav";
 import { ClientTeamTab } from "@/components/client-dashboard/client-team-tab";
+import { ClientMembersSidebar } from "@/components/client-dashboard/client-members-sidebar";
 import { ClientSettingsTab } from "@/components/client-dashboard/client-settings-tab";
 import { ClientRequirementAssignModal } from "@/components/client-dashboard/client-requirement-assign-modal";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
@@ -54,6 +55,7 @@ import {
 export default function ClientDashboard() {
   const { logout } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [sidebarTab, setSidebarTab] = useState('overview');
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [sharedProfilesOpen, setSharedProfilesOpen] = useState(false);
@@ -330,17 +332,12 @@ export default function ClientDashboard() {
       return status === 'active' || status === 'open' || status === 'in_progress' || status === 'in progress';
     }).length;
     const pausedRoles = roles.filter((role: any) => normalizeStatus(role?.status) === 'paused').length;
-    const withdrawnRoles = roles.filter((role: any) => {
-      const status = normalizeStatus(role?.status);
-      return status === 'withdrawn' || status === 'cancelled' || status === 'closed' || status === 'completed';
-    }).length;
-
     return {
       rolesAssigned: roles.length || dashboardStats.rolesAssigned,
       totalPositions: totalPositions || dashboardStats.totalPositions,
       activeRoles: activeRoles || dashboardStats.activeRoles,
       pausedRoles: pausedRoles || dashboardStats.pausedRoles,
-      withdrawnRoles: withdrawnRoles || dashboardStats.withdrawnRoles,
+      withdrawnRoles: dashboardStats.withdrawnRoles,
       successfulHires: Array.isArray(allClosureReports) ? allClosureReports.length : dashboardStats.successfulHires,
     };
   }, [allRolesData, allClosureReports, dashboardStats]);
@@ -413,7 +410,11 @@ export default function ClientDashboard() {
       onHelpClick: () => setIsHelpChatOpen(true),
       portalNudges: isClientAdmin ? activeNudges : [],
       onOpenNudges: () => handleSidebarTabChange("nudges"),
-      onOpenClosures: () => setIsClosureModalOpen(true),
+      onOpenClosures: () => {
+        handleSidebarTabChange("pipeline");
+        setIsClosureModalOpen(true);
+      },
+      onOpenPipeline: () => handleSidebarTabChange("pipeline"),
       onOpenProfileSettings: () => setProfileSettingsOpen(true),
       onOpenChangePassword: () => setChangePasswordOpen(true),
     }),
@@ -578,8 +579,8 @@ export default function ClientDashboard() {
     filtered = filtered.filter((c: any) => !(c.id && c.id.startsWith('sample-')));
 
     if (pipelinePeriod === "today") {
-      const todayKey = format(new Date(), 'yyyy-MM-dd');
-      filtered = filtered.filter((c: any) => getCandidateDateKey(c) === todayKey);
+      const selectedDayKey = format(pipelineDate, 'yyyy-MM-dd');
+      filtered = filtered.filter((c: any) => getCandidateDateKey(c) === selectedDayKey);
     }
 
     // Filter by selected role (single select) - Keep for backward compatibility
@@ -600,7 +601,7 @@ export default function ClientDashboard() {
     }
 
     return filtered;
-  }, [mergedPipelineData, pipelinePeriod, selectedRole, allRolesData, sampleRoles]);
+  }, [mergedPipelineData, pipelinePeriod, pipelineDate, selectedRole, allRolesData, sampleRoles]);
 
   // Group pipeline data by stage for the column view
   const pipelineStages = [
@@ -788,11 +789,12 @@ export default function ClientDashboard() {
       case 'overview':
       case 'dashboard':
         return (
-          <div className="h-full overflow-y-auto">
-            {/* Simple Client Header */}
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
             <SimpleClientHeader {...clientHeaderProps} />
 
-            <div className="px-6 py-6 space-y-6">
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-6 px-6 py-6">
               {/* Stats Cards - Individual Cards Design (Image 2) */}
               <div className="grid grid-cols-6 gap-4">
                 {/* Roles Assigned - Highlighted Card */}
@@ -853,6 +855,10 @@ export default function ClientDashboard() {
               {/* Nudge Escalation Table */}
               <ActiveNudgesTable />
 
+                </div>
+              </div>
+
+              {isClientAdmin && <ClientMembersSidebar />}
             </div>
           </div>
         );
@@ -867,20 +873,242 @@ export default function ClientDashboard() {
                   View-only access. Contact your Client Admin to create or update requirements.
                 </p>
               )}
+
+              {isClientAdmin && (
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-gray-900">JD Upload</h3>
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={resetJdUploadForm}
+                      className="h-10 w-10 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                      title="Reset JD upload"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={openJdPreviewIfValid}
+                      variant="outline"
+                      className="px-6 py-2 rounded border-gray-300 hover:bg-gray-50"
+                    >
+                      Preview
+                    </Button>
+                    <Button
+                      onClick={openJdPreviewIfValid}
+                      disabled={!isJdFormReady}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Submit
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-6 mb-6">
+                    {/* Drag & Drop Upload - Left Side */}
+                    <div className="relative">
+                      <input
+                        ref={jdFileInputRef}
+                        type="file"
+                        accept=".pdf,.docx,.doc"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setUploadedFile(file);
+                            const fileUrl = URL.createObjectURL(file);
+                            setJdFilePreviewUrl(fileUrl);
+                            
+                            // Parse JD file to auto-fill fields
+                            try {
+                              const formData = new FormData();
+                              formData.append('jdFile', file);
+                              const response = await apiFileUpload('/api/client/parse-jd', formData);
+                              const parsed = await response.json();
+                              if (parsed.data) {
+                                if (parsed.data.position && !jdPosition) {
+                                  setJdPosition(parsed.data.position);
+                                }
+                                if (parsed.data.primarySkills && !primarySkills) {
+                                  setPrimarySkills(parsed.data.primarySkills);
+                                }
+                                if (parsed.data.secondarySkills && !secondarySkills) {
+                                  setSecondarySkills(parsed.data.secondarySkills);
+                                }
+                                if (parsed.data.knowledgeOnly && !knowledgeOnly) {
+                                  setKnowledgeOnly(parsed.data.knowledgeOnly);
+                                }
+                                if (parsed.data.specialInstructions && !specialInstructions) {
+                                  setSpecialInstructions(parsed.data.specialInstructions);
+                                }
+                                if (parsed.data.jdText && !jdText) {
+                                  setJdText(parsed.data.jdText);
+                                }
+                              }
+                            } catch (error) {
+                              console.error('Failed to parse JD:', error);
+                            }
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <div
+                        onClick={() => jdFileInputRef.current?.click()}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            setUploadedFile(file);
+                            const fileUrl = URL.createObjectURL(file);
+                            setJdFilePreviewUrl(fileUrl);
+                          }
+                        }}
+                        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors h-full min-h-[200px] flex flex-col items-center justify-center"
+                      >
+                        {uploadedFile ? (
+                          <>
+                            <FileText className="h-10 w-10 text-blue-500 mb-3" />
+                            <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
+                            <p className="text-xs text-gray-500 mt-1">Click to change file</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-10 w-10 text-gray-400 mb-3" />
+                            <p className="text-gray-700 text-sm font-medium">Drag & Drop JD File Here</p>
+                            <p className="text-xs text-gray-500 mt-1">PDF, DOCX supported</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* JD Text Area - Right Side */}
+                    <div
+                      onClick={() => setIsJdModalOpen(true)}
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors min-h-[200px] flex flex-col items-center justify-center"
+                    >
+                      {jdText ? (
+                        <>
+                          <div className="mb-3">
+                            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                              <Edit3 className="h-6 w-6 text-green-600" />
+                            </div>
+                          </div>
+                          <p className="text-green-600 text-sm font-semibold mb-1">JD Content Added</p>
+                          <p className="text-xs text-gray-500">Click to edit content</p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mb-4">
+                            <Edit3 className="h-10 w-10 text-blue-500 mx-auto" />
+                          </div>
+                          <p className="text-gray-700 text-sm font-medium">Copy & Paste Or Write Your Own JD</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Position/Role <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={jdPosition}
+                        onChange={(e) => setJdPosition(e.target.value)}
+                        placeholder="e.g., Senior Software Engineer"
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        No. of Positions <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={jdNoOfPositions}
+                        onChange={(e) => setJdNoOfPositions(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Primary Skills <span className="text-red-500">*</span></label>
+                      <Input
+                        value={primarySkills}
+                        onChange={(e) => setPrimarySkills(e.target.value)}
+                        placeholder="e.g., React, Node.js, TypeScript"
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Secondary Skills <span className="text-red-500">*</span></label>
+                      <Input
+                        value={secondarySkills}
+                        onChange={(e) => setSecondarySkills(e.target.value)}
+                        placeholder="e.g., MongoDB, AWS, Docker"
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Knowledge Only <span className="text-red-500">*</span></label>
+                      <Input
+                        value={knowledgeOnly}
+                        onChange={(e) => setKnowledgeOnly(e.target.value)}
+                        placeholder="e.g., Agile, Scrum, DevOps"
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Special Instructions <span className="text-red-500">*</span></label>
+                    <Textarea
+                      value={specialInstructions}
+                      onChange={(e) => setSpecialInstructions(e.target.value)}
+                      placeholder="Enter special instructions..."
+                      className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 min-h-[100px] placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
+              </div>
+              )}
+
               {/* Requirements / JD */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-lg font-bold text-gray-900">Requirements / JD</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => setIsRolesModalOpen(true)}
-                    disabled={!Array.isArray(allRolesData) || allRolesData.length === 0}
-                  >
-                    View more
-                  </Button>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {isClientAdmin && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-[4px] border-blue-600 text-blue-600 hover:bg-blue-50"
+                        onClick={() => navigate('/archives')}
+                      >
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="shrink-0 rounded-[4px] bg-blue-600 text-white hover:bg-blue-700"
+                      onClick={() => setIsRolesModalOpen(true)}
+                      disabled={!Array.isArray(allRolesData) || allRolesData.length === 0}
+                    >
+                      View more
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -1047,225 +1275,6 @@ export default function ClientDashboard() {
                 </div>
               </div>
 
-              {isClientAdmin && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-gray-900">JD Upload</h3>
-                  <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={resetJdUploadForm}
-                      className="h-10 w-10 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                      title="Reset JD upload"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      onClick={openJdPreviewIfValid}
-                      variant="outline"
-                      className="px-6 py-2 rounded border-gray-300 hover:bg-gray-50"
-                    >
-                      Preview
-                    </Button>
-                    <Button
-                      onClick={openJdPreviewIfValid}
-                      disabled={!isJdFormReady}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Submit
-                    </Button>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-2 gap-6 mb-6">
-                    {/* Drag & Drop Upload - Left Side */}
-                    <div className="relative">
-                      <input
-                        ref={jdFileInputRef}
-                        type="file"
-                        accept=".pdf,.docx,.doc"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setUploadedFile(file);
-                            const fileUrl = URL.createObjectURL(file);
-                            setJdFilePreviewUrl(fileUrl);
-                            
-                            // Parse JD file to auto-fill fields
-                            try {
-                              const formData = new FormData();
-                              formData.append('jdFile', file);
-                              const response = await apiFileUpload('/api/client/parse-jd', formData);
-                              const parsed = await response.json();
-                              if (parsed.data) {
-                                if (parsed.data.position && !jdPosition) {
-                                  setJdPosition(parsed.data.position);
-                                }
-                                if (parsed.data.primarySkills && !primarySkills) {
-                                  setPrimarySkills(parsed.data.primarySkills);
-                                }
-                                if (parsed.data.secondarySkills && !secondarySkills) {
-                                  setSecondarySkills(parsed.data.secondarySkills);
-                                }
-                                if (parsed.data.knowledgeOnly && !knowledgeOnly) {
-                                  setKnowledgeOnly(parsed.data.knowledgeOnly);
-                                }
-                                toast({
-                                  title: "JD Parsed",
-                                  description: "Fields have been auto-filled from the JD file.",
-                                });
-                              }
-                            } catch (error) {
-                              console.error('JD parsing error:', error);
-                              // Continue without parsing - user can fill manually
-                            }
-                          }
-                        }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      />
-                      <div className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer min-h-[180px] flex flex-col justify-center items-center bg-blue-50/30">
-                        {uploadedFile ? (
-                          <>
-                            <div className="mb-3">
-                              <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                <FileText className="h-6 w-6 text-green-600" />
-                              </div>
-                            </div>
-                            <p className="text-green-600 text-sm font-semibold mb-1">{uploadedFile.name}</p>
-                            <p className="text-xs text-gray-500 mb-2">File uploaded successfully</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setUploadedFile(null);
-                                if (jdFilePreviewUrl) {
-                                  URL.revokeObjectURL(jdFilePreviewUrl);
-                                }
-                                setJdFilePreviewUrl(null);
-                                if (jdFileInputRef.current) {
-                                  jdFileInputRef.current.value = '';
-                                }
-                              }}
-                              className="text-xs text-red-500 hover:underline"
-                            >
-                              Remove file
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <div className="mb-4">
-                              <Upload className="h-10 w-10 text-blue-500 mx-auto" />
-                            </div>
-                            <p className="text-gray-700 text-sm font-medium mb-2">Drag & Drop A file here or Click to Browse</p>
-                            <p className="text-xs text-gray-500 mb-1">Supported PDF, Docx</p>
-                            <p className="text-xs text-gray-500">Max File Size 5MB</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Manual Input - Right Side */}
-                    <div className="relative">
-                      <div
-                        onClick={() => {
-                          setTempJdText(jdText);
-                          setIsJdModalOpen(true);
-                        }}
-                        className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center min-h-[180px] flex flex-col justify-center items-center hover:border-blue-400 transition-colors cursor-pointer bg-blue-50/30"
-                      >
-                        {jdText ? (
-                          <>
-                            <div className="mb-3">
-                              <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                <Edit3 className="h-6 w-6 text-green-600" />
-                              </div>
-                            </div>
-                            <p className="text-green-600 text-sm font-semibold mb-1">JD Content Added</p>
-                            <p className="text-xs text-gray-500">Click to edit content</p>
-                          </>
-                        ) : (
-                          <>
-                            <div className="mb-4">
-                              <Edit3 className="h-10 w-10 text-blue-500 mx-auto" />
-                            </div>
-                            <p className="text-gray-700 text-sm font-medium">Copy & Paste Or Write Your Own JD</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Position/Role <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        value={jdPosition}
-                        onChange={(e) => setJdPosition(e.target.value)}
-                        placeholder="e.g., Senior Software Engineer"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        No. of Positions <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={jdNoOfPositions}
-                        onChange={(e) => setJdNoOfPositions(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Skills and Knowledge Section - Below Upload Areas */}
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Primary Skills <span className="text-red-500">*</span></label>
-                      <Input
-                        value={primarySkills}
-                        onChange={(e) => setPrimarySkills(e.target.value)}
-                        placeholder="e.g., React, Node.js, TypeScript"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Secondary Skills <span className="text-red-500">*</span></label>
-                      <Input
-                        value={secondarySkills}
-                        onChange={(e) => setSecondarySkills(e.target.value)}
-                        placeholder="e.g., MongoDB, AWS, Docker"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Knowledge Only <span className="text-red-500">*</span></label>
-                      <Input
-                        value={knowledgeOnly}
-                        onChange={(e) => setKnowledgeOnly(e.target.value)}
-                        placeholder="e.g., Agile, Scrum, DevOps"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Special Instructions */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Special Instructions <span className="text-red-500">*</span></label>
-                    <Textarea
-                      value={specialInstructions}
-                      onChange={(e) => setSpecialInstructions(e.target.value)}
-                      placeholder="Enter special instructions..."
-                      className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 min-h-[100px] placeholder:text-gray-400"
-                    />
-                  </div>
-                </div>
-              </div>
-              )}
             </div>
           </div>
         );
@@ -1286,7 +1295,7 @@ export default function ClientDashboard() {
                     <div className="flex items-center gap-3">
                       {/* Requirement Filter */}
                       <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
-                        <SelectTrigger className="h-10 w-48 rounded">
+                        <SelectTrigger className="h-10 w-48 rounded border border-gray-200 bg-gray-50 text-gray-900 shadow-sm hover:bg-gray-100">
                           <SelectValue placeholder="All Requirements" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1303,8 +1312,16 @@ export default function ClientDashboard() {
                       </Select>
 
                       {/* Period Selector */}
-                      <Select value={pipelinePeriod} onValueChange={setPipelinePeriod}>
-                        <SelectTrigger className="h-10 w-32 rounded">
+                      <Select
+                        value={pipelinePeriod}
+                        onValueChange={(value) => {
+                          setPipelinePeriod(value);
+                          if (value === 'today') {
+                            setPipelineDate(new Date());
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-10 w-32 rounded border border-gray-200 bg-gray-50 text-gray-900 shadow-sm hover:bg-gray-100">
                           <SelectValue placeholder="Period" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1312,6 +1329,14 @@ export default function ClientDashboard() {
                           <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                       </Select>
+
+                      {pipelinePeriod === 'today' && (
+                        <StandardDatePicker
+                          value={pipelineDate}
+                          onChange={(date) => setPipelineDate(date || new Date())}
+                          className="h-10 w-40 border-gray-200 bg-gray-50 shadow-sm hover:bg-gray-100"
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -2107,10 +2132,9 @@ export default function ClientDashboard() {
         {/* Main Content Area */}
         <div className="flex min-h-0 flex-1 ml-16">
           {/* Middle Section */}
-          <div className={`${normalizeClientPortalTab(sidebarTab) === 'overview' ? 'flex-1' : 'w-full'} flex h-full min-h-0 flex-col overflow-hidden bg-white`}>
+          <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
             {renderMainContent()}
           </div>
-
         </div>
       </div>
 

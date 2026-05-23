@@ -127,6 +127,13 @@ import {
   acceptClientMemberInvite,
 } from "./client-team";
 import { sendClientMemberInviteEmail } from "./email-service";
+import {
+  syncAllTargetMappingsFromRevenue,
+  enrichTargetMappingWithRevenue,
+  computeTargetStatsFromRevenue,
+  countQuartersTargetMet,
+} from "./target-revenue-sync";
+import { enrichRequirementsWithResumeCount } from "./requirement-resume-count";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -439,6 +446,56 @@ function matchesEmployeeRef(
   return !!code && ref === code;
 }
 
+function getTeamLeaderRecruiters(teamLeader: { id: string; employeeId?: string | null; name?: string | null }, allEmployees: Array<{ id: string; employeeId?: string | null; name?: string | null; role?: string | null; reportingTo?: string | null }>) {
+  const tlName = (teamLeader.name || "").toLowerCase();
+  return allEmployees.filter(
+    (emp) =>
+      emp.role === "recruiter" &&
+      (emp.reportingTo === teamLeader.employeeId ||
+        emp.reportingTo === teamLeader.id ||
+        (emp.reportingTo || "").toLowerCase() === tlName),
+  );
+}
+
+function revenueMappingBelongsToRecruiter(
+  mapping: { talentAdvisorId?: string | null; talentAdvisorName?: string | null },
+  recruiter: { id: string; employeeId?: string | null; name?: string | null },
+): boolean {
+  return (
+    matchesEmployeeRef(recruiter, mapping.talentAdvisorId) ||
+    (mapping.talentAdvisorName || "").toLowerCase() === (recruiter.name || "").toLowerCase()
+  );
+}
+
+function isClosedRevenueMapping(mapping: {
+  status?: string | null;
+  managementStatus?: string | null;
+  closureDate?: string | null;
+  offeredDate?: string | null;
+}): boolean {
+  const status = (mapping.status || mapping.managementStatus || "").toLowerCase();
+  if (status === "closed") return true;
+  if (mapping.closureDate && String(mapping.closureDate).trim()) return true;
+  if (mapping.offeredDate && String(mapping.offeredDate).trim()) return true;
+  // Revenue mapping rows represent placements/closures when recorded by Admin
+  return true;
+}
+
+const REVENUE_QUARTER_CODES = ["JFM", "AMJ", "JAS", "OND"] as const;
+
+function normalizeRevenueQuarterCode(raw: string | null | undefined): string {
+  const u = (raw || "").toUpperCase().trim();
+  if (REVENUE_QUARTER_CODES.includes(u as (typeof REVENUE_QUARTER_CODES)[number])) return u;
+  const qNum = parseInt(u.replace(/\D/g, ""), 10);
+  if (qNum >= 1 && qNum <= 4) return REVENUE_QUARTER_CODES[qNum - 1];
+  return u || "Unknown";
+}
+
+function chartQuarterLabelFromCode(year: number, quarterCode: string): string {
+  const idx = REVENUE_QUARTER_CODES.indexOf(quarterCode as (typeof REVENUE_QUARTER_CODES)[number]);
+  return idx >= 0 ? `Q${idx + 1} ${year}` : `${quarterCode} ${year}`;
+}
+
 async function canonicalizeEmployeeIdForNudge(ref: string | null | undefined): Promise<string | null> {
   if (!ref) return null;
   const trimmed = ref.trim();
@@ -460,14 +517,21 @@ function isShortlistedApplicationStatus(status: string | null | undefined): bool
   return n === "shortlisted" || n.includes("shortlist");
 }
 
+function notificationFeedLine(...segments: (string | null | undefined)[]): string {
+  return segments
+    .map((s) => (s == null ? "" : String(s).trim()))
+    .filter(Boolean)
+    .join(" - ");
+}
+
 function taEscalationFeedLine(n: { jobTitle?: string | null; candidateName?: string | null; escalationLevel?: string | null }): string {
   const lvl = (n.escalationLevel || "").toLowerCase();
   const job = n.jobTitle || "Role";
   const cand = n.candidateName || "Candidate";
-  if (lvl === "team_leader") return `[${job} - ${cand} - Escalated to TL]`;
-  if (lvl === "admin") return `[${job} - ${cand} - Escalated to Admin]`;
-  if (lvl === "client") return `[${job} - ${cand} - Escalated to Client]`;
-  return `[${job} - ${cand} - Escalated]`;
+  if (lvl === "team_leader") return notificationFeedLine([job, cand, "Escalated to TL"]);
+  if (lvl === "admin") return notificationFeedLine([job, cand, "Escalated to Admin"]);
+  if (lvl === "client") return notificationFeedLine([job, cand, "Escalated to Client"]);
+  return notificationFeedLine([job, cand, "Escalated"]);
 }
 
 async function buildEmployeeNotificationsFeed(employee: any) {
@@ -476,13 +540,28 @@ async function buildEmployeeNotificationsFeed(employee: any) {
   const isTL = role === "team_leader";
   const isAdmin = role === "admin";
 
-  await maybeSyncActiveNudgeEscalations();
+  void maybeSyncActiveNudgeEscalations().catch(() => {});
   const [allNudges, allEmployees, allRevenueMappings, allRequirements, allApplications] = await Promise.all([
-    storage.getActiveNudges(),
-    storage.getAllEmployees(),
-    storage.getAllRevenueMappings(),
-    storage.getRequirements(),
-    storage.getAllJobApplications(),
+    storage.getActiveNudges().catch((err) => {
+      console.error("[notifications-feed] getActiveNudges failed:", err);
+      return [] as Awaited<ReturnType<typeof storage.getActiveNudges>>;
+    }),
+    storage.getAllEmployees().catch((err) => {
+      console.error("[notifications-feed] getAllEmployees failed:", err);
+      return [] as Awaited<ReturnType<typeof storage.getAllEmployees>>;
+    }),
+    storage.getAllRevenueMappings().catch((err) => {
+      console.error("[notifications-feed] getAllRevenueMappings failed:", err);
+      return [] as Awaited<ReturnType<typeof storage.getAllRevenueMappings>>;
+    }),
+    storage.getRequirements().catch((err) => {
+      console.error("[notifications-feed] getRequirements failed:", err);
+      return [] as Awaited<ReturnType<typeof storage.getRequirements>>;
+    }),
+    storage.getAllJobApplications().catch((err) => {
+      console.error("[notifications-feed] getAllJobApplications failed:", err);
+      return [] as Awaited<ReturnType<typeof storage.getAllJobApplications>>;
+    }),
   ]);
 
   const toIso = (value: any): string | null => {
@@ -493,19 +572,23 @@ async function buildEmployeeNotificationsFeed(employee: any) {
 
   if (isAdmin) {
     const adminNudges = allNudges
-      .filter((n) => !n.isResponded && n.escalationLevel === "admin")
+      .filter((n) => !n.isResponded && !n.isRead && n.escalationLevel === "admin")
       .map((n) => ({
         id: n.id,
-        line: `[${n.jobTitle} - ${resolveTeamLeaderName(n.recruiterId, allEmployees)}]`,
+        line: notificationFeedLine([n.jobTitle, resolveTeamLeaderName(n.recruiterId, allEmployees)]),
         createdAt: toIso(n.createdAt),
         isUnread: !n.isRead,
       }));
 
     const clientEscalations = allNudges
-      .filter((n) => !n.isResponded && n.escalationLevel === "client")
+      .filter((n) => !n.isResponded && !n.isRead && n.escalationLevel === "client")
       .map((n) => ({
         id: n.id,
-        line: `[${n.candidateName} - ${resolveTeamLeaderName(n.recruiterId, allEmployees)} - Escalated to "${n.company}"]`,
+        line: notificationFeedLine([
+          n.candidateName,
+          resolveTeamLeaderName(n.recruiterId, allEmployees),
+          `Escalated to ${n.company}`,
+        ]),
         createdAt: toIso(n.createdAt),
         isUnread: !n.isRead,
       }));
@@ -517,7 +600,11 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(rm.createdAt);
         return {
           id: rm.id,
-          line: `[${rm.position} - ${rm.teamLeadName} - (${formatOrdinalShortDate(rm.closureDate || rm.createdAt)})]`,
+          line: notificationFeedLine([
+            rm.position,
+            rm.teamLeadName,
+            formatOrdinalShortDate(rm.closureDate || rm.createdAt),
+          ]),
           createdAt,
           isUnread: isRecentNotification(createdAt),
         };
@@ -557,27 +644,35 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(r.createdAt);
         return {
           id: r.id,
-          line: `[${r.position} - ${r.company}]`,
+          line: notificationFeedLine([r.position, r.company]),
           createdAt,
           isUnread: isRecentNotification(createdAt),
         };
       });
 
     const nudges = allNudges
-      .filter((n) => !n.isResponded && n.escalationLevel === "team_leader" && belongsToTeam(n.recruiterId))
+      .filter(
+        (n) =>
+          !n.isResponded &&
+          !n.isRead &&
+          n.escalationLevel === "team_leader" &&
+          belongsToTeam(n.recruiterId),
+      )
       .map((n) => ({
         id: n.id,
-        line: `[${n.jobTitle} - ${
-          allEmployees.find((e) => matchesEmployeeRef(e, n.recruiterId))?.name || "TA"
-        }]`,
+        line: notificationFeedLine([
+          n.jobTitle,
+          allEmployees.find((e) => matchesEmployeeRef(e, n.recruiterId))?.name || "TA",
+        ]),
         createdAt: toIso(n.createdAt),
-        isUnread: true,
+        isUnread: !n.isRead,
       }));
 
     const escalatedNudges = allNudges
       .filter(
         (n) =>
           !n.isResponded &&
+          !n.isRead &&
           (n.escalationLevel === "admin" || n.escalationLevel === "client") &&
           belongsToTeam(n.recruiterId),
       )
@@ -585,10 +680,10 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         id: n.id,
         line:
           n.escalationLevel === "client"
-            ? `[${n.candidateName} - ${n.jobTitle} - Escalated to Client]`
-            : `[${n.candidateName} - ${n.jobTitle} - Escalated to Admin]`,
+            ? notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Client"])
+            : notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Admin"]),
         createdAt: toIso(n.createdAt),
-        isUnread: true,
+        isUnread: !n.isRead,
       }));
 
     const closures = [...allRevenueMappings]
@@ -599,7 +694,11 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(rm.createdAt);
         return {
           id: rm.id,
-          line: `[${rm.position} - ${rm.talentAdvisorName} - (${formatOrdinalShortDate(rm.closureDate || rm.createdAt)})]`,
+          line: notificationFeedLine([
+            rm.position,
+            rm.talentAdvisorName,
+            formatOrdinalShortDate(rm.closureDate || rm.createdAt),
+          ]),
           createdAt,
           isUnread: isRecentNotification(createdAt),
         };
@@ -650,7 +749,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       )
       .map((n) => ({
         id: n.id,
-        line: `[${n.candidateName || "Candidate"} - ${n.jobTitle || "Role"}]`,
+        line: notificationFeedLine([n.candidateName || "Candidate", n.jobTitle || "Role"]),
         createdAt: toIso(n.createdAt),
         isUnread: !n.isRead,
       }));
@@ -671,7 +770,11 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(rm.closureDate || rm.createdAt);
         return {
           id: rm.id,
-          line: `[${rm.candidateName || "Candidate"} - ${rm.position || "Role"} - ${rm.talentAdvisorName || "TA"}]`,
+          line: notificationFeedLine([
+            rm.candidateName || "Candidate",
+            rm.position || "Role",
+            rm.talentAdvisorName || "TA",
+          ]),
           createdAt,
           isUnread: isRecentNotification(createdAt, 72),
         };
@@ -701,7 +804,11 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(app.updatedAt || app.appliedDate);
         return {
           id: app.id,
-          line: `[${app.candidateName || "Candidate"} - ${(app.jobTitle || app.requirementPosition || "Role")} - Shortlisted]`,
+          line: notificationFeedLine([
+            app.candidateName || "Candidate",
+            app.jobTitle || app.requirementPosition || "Role",
+            "Shortlisted",
+          ]),
           createdAt,
           isUnread: isRecentNotification(createdAt, 72),
         };
@@ -734,7 +841,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(r.createdAt);
         return {
           id: r.id,
-          line: `[${r.position} - ${r.company}]`,
+          line: notificationFeedLine([r.position, r.company]),
           createdAt,
           isUnread: isRecentNotification(createdAt),
         };
@@ -742,13 +849,17 @@ async function buildEmployeeNotificationsFeed(employee: any) {
 
     const nudges = allNudges
       .filter(
-        (n) => !n.isResponded && n.escalationLevel === "recruiter" && matchesEmployeeRef(employee, n.recruiterId),
+        (n) =>
+          !n.isResponded &&
+          !n.isRead &&
+          n.escalationLevel === "recruiter" &&
+          matchesEmployeeRef(employee, n.recruiterId),
       )
       .map((n) => ({
         id: n.id,
-        line: `[${n.jobTitle} - ${n.candidateName}]`,
+        line: notificationFeedLine([n.jobTitle, n.candidateName]),
         createdAt: toIso(n.createdAt),
-        isUnread: true,
+        isUnread: !n.isRead,
       }));
 
     const taEscalatedLevels = new Set(["team_leader", "admin", "client"]);
@@ -763,7 +874,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         id: n.id,
         line: taEscalationFeedLine(n),
         createdAt: toIso(n.createdAt),
-        isUnread: true,
+        isUnread: !n.isRead,
       }));
 
     const closures = [...allRevenueMappings]
@@ -779,7 +890,11 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(rm.closureDate || rm.createdAt);
         return {
           id: rm.id,
-          line: `[${rm.position} - ${rm.clientName || "Client"} - (${formatOrdinalShortDate(rm.closureDate || rm.createdAt)})]`,
+          line: notificationFeedLine([
+            rm.position,
+            rm.clientName || "Client",
+            formatOrdinalShortDate(rm.closureDate || rm.createdAt),
+          ]),
           createdAt,
           isUnread: isRecentNotification(createdAt, 72),
         };
@@ -799,7 +914,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         const createdAt = toIso(app.appliedDate);
         return {
           id: app.id,
-          line: `[${app.candidateName || "Candidate"} - ${app.jobTitle || "Role"}]`,
+          line: notificationFeedLine([app.candidateName || "Candidate", app.jobTitle || "Role"]),
           createdAt,
           isUnread: isRecentNotification(createdAt, 72),
         };
@@ -1452,6 +1567,7 @@ async function resolveApplicationCandidateDetails(application: {
     companyLevel: candidateRow?.companyLevel || profileRow?.companyLevel || null,
     statusNote: application.statusNote,
     rejectionReason: application.rejectionReason,
+    profilePicture: candidateRow?.profilePicture || profileRow?.profilePicture || null,
   };
 }
 
@@ -2127,12 +2243,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           try {
             const employeeAgreementAccepted = await computeEmployeeAgreementAccepted(employee);
-            const { password: _, ...employeeData } = employee;
-            res.json({
-              success: true,
+          const { password: _, ...employeeData } = employee;
+          res.json({
+            success: true,
               employee: { ...employeeData, employeeAgreementAccepted },
-              message: "Login successful"
-            });
+            message: "Login successful"
+          });
           } catch (agreementErr) {
             console.error("Employee login agreement flag error:", agreementErr);
             const { password: _, ...employeeData } = employee;
@@ -4266,13 +4382,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allEmployees = await storage.getAllEmployees();
-      const recruiters = allEmployees.filter(
-        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
-      );
+      const recruiters = getTeamLeaderRecruiters(employee, allEmployees);
 
-      const year = new Date().getFullYear();
       const teamMembers = await Promise.all(recruiters.map(async (rec) => {
-        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
+        const allMappings = await storage.getAllRevenueMappings();
+        const revenueMappings = allMappings.filter((m) => revenueMappingBelongsToRecruiter(m, rec));
         const totalRevenue = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
 
         let tenure = "0";
@@ -4290,14 +4404,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         return {
           id: rec.id,
+          employeeId: rec.employeeId,
           name: rec.name,
           email: rec.email,
           position: rec.designation || 'Recruiter',
           department: rec.department || 'Recruitment',
           salary: totalRevenue > 0 ? `${totalRevenue.toLocaleString('en-IN')} INR` : "0 INR",
-          year: `${year}-${year + 1}`,
           profilesCount: String(revenueMappings.length),
-          closures: revenueMappings.filter(rm => rm.status === 'closed').length,
+          closures: revenueMappings.filter((rm) => isClosedRevenueMapping(rm)).length,
           joiningDate: rec.joiningDate ? new Date(rec.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
           tenure: tenure,
           status: 'online',
@@ -4494,12 +4608,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const performanceData = await Promise.all(teamRecruiters.map(async (rec) => {
         const recReqs = await storage.getRequirementsByTalentAdvisorId(rec.id);
-        // Filter requirements by date for performance data
         const filteredRecReqs = recReqs.filter(req => {
           const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
-          return createdDate <= today;
+          return createdDate <= today && activeRequirementIds.has(req.id);
         });
-        return { member: rec.name, requirements: filteredRecReqs.length };
+
+        let profilesRequired = 0;
+        let profilesDelivered = 0;
+        for (const req of filteredRecReqs) {
+          const target = getResumeTarget(req.criticality, req.toughness);
+          profilesRequired += target;
+          profilesDelivered += teamSubmissions.filter(s => s.requirementId === req.id).length;
+          profilesDelivered += taggedApplications.filter(app => app.requirementId === req.id).length;
+        }
+
+        const recRevenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
+        const closures = recRevenueMappings.length;
+
+        return {
+          member: rec.name,
+          requirements: filteredRecReqs.length,
+          profilesDelivered,
+          profilesRequired,
+          closures,
+        };
       }));
 
       const totalRequirements = filteredRequirements.length;
@@ -5171,7 +5303,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignmentStatus: "archived",
         }));
 
-      res.json([...recentClosedArchivedRequirements, ...requirementsWithStatus]);
+      const allRequirementsForResume = [...recentClosedArchivedRequirements, ...requirementsWithStatus];
+      const requirementIdsForResume = allRequirementsForResume.map((r: any) =>
+        r.isRecentlyClosed ? r.id.replace(/^recent-closed-/, "") : r.id
+      );
+
+      const { getResumeTarget: getTarget } = await import("@shared/constants");
+      const { resumeSubmissions, jobApplications: jobAppsTable } = await import("@shared/schema");
+      const allSubmissionsForResume = requirementIdsForResume.length > 0
+        ? (await db.select().from(resumeSubmissions)).filter((s: any) => requirementIdsForResume.includes(s.requirementId))
+        : [];
+      const allTaggedForResume = requirementIdsForResume.length > 0
+        ? (await db.select().from(jobAppsTable)).filter(
+            (app: any) =>
+              app.source === "recruiter_tagged" &&
+              app.requirementId &&
+              requirementIdsForResume.includes(app.requirementId)
+          )
+        : [];
+
+      const padResumeCount = (delivered: number, target: number) =>
+        `${String(Math.max(0, delivered)).padStart(2, "0")}/${String(Math.max(0, target)).padStart(2, "0")}`;
+
+      const enrichedRequirements = allRequirementsForResume.map((req: any) => {
+        const lookupId = req.isRecentlyClosed ? req.id.replace(/^recent-closed-/, "") : req.id;
+        const target = getTarget(req.criticality, req.toughness);
+        const delivered =
+          allSubmissionsForResume.filter((s: any) => s.requirementId === lookupId).length +
+          allTaggedForResume.filter((app: any) => app.requirementId === lookupId).length;
+        return {
+          ...req,
+          resumeCount: padResumeCount(delivered, target),
+          resumeDelivered: delivered,
+          resumeTarget: target,
+        };
+      });
+
+      res.json(enrichedRequirements);
     } catch (error) {
       console.error('Get team leader requirements error:', error);
       res.status(500).json({ message: "Internal server error", error: error instanceof Error ? error.message : String(error) });
@@ -5616,13 +5784,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allEmployees = await storage.getAllEmployees();
-      const recruiters = allEmployees.filter(
-        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
-      );
+      const recruiters = getTeamLeaderRecruiters(employee, allEmployees);
+      const allMappings = await storage.getAllRevenueMappings();
 
       const performanceData = await Promise.all(recruiters.map(async (rec) => {
-        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
-        const closures = revenueMappings.filter(rm => rm.status === 'closed').length;
+        const revenueMappings = allMappings.filter((m) => revenueMappingBelongsToRecruiter(m, rec));
+        const closures = revenueMappings.filter((rm) => isClosedRevenueMapping(rm)).length;
 
         let tenure = "0";
         if (rec.joiningDate) {
@@ -5640,7 +5807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Count unique quarters with closures
-        const closedMappings = revenueMappings.filter(rm => rm.status === 'closed');
+        const closedMappings = revenueMappings.filter((rm) => isClosedRevenueMapping(rm));
         const qtrsAchieved = new Set(closedMappings.map(rm => rm.quarter)).size;
 
         // Find last closure date
@@ -5676,58 +5843,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const memberId = req.query.memberId as string | undefined;
       const allEmployees = await storage.getAllEmployees();
-      const recruiters = allEmployees.filter(
-        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
-      );
+      const recruiters = getTeamLeaderRecruiters(employee, allEmployees);
 
-      // Get members list for filter dropdown
-      const members = recruiters.map(rec => ({
+      const members = recruiters.map((rec) => ({
         id: rec.id,
-        name: rec.name
+        name: rec.name,
       }));
 
-      // Calculate performance data per quarter for each member
-      const performanceByMember: Record<string, { resumesDelivered: number; closures: number }[]> = {};
-      const quarterlyData: Record<string, { resumesDelivered: number; closures: number }> = {};
+      const tlName = (employee.name || "").toLowerCase();
+      const tlRefs = new Set(
+        [employee.id, employee.employeeId].filter(Boolean) as string[],
+      );
 
-      // Filter recruiters if memberId is specified
-      const targetRecruiters = memberId && memberId !== 'all'
-        ? recruiters.filter(rec => rec.id === memberId)
-        : recruiters;
+      const allMappings = await storage.getAllRevenueMappings();
+      let teamMappings = allMappings.filter((mapping) => {
+        const onTeamLead =
+          tlRefs.has(mapping.teamLeadId) ||
+          (mapping.teamLeadName || "").toLowerCase() === tlName;
+        const onTeamRecruiter = recruiters.some((rec) =>
+          revenueMappingBelongsToRecruiter(mapping, rec),
+        );
+        return onTeamLead || onTeamRecruiter;
+      });
 
-      for (const rec of targetRecruiters) {
-        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
+      const targetRecruiters =
+        memberId && memberId !== "all"
+          ? recruiters.filter((rec) => rec.id === memberId)
+          : recruiters;
 
-        for (const rm of revenueMappings) {
-          const quarter = rm.quarter || 'Unknown';
-          if (!quarterlyData[quarter]) {
-            quarterlyData[quarter] = { resumesDelivered: 0, closures: 0 };
-          }
-
-          // Count resumes delivered (all mappings count as resumes)
-          quarterlyData[quarter].resumesDelivered += 1;
-
-          // Count closures (only closed status)
-          if (rm.status === 'closed') {
-            quarterlyData[quarter].closures += 1;
-          }
-        }
+      if (memberId && memberId !== "all") {
+        const selected = recruiters.find((rec) => rec.id === memberId);
+        teamMappings = selected
+          ? teamMappings.filter((mapping) => revenueMappingBelongsToRecruiter(mapping, selected))
+          : [];
       }
 
-      // Convert to array format for chart
-      const chartData = Object.entries(quarterlyData).map(([quarter, data]) => ({
-        quarter,
-        resumesDelivered: data.resumesDelivered,
-        closures: data.closures
-      })).sort((a, b) => {
-        // Sort by quarter (e.g., "Q1 2024" < "Q2 2024")
-        return a.quarter.localeCompare(b.quarter);
-      });
+      const { jobApplications, requirements } = await import("@shared/schema");
+      const recruiterIds = new Set(targetRecruiters.map((r) => r.id));
+      const recruiterNames = new Set(
+        targetRecruiters.map((r) => (r.name || "").toLowerCase()).filter(Boolean),
+      );
+
+      const allApplications = await db.select({ appliedDate: jobApplications.appliedDate, requirementId: jobApplications.requirementId }).from(jobApplications);
+      const allRequirements = await db.select({
+        id: requirements.id,
+        talentAdvisorId: requirements.talentAdvisorId,
+        talentAdvisor: requirements.talentAdvisor,
+      }).from(requirements);
+
+      const teamRequirementIds = new Set(
+        allRequirements
+          .filter(
+            (req) =>
+              (req.talentAdvisorId && recruiterIds.has(req.talentAdvisorId)) ||
+              (req.talentAdvisor && recruiterNames.has(req.talentAdvisor.toLowerCase())),
+          )
+          .map((req) => req.id),
+      );
+
+      const quarterlyData: Record<string, { resumesDelivered: number; closures: number }> = {};
+
+      const ensureQuarter = (label: string) => {
+        if (!quarterlyData[label]) {
+          quarterlyData[label] = { resumesDelivered: 0, closures: 0 };
+        }
+        return quarterlyData[label];
+      };
+
+      for (const rm of teamMappings) {
+        const year = Number(rm.year) || new Date().getFullYear();
+        const code = normalizeRevenueQuarterCode(rm.quarter);
+        const label = chartQuarterLabelFromCode(year, code);
+        ensureQuarter(label).closures += 1;
+      }
+
+      for (const app of allApplications) {
+        if (!app.requirementId || !teamRequirementIds.has(app.requirementId) || !app.appliedDate) continue;
+        const date = new Date(app.appliedDate);
+        if (isNaN(date.getTime())) continue;
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const code = REVENUE_QUARTER_CODES[Math.floor(month / 3)];
+        const label = chartQuarterLabelFromCode(year, code);
+        ensureQuarter(label).resumesDelivered += 1;
+      }
+
+      const chartData = Object.entries(quarterlyData)
+        .map(([quarter, data]) => ({
+          quarter,
+          resumesDelivered: data.resumesDelivered,
+          closures: data.closures,
+        }))
+        .sort((a, b) => {
+          const parse = (label: string) => {
+            const parts = label.split(/\s+/);
+            const qKey = (parts[0] || "").toUpperCase();
+            const year = parseInt(parts[1] || "0", 10) || 0;
+            const qMap: Record<string, number> = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 };
+            return { year, q: qMap[qKey] || 0 };
+          };
+          const pa = parse(a.quarter);
+          const pb = parse(b.quarter);
+          if (pa.year !== pb.year) return pa.year - pb.year;
+          return pa.q - pb.q;
+        });
 
       res.json({
         members,
         chartData,
-        selectedMemberId: memberId || 'all'
+        selectedMemberId: memberId || "all",
       });
     } catch (error) {
       console.error('Get team leader team performance graph error:', error);
@@ -5745,34 +5969,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allEmployees = await storage.getAllEmployees();
-      const recruiters = allEmployees.filter(
-        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      const tlName = (employee.name || "").toLowerCase();
+      const tlRefs = new Set(
+        [employee.id, employee.employeeId].filter(Boolean) as string[],
       );
-      const recruiterIds = new Set(recruiters.map(rec => rec.id));
-      const recruiterNames = new Set(recruiters.map(rec => rec.name.toLowerCase()));
-      const allRevenueMappings = await storage.getAllRevenueMappings();
 
-      const closures = allRevenueMappings
-        .filter((mapping: any) => {
-          const status = String(mapping.status || '').toLowerCase();
-          const matchesRecruiterId = mapping.talentAdvisorId && recruiterIds.has(mapping.talentAdvisorId);
-          const matchesRecruiterName = mapping.talentAdvisorName && recruiterNames.has(String(mapping.talentAdvisorName).toLowerCase());
-          const matchesTeamLead = mapping.teamLeadId === employee.id || String(mapping.teamLeadName || '').toLowerCase() === employee.name.toLowerCase();
-          return status === 'closed' && (matchesRecruiterId || matchesRecruiterName || matchesTeamLead);
+      const recruiters = getTeamLeaderRecruiters(employee, allEmployees);
+
+      const teamRecruiterRefs = new Set<string>();
+      for (const rec of recruiters) {
+        teamRecruiterRefs.add(rec.id);
+        if (rec.employeeId) teamRecruiterRefs.add(rec.employeeId);
+      }
+
+      const allMappings = await storage.getAllRevenueMappings();
+      const closures = allMappings
+        .filter((mapping) => {
+          const onTeamLead =
+            tlRefs.has(mapping.teamLeadId) ||
+            (mapping.teamLeadName || "").toLowerCase() === tlName;
+          const onTeamRecruiter =
+            teamRecruiterRefs.has(mapping.talentAdvisorId) ||
+            recruiters.some(
+              (rec) =>
+                matchesEmployeeRef(rec, mapping.talentAdvisorId) ||
+                (mapping.talentAdvisorName || "").toLowerCase() === (rec.name || "").toLowerCase(),
+            );
+          return onTeamLead || onTeamRecruiter;
         })
-        .sort((a: any, b: any) => {
-          const aTime = new Date(a.closureDate || a.createdAt || 0).getTime();
-          const bTime = new Date(b.closureDate || b.createdAt || 0).getTime();
-          return bTime - aTime;
-        })
-        .map((mapping: any) => ({
-          name: mapping.candidateName || 'Unknown',
-          position: mapping.position || 'Unknown Position',
-          company: mapping.clientName || mapping.company || 'Unknown Company',
-          closureMonth: mapping.quarter || 'N/A',
-          talentAdvisor: mapping.talentAdvisorName || 'Unassigned',
-          package: mapping.package ? `${Number(mapping.package).toLocaleString('en-IN')}` : '0',
-          revenue: mapping.revenue ? `${Number(mapping.revenue).toLocaleString('en-IN')}` : '0',
+        .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
+        .map((mapping) => ({
+          id: mapping.id,
+          name: mapping.candidateName || "Unknown",
+          position: mapping.position || "Unknown Position",
+          company: mapping.clientName || "Unknown Company",
+          closureMonth: mapping.quarter
+            ? `${mapping.quarter}${mapping.year ? ` ${mapping.year}` : ""}`
+            : "N/A",
+          talentAdvisor: mapping.talentAdvisorName || "Unassigned",
+          package: mapping.revenue
+            ? `${Number(mapping.revenue).toLocaleString("en-IN")}`
+            : "0",
+          revenue: mapping.revenue
+            ? `${Number(mapping.revenue).toLocaleString("en-IN")}`
+            : "0",
           offeredDate: mapping.offeredDate || null,
           joinedDate: mapping.closureDate || null,
         }));
@@ -5828,7 +6068,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/notifications-feed", requireEmployeeAuth, async (req, res) => {
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
-      if (!employee || (employee.role || "").toLowerCase() !== "admin") {
+      const sessionRole = (req.session.employeeRole || "").toLowerCase().replace(/[\s-]+/g, "_");
+      const dbRole = (employee?.role || "").toLowerCase().replace(/[\s-]+/g, "_");
+      const isAdminUser =
+        sessionRole === "admin" ||
+        dbRole === "admin" ||
+        sessionRole.includes("admin") ||
+        dbRole.includes("admin");
+      if (!employee || !isAdminUser) {
         return res.status(403).json({ message: "Access denied. Admin role required." });
       }
       const feed = await buildEmployeeNotificationsFeed(employee);
@@ -5841,7 +6088,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Admin notifications feed error:", error);
-      res.status(500).json({ message: "Failed to load notifications" });
+      res.json({
+        closures: [],
+        adminNudges: [],
+        clientEscalations: [],
+        unreadAdminNudges: 0,
+        unreadClientEscalations: 0,
+      });
     }
   });
 
@@ -5855,7 +6108,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(feed);
     } catch (error) {
       console.error("Employee notifications feed error:", error);
-      res.status(500).json({ message: "Failed to load notifications" });
+      res.json({
+        role: "employee",
+        closures: [],
+        nudges: [],
+        escalatedNudges: [],
+        newRequirements: [],
+        newCandidateApplied: [],
+        unreadCount: 0,
+      });
+    }
+  });
+
+  app.patch("/api/employee/notifications/dismiss", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { kind, id } = req.body as { kind?: string; id?: string };
+      if (!id) {
+        return res.status(400).json({ message: "Notification id is required" });
+      }
+      const nudgeKinds = new Set(["nudge", "escalation", "escalatedNudge"]);
+      if (kind && nudgeKinds.has(kind)) {
+        const { nudges: nudgesTable } = await import("@shared/schema");
+        await db
+          .update(nudgesTable)
+          .set({ isRead: true })
+          .where(eq(nudgesTable.id, id));
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Dismiss notification error:", error);
+      res.status(500).json({ message: "Failed to dismiss notification" });
     }
   });
 
@@ -6210,11 +6492,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get target mappings for this recruiter
       const recruiterTargets = allTargetMappings.filter(tm => tm.teamMemberId === recruiter.id);
+      const enrichedRecruiterTargets = recruiterTargets.map((tm) =>
+        enrichTargetMappingWithRevenue(tm, allRevenueMappings),
+      );
 
-      // Calculate quarters achieved
-      const quartersAchieved = recruiterTargets.filter(tm =>
-        (tm.targetAchieved ?? 0) >= tm.minimumTarget
-      ).length;
+      const quartersAchieved = countQuartersTargetMet(enrichedRecruiterTargets);
 
       // Get revenue mappings for this recruiter
       const recruiterRevenueMappings = allRevenueMappings.filter(rm =>
@@ -6222,17 +6504,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (rm.talentAdvisorName || '').toLowerCase() === recruiter.name.toLowerCase()
       );
 
-      const totalClosures = recruiterRevenueMappings.filter(rm => rm.status === 'closed').length;
+      const totalClosures = recruiterRevenueMappings.length;
 
-      // Calculate total revenue
-      const totalRevenue = recruiterRevenueMappings
-        .filter(rm => rm.status === 'closed')
-        .reduce((sum, rm) => sum + (parseFloat(rm.revenue || '0') || 0), 0);
+      const totalRevenue = recruiterRevenueMappings.reduce(
+        (sum, rm) => sum + (Number(rm.revenue) || 0),
+        0,
+      );
 
-      // Calculate target achievement percentage
-      const totalTarget = recruiterTargets.reduce((sum, tm) => sum + (tm.minimumTarget || 0), 0);
-      const totalAchieved = recruiterTargets.reduce((sum, tm) => sum + (tm.targetAchieved || 0), 0);
-      const targetAchievement = totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0;
+      const totalTarget = enrichedRecruiterTargets.reduce(
+        (sum, tm) => sum + (tm.minimumTarget || 0),
+        0,
+      );
+      const totalAchieved = enrichedRecruiterTargets.reduce(
+        (sum, tm) => sum + (tm.targetAchieved || 0),
+        0,
+      );
+      const targetAchievement =
+        totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0;
 
       // Get last closure date
       const closedMappings = recruiterRevenueMappings.filter(rm => rm.status === 'closed');
@@ -7667,7 +7955,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminRequirements = allRequirements.filter((req: any) => {
         return !req.id || !/^STR\d{5}$/.test(req.id);
       });
-      res.json(adminRequirements);
+      const enriched = await enrichRequirementsWithResumeCount(adminRequirements);
+      res.json(enriched);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -9770,15 +10059,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/target-mappings", requireAdminAuth, async (req, res) => {
     try {
       const targetMappings = await storage.getAllTargetMappings();
+      const allRevenue = await storage.getAllRevenueMappings();
 
-      // Enrich with employee data
+      // Enrich with employee data and live revenue aggregates
       const enrichedMappings = await Promise.all(
         targetMappings.map(async (mapping) => {
           const teamLead = await storage.getEmployeeById(mapping.teamLeadId);
           const teamMember = await storage.getEmployeeById(mapping.teamMemberId);
+          const withRevenue = enrichTargetMappingWithRevenue(mapping, allRevenue);
 
           return {
-            ...mapping,
+            ...withRevenue,
             teamLeadName: teamLead?.name || "Unknown",
             teamMemberName: teamMember?.name || "Unknown",
             teamMemberRole: teamMember?.role || "Unknown",
@@ -9940,6 +10231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const revenueMapping = await storage.createRevenueMapping(revenueMappingData);
+
+      await syncAllTargetMappingsFromRevenue(storage);
 
       logClosureMade(
         storage,
@@ -10209,6 +10502,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Revenue mapping not found" });
       }
 
+      await syncAllTargetMappingsFromRevenue(storage);
+
       res.json({
         message: "Revenue mapping updated successfully",
         revenueMapping: updatedRevenueMapping,
@@ -10235,6 +10530,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Revenue mapping not found" });
       }
 
+      await syncAllTargetMappingsFromRevenue(storage);
+
       res.json({ message: "Revenue mapping deleted successfully" });
     } catch (error) {
       console.error("Delete revenue mapping error:", error);
@@ -10256,7 +10553,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all requirements
       const allRequirements = await db.select().from(requirements);
 
-      // Filter by date range if provided
       let filteredDeliveries = allDeliveries;
       let filteredRequirements = allRequirements;
 
@@ -10274,6 +10570,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (dateTo && new Date(dateTo as string) < reqDate) return false;
           return true;
         });
+      }
+
+      // Filter by team if provided
+      if (teamId && teamId !== 'all') {
+        const normalizedTeamId = String(teamId).toLowerCase();
+        const teamLeader = await db.execute(sql`
+          SELECT id, employee_id, name
+          FROM employees
+          WHERE LOWER(id) = ${normalizedTeamId}
+             OR LOWER(employee_id) = ${normalizedTeamId}
+             OR LOWER(name) = ${normalizedTeamId}
+          LIMIT 1
+        `);
+
+        const teamLeaderRow = teamLeader.rows?.[0] as any;
+        if (teamLeaderRow) {
+          filteredRequirements = filteredRequirements.filter((req: any) => {
+            const teamLeadRaw = String(req.teamLead || "").toLowerCase();
+            return (
+              teamLeadRaw === String(teamLeaderRow.id || "").toLowerCase() ||
+              teamLeadRaw === String(teamLeaderRow.employee_id || "").toLowerCase() ||
+              teamLeadRaw === String(teamLeaderRow.name || "").toLowerCase()
+            );
+          });
+          const allowedRequirementIds = new Set(filteredRequirements.map((req: any) => req.id));
+          filteredDeliveries = filteredDeliveries.filter((delivery: any) => allowedRequirementIds.has(delivery.requirementId));
+        } else {
+          filteredRequirements = [];
+          filteredDeliveries = [];
+        }
       }
 
       // Group data by time period
@@ -10555,18 +10881,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Count quarters since joining (as requested: based on joining date)
-        const quartersAchieved = calculateQuartersSince(member.joiningDate);
+        const enrichedMemberTargets = memberTargets.map((tm) =>
+          enrichTargetMappingWithRevenue(tm, allRevenueMappings),
+        );
 
-        // Calculate total revenue
-        const totalRevenue = memberClosures
-          .filter(rm => rm.status === 'closed')
-          .reduce((sum, rm) => sum + (parseFloat(rm.revenue || '0') || 0), 0);
+        const quartersAchieved = countQuartersTargetMet(enrichedMemberTargets);
 
-        // Calculate target achievement percentage
-        const totalTarget = memberTargets.reduce((sum, tm) => sum + (tm.minimumTarget || 0), 0);
-        const totalAchieved = memberTargets.reduce((sum, tm) => sum + (tm.targetAchieved || 0), 0);
-        const targetAchievement = totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0;
+        const totalRevenue = memberClosures.reduce(
+          (sum, rm) => sum + (Number(rm.revenue) || 0),
+          0,
+        );
+
+        const totalTarget = enrichedMemberTargets.reduce(
+          (sum, tm) => sum + (tm.minimumTarget || 0),
+          0,
+        );
+        const totalAchieved = enrichedMemberTargets.reduce(
+          (sum, tm) => sum + (tm.targetAchieved || 0),
+          0,
+        );
+        const targetAchievement =
+          totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0;
 
         return {
           id: member.id,
@@ -10702,7 +11037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0",
           closureAction,
         };
-        });
+      });
 
       res.json(closuresList);
     } catch (error) {
@@ -10861,16 +11196,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } else {
-        // All teams - show only team leaders (TLs), not all recruiters
-        targetMembers = teamLeaders;
+        // All teams - show active recruiters so the chart is representative.
+        targetMembers = allEmployees.filter((emp: any) =>
+          emp.role === 'recruiter' && emp.is_active === true
+        );
       }
 
       // Calculate total revenue per member
-      const revenueData = targetMembers.slice(0, 20).map(member => {
+      const revenueData = targetMembers.map(member => {
         const memberRevenue = allRevenueMappings
           .filter(rm =>
-            rm.talentAdvisorId === member.id ||
-            rm.talentAdvisorName?.toLowerCase() === member.name.toLowerCase()
+            (rm.status === 'closed' || rm.status === 'Closed') &&
+            (rm.talentAdvisorId === member.id ||
+              rm.talentAdvisorName?.toLowerCase() === member.name.toLowerCase())
           )
           .reduce((sum, rm) => sum + (parseFloat(rm.revenue?.toString() || '0') || 0), 0);
 
@@ -10973,14 +11311,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const totalMinTarget = filteredTargets.reduce((sum, target) => sum + (target.minimumTarget || 0), 0);
-      const totalAchieved = filteredTargets.reduce((sum, target) => sum + (target.targetAchieved ?? 0), 0);
-      const totalIncentives = filteredTargets.reduce((sum, target) => sum + (target.incentives ?? 0), 0);
+      const totalAchieved = relevantClosures.reduce(
+        (sum, mapping) => sum + (Number(mapping.revenue) || 0),
+        0,
+      );
+      const totalIncentives = relevantClosures.reduce(
+        (sum, mapping) => sum + (Number(mapping.incentive) || 0),
+        0,
+      );
 
-      const totalRevenue = relevantClosures.reduce((sum, mapping) => sum + (mapping.revenue || 0), 0);
+      const totalRevenue = totalAchieved;
       const closuresCount = relevantClosures.length;
 
-      // Calculate performance percentage for gauge
-      const performancePercentage = totalMinTarget > 0 ? Math.min((totalAchieved / totalMinTarget) * 100, 100) : 0;
+      // Calculate performance percentage for gauge (target progress; sensible fallback when targets unset)
+      let performancePercentage = 0;
+      if (totalMinTarget > 0) {
+        performancePercentage = Math.min((totalAchieved / totalMinTarget) * 100, 100);
+      } else if (totalAchieved > 0) {
+        performancePercentage = 100;
+      }
 
       res.json({
         currentQuarter: summaryLabel,
@@ -10989,7 +11338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         incentiveEarned: totalIncentives,
         totalRevenue,
         closuresCount,
-        performancePercentage: Math.round(performancePercentage),
+        performancePercentage: Math.round(performancePercentage * 10) / 10,
         period: typeof period === 'string' ? period : 'quarterly'
       });
     } catch (error) {
@@ -12054,25 +12403,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         application = updated;
       } else {
         // Create new application
-        const applicationData = {
-          profileId: `recruiter-tagged-${Date.now()}`,
-          requirementId: requirementId || null,
-          ownerEmployeeId: employee.id,
-          ownerRole,
-          jobTitle: jobTitle.trim(),
-          company: company.trim(),
-          status: "In Process",
-          source: "recruiter_tagged",
+      const applicationData = {
+        profileId: `recruiter-tagged-${Date.now()}`,
+        requirementId: requirementId || null,
+        ownerEmployeeId: employee.id,
+        ownerRole,
+        jobTitle: jobTitle.trim(),
+        company: company.trim(),
+        status: "In Process",
+        source: "recruiter_tagged",
           // Ask explicit consent only once for recruiter-invited flow.
           isCandidateConfirmed: hasPriorRecruiterConsent,
-          candidateName: candidateName.trim(),
+        candidateName: candidateName.trim(),
           candidateEmail: candidateEmailStr,
-          candidatePhone: candidatePhone?.trim() || null,
-          experience: experience?.toString() || null,
-          skills: Array.isArray(skills) ? JSON.stringify(skills) : (skills || null),
-          location: location?.trim() || null,
-          appliedDate: new Date(),
-        };
+        candidatePhone: candidatePhone?.trim() || null,
+        experience: experience?.toString() || null,
+        skills: Array.isArray(skills) ? JSON.stringify(skills) : (skills || null),
+        location: location?.trim() || null,
+        appliedDate: new Date(),
+      };
 
         application = await storage.createJobApplication(applicationData);
       }
@@ -13187,7 +13536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!(await employeeCanViewCandidateRecord(employee, candidate))) {
-        return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
+          return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
       }
 
       res.json(candidate);
@@ -14337,15 +14686,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pausedRoles = requirements.filter(
           (r) => normalizeStatus(r.status) === "paused",
         ).length;
-        const withdrawnRoles = requirements.filter((r) => {
-          const s = normalizeStatus(r.status);
-          return (
-            s === "withdrawn" ||
-            s === "cancelled" ||
-            s === "closed" ||
-            s === "completed"
-          );
-        }).length;
+        const withdrawnRoles = requirements.filter(
+          (r) => (r.managementStatus || "").trim().toLowerCase() === "closed",
+        ).length;
         const scopedApps = allApplications.filter(
           (a) => a.requirementId && reqIds.has(a.requirementId),
         );
@@ -14649,6 +14992,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get client pipeline error:', error);
       res.status(500).json({ message: "Failed to get pipeline data" });
+    }
+  });
+
+  app.get("/api/client/archived-requirements", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+      };
+      const { companyName, memberRequirementIds } =
+        await getClientScopedRequirements(authEmp);
+      const normalizedCompany = (companyName || "").trim().toLowerCase();
+
+      const allArchived = await storage.getArchivedRequirements();
+      let scoped = allArchived.filter(
+        (req: any) =>
+          (req.company || "").trim().toLowerCase() === normalizedCompany,
+      );
+
+      if (memberRequirementIds !== null) {
+        scoped = scoped.filter((req: any) =>
+          memberRequirementIds.has((req.originalId || req.id || "").trim()),
+        );
+      }
+
+      res.json(scoped);
+    } catch (error) {
+      console.error("Get client archived requirements error:", error);
+      res.status(500).json({ message: "Failed to get archived requirements" });
+    }
+  });
+
+  app.get("/api/client/archived-candidates", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { applications: scopedApplications } =
+        await getJobApplicationsScopedToClient(employee);
+
+      const archivedStatuses = new Set([
+        "screened out",
+        "rejected",
+        "archived",
+        "offer drop",
+        "declined",
+        "withdrawn",
+      ]);
+
+      const archivedCandidates = scopedApplications
+        .filter((app: any) => {
+          const status = (app.status || app.currentStatus || "")
+            .trim()
+            .toLowerCase();
+          return archivedStatuses.has(status) || status.includes("reject");
+        })
+        .map((app: any) => ({
+          id: app.id,
+          candidateName: app.candidateName || "Unknown",
+          candidateEmail: app.candidateEmail || "N/A",
+          jobTitle: app.jobTitle || app.roleApplied || "N/A",
+          company: app.company || "N/A",
+          status: app.status || app.currentStatus || "Rejected",
+          appliedDate: app.appliedDate || app.updatedAt || null,
+          requirementId: app.requirementId || null,
+        }));
+
+      res.json(archivedCandidates);
+    } catch (error) {
+      console.error("Get client archived candidates error:", error);
+      res.status(500).json({ message: "Failed to get archived candidates" });
     }
   });
 

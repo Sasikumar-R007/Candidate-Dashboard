@@ -8,10 +8,15 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { BrainCircuit, BarChart3, Users, TrendingUp, Shield, ArrowLeft } from "lucide-react";
+import { Users, ArrowLeft, Briefcase, TrendingUp, Shield } from "lucide-react";
 import { Link } from "wouter";
 import staffosLogo3 from "@/assets/staffos logo 3.png";
 import staffosLogo2 from "@/assets/staffos logo 2.png";
+import rocketIcon from "@/assets/Icons/rocket.png";
+import suitcaseIcon from "@/assets/Icons/suitcase.png";
+import securityIcon from "@/assets/Icons/security.png";
+import lineChartIcon from "@/assets/Icons/line-chart.png";
+import { PaperPlaneNudgeIcon } from "@/components/landing/paper-plane-nudge-icon";
 import { useAuth } from "@/contexts/auth-context";
 import { getDefaultRouteForAuthUser } from "@/lib/auth-routing";
 import { 
@@ -109,86 +114,132 @@ export default function EmployerLogin() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Modern SaaS Design with Gradient - Matching Landing Page Theme */}
-      <div
-        className="hidden lg:flex lg:w-1/2 h-screen relative overflow-hidden"
-        style={{
-          background:
-            "radial-gradient(circle at 18% 18%, rgba(96, 165, 250, 0.35), transparent 28%), radial-gradient(circle at 82% 78%, rgba(14, 165, 233, 0.28), transparent 32%), linear-gradient(135deg, #0B1F5E 0%, #1D4ED8 48%, #2563EB 100%)",
-        }}
-      >
-        {/* Content overlay */}
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          {/* StaffOS logo at top left */}
-          <div className="flex items-center space-x-2">
-            <img
-              src={staffosLogo2}
-              alt="StaffOS Logo"
-              className="h-10 w-10 rounded-lg object-contain"
-            />
-            <span className="text-xl font-bold text-white">StaffOS</span>
+      <div className="relative hidden h-screen overflow-y-auto scrollbar-hide border-0 lg:flex lg:w-1/2">
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#F8F7FF] via-[#F4F1FF] to-[#EEF4FF]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-90"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 12% 18%, rgba(91, 67, 221, 0.14), transparent 42%), radial-gradient(circle at 88% 82%, rgba(37, 99, 235, 0.12), transparent 40%), radial-gradient(circle at 70% 12%, rgba(99, 102, 241, 0.08), transparent 35%)",
+          }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.45]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(91, 67, 221, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(91, 67, 221, 0.05) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+          aria-hidden
+        />
+        <div className="relative z-10 flex h-full min-h-screen w-full flex-col justify-between gap-4 py-7 pl-10 pr-10 xl:pr-14">
+          <div className="shrink-0">
+            <p className="text-[11px] font-semibold tracking-[0.06em] text-[#4A3EC8]">Why StaffOS?</p>
+            <div className="mt-1.5 h-[2px] w-9 rounded bg-[#4A3EC8]" />
+            <h1 className="mt-2 text-[32px] font-semibold leading-[1.12] tracking-[-0.01em] text-[#080C2A]">
+            All Your Hiring Needs 
+              <br />
+              All in One Platform.
+            </h1>
           </div>
-          
-          {/* Main content area */}
-          <div className="flex-1 flex flex-col justify-center space-y-8 max-w-lg">
-            {/* Main heading */}
-            <div className="space-y-4">
-              <h1 className="text-4xl lg:text-5xl font-bold leading-tight text-white">
-                Powerful Hiring
-                <span className="block text-blue-200">
-                  Analytics Platform
-                </span>
-              </h1>
-              <p className="text-lg text-blue-100/90 leading-relaxed">
-                Transform your recruitment with data-driven insights. Track performance, optimize workflows, and make smarter hiring decisions.
-              </p>
+
+
+          <div className="flex min-h-0 flex-1 flex-col justify-center gap-3">
+          <div className="grid w-full grid-cols-3 gap-3">
+            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+              <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#F3EEFF]">
+                <img src={rocketIcon} alt="" className="h-7 w-7 object-contain" aria-hidden />
+              </div>
+              <p className="text-[15px] leading-[1.2] font-semibold text-[#0D122B]">India&apos;s First Free ATS</p>
+              <div className="my-1.5 h-[2px] w-8 rounded bg-[#5B43DD]" />
+              <p className="text-[12px] leading-[1.35] text-[#2A304A]">Modern hiring<br />made simple.</p>
             </div>
-            
-            {/* Feature highlights */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg shadow-blue-950/20">
-                <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-blue-100" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">Real-time Analytics</h3>
-                  <p className="text-sm text-blue-100/80">Track hiring metrics and KPIs instantly</p>
-                </div>
+            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+              <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#E9F9F0]">
+                <img src={suitcaseIcon} alt="" className="h-7 w-7 object-contain" aria-hidden />
               </div>
-              
-              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg shadow-blue-950/20">
-                <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-100" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">Team Performance</h3>
-                  <p className="text-sm text-blue-100/80">Monitor and improve recruiter productivity</p>
-                </div>
+              <p className="text-[15px] leading-[1.2] font-semibold text-[#0D122B]">Free Job Posting</p>
+              <div className="my-1.5 h-[2px] w-8 rounded bg-[#23A868]" />
+              <p className="text-[12px] leading-[1.35] text-[#2A304A]">Post jobs for free.<br />Pay only when you hire.</p>
+            </div>
+            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+              <div className="mb-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] bg-[#EAF2FF]">
+                <img src={securityIcon} alt="" className="h-5 w-5 object-contain" aria-hidden />
               </div>
-              
-              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg shadow-blue-950/20">
-                <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-blue-100" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">Smart Insights</h3>
-                  <p className="text-sm text-blue-100/80">AI-powered recommendations for success</p>
-                </div>
-              </div>
+              <p className="text-[15px] leading-[1.2] font-semibold text-[#0D122B]">Free Background<br />Verification</p>
+              <div className="my-1.5 h-[2px] w-8 rounded bg-[#1E6BFF]" />
+              <p className="text-[12px] leading-[1.35] text-[#2A304A]">Verified candidate checks<br />within 7 days after onboarding.</p>
             </div>
           </div>
-          
-          {/* Trust indicator */}
-          <div className="flex items-center space-x-2 text-blue-100/85 text-sm">
-            <Shield className="w-4 h-4" />
-            <span>Enterprise-grade security & compliance</span>
+
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.06em] text-[#4A3EC8]">HIGHLIGHTS</p>
+            <div className="mt-1.5 h-[2px] w-9 rounded bg-[#4A3EC8]" />
+          </div>
+
+          <div className="grid w-full grid-cols-3 gap-3">
+            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+              <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#FFF3E9]">
+                <Users className="h-7 w-7 text-[#DE7E33]" strokeWidth={1.9} />
+              </div>
+              <p className="text-[15px] leading-[1.2] font-semibold text-[#0D122B]">Expert Recruiter Team</p>
+              <div className="my-1.5 h-[2px] w-8 rounded bg-[#D97A32]" />
+              <p className="text-[12px] leading-[1.35] text-[#2A304A]">Industry-trained recruiters<br />for faster and quality-driven hiring.</p>
+            </div>
+            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+              <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#F3EEFF]">
+                <PaperPlaneNudgeIcon className="h-7 w-7 text-[#6542D9]" />
+              </div>
+              <p className="text-[15px] leading-[1.2] font-semibold text-[#0D122B]">Powered by Nudges</p>
+              <div className="my-1.5 h-[2px] w-8 rounded bg-[#5B43DD]" />
+              <p className="text-[12px] leading-[1.35] text-[#2A304A]">Structured updates with smart escalation.<br />No more chasing recruiters for updates.</p>
+            </div>
+            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+              <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#E8F8F1]">
+                <img src={lineChartIcon} alt="" className="h-7 w-7 object-contain" aria-hidden />
+              </div>
+              <p className="text-[15px] leading-[1.2] font-semibold text-[#0D122B]">Pipeline Visibility<br />&amp; Metrics</p>
+              <div className="my-1.5 h-[2px] w-8 rounded bg-[#14A26A]" />
+              <p className="text-[12px] leading-[1.35] text-[#2A304A]">Track every hiring stage<br />and measure progress in real time.</p>
+            </div>
+          </div>
+
+          </div>
+
+          <div className="flex w-full shrink-0 items-center justify-between rounded-2xl border border-[#E0DCFF] bg-white/75 px-4 py-4 shadow-md shadow-[#5B43DD]/10 backdrop-blur-sm">
+            <div className="flex min-w-0 flex-1 items-center gap-3.5">
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[8px]">
+                <img src={staffosLogo2} alt="StaffOS" className="h-full w-full object-cover" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold leading-snug tracking-tight text-[#111827]">
+                  <span className="text-[#4B43CC]">StaffOS</span> - The Operating System for Hiring.
+                </p>
+                <p className="mt-1 text-[12px] leading-snug text-[#2A304A]">ATS. Recruiters. Visibility. Verification.</p>
+                <p className="text-[12px] font-semibold leading-snug text-[#4B43CC]">All in one seamless workflow.</p>
+              </div>
+            </div>
+            <div className="relative ml-3 h-16 w-16 shrink-0">
+              <div className="absolute inset-0 rounded-full border border-dashed border-[#B9BDD6]" />
+              <div className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[6px]">
+                <img src={staffosLogo2} alt="StaffOS" className="h-full w-full object-cover" />
+              </div>
+              <div className="absolute -left-0.5 top-0 flex h-5 w-5 items-center justify-center rounded-[4px] bg-white text-[#D97A32] shadow-sm"><Users className="h-3 w-3" /></div>
+              <div className="absolute -right-0.5 top-0 flex h-5 w-5 items-center justify-center rounded-[4px] bg-white text-[#14A26A] shadow-sm"><TrendingUp className="h-3 w-3" /></div>
+              <div className="absolute left-0 bottom-0 flex h-5 w-5 items-center justify-center rounded-[4px] bg-white text-[#1E6BFF] shadow-sm"><Shield className="h-3 w-3" /></div>
+              <div className="absolute right-0 bottom-0 flex h-5 w-5 items-center justify-center rounded-[4px] bg-white text-[#23A868] shadow-sm"><Briefcase className="h-3 w-3" /></div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex min-h-screen w-full items-center justify-center border-0 bg-white px-8 py-6 dark:bg-gray-900 lg:w-1/2 lg:px-14 xl:px-20">
+        <div className="w-full max-w-[26rem] space-y-8 lg:mx-auto">
           {/* Back Button */}
           <Link href="/">
             <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">

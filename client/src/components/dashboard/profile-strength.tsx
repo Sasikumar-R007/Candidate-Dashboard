@@ -16,6 +16,24 @@ export default function ProfileStrength({ profile, jobPreferences, onEdit, editI
   if (!profile) return null;
 
   const { percentage: strength } = calculateProfileCompletion(profile, jobPreferences);
+  const strengthTone =
+    strength === 100
+      ? {
+          ring: "text-green-600",
+          badge: "bg-green-600",
+          avatar: "bg-green-50 text-green-600",
+        }
+      : strength >= 41
+        ? {
+            ring: "text-amber-500",
+            badge: "bg-amber-500",
+            avatar: "bg-amber-50 text-amber-600",
+          }
+        : {
+            ring: "text-red-500",
+            badge: "bg-red-500",
+            avatar: "bg-red-50 text-red-600",
+          };
 
   return (
     <div className="flex flex-col items-center mb-3 p-4 bg-white dark:bg-gray-800 rounded-[1rem] shadow-sm border border-gray-100 dark:border-gray-700 w-full max-w-[280px] mx-auto group ring-1 ring-gray-100 dark:ring-gray-800 hover:shadow-md transition-all">
@@ -41,19 +59,19 @@ export default function ProfileStrength({ profile, jobPreferences, onEdit, editI
               strokeDasharray={326}
               strokeDashoffset={326 - (326 * strength) / 100}
               strokeLinecap="round"
-              className="text-blue-600 transition-all duration-1000 ease-out"
+              className={`${strengthTone.ring} transition-all duration-1000 ease-out`}
             />
           </svg>
 
           <Avatar className="w-24 h-24 border-4 border-white dark:border-gray-800 shadow-sm">
             <AvatarImage src={profile.profilePicture || ""} className="object-cover" />
-            <AvatarFallback className="bg-blue-50 text-blue-600 font-bold text-xl uppercase">
+            <AvatarFallback className={`${strengthTone.avatar} font-bold text-xl uppercase`}>
               {profile.firstName?.[0]}{profile.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
         </div>
 
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-lg border-2 border-white dark:border-gray-800 tracking-wider">
+        <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 ${strengthTone.badge} text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-lg border-2 border-white dark:border-gray-800 tracking-wider`}>
           {strength}%
         </div>
       </div>

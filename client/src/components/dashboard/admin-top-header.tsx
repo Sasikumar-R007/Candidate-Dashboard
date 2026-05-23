@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, Settings, KeyRound, LogOut, HelpCircle, Bell, MessageCircle, Briefcase, Users, CheckCircle, Calendar } from "lucide-react";
+import NotificationPanel, {
+  type NotificationNavigateSection,
+  type NotificationPanelRow,
+  type NotificationSectionConfig,
+} from "@/components/dashboard/notification-panel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +20,8 @@ interface AdminTopHeaderProps {
   hideHelpButton?: boolean;
   /** Admin only: switches dashboard sidebar to the Nudges session */
   onOpenNudgesTab?: () => void;
+  /** Navigate to the dashboard section for a clicked notification */
+  onNavigateToSection?: (section: NotificationNavigateSection) => void;
 }
 
 type AdminNotificationFeed = {
@@ -59,19 +66,20 @@ function getActivityIcon(type: string) {
   }
 }
 
-function getRelativeTime(dateString: string): string {
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+function getDismissedNotificationsKey(employeeId?: string | null): string | null {
+  return employeeId ? `staffos-dismissed-notifications:${employeeId}` : null;
+}
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  return date.toLocaleDateString();
+function readDismissedNotificationKeys(storageKey: string | null): Set<string> {
+  if (!storageKey) return new Set();
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed.filter((k) => typeof k === "string")) : new Set();
+  } catch {
+    return new Set();
+  }
 }
 
 export default function AdminTopHeader({
@@ -79,6 +87,7 @@ export default function AdminTopHeader({
   onHelpClick,
   hideHelpButton = false,
   onOpenNudgesTab,
+  onNavigateToSection,
 }: AdminTopHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -92,16 +101,24 @@ export default function AdminTopHeader({
   const { logout } = useAuth();
   const employee = useEmployeeAuth();
   const queryClient = useQueryClient();
+  const dismissedStorageKey = getDismissedNotificationsKey(employee?.id);
+  const [dismissedNotificationKeys, setDismissedNotificationKeys] = useState<Set<string>>(() =>
+    readDismissedNotificationKeys(dismissedStorageKey),
+  );
 
   const userRole = employee?.role || "admin";
-  const isAdmin = userRole === "admin";
-  const isTL = userRole === "team_leader";
-  const isTA = userRole === "recruiter" || userRole === "talent_advisor" || userRole === "ta";
+  const normalizedRole = (userRole || "").toLowerCase().replace(/[\s-]+/g, "_");
+  const isAdmin = normalizedRole === "admin" || normalizedRole.includes("admin");
+  const isTL = normalizedRole === "team_leader" || normalizedRole === "teamleader" || normalizedRole === "tl";
+  const isTA =
+    normalizedRole === "recruiter" ||
+    normalizedRole === "talent_advisor" ||
+    normalizedRole === "ta";
 
   const { data: activities = [], isLoading: activitiesLoading } = useQuery<UserActivity[]>({
     queryKey: ['/api/user-activities', userRole],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/user-activities/${userRole}?limit=5`, {});
+      const response = await apiRequest('GET', `/api/user-activities/${userRole}?limit=5`);
       if (!response.ok) throw new Error('Failed to fetch activities');
       return response.json();
     },
@@ -109,12 +126,6 @@ export default function AdminTopHeader({
     refetchInterval: 30000,
   });
   
-  useEffect(() => {
-    if (showNotifications && (isAdmin || isTL || isTA)) {
-      queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
-    }
-  }, [showNotifications, isAdmin, isTL, isTA, queryClient]);
-
   useEffect(() => {
     const loadProfileData = async () => {
       if (!employee?.role) return;
@@ -199,16 +210,63 @@ export default function AdminTopHeader({
   
   const displayRole = getRoleDisplayName(userRole);
 
+  const notificationFeedKey = isAdmin
+    ? "/api/admin/notifications-feed"
+    : "/api/employee/notifications-feed";
+
   const {
     data: employeeFeed,
     isLoading: feedLoading,
     isError: feedError,
     refetch: refetchNotificationFeed,
   } = useQuery<EmployeeNotificationFeed>({
-    queryKey: ["/api/employee/notifications-feed"],
+    queryKey: [notificationFeedKey],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/employee/notifications-feed", {});
-      return res.json();
+      try {
+        const res = await apiRequest("GET", notificationFeedKey);
+        const data = await res.json();
+        if (isAdmin) {
+          const adminData = data as {
+            closures?: EmployeeNotificationItem[];
+            adminNudges?: EmployeeNotificationItem[];
+            clientEscalations?: EmployeeNotificationItem[];
+            nudges?: EmployeeNotificationItem[];
+            escalatedNudges?: EmployeeNotificationItem[];
+            unreadAdminNudges?: number;
+            unreadClientEscalations?: number;
+          };
+          const nudges = adminData.adminNudges ?? adminData.nudges ?? [];
+          const escalated = adminData.clientEscalations ?? adminData.escalatedNudges ?? [];
+          const closures = adminData.closures ?? [];
+          return {
+            role: "admin",
+            closures,
+            nudges,
+            escalatedNudges: escalated,
+            newRequirements: [],
+            newCandidateApplied: [],
+            unreadCount:
+              (adminData.unreadAdminNudges ?? 0) +
+              (adminData.unreadClientEscalations ?? 0) +
+              closures.filter((c) => c.isUnread).length,
+          };
+        }
+        return data as EmployeeNotificationFeed;
+      } catch (err) {
+        console.error("[notifications-feed] fetch failed:", err);
+        if (isAdmin) {
+          return {
+            role: "admin",
+            closures: [],
+            nudges: [],
+            escalatedNudges: [],
+            newRequirements: [],
+            newCandidateApplied: [],
+            unreadCount: 0,
+          };
+        }
+        throw err;
+      }
     },
     enabled: isAdmin || isTL || isTA,
     staleTime: 30_000,
@@ -217,13 +275,21 @@ export default function AdminTopHeader({
     retry: 2,
   });
 
+  useEffect(() => {
+    if (showNotifications && (isAdmin || isTL || isTA)) {
+      void refetchNotificationFeed();
+    }
+  }, [showNotifications, isAdmin, isTL, isTA, refetchNotificationFeed]);
+
   const markNudgeReadMutation = useMutation({
     mutationFn: async (nudgeId: string) => {
       const res = await apiRequest("PATCH", `/api/admin/notifications/nudges/${nudgeId}/read`, {});
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [notificationFeedKey] });
       queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications-feed"] });
     },
   });
 
@@ -231,9 +297,9 @@ export default function AdminTopHeader({
     if (isAdmin) {
       return [
         { id: "all", label: "All" },
-        { id: "closures", label: "Closures" },
+        { id: "closures", label: "Candidate Closures" },
         { id: "nudges", label: "Nudges" },
-        { id: "escalations", label: "Escalations" },
+        { id: "escalations", label: "Nudges Escalations" },
       ];
     }
     if (isTL) {
@@ -241,17 +307,132 @@ export default function AdminTopHeader({
         { id: "all", label: "All" },
         { id: "newRequirements", label: "New Requirements" },
         { id: "nudges", label: "Nudges" },
-        { id: "escalatedNudges", label: "Escalated Nudges" },
-        { id: "closures", label: "Closures" },
+        { id: "escalatedNudges", label: "Nudges Escalations" },
+        { id: "closures", label: "Candidate Closures" },
       ];
     }
     return [
       { id: "all", label: "All" },
       { id: "newRequirements", label: "New Requirements" },
       { id: "nudges", label: "Nudges" },
-      { id: "escalatedNudges", label: "Escalated Nudges" },
-      { id: "closures", label: "Closures" },
-      { id: "newCandidateApplied", label: "New Candidate Applied" },
+      { id: "escalatedNudges", label: "Nudges Escalations" },
+      { id: "newCandidateApplied", label: "New Profiles" },
+    ];
+  }, [isAdmin, isTL]);
+
+  const notificationSections = useMemo((): NotificationSectionConfig[] => {
+    if (isAdmin) {
+      return [
+        {
+          id: "closures",
+          heading: "Candidate moved to closure",
+          headingClassName: "text-emerald-700",
+          kinds: ["closure"],
+          tabId: "closures",
+          navigateTo: "closures",
+        },
+        {
+          id: "nudges",
+          heading: "Nudges - Action Needed",
+          headingClassName: "text-amber-700",
+          kinds: ["nudge"],
+          tabId: "nudges",
+          showActButton: true,
+          showTimeRemaining: true,
+          navigateTo: "nudges",
+        },
+        {
+          id: "escalations",
+          heading: "Nudges - Action Escalation",
+          headingClassName: "text-orange-800",
+          kinds: ["escalation"],
+          tabId: "escalations",
+          showTimeRemaining: true,
+          navigateTo: "escalations",
+        },
+      ];
+    }
+    if (isTL) {
+      return [
+        {
+          id: "closures",
+          heading: "Candidate moved to closure",
+          headingClassName: "text-emerald-700",
+          kinds: ["closure"],
+          tabId: "closures",
+          navigateTo: "closures",
+        },
+        {
+          id: "requirements",
+          heading: "New Requirements",
+          headingClassName: "text-blue-700",
+          kinds: ["newRequirement"],
+          tabId: "newRequirements",
+          navigateTo: "requirements",
+        },
+        {
+          id: "nudges",
+          heading: "Nudges - Action Needed",
+          headingClassName: "text-amber-700",
+          kinds: ["nudge"],
+          tabId: "nudges",
+          showTimeRemaining: true,
+          navigateTo: "nudges",
+        },
+        {
+          id: "escalated",
+          heading: "Nudges - Action Escalation",
+          headingClassName: "text-orange-800",
+          kinds: ["escalatedNudge"],
+          tabId: "escalatedNudges",
+          showTimeRemaining: true,
+          navigateTo: "escalations",
+        },
+      ];
+    }
+    return [
+      {
+        id: "closures",
+        heading: "Candidate moved to closure",
+        headingClassName: "text-emerald-700",
+        kinds: ["closure"],
+        tabId: "closures",
+        navigateTo: "closures",
+      },
+      {
+        id: "requirements",
+        heading: "New Requirements",
+        headingClassName: "text-blue-700",
+        kinds: ["newRequirement"],
+        tabId: "newRequirements",
+        navigateTo: "requirements",
+      },
+      {
+        id: "nudges",
+        heading: "Nudges - Action Needed",
+        headingClassName: "text-amber-700",
+        kinds: ["nudge"],
+        tabId: "nudges",
+        showTimeRemaining: true,
+        navigateTo: "nudges",
+      },
+      {
+        id: "escalated",
+        heading: "Nudges - Action Escalation",
+        headingClassName: "text-orange-800",
+        kinds: ["escalatedNudge"],
+        tabId: "escalatedNudges",
+        showTimeRemaining: true,
+        navigateTo: "escalations",
+      },
+      {
+        id: "candidates",
+        heading: "New Candidate Applied",
+        headingClassName: "text-violet-700",
+        kinds: ["newCandidate"],
+        tabId: "newCandidateApplied",
+        navigateTo: "newCandidates",
+      },
     ];
   }, [isAdmin, isTL]);
 
@@ -261,7 +442,32 @@ export default function AdminTopHeader({
     }
   }, [notificationTabs, notificationTab]);
 
-  type FeedRow = EmployeeNotificationItem & { key: string; kind: string; nudgeId?: string; sort: number };
+  type FeedRow = NotificationPanelRow & { sort: number };
+
+  const dismissNotificationMutation = useMutation({
+    mutationFn: async ({ kind, id }: { kind: string; id: string }) => {
+      const res = await apiRequest("PATCH", "/api/employee/notifications/dismiss", { kind, id });
+      return res.json();
+    },
+    onSuccess: () => {
+      void refetchNotificationFeed();
+    },
+  });
+
+  const dismissNotification = (row: NotificationPanelRow) => {
+    setDismissedNotificationKeys((prev) => {
+      const next = new Set(prev);
+      next.add(row.key);
+      if (dismissedStorageKey) {
+        localStorage.setItem(dismissedStorageKey, JSON.stringify(Array.from(next)));
+      }
+      return next;
+    });
+
+    if (row.kind === "nudge" || row.kind === "escalation" || row.kind === "escalatedNudge") {
+      dismissNotificationMutation.mutate({ kind: row.kind, id: row.id });
+    }
+  };
 
   const mergedRows = useMemo<FeedRow[]>(() => {
     if (!employeeFeed) return [];
@@ -301,35 +507,70 @@ export default function AdminTopHeader({
     return rows.sort((a, b) => b.sort - a.sort);
   }, [employeeFeed, isAdmin, isTL]);
 
-  const filteredRows = useMemo(() => {
-    if (notificationTab === "all") return mergedRows;
-    if (notificationTab === "closures") return mergedRows.filter((r) => r.kind === "closure");
-    if (notificationTab === "nudges") return mergedRows.filter((r) => r.kind === "nudge");
-    if (notificationTab === "escalations") return mergedRows.filter((r) => r.kind === "escalation");
-    if (notificationTab === "newRequirements") return mergedRows.filter((r) => r.kind === "newRequirement");
-    if (notificationTab === "escalatedNudges") return mergedRows.filter((r) => r.kind === "escalatedNudge");
-    if (notificationTab === "newCandidateApplied") return mergedRows.filter((r) => r.kind === "newCandidate");
-    return mergedRows;
-  }, [mergedRows, notificationTab]);
+  const visibleRows = useMemo(
+    () => mergedRows.filter((row) => !dismissedNotificationKeys.has(row.key)),
+    [mergedRows, dismissedNotificationKeys],
+  );
+
+  const panelRows = useMemo((): NotificationPanelRow[] => visibleRows, [visibleRows]);
 
   const headerUnreadCount = useMemo(() => {
-    const fromRows = mergedRows.filter((r) => r.isUnread).length;
+    const fromRows = visibleRows.filter((r) => r.isUnread).length;
     const fromFeed = employeeFeed?.unreadCount ?? 0;
     return Math.max(fromFeed, fromRows);
-  }, [mergedRows, employeeFeed]);
+  }, [visibleRows, employeeFeed]);
 
-  const openNudgesAndClose = async (opts?: { markNudgeReadId?: string }) => {
-    if (opts?.markNudgeReadId) {
+  const navigateForSection = (section: NotificationNavigateSection) => {
+    const storageKey = isTL
+      ? "tlDashboardSidebarTab"
+      : isAdmin
+        ? "adminDashboardSidebarTab"
+        : "recruiterDashboardSidebarTab";
+
+    const tabBySection: Record<NotificationNavigateSection, string> = isAdmin
+      ? {
+          closures: "performance",
+          nudges: "nudges",
+          escalations: "nudges",
+          pipeline: "pipeline",
+          requirements: "requirements",
+          newCandidates: "pipeline",
+        }
+      : {
+          closures: "performance",
+          nudges: "nudges",
+          escalations: "nudges",
+          pipeline: "pipeline",
+          requirements: "requirements",
+          newCandidates: "pipeline",
+        };
+
+    sessionStorage.setItem(storageKey, tabBySection[section]);
+    window.dispatchEvent(
+      new CustomEvent("staffos-notification-navigate", { detail: { section, storageKey, tab: tabBySection[section] } }),
+    );
+    onNavigateToSection?.(section);
+    if (section === "nudges" || section === "escalations") {
+      onOpenNudgesTab?.();
+    }
+    setShowNotifications(false);
+    void queryClient.invalidateQueries({ queryKey: ["/api/nudges"] });
+  };
+
+  const handlePanelNavigate = (_section: NotificationNavigateSection, row: NotificationPanelRow) => {
+    const section = notificationSections.find((s) => s.kinds.includes(row.kind))?.navigateTo ?? "nudges";
+    navigateForSection(section);
+  };
+
+  const handleActOnNudge = async (row: NotificationPanelRow) => {
+    if (row.nudgeId) {
       try {
-        await markNudgeReadMutation.mutateAsync(opts.markNudgeReadId);
+        await markNudgeReadMutation.mutateAsync(row.nudgeId);
       } catch {
         /* still navigate */
       }
     }
-    setShowNotifications(false);
-    sessionStorage.setItem("adminDashboardSidebarTab", "nudges");
-    void queryClient.invalidateQueries({ queryKey: ["/api/nudges"] });
-    onOpenNudgesTab?.();
+    navigateForSection("nudges");
   };
   
   const logoutMutation = useMutation({
@@ -416,10 +657,12 @@ export default function AdminTopHeader({
               aria-label="Notifications"
               data-testid="button-header-notification"
             >
-              <Bell size={20} strokeWidth={2} />
-              {headerUnreadCount > 0 && (
-                <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-800" />
-              )}
+              <span className="relative inline-flex">
+                <Bell size={20} strokeWidth={2} />
+                {headerUnreadCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white dark:ring-slate-800" />
+                )}
+              </span>
             </button>
 
             {showNotifications && (
@@ -430,116 +673,21 @@ export default function AdminTopHeader({
                   aria-label="Close notifications"
                   onClick={() => setShowNotifications(false)}
                 />
-                <div className="notification-panel-container fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900">
-                  <div className="border-b border-slate-100 px-5 pb-3 pt-4 dark:border-slate-800">
-                    <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-                      Notifications
-                    </h3>
-                    <div className="mt-3 overflow-x-auto">
-                      <div className="flex w-max min-w-full rounded-xl bg-slate-100/90 p-1 dark:bg-slate-800/80">
-                        {notificationTabs.map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          onClick={() => setNotificationTab(tab.id)}
-                          className={`relative shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition ${
-                            notificationTab === tab.id
-                              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-50"
-                              : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                          }`}
-                        >
-                          <span>{tab.label}</span>
-                        </button>
-                      ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-                    {feedLoading && (
-                      <p className="px-3 py-8 text-center text-sm text-slate-500">Loading…</p>
-                    )}
-                    {feedError && !feedLoading && !employeeFeed && (
-                      <div className="px-3 py-6 text-center">
-                        <p className="text-sm text-amber-700 dark:text-amber-400">
-                          Notifications could not be loaded.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => void refetchNotificationFeed()}
-                          className="mt-3 text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400"
-                        >
-                          Try again
-                        </button>
-                      </div>
-                    )}
-                    {feedError && !feedLoading && employeeFeed && filteredRows.length > 0 && (
-                      <p className="mx-3 mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                        Showing last loaded notifications. Pull to refresh if something looks out of date.
-                      </p>
-                    )}
-                    {!feedLoading && (!feedError || employeeFeed) && filteredRows.length === 0 && (
-                      <p className="px-3 py-8 text-center text-sm text-slate-500">No notifications yet.</p>
-                    )}
-                    {!feedLoading &&
-                      (!feedError || !!employeeFeed) &&
-                      filteredRows.map((row) => {
-                        const initials = row.line.replace(/^\[/, "").charAt(0).toUpperCase() || "?";
-                        const sub =
-                          row.kind === "newRequirement"
-                            ? "New requirement"
-                            : row.kind === "newCandidate"
-                              ? "New candidate applied"
-                              : row.kind === "closure"
-                            ? "New closure"
-                            : row.kind === "escalation"
-                              ? "Escalated to client"
-                              : row.kind === "escalatedNudge"
-                                ? "Escalated nudge"
-                                : "Nudge notification";
-                        return (
-                          <div
-                            key={row.key}
-                            className={`group relative mb-1 flex items-stretch gap-3 rounded-2xl px-3 py-3 pr-2 transition ${
-                              row.isUnread
-                                ? "bg-violet-50/80 dark:bg-violet-950/30"
-                                : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                            }`}
-                          >
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-semibold text-white">
-                              {initials}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold leading-snug text-slate-900 dark:text-slate-100">
-                                {row.line}
-                              </p>
-                              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{sub}</p>
-                              {row.createdAt && (
-                                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                                  {getRelativeTime(row.createdAt)}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex shrink-0 flex-row items-center gap-2 self-center">
-                              {isAdmin && row.kind === "nudge" && row.nudgeId && (
-                                <button
-                                  type="button"
-                                  onClick={() => void openNudgesAndClose({ markNudgeReadId: row.nudgeId })}
-                                  className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60"
-                                  disabled={markNudgeReadMutation.isPending}
-                                >
-                                  Act
-                                </button>
-                              )}
-                              {row.isUnread && (
-                                <span className="h-2 w-2 shrink-0 rounded-full bg-violet-600" aria-hidden />
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-
+                <div className="notification-panel-container fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col overflow-hidden rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+                  <NotificationPanel
+                    rows={panelRows}
+                    tabs={notificationTabs}
+                    sections={notificationSections}
+                    activeTab={notificationTab}
+                    onTabChange={setNotificationTab}
+                    isLoading={feedLoading}
+                    isError={feedError && !employeeFeed}
+                    hasStaleFeed={feedError && !!employeeFeed && panelRows.length > 0}
+                    onRetry={() => void refetchNotificationFeed()}
+                    onDismiss={dismissNotification}
+                    onNavigate={handlePanelNavigate}
+                    onActOnNudge={isAdmin ? handleActOnNudge : undefined}
+                  />
                 </div>
               </>
             )}
@@ -593,6 +741,11 @@ export default function AdminTopHeader({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
                   <p className="truncate text-xs text-slate-500">{displayRole}</p>
+                  {(profileData?.employeeId || employee?.employeeId) && (
+                    <p className="mt-1 truncate text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      Profile ID: {profileData?.employeeId || employee?.employeeId}
+                    </p>
+                  )}
                 </div>
               </div>
 

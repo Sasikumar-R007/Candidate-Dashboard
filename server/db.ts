@@ -29,8 +29,19 @@ function fixRenderDatabaseUrl(url: string): string {
   return url;
 }
 
+function ensureSslInConnectionUrl(url: string): string {
+  const needsSsl =
+    url.includes("render.com") ||
+    url.includes("neon.tech") ||
+    url.includes("supabase.co");
+  if (needsSsl && !/[?&]sslmode=/i.test(url)) {
+    return `${url}${url.includes("?") ? "&" : "?"}sslmode=require`;
+  }
+  return url;
+}
+
 // Fix the DATABASE_URL if needed
-const fixedDatabaseUrl = fixRenderDatabaseUrl(process.env.DATABASE_URL);
+const fixedDatabaseUrl = ensureSslInConnectionUrl(fixRenderDatabaseUrl(process.env.DATABASE_URL));
 
 // Parse the DATABASE_URL to handle URL-encoded passwords properly
 function parseDatabaseUrl(url: string) {
@@ -61,9 +72,12 @@ const isLocalDatabase = fixedDatabaseUrl.includes('localhost') ||
 // Parse connection string and remove SSL requirements for local databases
 let connectionConfig: any = {
   // Single shared pool (app + sessions). Remote DBs need headroom for parallel dashboard loads.
-  max: process.env.NODE_ENV === 'production' ? 20 : 15,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: isLocalDatabase ? 5000 : 20000,
+  max: process.env.NODE_ENV === "production" ? 20 : 10,
+  idleTimeoutMillis: isLocalDatabase ? 30000 : 20000,
+  connectionTimeoutMillis: isLocalDatabase ? 10000 : 30000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+  maxLifetimeSeconds: isLocalDatabase ? 0 : 300,
 };
 
 // Try to parse the connection string for better password handling
@@ -92,7 +106,33 @@ if (parsedConfig) {
 // Use standard PostgreSQL driver (works with both local and cloud PostgreSQL)
 export const pool = new Pool(connectionConfig);
 
+pool.on("error", (err) => {
+  console.error("[db] Unexpected error on idle pool client:", err.message);
+});
+
 export const db = drizzle({ client: pool, schema });
+
+/** Verify DB is reachable before session store / migrations run. */
+export async function verifyPoolConnection(maxAttempts = 5): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query("SELECT 1");
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[db] Connection attempt ${attempt}/${maxAttempts} failed: ${message}`);
+      if (attempt === maxAttempts) {
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, Math.min(2000 * attempt, 10000)));
+    } finally {
+      client?.release();
+    }
+  }
+  return false;
+}
 
 export async function ensureRequirementManagementColumns() {
   await pool.query(`

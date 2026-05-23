@@ -11,9 +11,10 @@ import staffosLogo from "@/assets/staffos logo 2.png";
 interface AdminSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  hasUnreadNudges?: boolean;
 }
 
-export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
+export default function AdminSidebar({ activeTab, onTabChange, hasUnreadNudges = false }: AdminSidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
@@ -81,7 +82,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     <>
       {/* Main Sidebar */}
       <div 
-        className={`${isExpanded ? 'w-64' : 'w-16'} bg-slate-900 text-white flex-shrink-0 h-screen transition-all duration-300 fixed left-0 top-0 z-50 flex flex-col shadow-xl`}
+        className={`${isExpanded ? 'w-64' : 'w-16'} bg-slate-900 text-white flex-shrink-0 h-screen transition-all duration-300 fixed left-0 top-0 z-50 flex flex-col shadow-xl overflow-visible`}
       >
         {/* Logo Section */}
         <div className={`h-16 flex items-center ${isExpanded ? 'px-4' : 'justify-center'} border-b border-slate-700 gap-3 overflow-hidden`}>
@@ -96,7 +97,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <nav className="flex-1 py-4 overflow-visible">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeTab === item.id;
@@ -124,7 +125,12 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                   )}
                   
                   <div className={`flex items-center gap-4 ${!isExpanded && 'justify-center w-full'}`}>
-                    <IconComponent size={20} className="flex-shrink-0" />
+                    <div className="relative">
+                      <IconComponent size={20} className="flex-shrink-0" />
+                      {item.id === 'nudges' && hasUnreadNudges && (
+                        <span className="absolute -right-1.5 -top-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />
+                      )}
+                    </div>
                     {isExpanded && (
                       <span className="text-sm font-medium whitespace-nowrap transition-all duration-300">
                         {item.label}
@@ -135,8 +141,8 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                   {/* Tooltip (only when collapsed) */}
                   {hoveredItem === item.id && !isExpanded && (
                     <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
-                      <div className="h-2 w-2 rotate-45 rounded-[1px] bg-slate-800" />
-                      <div className="-ml-1 whitespace-nowrap rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-white shadow-xl border border-slate-700">
+                      <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                      <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
                         {item.label}
                       </div>
                     </div>
@@ -160,8 +166,10 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
           {/* Sign Out Button */}
           <button
             onClick={handleLogout}
+            onMouseEnter={() => setHoveredItem('logout')}
+            onMouseLeave={() => setHoveredItem(null)}
             disabled={logoutMutation.isPending}
-            className={`w-full h-12 flex items-center ${isExpanded ? 'px-4' : 'justify-center'} text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors disabled:opacity-50 group`}
+            className={`relative w-full h-12 flex items-center ${isExpanded ? 'px-4' : 'justify-center'} text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors disabled:opacity-50 group`}
             data-testid="button-admin-logout"
           >
             <LogOut size={18} className={`${isExpanded ? 'mr-3' : ''}`} />
@@ -174,8 +182,8 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
             {/* Sign Out Tooltip (only when collapsed) */}
             {hoveredItem === 'logout' && !isExpanded && (
               <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
-                <div className="h-2 w-2 rotate-45 rounded-[1px] bg-red-900" />
-                <div className="-ml-1 whitespace-nowrap rounded-md bg-red-900 px-3 py-1.5 text-xs font-medium text-white shadow-xl">
+                <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
                   Sign Out
                 </div>
               </div>

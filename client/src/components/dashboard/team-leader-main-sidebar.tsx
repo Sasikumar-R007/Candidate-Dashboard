@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Users, FileText, GitBranch, Trophy, MessageCircle, ChevronRight, User, LogOut, Bell, Briefcase, Settings, ChevronDown, Zap } from "lucide-react";
+import { Users, FileText, GitBranch, Trophy, ChevronRight, LogOut, Zap } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -11,10 +11,9 @@ import staffosLogo from "@/assets/staffos logo 2.png";
 interface TeamLeaderMainSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  chatUnreadCount?: number;
 }
 
-export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnreadCount = 0 }: TeamLeaderMainSidebarProps) {
+export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLeaderMainSidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -29,7 +28,6 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
     { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
     { id: 'performance', label: 'Performance', icon: Trophy },
     { id: 'nudges', label: 'Nudges', icon: Zap },
-    { id: 'chat', label: 'Chat', icon: MessageCircle }
   ];
 
   // Logout mutation for employees (team leaders)
@@ -125,12 +123,7 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400"></div>
                 )}
                 
-                <div className="relative">
-                  <IconComponent size={20} />
-                  {item.id === 'chat' && chatUnreadCount > 0 && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-900 animate-pulse"></div>
-                  )}
-                </div>
+                <IconComponent size={20} />
                 
                 {/* Tooltip */}
                 {hoveredItem === item.id && !isExpanded && (

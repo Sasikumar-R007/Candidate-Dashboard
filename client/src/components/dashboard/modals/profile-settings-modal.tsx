@@ -326,7 +326,17 @@ export function ProfileSettingsModal({
                 />
               </div>
 
-              <h3 className="mt-5 text-lg font-semibold text-slate-900">{formData.name || "Admin"}</h3>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <h3 className="text-lg font-semibold text-slate-900">{formData.name || "Admin"}</h3>
+                {formData.employeeId ? (
+                  <span
+                    className="inline-flex rounded-[4px] border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-900"
+                    data-testid="text-account-profile-id"
+                  >
+                    {formData.employeeId}
+                  </span>
+                ) : null}
+              </div>
               <p className="text-sm text-slate-500">{formData.role || "Admin"}</p>
 
               <div className="mt-6 grid w-full gap-3">

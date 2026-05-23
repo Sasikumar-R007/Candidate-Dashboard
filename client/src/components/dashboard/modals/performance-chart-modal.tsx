@@ -1,13 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { CalendarIcon } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 
 interface PerformanceChartModalProps {
@@ -140,47 +136,18 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
               </SelectContent>
             </Select>
             
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-48 justify-start text-left font-normal ${!dateFrom && "text-gray-500 dark:text-gray-400"}`}
-                  data-testid="button-date-from"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFrom ? format(dateFrom, "PPP") : <span>From Date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dateFrom}
-                  onSelect={setDateFrom}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-48 justify-start text-left font-normal ${!dateTo && "text-gray-500 dark:text-gray-400"}`}
-                  data-testid="button-date-to"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateTo ? format(dateTo, "PPP") : <span>To Date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dateTo}
-                  onSelect={setDateTo}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <StandardDatePicker
+              value={dateFrom}
+              onChange={setDateFrom}
+              placeholder="From Date"
+              className="w-48"
+            />
+            <StandardDatePicker
+              value={dateTo}
+              onChange={setDateTo}
+              placeholder="To Date"
+              className="w-48"
+            />
             
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-32 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-period">
@@ -205,7 +172,7 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                 <span className="text-sm text-gray-600 dark:text-gray-400">Required</span>
               </div>
             </div>
-            <div className="h-[400px]">
+            <div className="h-[280px]">
               {isLoadingPerformance ? (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-gray-500 dark:text-gray-400">Loading performance data...</p>
@@ -228,11 +195,14 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
-                    <XAxis 
+                    <XAxis
                       dataKey="period"
-                      stroke="#6b7280" 
-                      style={{ fontSize: '11px' }}
-                      tick={{ fill: '#6b7280' }}
+                      stroke="#6b7280"
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={56}
+                      tick={{ fill: '#6b7280', fontSize: 10 }}
                     />
                     <YAxis 
                       stroke="#6b7280" 
