@@ -105,6 +105,7 @@ import {
   parseAndNormalizeSkills
 } from "./source-resume-search";
 import {
+  CLIENT_ADMIN_ROLE,
   isClientPortalRole,
   isClientAdminRole,
 } from "@shared/client-roles";
@@ -14194,10 +14195,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (clientId && typeof clientId === 'string') {
         const metrics = await storage.getImpactMetrics(clientId);
-        if (!metrics) {
-          return res.status(404).json({ message: "Impact metrics not found" });
-        }
-        return res.json(metrics);
+        // Frontend expects an array; empty array when none exist yet (not 404).
+        return res.json(metrics ? [metrics] : []);
       }
 
       const allMetrics = await storage.getAllImpactMetrics();

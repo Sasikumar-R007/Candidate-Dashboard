@@ -185,3 +185,17 @@ CREATE INDEX IF NOT EXISTS idx_employees_client_company_id
 
 CREATE INDEX IF NOT EXISTS idx_requirements_assigned_client_member_id
   ON requirements (assigned_client_member_id);
+
+CREATE TABLE IF NOT EXISTS impact_metrics (
+  id varchar(255) PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id text,
+  speed_to_hire real NOT NULL DEFAULT 15,
+  revenue_impact_of_delay real NOT NULL DEFAULT 75000,
+  client_nps real NOT NULL DEFAULT 60,
+  candidate_nps real NOT NULL DEFAULT 70,
+  feedback_turn_around real NOT NULL DEFAULT 2,
+  feedback_turn_around_avg_days real NOT NULL DEFAULT 5,
+  first_year_retention_rate real NOT NULL DEFAULT 90,
+  fulfillment_rate real NOT NULL DEFAULT 20,
+  revenue_recovered real NOT NULL DEFAULT 1.5
+);

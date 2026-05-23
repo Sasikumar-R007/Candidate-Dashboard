@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -102,9 +108,9 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
           <DialogTitle className="text-xl font-semibold text-gray-900">
             {editData ? "Edit Client Admin" : "Add Client Admin"}
           </DialogTitle>
-          <p className="text-sm text-gray-500 px-6 -mt-2">
+          <DialogDescription className="text-sm text-gray-500">
             One active Client Admin per company. Members are invited from the client Team tab.
-          </p>
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
