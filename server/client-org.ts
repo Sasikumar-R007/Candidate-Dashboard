@@ -90,24 +90,7 @@ export async function resolveClientCompanyForEmployee(employee: {
 }
 
 export async function ensureClientOrgSchema() {
-  await pool.query(`
-    ALTER TABLE employees
-    ADD COLUMN IF NOT EXISTS client_company_id varchar(255),
-    ADD COLUMN IF NOT EXISTS client_department_id varchar(255),
-    ADD COLUMN IF NOT EXISTS can_see_salary_details boolean DEFAULT false
-  `);
-
-  await pool.query(`
-    ALTER TABLE client_invites
-    ADD COLUMN IF NOT EXISTS client_department_id varchar(255),
-    ADD COLUMN IF NOT EXISTS can_see_salary_details boolean DEFAULT false
-  `);
-
-  await pool.query(`
-    ALTER TABLE requirements
-    ADD COLUMN IF NOT EXISTS assigned_client_member_id varchar(255)
-  `);
-
+  // Create tables first — altering client_invites before it exists caused startup migration to fail.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS client_departments (
       id varchar(255) PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -133,6 +116,24 @@ export async function ensureClientOrgSchema() {
       accepted_at text,
       created_at text NOT NULL
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE employees
+    ADD COLUMN IF NOT EXISTS client_company_id varchar(255),
+    ADD COLUMN IF NOT EXISTS client_department_id varchar(255),
+    ADD COLUMN IF NOT EXISTS can_see_salary_details boolean DEFAULT false
+  `);
+
+  await pool.query(`
+    ALTER TABLE client_invites
+    ADD COLUMN IF NOT EXISTS client_department_id varchar(255),
+    ADD COLUMN IF NOT EXISTS can_see_salary_details boolean DEFAULT false
+  `);
+
+  await pool.query(`
+    ALTER TABLE requirements
+    ADD COLUMN IF NOT EXISTS assigned_client_member_id varchar(255)
   `);
 
   await pool.query(`
