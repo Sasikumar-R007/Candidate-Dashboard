@@ -1,6 +1,11 @@
 import * as schema from "@shared/schema";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -311,4 +316,11 @@ export async function ensureRequirementManagementColumns() {
     CREATE INDEX IF NOT EXISTS idx_candidate_application_comments_application_id
     ON candidate_application_comments (application_id)
   `);
+}
+
+/** Full idempotent schema sync for production DBs that lag behind localhost (drizzle push). */
+export async function ensureDeploymentSchema() {
+  const sqlPath = join(__dirname, "migrations", "sync_deployment_schema.sql");
+  const sql = readFileSync(sqlPath, "utf8");
+  await pool.query(sql);
 }

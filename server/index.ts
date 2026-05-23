@@ -5,7 +5,12 @@ import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
-import { ensureRequirementManagementColumns, pool, verifyPoolConnection } from "./db";
+import {
+  ensureDeploymentSchema,
+  ensureRequirementManagementColumns,
+  pool,
+  verifyPoolConnection,
+} from "./db";
 import {
   ensureClientOrgSchema,
   migrateLegacyClientLogins,
@@ -189,6 +194,13 @@ async function registerSessionMiddleware() {
 (async () => {
   await registerSessionMiddleware();
   registerRequestLogging();
+  try {
+    await ensureDeploymentSchema();
+    log("Deployment schema sync completed.", "db");
+  } catch (error) {
+    console.error("Failed to sync deployment schema:", error);
+  }
+
   try {
     await ensureRequirementManagementColumns();
     log("Requirement management columns verified.", "db");
