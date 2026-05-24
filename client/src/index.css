@@ -75,6 +75,69 @@
   background-color: hsl(220 13% 18%) !important;
 }
 
+/* Add Employee / Add Client modals — visible borders, light placeholders, scroll area */
+.master-modal-dialog .input-styled,
+.master-modal-dialog input.input-styled {
+  border: 1px solid hsl(214 22% 80%) !important;
+  background-color: hsl(210 40% 96%) !important;
+  box-shadow: none !important;
+}
+
+.dark .master-modal-dialog .input-styled,
+.dark .master-modal-dialog input.input-styled {
+  border-color: hsl(215 16% 38%) !important;
+  background-color: hsl(220 13% 18%) !important;
+}
+
+.master-modal-dialog .input-styled:focus,
+.master-modal-dialog .input-styled:focus-visible,
+.master-modal-dialog input.input-styled:focus,
+.master-modal-dialog input.input-styled:focus-visible {
+  border-color: hsl(217 91% 60%) !important;
+  outline: none !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-width: 0px !important;
+  box-shadow: 0 0 0 2px hsl(217 91% 60% / 0.22) !important;
+}
+
+/* Prevent scroll container from clipping top/bottom borders and focus rings */
+.master-modal-dialog .grid > div {
+  min-height: 2.75rem;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.master-modal-dialog input::placeholder,
+.master-modal-dialog textarea::placeholder {
+  color: hsl(214 18% 68%) !important;
+  opacity: 1;
+}
+
+.dark .master-modal-dialog input::placeholder,
+.dark .master-modal-dialog textarea::placeholder {
+  color: hsl(215 14% 52%) !important;
+}
+
+.master-modal-dialog [data-placeholder] {
+  color: hsl(214 18% 68%) !important;
+}
+
+.dark .master-modal-dialog [data-placeholder] {
+  color: hsl(215 14% 52%) !important;
+}
+
+.master-modal-dialog input[type="date"]:not(:focus):invalid,
+.master-modal-dialog input[type="date"]:not(:focus):not([value]),
+.master-modal-dialog input[type="date"]:not(:focus)[value=""] {
+  color: hsl(214 18% 68%);
+}
+
+.dark .master-modal-dialog input[type="date"]:not(:focus):invalid,
+.dark .master-modal-dialog input[type="date"]:not(:focus):not([value]),
+.dark .master-modal-dialog input[type="date"]:not(:focus)[value=""] {
+  color: hsl(215 14% 52%);
+}
+
 @keyframes notification-card-exit {
   0% {
     opacity: 1;

@@ -5,10 +5,14 @@ import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ADMIN_FILTER_DATE_CLASS, ADMIN_FILTER_SELECT_CLASS } from "@/lib/revenue-mapping-utils";
 
 interface PerformanceChartModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTeamId?: string;
+  initialPeriod?: string;
+  teamLeaders?: Array<{ id: string; name: string }>;
 }
 
 interface PerformanceDataItem {
@@ -28,32 +32,35 @@ interface DefaultRateData {
   stats: Record<string, { total: number; completed: number }>;
 }
 
-export default function PerformanceChartModal({ isOpen, onClose }: PerformanceChartModalProps) {
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+export default function PerformanceChartModal({
+  isOpen,
+  onClose,
+  initialTeamId = "all",
+  initialPeriod = "monthly",
+  teamLeaders = [],
+}: PerformanceChartModalProps) {
+  const [selectedTeam, setSelectedTeam] = useState<string>(initialTeamId);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
-  const [period, setPeriod] = useState<string>("monthly");
+  const [period, setPeriod] = useState<string>(initialPeriod);
   const [selectedDefaultRateMember, setSelectedDefaultRateMember] = useState<string>("");
   const [defaultRateDateFrom, setDefaultRateDateFrom] = useState<Date | undefined>(undefined);
   const [defaultRateDateTo, setDefaultRateDateTo] = useState<Date | undefined>(undefined);
 
-  // Fetch team members list for dropdown
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedTeam(initialTeamId || "all");
+    setPeriod(initialPeriod || "monthly");
+  }, [isOpen, initialTeamId, initialPeriod]);
+
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
     queryKey: ['/api/admin/team-members-list'],
+    enabled: isOpen,
   });
 
-  // Fetch monthly performance data for team names
-  const { data: monthlyPerformanceData } = useQuery<{
-    data: Array<Record<string, any>>;
-    teams: string[];
-    members: Array<{ key: string; name: string; teamLeader: string }>;
-  }>({
-    queryKey: ['/api/admin/monthly-performance'],
-  });
-
-  // Fetch performance graph data from backend
   const { data: performanceData = [], isLoading: isLoadingPerformance } = useQuery<PerformanceDataItem[]>({
     queryKey: ['/api/admin/performance-graph', selectedTeam, dateFrom?.toISOString(), dateTo?.toISOString(), period],
+    enabled: isOpen,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedTeam && selectedTeam !== 'all') {
@@ -75,7 +82,6 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
     },
   });
 
-  // Fetch default rate data for selected member
   const { data: defaultRateData, isLoading: isLoadingDefaultRate } = useQuery<DefaultRateData>({
     queryKey: ['/api/admin/default-rate', selectedDefaultRateMember, defaultRateDateFrom?.toISOString(), defaultRateDateTo?.toISOString()],
     queryFn: async () => {
@@ -92,10 +98,9 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return await response.json();
     },
-    enabled: !!selectedDefaultRateMember,
+    enabled: isOpen && !!selectedDefaultRateMember,
   });
 
-  // Set default member when team members load (using useEffect to avoid state update during render)
   useEffect(() => {
     if (teamMembers.length > 0 && !selectedDefaultRateMember) {
       setSelectedDefaultRateMember(teamMembers[0].name);
@@ -120,17 +125,16 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
         </DialogHeader>
         
         <div className="p-6 overflow-y-auto flex-1">
-          {/* Filters Section */}
-          <div className="flex flex-wrap gap-4 mb-6">
+          <div className="flex flex-wrap items-end gap-3 mb-6">
             <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-              <SelectTrigger className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-team">
+              <SelectTrigger className={`w-44 ${ADMIN_FILTER_SELECT_CLASS}`} data-testid="select-team">
                 <SelectValue placeholder="Select Team" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Teams</SelectItem>
-                {monthlyPerformanceData?.teams?.map((team) => (
-                  <SelectItem key={team} value={team.toLowerCase()}>
-                    {team}
+                {teamLeaders.map((leader) => (
+                  <SelectItem key={leader.id} value={leader.id}>
+                    {leader.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -140,17 +144,17 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
               value={dateFrom}
               onChange={setDateFrom}
               placeholder="From Date"
-              className="w-48"
+              className={`w-44 ${ADMIN_FILTER_DATE_CLASS}`}
             />
             <StandardDatePicker
               value={dateTo}
               onChange={setDateTo}
               placeholder="To Date"
-              className="w-48"
+              className={`w-44 ${ADMIN_FILTER_DATE_CLASS}`}
             />
             
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-32 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-period">
+              <SelectTrigger className={`w-32 ${ADMIN_FILTER_SELECT_CLASS}`} data-testid="select-period">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -246,14 +250,12 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
             </div>
           </div>
 
-          {/* Default Rate (Individually) Section */}
           <div className="mt-6 pt-6 border-t dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Default Rate (Individually)</h3>
           
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 mb-4">
+          <div className="flex flex-wrap items-end gap-3 mb-4">
             <Select value={selectedDefaultRateMember} onValueChange={setSelectedDefaultRateMember}>
-              <SelectTrigger className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-default-rate-member">
+              <SelectTrigger className={`w-44 ${ADMIN_FILTER_SELECT_CLASS}`} data-testid="select-default-rate-member">
                 <SelectValue placeholder="Select Member" />
               </SelectTrigger>
               <SelectContent>
@@ -267,18 +269,17 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
               value={defaultRateDateFrom}
               onChange={setDefaultRateDateFrom}
               placeholder="From Date"
-              className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 dark:text-white"
+              className={`w-44 ${ADMIN_FILTER_DATE_CLASS}`}
             />
             
             <StandardDatePicker
               value={defaultRateDateTo}
               onChange={setDefaultRateDateTo}
               placeholder="To Date"
-              className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 dark:text-white"
+              className={`w-44 ${ADMIN_FILTER_DATE_CLASS}`}
             />
           </div>
 
-          {/* Stacked Bar Chart */}
           <div className="h-[300px] bg-gray-50 dark:bg-gray-900 p-4 rounded-md">
             {isLoadingDefaultRate ? (
               <div className="flex items-center justify-center h-full">

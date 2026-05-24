@@ -141,6 +141,36 @@ export default function SimpleClientHeader({
     []
   );
 
+  const notificationSections = useMemo((): NotificationSectionConfig[] => {
+    return [
+      {
+        id: "newProfiles",
+        heading: "New profiles shared",
+        headingClassName: "text-violet-700",
+        kinds: ["newProfile"],
+        tabId: "newProfiles",
+        navigateTo: "newCandidates",
+      },
+      {
+        id: "nudges",
+        heading: "Nudges - Action Needed",
+        headingClassName: "text-amber-700",
+        kinds: ["nudge"],
+        tabId: "nudges",
+        showTimeRemaining: true,
+        navigateTo: "nudges",
+      },
+      {
+        id: "closures",
+        heading: "Candidate moved to closure",
+        headingClassName: "text-emerald-700",
+        kinds: ["closure"],
+        tabId: "closures",
+        navigateTo: "closures",
+      },
+    ];
+  }, []);
+
   useEffect(() => {
     if (!notificationTabs.some((tab) => tab.id === notificationTab)) {
       setNotificationTab(notificationTabs[0]?.id || "all");

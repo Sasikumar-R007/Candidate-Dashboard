@@ -15,6 +15,7 @@ import {
   Loader2,
   Mail,
   MapPin,
+  Pencil,
   Phone,
   SendHorizontal,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
@@ -102,6 +104,10 @@ type SessionApplication = {
   websiteUrl?: string | null;
   pedigreeLevel?: string | null;
   companyLevel?: string | null;
+  applicationCurrentCtc?: string | null;
+  applicationExpectedCtc?: string | null;
+  salaryEditedByName?: string | null;
+  salaryEditedAt?: string | null;
 };
 
 type ApplicationComment = {
@@ -126,6 +132,10 @@ function normalizeUploadAssetUrl(
 
   if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
+  }
+
+  if (url.startsWith("/api/profile-media")) {
+    return `${API_BASE_URL}${url}`;
   }
 
   if (!url.startsWith("/")) {
@@ -169,10 +179,22 @@ function roleBadgeClass(role: string, onMutedPanel = false): string {
   return "bg-gray-100 text-gray-700";
 }
 
-const SAMPLE_SALARY_DISPLAY = "₹18,00,000 Current CTC · ₹22,00,000 Expected CTC";
-
 const SALARY_CONFIDENTIAL_TOOLTIP =
   "Confidential: Do not share salary details in this comment chat.";
+
+function normalizeSalaryInput(value?: string | null): string {
+  const raw = String(value ?? "0").trim().replace(/[^\d.]/g, "");
+  return raw || "0";
+}
+
+function formatSalaryDisplay(value?: string | null): string {
+  const normalized = normalizeSalaryInput(value);
+  const num = Number(normalized);
+  if (!Number.isNaN(num)) {
+    return `₹${num.toLocaleString("en-IN")}`;
+  }
+  return `₹${normalized}`;
+}
 
 function formatApplicationSourceLabel(source: string): string {
   const s = source.toLowerCase().trim();
@@ -187,7 +209,7 @@ function SourceBadge({ source }: { source: string }) {
   return (
     <span
       className={cn(
-        "inline-block px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex w-fit self-start px-2.5 py-0.5 text-xs font-semibold",
         BTN_RADIUS,
         isSourced ? "bg-violet-100 text-violet-800" : "bg-amber-100 text-amber-900",
       )}
@@ -197,19 +219,74 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
-function SalaryDetailsBar({ salaryText }: { salaryText: string }) {
+function SalaryDetailsSection({
+  applicationId,
+  apiMode,
+  currentCtc,
+  expectedCtc,
+  lastEditedBy,
+  lastEditedAt,
+  canEdit,
+  onSaved,
+}: {
+  applicationId: string;
+  apiMode: "recruiter" | "client";
+  currentCtc: string;
+  expectedCtc: string;
+  lastEditedBy?: string | null;
+  lastEditedAt?: string | null;
+  canEdit: boolean;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [expanded, setExpanded] = useState(false);
+  const [draftCurrent, setDraftCurrent] = useState(currentCtc);
+  const [draftExpected, setDraftExpected] = useState(expectedCtc);
+
+  useEffect(() => {
+    setDraftCurrent(currentCtc);
+    setDraftExpected(expectedCtc);
+    if (!canEdit) setExpanded(false);
+  }, [applicationId, currentCtc, expectedCtc, canEdit]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", `/api/recruiter/applications/${applicationId}/salary`, {
+        currentCtc: draftCurrent,
+        expectedCtc: draftExpected,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Salary details saved" });
+      setExpanded(false);
+      onSaved();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not save salary",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const summary = `${formatSalaryDisplay(currentCtc)} Current CTC · ${formatSalaryDisplay(expectedCtc)} Exp CTC`;
+
   return (
     <div
       className={cn(
-        "mx-4 mb-2 mt-2 shrink-0 border border-gray-300 bg-gray-200/70 px-3 py-2.5",
+        "mx-4 mb-2 mt-2 shrink-0 border border-gray-300 bg-gray-200/70",
         BTN_RADIUS,
       )}
       data-testid="salary-details-bar"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <IndianRupee className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Salary Details</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+            Salary Details
+          </span>
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -233,10 +310,82 @@ function SalaryDetailsBar({ salaryText }: { salaryText: string }) {
             </Tooltip>
           </TooltipProvider>
         </div>
-        <span className="shrink-0 text-sm font-medium text-gray-800" data-testid="text-salary-details-sample">
-          {salaryText}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {canEdit && apiMode === "recruiter" && (
+            <button
+              type="button"
+              onClick={() => setExpanded((prev) => !prev)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 transition hover:bg-gray-300/60 hover:text-gray-900"
+              aria-label={expanded ? "Close salary editor" : "Edit salary details"}
+              data-testid="button-edit-salary-details"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
+
+      <div
+        className={cn(
+          "overflow-hidden border-t border-gray-300/80 transition-all duration-300 ease-in-out",
+          expanded ? "max-h-64 opacity-100" : "max-h-0 opacity-0",
+        )}
+      >
+        <div className="space-y-3 px-3 py-3">
+          <div>
+            <Label htmlFor="salary-current-ctc" className="text-xs text-gray-600">
+              Current CTC
+            </Label>
+            <Input
+              id="salary-current-ctc"
+              value={draftCurrent}
+              onChange={(e) => setDraftCurrent(e.target.value.replace(/[^\d]/g, ""))}
+              placeholder="0"
+              className={cn("mt-1 h-9 bg-white", BTN_RADIUS)}
+              inputMode="numeric"
+            />
+          </div>
+          <div>
+            <Label htmlFor="salary-expected-ctc" className="text-xs text-gray-600">
+              Expected CTC
+            </Label>
+            <Input
+              id="salary-expected-ctc"
+              value={draftExpected}
+              onChange={(e) => setDraftExpected(e.target.value.replace(/[^\d]/g, ""))}
+              placeholder="0"
+              className={cn("mt-1 h-9 bg-white", BTN_RADIUS)}
+              inputMode="numeric"
+            />
+          </div>
+          {lastEditedBy && (
+            <p className="text-xs text-gray-500">
+              Last edited by {lastEditedBy}
+              {lastEditedAt
+                ? ` · ${format(new Date(lastEditedAt), "MMM d, yyyy h:mm a")}`
+                : ""}
+            </p>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            className={cn("w-full", BTN_RADIUS)}
+            disabled={saveMutation.isPending}
+            onClick={() => saveMutation.mutate()}
+          >
+            {saveMutation.isPending ? "Saving…" : "Save salary details"}
+          </Button>
+        </div>
+      </div>
+
+      {!expanded && (
+        <div className="border-t border-gray-300/60 px-3 pb-2.5 pt-2">
+          <p className="text-sm font-medium text-gray-800">{summary}</p>
+          {lastEditedBy && (
+            <p className="mt-1 text-xs text-gray-500">Last edited by {lastEditedBy}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -255,16 +404,25 @@ function PipelineStageBadge({ status }: { status: string }) {
   );
 }
 
-function formatCtc(ctc?: string | null, ectc?: string | null): string | undefined {
-  const parts = [ctc, ectc ? `Expected: ${ectc}` : null].filter(Boolean);
-  return parts.length ? parts.join(" · ") : undefined;
-}
-
 function formatEducation(app?: SessionApplication): string | undefined {
   if (!app) return undefined;
   const parts = [app.education, app.highestQualification, app.collegeName].filter(Boolean);
   const unique = [...new Set(parts)];
   return unique.length ? unique.join(" · ") : undefined;
+}
+
+function formatCtcLabel(
+  app?: SessionApplication,
+  normalized?: { current: string; expected: string },
+): string | undefined {
+  const current = normalized?.current ?? normalizeSalaryInput(app?.applicationCurrentCtc ?? app?.ctc);
+  const expected = normalized?.expected ?? normalizeSalaryInput(app?.applicationExpectedCtc ?? app?.ectc);
+  const parts: string[] = [];
+  if (current !== "0") parts.push(`${formatSalaryDisplay(current)} current`);
+  if (expected !== "0") parts.push(`${formatSalaryDisplay(expected)} expected`);
+  if (parts.length > 0) return parts.join(" · ");
+  const legacy = [app?.ctc, app?.ectc].filter((v): v is string => Boolean(v && String(v).trim()));
+  return legacy.length > 0 ? Array.from(new Set(legacy)).join(" · ") : undefined;
 }
 
 type CandidateCommentsSessionProps = {
@@ -274,6 +432,8 @@ type CandidateCommentsSessionProps = {
   onSelectApplicant?: (applicant: CandidateCommentsSessionApplicant) => void;
   onBack: () => void;
   apiMode?: "recruiter" | "client";
+  /** Client portal: hide salary block when member cannot see salary (server also strips fields). */
+  canViewSalaryDetails?: boolean;
   viewerName?: string;
   clientReject?: {
     canReject: boolean;
@@ -289,6 +449,7 @@ export function CandidateCommentsSession({
   onSelectApplicant,
   onBack,
   apiMode = "recruiter",
+  canViewSalaryDetails = true,
   viewerName,
   clientReject,
 }: CandidateCommentsSessionProps) {
@@ -409,12 +570,28 @@ export function CandidateCommentsSession({
   const appliedCompanyName = app?.company || fallbackApplicant?.company || null;
   const appliedDaysAgo = formatAppliedDaysAgo(app?.appliedDate);
   const educationLabel = formatEducation(app);
-  const ctcLabel = formatCtc(app?.ctc, app?.ectc);
   const location = app?.location || fallbackApplicant?.location;
   const experience = app?.experience || fallbackApplicant?.experience;
   const pipelineStage = app?.status || fallbackApplicant?.currentStatus || "";
-  const salaryDisplay = ctcLabel || SAMPLE_SALARY_DISPLAY;
   const applicationSource = app?.source;
+  const applicationCurrentCtc = normalizeSalaryInput(
+    app?.applicationCurrentCtc ?? app?.ctc ?? "0",
+  );
+  const applicationExpectedCtc = normalizeSalaryInput(
+    app?.applicationExpectedCtc ?? app?.ectc ?? "0",
+  );
+  const ctcLabel = formatCtcLabel(app, {
+    current: applicationCurrentCtc,
+    expected: applicationExpectedCtc,
+  });
+  const employeeRole = (employee?.role || "").toLowerCase();
+  const canEditSalary =
+    apiMode === "recruiter" &&
+    (employeeRole === "team_leader" ||
+      employeeRole === "recruiter" ||
+      employeeRole === "talent_advisor" ||
+      employeeRole === "ta");
+  const showSalarySection = apiMode !== "client" || canViewSalaryDetails;
 
   const showContentFade = isSwitching || sessionFetching || commentsFetching;
 
@@ -845,7 +1022,26 @@ export function CandidateCommentsSession({
               </Button>
             </div>
           )}
-          <SalaryDetailsBar salaryText={salaryDisplay} />
+          {showSalarySection && (
+            <SalaryDetailsSection
+              applicationId={applicationId}
+              apiMode={apiMode}
+              currentCtc={applicationCurrentCtc}
+              expectedCtc={applicationExpectedCtc}
+              lastEditedBy={app?.salaryEditedByName}
+              lastEditedAt={
+                app?.salaryEditedAt == null
+                  ? null
+                  : typeof app.salaryEditedAt === "string"
+                    ? app.salaryEditedAt
+                    : String(app.salaryEditedAt)
+              }
+              canEdit={canEditSalary}
+              onSaved={() => {
+                void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
+              }}
+            />
+          )}
 
           <div
             className={cn(

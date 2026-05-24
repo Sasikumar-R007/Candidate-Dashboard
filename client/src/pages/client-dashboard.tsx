@@ -355,7 +355,7 @@ export default function ClientDashboard() {
     (clientProfile as { isClientAdmin?: boolean } | undefined)?.isClientAdmin === true;
 
   const { data: activeNudges = [] } = useQuery({
-    queryKey: ['/api/nudges', isClientAdmin],
+    queryKey: ['/api/nudges'],
     enabled: isClientAdmin,
     placeholderData: [],
   });
@@ -772,6 +772,11 @@ export default function ClientDashboard() {
             onSelectApplicant={handleSelectSessionApplicant}
             onBack={handleCloseCandidateSession}
             apiMode="client"
+            canViewSalaryDetails={
+              isClientAdmin ||
+              (clientProfile as { canSeeSalaryDetails?: boolean } | undefined)?.canSeeSalaryDetails ===
+                true
+            }
             viewerName={userName}
             clientReject={{
               canReject:

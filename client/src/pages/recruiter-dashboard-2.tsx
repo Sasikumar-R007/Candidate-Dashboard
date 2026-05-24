@@ -3935,14 +3935,16 @@ export default function RecruiterDashboard2() {
                   data-testid="input-search-applicants"
                 />
                 <button
+                  type="button"
                   onClick={() => {
                     setIsApplicantOverviewModalOpen(false);
                     setApplicantSearchQuery('');
                   }}
-                  className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                  aria-label="Close"
                   data-testid="button-close-applicants-modal"
                 >
-                  Ã—
+                  <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -4182,11 +4184,13 @@ export default function RecruiterDashboard2() {
                 All Pending Meetings
               </h2>
               <button
+                type="button"
                 onClick={() => setIsPendingMeetingsModalOpen(false)}
-                className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                aria-label="Close"
                 data-testid="button-close-meetings-modal"
               >
-                Ã—
+                <X className="h-5 w-5" />
               </button>
             </div>
 
@@ -4223,11 +4227,13 @@ export default function RecruiterDashboard2() {
                 All CEO Commands
               </h2>
               <button
+                type="button"
                 onClick={() => setIsCeoCommandsModalOpen(false)}
-                className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                aria-label="Close"
                 data-testid="button-close-commands-modal"
               >
-                Ã—
+                <X className="h-5 w-5" />
               </button>
             </div>
 

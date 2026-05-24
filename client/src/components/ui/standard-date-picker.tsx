@@ -46,7 +46,9 @@ export function StandardDatePicker({
       disabled={disabled}
       max={maxDateStr}
       min={minDateStr}
-      className={`px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${className}`}
+      className={`px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+        dateValue ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"
+      } ${className}`}
       style={{
         colorScheme: 'light'
       }}

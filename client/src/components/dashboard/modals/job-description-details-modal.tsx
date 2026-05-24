@@ -7,6 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  formatRoleIdShort,
+  parseRequirementJdExtras,
+  type RequirementJdExtras,
+} from "@shared/requirement-jd-extras";
 
 export type JobDescriptionDetailsData = {
   id?: string;
@@ -22,6 +27,12 @@ export type JobDescriptionDetailsData = {
   teamLead?: string;
   jdFile?: string | null;
   jdText?: string | null;
+  sourceDetails?: string | null;
+  sourceType?: string | null;
+  primarySkills?: string | null;
+  secondarySkills?: string | null;
+  knowledgeOnly?: string | null;
+  specialInstructions?: string | null;
 };
 
 type JobDescriptionDetailsModalProps = {
@@ -49,12 +60,72 @@ function resolveJdFileUrl(jdFile?: string | null): string | null {
   return `${window.location.origin}/${trimmed.replace(/^\//, "")}`;
 }
 
+function JdSkillsAndInstructions({ extras }: { extras: RequirementJdExtras }) {
+  const hasSkills = Boolean(
+    extras.primarySkills?.trim() ||
+      extras.secondarySkills?.trim() ||
+      extras.knowledgeOnly?.trim(),
+  );
+  const hasInstructions = Boolean(extras.specialInstructions?.trim());
+
+  if (!hasSkills && !hasInstructions) return null;
+
+  return (
+    <div className="mt-6 space-y-5 border-t border-gray-200 pt-5 dark:border-gray-600">
+      {hasSkills && (
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">Skills</label>
+          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
+            {extras.primarySkills?.trim() && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Primary Skills
+                </p>
+                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{extras.primarySkills}</p>
+              </div>
+            )}
+            {extras.secondarySkills?.trim() && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Secondary Skills
+                </p>
+                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{extras.secondarySkills}</p>
+              </div>
+            )}
+            {extras.knowledgeOnly?.trim() && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Knowledge Only
+                </p>
+                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{extras.knowledgeOnly}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {hasInstructions && (
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Special Instructions
+          </label>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
+            <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{extras.specialInstructions}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function JdDocumentPanel({
   jdFile,
   jdText,
+  extras,
 }: {
   jdFile?: string | null;
   jdText?: string | null;
+  extras: RequirementJdExtras;
 }) {
   const jdFileUrl = useMemo(() => resolveJdFileUrl(jdFile), [jdFile]);
   const isPdf = jdFileUrl?.toLowerCase().includes(".pdf");
@@ -108,6 +179,12 @@ function JdDocumentPanel({
 
   const fileName = jdFile?.split("/").pop() || "document";
   const iframeSrc = previewBlobUrl || (isPdf ? null : jdFileUrl);
+  const hasSkillsOrInstructions = Boolean(
+    extras.primarySkills?.trim() ||
+      extras.secondarySkills?.trim() ||
+      extras.knowledgeOnly?.trim() ||
+      extras.specialInstructions?.trim(),
+  );
 
   return (
     <div className="overflow-y-auto rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800 max-h-[62vh]">
@@ -155,7 +232,7 @@ function JdDocumentPanel({
         </div>
       )}
 
-      {!jdFileUrl && !jdText?.trim() && (
+      {!jdFileUrl && !jdText?.trim() && !hasSkillsOrInstructions && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
           No job description document or text has been uploaded for this requirement yet.
         </p>
@@ -173,6 +250,8 @@ function JdDocumentPanel({
           </div>
         </div>
       )}
+
+      <JdSkillsAndInstructions extras={extras} />
     </div>
   );
 }
@@ -187,7 +266,16 @@ export default function JobDescriptionDetailsModal({
   if (!data) return null;
 
   const spocLabel = data.spocName || data.spoc || "N/A";
-  const hasDocumentSection = Boolean(data.jdFile?.trim() || data.jdText?.trim());
+  const jdExtras = parseRequirementJdExtras(data);
+  const hasDocumentSection = Boolean(
+    data.jdFile?.trim() ||
+      data.jdText?.trim() ||
+      jdExtras.primarySkills?.trim() ||
+      jdExtras.secondarySkills?.trim() ||
+      jdExtras.knowledgeOnly?.trim() ||
+      jdExtras.specialInstructions?.trim(),
+  );
+  const shortRoleId = formatRoleIdShort(data.id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,7 +319,7 @@ export default function JobDescriptionDetailsModal({
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     {variant === "admin" ? "Role ID" : "Requirement ID"}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{data.id || "N/A"}</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{shortRoleId}</p>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -301,7 +389,7 @@ export default function JobDescriptionDetailsModal({
             </div>
 
             {hasDocumentSection ? (
-              <JdDocumentPanel jdFile={data.jdFile} jdText={data.jdText} />
+              <JdDocumentPanel jdFile={data.jdFile} jdText={data.jdText} extras={jdExtras} />
             ) : (
               <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                 <p className="text-center text-sm text-slate-600">

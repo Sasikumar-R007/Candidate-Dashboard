@@ -213,6 +213,15 @@ function normalizeJobApplication(application: any): JobApplication {
       application.is_candidate_confirmed !== undefined
         ? application.is_candidate_confirmed
         : (application.isCandidateConfirmed ?? true),
+    applicationCurrentCtc:
+      application.application_current_ctc ?? application.applicationCurrentCtc ?? "0",
+    applicationExpectedCtc:
+      application.application_expected_ctc ?? application.applicationExpectedCtc ?? "0",
+    salaryEditedByEmployeeId:
+      application.salary_edited_by_employee_id ?? application.salaryEditedByEmployeeId ?? null,
+    salaryEditedByName:
+      application.salary_edited_by_name ?? application.salaryEditedByName ?? null,
+    salaryEditedAt: application.salary_edited_at ?? application.salaryEditedAt ?? null,
   } as JobApplication;
 }
 
@@ -238,6 +247,8 @@ const jobApplicationColumnCandidates = [
   "job_title", "company", "job_type", "status", "source", "applied_date", "candidate_name",
   "candidate_email", "candidate_phone", "description", "salary", "location", "work_mode",
   "experience", "skills", "logo", "last_nudged_at", "is_candidate_confirmed",
+  "application_current_ctc", "application_expected_ctc",
+  "salary_edited_by_employee_id", "salary_edited_by_name", "salary_edited_at",
 ];
 
 const EMPLOYEE_BY_ID_CACHE_TTL_MS = 60_000;
@@ -1710,6 +1721,31 @@ export class DatabaseStorage implements IStorage {
     return await this.queryJobApplications(undefined, sql`ORDER BY applied_date DESC`);
   }
 
+  /** Tagged recruiter deliveries for one calendar day (avoids loading all applications). */
+  async getTaggedJobApplicationsOnDate(date: string): Promise<JobApplication[]> {
+    return await db
+      .select()
+      .from(jobApplications)
+      .where(
+        and(
+          eq(jobApplications.source, "recruiter_tagged"),
+          sql`${jobApplications.appliedDate}::date = ${date}::date`,
+        ),
+      );
+  }
+
+  async getTaggedJobApplicationsUpToDate(endDate: string): Promise<JobApplication[]> {
+    return await db
+      .select()
+      .from(jobApplications)
+      .where(
+        and(
+          eq(jobApplications.source, "recruiter_tagged"),
+          sql`${jobApplications.appliedDate}::date <= ${endDate}::date`,
+        ),
+      );
+  }
+
   async getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]> {
     const applications = await this.queryJobApplications(sql`"recruiter_job_id" = ${recruiterJobId}`);
     return applications.sort((a, b) => {
@@ -1758,6 +1794,48 @@ export class DatabaseStorage implements IStorage {
     }
     if (rejectionReason !== undefined && availableColumns.includes("rejection_reason")) {
       assignments.push(sql`"rejection_reason" = ${rejectionReason}`);
+    }
+
+    await db.execute(sql`
+      UPDATE "job_applications"
+      SET ${sql.join(assignments, sql`, `)}
+      WHERE "id" = ${id}
+    `);
+
+    const [application] = await this.queryJobApplications(sql`"id" = ${id}`);
+    return application || undefined;
+  }
+
+  async updateJobApplicationSalary(
+    id: string,
+    payload: {
+      applicationCurrentCtc: string;
+      applicationExpectedCtc: string;
+      salaryEditedByEmployeeId: string;
+      salaryEditedByName: string;
+    },
+  ): Promise<JobApplication | undefined> {
+    const availableColumns = await this.getAvailableColumns("job_applications");
+    const assignments: ReturnType<typeof sql>[] = [];
+
+    if (availableColumns.includes("application_current_ctc")) {
+      assignments.push(sql`"application_current_ctc" = ${payload.applicationCurrentCtc}`);
+    }
+    if (availableColumns.includes("application_expected_ctc")) {
+      assignments.push(sql`"application_expected_ctc" = ${payload.applicationExpectedCtc}`);
+    }
+    if (availableColumns.includes("salary_edited_by_employee_id")) {
+      assignments.push(sql`"salary_edited_by_employee_id" = ${payload.salaryEditedByEmployeeId}`);
+    }
+    if (availableColumns.includes("salary_edited_by_name")) {
+      assignments.push(sql`"salary_edited_by_name" = ${payload.salaryEditedByName}`);
+    }
+    if (availableColumns.includes("salary_edited_at")) {
+      assignments.push(sql`"salary_edited_at" = ${new Date().toISOString()}`);
+    }
+
+    if (assignments.length === 0) {
+      throw new Error("Salary columns are not available on job_applications");
     }
 
     await db.execute(sql`
@@ -2209,7 +2287,70 @@ export class DatabaseStorage implements IStorage {
     return result || undefined;
   }
 
-  async calculateRecruiterDailyMetrics(recruiterId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+  async countRecruiterUniqueDeliveriesOnDate(
+    recruiterId: string,
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<number> {
+    const activeAssignments = await db
+      .select()
+      .from(requirementAssignments)
+      .where(
+        and(
+          eq(requirementAssignments.recruiterId, recruiterId),
+          eq(requirementAssignments.status, "active"),
+        ),
+      );
+
+    const requirementIds = new Set(
+      activeAssignments.map((assignment) => assignment.requirementId),
+    );
+
+    const advisorRequirements = await this.getRequirementsByTalentAdvisorId(recruiterId);
+    for (const req of advisorRequirements) {
+      if (!req.isArchived) {
+        requirementIds.add(req.id);
+      }
+    }
+
+    if (requirementIds.size === 0) {
+      return 0;
+    }
+
+    const unique = new Set<string>();
+
+    const submissions = await db
+      .select()
+      .from(resumeSubmissions)
+      .where(
+        and(
+          eq(resumeSubmissions.recruiterId, recruiterId),
+          sql`${resumeSubmissions.submittedAt}::date = ${date}::date`,
+        ),
+      );
+
+    for (const submission of submissions) {
+      if (!requirementIds.has(submission.requirementId)) continue;
+      const key = `${submission.requirementId}::${(submission.candidateEmail || submission.candidateName || submission.id || "").toString().trim().toLowerCase()}`;
+      unique.add(key);
+    }
+
+    const taggedApplications =
+      taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
+    for (const app of taggedApplications) {
+      if (!app.requirementId || !requirementIds.has(app.requirementId)) continue;
+      const key = `${app.requirementId}::${(app.candidateEmail || app.candidateName || app.id || "").toString().trim().toLowerCase()}`;
+      unique.add(key);
+    }
+
+    return unique.size;
+  }
+
+  async calculateRecruiterDailyMetrics(
+    recruiterId: string,
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
     const assignments = await db.select().from(requirementAssignments)
       .where(and(
         eq(requirementAssignments.recruiterId, recruiterId),
@@ -2223,33 +2364,63 @@ export class DatabaseStorage implements IStorage {
         required += getResumeTarget(requirement.criticality, requirement.toughness);
       }
     }
+
+    const talentAdvisorRequirements = await this.getRequirementsByTalentAdvisorId(recruiterId);
+    for (const req of talentAdvisorRequirements) {
+      if (req.isArchived) continue;
+      const alreadyCounted = assignments.some((a) => a.requirementId === req.id);
+      if (!alreadyCounted) {
+        required += getResumeTarget(req.criticality, req.toughness);
+      }
+    }
     
-    const delivered = await this.getResumeSubmissionsCountByRecruiterAndDate(recruiterId, date);
+    const delivered = await this.countRecruiterUniqueDeliveriesOnDate(
+      recruiterId,
+      date,
+      taggedOnDate,
+    );
     const defaulted = Math.max(0, required - delivered);
+    const requirementCount = new Set([
+      ...assignments.map((a) => a.requirementId),
+      ...talentAdvisorRequirements.filter((r) => !r.isArchived).map((r) => r.id),
+    ]).size;
     
-    return { delivered, defaulted, required, requirementCount: assignments.length };
+    return { delivered, defaulted, required, requirementCount };
   }
 
-  async calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
-    // Use raw SQL to exclude last_login_at column (which may not exist in production)
-    const teamMembersResult = await db.execute(sql`
-      SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-             department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-             father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-             increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-             current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-             branch, city, reporting_to, is_active, created_at, profile_picture
-      FROM employees 
-      WHERE reporting_to = ${teamLeadId} OR id = ${teamLeadId}
-    `);
-    const teamMembers = teamMembersResult.rows.map(normalizeEmployee);
+  async calculateTeamDailyMetrics(
+    teamLeadId: string,
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const tagged =
+      taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
+    const allEmployees = await this.getAllEmployees();
+    const teamLead = allEmployees.find(
+      (emp) => emp.id === teamLeadId || emp.employeeId === teamLeadId,
+    );
+    if (!teamLead) {
+      return { delivered: 0, defaulted: 0, required: 0, requirementCount: 0 };
+    }
+
+    const teamMembers = allEmployees.filter(
+      (emp) =>
+        emp.id === teamLead.id ||
+        ((emp.role === "recruiter" ||
+          emp.role === "talent_advisor" ||
+          emp.role === "ta") &&
+          emp.isActive !== false &&
+          (emp.reportingTo === teamLead.employeeId ||
+            emp.reportingTo === teamLead.id ||
+            emp.reportingTo === teamLead.name)),
+    );
     
     let totalDelivered = 0;
     let totalRequired = 0;
     let totalRequirements = 0;
     
     for (const member of teamMembers) {
-      const metrics = await this.calculateRecruiterDailyMetrics(member.id, date);
+      const metrics = await this.calculateRecruiterDailyMetrics(member.id, date, tagged);
       totalDelivered += metrics.delivered;
       totalRequired += metrics.required;
       totalRequirements += metrics.requirementCount;
@@ -2260,7 +2431,12 @@ export class DatabaseStorage implements IStorage {
     return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
   }
 
-  async calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+  async calculateOrgDailyMetrics(
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const tagged =
+      taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
     // Use raw SQL to exclude last_login_at column (which may not exist in production)
     const recruitersResult = await db.execute(sql`
       SELECT id, employee_id, name, email, password, role, address, designation, phone, 
@@ -2279,7 +2455,7 @@ export class DatabaseStorage implements IStorage {
     let totalRequirements = 0;
     
     for (const recruiter of recruiters) {
-      const metrics = await this.calculateRecruiterDailyMetrics(recruiter.id, date);
+      const metrics = await this.calculateRecruiterDailyMetrics(recruiter.id, date, tagged);
       totalDelivered += metrics.delivered;
       totalRequired += metrics.required;
       totalRequirements += metrics.requirementCount;

@@ -13,6 +13,8 @@ import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
 import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
 import type { UserActivity } from "@shared/schema";
+import { formatEmployeeRoleDisplay } from "@/lib/employee-display";
+import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
 
 interface AdminTopHeaderProps {
   companyName?: string;
@@ -189,26 +191,20 @@ export default function AdminTopHeader({
     }
   }, [showUserDropdown, showNotifications]);
   
+  const profilePictureSrc = useMemo(
+    () => resolveProfilePictureUrl(profileData?.profilePicture),
+    [profileData?.profilePicture],
+  );
+  const [profileImgError, setProfileImgError] = useState(false);
+  useEffect(() => {
+    setProfileImgError(false);
+  }, [profilePictureSrc]);
+
   const userName = profileData?.name || employee?.name || "Admin User";
   const userEmail = profileData?.email || employee?.email || "";
   const displayCompanyName = companyName;
   
-  const getRoleDisplayName = (role: string): string => {
-    switch (role) {
-      case 'admin':
-        return 'Admin';
-      case 'team_leader':
-        return 'Team Leader';
-      case 'recruiter':
-        return 'Recruiter';
-      case 'client':
-        return 'Client';
-      default:
-        return role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
-    }
-  };
-  
-  const displayRole = getRoleDisplayName(userRole);
+  const displayRole = formatEmployeeRoleDisplay(profileData?.role || userRole, { employeeRole: userRole });
 
   const notificationFeedKey = isAdmin
     ? "/api/admin/notifications-feed"
@@ -269,8 +265,9 @@ export default function AdminTopHeader({
       }
     },
     enabled: isAdmin || isTL || isTA,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     retry: 2,
   });
@@ -700,11 +697,12 @@ export default function AdminTopHeader({
             className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             data-testid="button-user-dropdown"
           >
-            {profileData?.profilePicture ? (
+            {profilePictureSrc && !profileImgError ? (
               <img
-                src={profileData.profilePicture}
+                src={profilePictureSrc}
                 alt={userName}
                 className="h-9 w-9 rounded-full object-cover"
+                onError={() => setProfileImgError(true)}
               />
             ) : (
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
@@ -727,11 +725,12 @@ export default function AdminTopHeader({
               onClick={(e) => e.stopPropagation()}
             >
             <div className="mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3">
-                {profileData?.profilePicture ? (
+                {profilePictureSrc && !profileImgError ? (
                   <img
-                    src={profileData.profilePicture}
+                    src={profilePictureSrc}
                     alt={userName}
                     className="h-11 w-11 rounded-2xl object-cover"
+                    onError={() => setProfileImgError(true)}
                   />
                 ) : (
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-base font-semibold">
@@ -741,11 +740,6 @@ export default function AdminTopHeader({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
                   <p className="truncate text-xs text-slate-500">{displayRole}</p>
-                  {(profileData?.employeeId || employee?.employeeId) && (
-                    <p className="mt-1 truncate text-xs font-semibold text-blue-700 dark:text-blue-300">
-                      Profile ID: {profileData?.employeeId || employee?.employeeId}
-                    </p>
-                  )}
                 </div>
               </div>
 

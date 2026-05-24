@@ -22,7 +22,13 @@ import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-mod
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import NudgeLogsTab from "@/components/dashboard/tabs/nudges-tab";
-import { invalidateAdminPerformanceQueries } from "@/lib/admin-performance-queries";
+import { invalidateRevenueMappingQueries } from "@/lib/admin-performance-queries";
+import {
+  formatRevenuePaymentStatus,
+  sortRevenueMappingsByRecency,
+  ADMIN_FILTER_SELECT_CLASS,
+  ADMIN_FILTER_DATE_CLASS,
+} from "@/lib/revenue-mapping-utils";
 import { SearchBar } from '@/components/ui/search-bar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -346,15 +352,32 @@ const initialCeoMeetingsData = [
 
 // Performance Chart Component
 interface PerformanceChartProps {
-  data: Array<{ member: string; requirements?: number; resumesA?: number; resumesB?: number; memberIndex?: number }>;
+  data: Array<{
+    member: string;
+    delivered?: number;
+    required?: number;
+    requirements?: number;
+    resumesA?: number;
+    resumesB?: number;
+    memberIndex?: number;
+  }>;
   height?: string;
   benchmarkValue?: number;
   showDualLines?: boolean;
 }
 
 function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDualLines = false }: PerformanceChartProps) {
-  // Show empty state if no data
-  if (!data || data.length === 0) {
+  const chartData = (data || []).map((point) => ({
+    ...point,
+    delivered: point.delivered ?? point.resumesB ?? 0,
+    required: point.required ?? point.resumesA ?? point.requirements ?? 0,
+  }));
+
+  const isDual =
+    showDualLines ||
+    chartData.some((point) => point.delivered > 0 || point.required > 0);
+
+  if (!chartData.length) {
     return (
       <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
         <div className="text-center">
@@ -365,29 +388,29 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
     );
   }
 
-  const maxResumes = showDualLines
-    ? Math.max(...data.map(d => Math.max(d.resumesA || 0, d.resumesB || 0)))
+  const maxResumes = isDual
+    ? Math.max(
+        benchmarkValue,
+        ...chartData.map((d) => Math.max(d.delivered, d.required)),
+      )
     : 15;
-  const roundedMax = Math.ceil(maxResumes / 2) * 2 + 2;
-  const ticks = showDualLines
-    ? Array.from({ length: Math.ceil(roundedMax / 2) + 1 }, (_, i) => i * 2)
+  const roundedMax = Math.max(4, Math.ceil(maxResumes / 3) * 3);
+  const tickStep = roundedMax <= 12 ? 3 : Math.ceil(roundedMax / 5);
+  const ticks = isDual
+    ? Array.from({ length: Math.floor(roundedMax / tickStep) + 1 }, (_, i) => i * tickStep)
     : [3, 6, 9, 12, 15];
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data}>
+      <AreaChart data={chartData}>
         <defs>
-          <linearGradient id="colorRequirementsMain" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="colorDeliveredMain" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
             <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
           </linearGradient>
-          <linearGradient id="colorResumesAMain" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="colorRequiredMain" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
             <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
-          </linearGradient>
-          <linearGradient id="colorResumesBMain" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
-            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
@@ -397,8 +420,8 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
           style={{ fontSize: '11px' }}
           tick={{ fill: '#6b7280' }}
           tickFormatter={(value, index) => {
-            if (showDualLines && data[index]?.memberIndex !== undefined) {
-              return `${data[index].memberIndex}. ${value}`;
+            if (isDual && chartData[index]?.memberIndex !== undefined) {
+              return `${chartData[index].memberIndex}. ${value}`;
             }
             return value;
           }}
@@ -408,7 +431,7 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
           style={{ fontSize: '12px' }}
           tick={{ fill: '#6b7280' }}
           ticks={ticks}
-          domain={[0, showDualLines ? roundedMax : 15]}
+          domain={[0, isDual ? roundedMax : 15]}
         />
         <Tooltip
           contentStyle={{
@@ -417,51 +440,65 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
             borderRadius: '8px'
           }}
         />
-        <Legend />
-        {!showDualLines && (
+        {isDual && (
+          <ReferenceLine
+            y={benchmarkValue}
+            stroke="#6b7280"
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            label={{
+              value: `Benchmark (${benchmarkValue})`,
+              position: 'insideTopRight',
+              fill: '#6b7280',
+              fontSize: 11,
+            }}
+          />
+        )}
+        {isDual ? (
+          <>
+            <Area
+              type="monotone"
+              dataKey="delivered"
+              stroke="#22c55e"
+              strokeWidth={2}
+              fill="url(#colorDeliveredMain)"
+              dot={{ fill: '#22c55e', r: 4 }}
+              activeDot={{ r: 6 }}
+              name="Delivered"
+            />
+            <Area
+              type="monotone"
+              dataKey="required"
+              stroke="#ef4444"
+              strokeWidth={2}
+              fill="url(#colorRequiredMain)"
+              fillOpacity={0.5}
+              dot={{ fill: '#ef4444', r: 4 }}
+              activeDot={{ r: 6 }}
+              name="Required"
+            />
+            <Legend />
+          </>
+        ) : (
           <>
             <ReferenceLine
               y={benchmarkValue}
-              stroke="#ef4444"
+              stroke="#6b7280"
               strokeWidth={2}
               strokeDasharray="5 5"
-              label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
+              label={{ value: `Benchmark (${benchmarkValue})`, position: 'right', fill: '#6b7280', fontSize: 12 }}
             />
             <Area
               type="monotone"
               dataKey="requirements"
               stroke="#22c55e"
               strokeWidth={2}
-              fill="url(#colorRequirementsMain)"
+              fill="url(#colorDeliveredMain)"
               dot={{ fill: '#22c55e', r: 4 }}
               activeDot={{ r: 6 }}
               name="Requirements"
             />
-          </>
-        )}
-        {showDualLines && (
-          <>
-            <Area
-              type="monotone"
-              dataKey="resumesA"
-              stroke="#ef4444"
-              strokeWidth={2}
-              fill="url(#colorResumesAMain)"
-              dot={{ fill: '#ef4444', r: 4 }}
-              activeDot={{ r: 6 }}
-              name="Resume Count A"
-            />
-            <Area
-              type="monotone"
-              dataKey="resumesB"
-              stroke="#22c55e"
-              strokeWidth={2}
-              fill="url(#colorResumesBMain)"
-              fillOpacity={0.6}
-              dot={{ fill: '#22c55e', r: 4 }}
-              activeDot={{ r: 6 }}
-              name="Resume Count B"
-            />
+            <Legend />
           </>
         )}
       </AreaChart>
@@ -931,6 +968,11 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/revenue-mappings"],
   });
 
+  const recentRevenueMappings = useMemo(
+    () => sortRevenueMappingsByRecency(revenueMappings).slice(0, 5),
+    [revenueMappings],
+  );
+
   // Fetch pipeline data from API (all applications from all recruiters)
   // Supports filtering by TL (team leader) and TA (team member)
   const [selectedPipelineTL, setSelectedPipelineTL] = useState<string>("all");
@@ -1200,7 +1242,7 @@ export default function AdminDashboard() {
       });
     },
     onSuccess: () => {
-      invalidateAdminPerformanceQueries(queryClient);
+      invalidateRevenueMappingQueries(queryClient);
       toast({
         title: "Success",
         description: "Revenue mapping deleted successfully",
@@ -1227,8 +1269,8 @@ export default function AdminDashboard() {
   const [isCeoMeetingsModalOpen, setIsCeoMeetingsModalOpen] = useState(false);
   const [isCreateMessageModalOpen, setIsCreateMessageModalOpen] = useState(false);
   const [isCreateMeetingModalOpen, setIsCreateMeetingModalOpen] = useState(false);
-  const [isPendingMeetingsCollapsed, setIsPendingMeetingsCollapsed] = useState(false);
-  const [isMessageStatusCollapsed, setIsMessageStatusCollapsed] = useState(false);
+  const [isPendingMeetingsCollapsed, setIsPendingMeetingsCollapsed] = useState(true);
+  const [isMessageStatusCollapsed, setIsMessageStatusCollapsed] = useState(true);
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [meetingFor, setMeetingFor] = useState('');
@@ -1758,7 +1800,8 @@ export default function AdminDashboard() {
     totalResumes: 0,
     dailyDeliveryDelivered: 0,
     dailyDeliveryDefaulted: 0,
-    overallPerformance: "G"
+    overallPerformance: "G",
+    performanceChart: { benchmarkValue: 10, members: [] as Array<{ member: string; fullName?: string; delivered: number; required: number }> },
   }, isLoading: isLoadingMetrics } = useQuery({
     queryKey: ['/api/admin/daily-metrics', format(selectedDate, 'yyyy-MM-dd'), selectedDailyMetricsTeam],
     queryFn: async () => {
@@ -1923,7 +1966,17 @@ export default function AdminDashboard() {
     lastClosure: string;
     qtrsAchieved: number;
   }>>({
-    queryKey: ['/api/admin/team-performance'],
+    queryKey: ['/api/admin/team-performance', selectedPerformanceTeam],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedPerformanceTeam && selectedPerformanceTeam !== 'all') {
+        params.append('teamId', selectedPerformanceTeam);
+      }
+      const url = `/api/admin/team-performance${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
   });
 
   // Fetch closures list from API for Closure Modal
@@ -2023,7 +2076,7 @@ export default function AdminDashboard() {
       return response.json();
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/closures-list'] });
+      invalidateRevenueMappingQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/pipeline'] });
       toast({
         title: variables.actionType === 'early-exit' ? 'Early Exit captured' : 'Offer Drop captured',
@@ -2247,13 +2300,24 @@ export default function AdminDashboard() {
     }));
   }, [outerPerformanceGraphData]);
 
-  // Performance chart data - uses backend data or empty array
+  const performanceBenchmark = dailyMetricsData?.performanceChart?.benchmarkValue ?? 10;
+
+  const performanceTeamLeaders = useMemo(
+    () =>
+      employees
+        .filter((emp: Employee) => emp.role === 'team_leader' && emp.isActive)
+        .map((emp: Employee) => ({ id: emp.id, name: emp.name })),
+    [employees],
+  );
+
   const performanceData = useMemo(() => {
-    return teamPerformanceData.slice(0, 6).map((member) => ({
-      member: member.talentAdvisor,
-      requirements: member.closures
+    const members = dailyMetricsData?.performanceChart?.members ?? [];
+    return members.map((entry: { member: string; delivered: number; required: number }) => ({
+      member: entry.member,
+      delivered: entry.delivered,
+      required: entry.required,
     }));
-  }, [teamPerformanceData]);
+  }, [dailyMetricsData?.performanceChart?.members]);
 
   // Revenue chart data - uses backend data
   const revenueData = useMemo(() => {
@@ -2284,13 +2348,8 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       // Invalidate all performance-related queries to refresh the UI
+      invalidateRevenueMappingQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/target-mappings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/revenue-mappings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/team-performance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/closures-list'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/revenue-analysis'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/performance-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/monthly-performance'] });
       toast({
         title: "Success",
         description: "Performance data has been reset. All charts and tables have been refreshed.",
@@ -2405,12 +2464,14 @@ export default function AdminDashboard() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { welcomeEmailSent?: boolean }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
       toast({
         title: "Success",
-        description: "Client credentials created successfully!",
+        description: data?.welcomeEmailSent === false
+          ? "Client Admin created. Welcome email could not be sent — share login details manually."
+          : "Client Admin created. A welcome email with login credentials has been sent.",
         className: "bg-green-50 border-green-200 text-green-800",
       });
     },
@@ -3834,7 +3895,7 @@ export default function AdminDashboard() {
               throw new Error(deleteResult.message || 'Failed to delete revenue mapping');
             }
 
-            invalidateAdminPerformanceQueries(queryClient);
+            invalidateRevenueMappingQueries(queryClient);
 
             toast({
               title: "Success",
@@ -4820,29 +4881,44 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-3 gap-4">
             {/* Left side - Overall Performance */}
             <div className="bg-white dark:bg-gray-900 rounded p-4 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Overall Performance</h3>
-                <div className={`text-lg font-bold ${getPerformanceBadgeColor(dailyMetricsData.overallPerformance || 'G')} w-8 h-8 rounded flex items-center justify-center`} data-testid="indicator-performance">
-                  {dailyMetricsData.overallPerformance || 'G'}
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Overall Performance</h3>
+                  <div className={`text-lg font-bold ${getPerformanceBadgeColor(dailyMetricsData.overallPerformance || 'G')} w-8 h-8 rounded flex items-center justify-center`} data-testid="indicator-performance">
+                    {dailyMetricsData.overallPerformance || 'G'}
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => setIsPerformanceGraphModalOpen(true)}
+                  data-testid="button-expand-overall-performance"
+                  title="Open detailed view"
+                >
+                  <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap justify-start gap-x-3 gap-y-1 mb-2">
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Delivered</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Required</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-4 h-0.5 border-t-2 border-dashed border-gray-500"></div>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Benchmark ({performanceBenchmark})</span>
                 </div>
               </div>
-              {/* Legend */}
-              <div className="flex justify-start space-x-2 mb-2">
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Team Performance</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-0.5 bg-red-500"></div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Average Benchmark (10)</span>
-                </div>
-              </div>
-              {/* Chart - Using original PerformanceChart component */}
               <div className="h-48 mt-2">
                 <PerformanceChart
                   data={performanceData}
                   height="100%"
-                  benchmarkValue={10}
+                  benchmarkValue={performanceBenchmark}
+                  showDualLines
                 />
               </div>
             </div>
@@ -4878,7 +4954,10 @@ export default function AdminDashboard() {
               {/* Top Controls */}
               <div className="flex items-center justify-between mb-4 gap-2">
                 <Select value={selectedDailyMetricsTeam} onValueChange={(value) => setSelectedDailyMetricsTeam(value)}>
-                  <SelectTrigger className="w-20 h-8 text-xs" data-testid="select-daily-metrics-team">
+                  <SelectTrigger
+                    className="h-8 w-24 border-slate-200 bg-slate-100 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700/80 dark:text-slate-100"
+                    data-testid="select-daily-metrics-team"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -6282,17 +6361,15 @@ export default function AdminDashboard() {
               <div className="flex gap-4 mb-4">
                 <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
                   <SelectTrigger className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm w-48">
-                    <SelectValue />
+                    <SelectValue placeholder="All Teams" />
                   </SelectTrigger>
                   <SelectContent>
-                    {monthlyPerformanceData?.teams?.map((team) => (
-                      <SelectItem key={team} value={team.toLowerCase()}>
-                        {team}
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {performanceTeamLeaders.map((leader) => (
+                      <SelectItem key={leader.id} value={leader.id}>
+                        {leader.name}
                       </SelectItem>
                     ))}
-                    {monthlyPerformanceData?.teams && monthlyPerformanceData.teams.length > 0 && (
-                      <SelectItem value="all">All</SelectItem>
-                    )}
                   </SelectContent>
                 </Select>
 
@@ -6521,7 +6598,9 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {revenueMappings.map((mapping: any) => (
+                          {recentRevenueMappings.map((mapping: any) => {
+                            const payment = formatRevenuePaymentStatus(mapping);
+                            return (
                             <tr key={mapping.id} className="border-b border-gray-100 dark:border-gray-700" data-testid={`row-revenue-${mapping.id}`}>
                               <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{mapping.talentAdvisorName || 'N/A'}</td>
                               <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.teamLeadName || 'N/A'}</td>
@@ -6533,11 +6612,11 @@ export default function AdminDashboard() {
                                 {mapping.revenue ? `₹${Number(mapping.revenue).toLocaleString('en-IN')}` : 'N/A'}
                               </td>
                               <td className="py-3 px-4">
-                                <span className={`px-2 py-1 text-xs rounded ${mapping.receivedPayment
+                                <span className={`px-2 py-1 text-xs rounded ${payment.isReceived
                                   ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                                   : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
                                   }`}>
-                                  {mapping.receivedPayment ? 'Received' : 'Pending'}
+                                  {payment.label}
                                 </span>
                               </td>
                               <td className="py-3 px-4">
@@ -6581,7 +6660,8 @@ export default function AdminDashboard() {
                                 </DropdownMenu>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     )}
@@ -8005,13 +8085,13 @@ export default function AdminDashboard() {
                   <div className="flex gap-4 mb-4">
                     <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
                       <SelectTrigger className="w-48 bg-cyan-400 text-black">
-                        <SelectValue />
+                        <SelectValue placeholder="All Teams" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {monthlyPerformanceData?.teams?.map((team) => (
-                          <SelectItem key={team} value={team.toLowerCase()}>
-                            {team}
+                        <SelectItem value="all">All Teams</SelectItem>
+                        {performanceTeamLeaders.map((leader) => (
+                          <SelectItem key={leader.id} value={leader.id}>
+                            {leader.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -8237,7 +8317,9 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {revenueMappings.map((mapping: any) => (
+                          {recentRevenueMappings.map((mapping: any) => {
+                            const payment = formatRevenuePaymentStatus(mapping);
+                            return (
                             <tr key={mapping.id} className="border-b border-gray-100 dark:border-gray-700" data-testid={`row-revenue-2-${mapping.id}`}>
                               <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{mapping.talentAdvisorName || 'N/A'}</td>
                               <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.teamLeadName || 'N/A'}</td>
@@ -8249,11 +8331,11 @@ export default function AdminDashboard() {
                                 {mapping.revenue ? `₹${Number(mapping.revenue).toLocaleString('en-IN')}` : 'N/A'}
                               </td>
                               <td className="py-3 px-4">
-                                <span className={`px-2 py-1 text-xs rounded ${mapping.receivedPayment
+                                <span className={`px-2 py-1 text-xs rounded ${payment.isReceived
                                   ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                                   : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
                                   }`}>
-                                  {mapping.receivedPayment ? 'Received' : 'Pending'}
+                                  {payment.label}
                                 </span>
                               </td>
                               <td className="py-3 px-4">
@@ -8297,7 +8379,8 @@ export default function AdminDashboard() {
                                 </DropdownMenu>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     )}
@@ -10798,18 +10881,36 @@ export default function AdminDashboard() {
       <PerformanceChartModal
         isOpen={isPerformanceChartModalOpen}
         onClose={() => setIsPerformanceChartModalOpen(false)}
+        initialTeamId={selectedPerformanceTeam}
+        initialPeriod={selectedPerformancePeriod}
+        teamLeaders={performanceTeamLeaders}
       />
 
       {/* Team Performance Table Modal */}
       <TeamPerformanceTableModal
         isOpen={isTeamPerformanceTableModalOpen}
         onClose={() => setIsTeamPerformanceTableModalOpen(false)}
+        teamId={selectedPerformanceTeam}
       />
 
       {/* Closure Modal */}
       <ClosureModal
         isOpen={isClosureModalOpen}
         onClose={() => setIsClosureModalOpen(false)}
+        onEditMapping={(mappingId) => {
+          const mapping = revenueMappings.find((m: { id: string }) => m.id === mappingId);
+          if (mapping) {
+            setEditingRevenueMapping(mapping);
+            setIsRevenueMappingModalOpen(true);
+          } else {
+            toast({
+              title: "Unable to edit",
+              description: "Revenue mapping not found. Try refreshing the page.",
+              variant: "destructive",
+            });
+          }
+        }}
+        onDeleteMapping={handleDeleteRevenueMapping}
       />
 
       {/* Add Team Leader Modal */}
@@ -11716,10 +11817,11 @@ export default function AdminDashboard() {
 
       {/* Add New Client Modal - Comprehensive Form */}
       <Dialog open={isClientModalOpen} onOpenChange={setIsClientModalOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="master-modal-dialog flex max-h-[90vh] w-[95vw] max-w-2xl flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Client Details</DialogTitle>
           </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-hide px-1 py-2">
           <div className="space-y-4">
             {/* Row 1 */}
             <div className="grid grid-cols-2 gap-4">
@@ -11964,7 +12066,7 @@ export default function AdminDashboard() {
                     setClientForm({ ...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : '' });
                   }}
                   placeholder="dd-mm-yyyy"
-                  className="w-full"
+                  className="input-styled w-full rounded"
                 />
               </div>
             </div>
@@ -12004,7 +12106,7 @@ export default function AdminDashboard() {
 
             <div className="flex justify-center pt-6">
               <Button
-                className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
+                className="rounded bg-[#2563EB] px-8 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
                 onClick={async () => {
                   if (!clientForm.brandName || !clientForm.email) {
                     toast({
@@ -12044,15 +12146,17 @@ export default function AdminDashboard() {
               </Button>
             </div>
           </div>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Add Employee Modal */}
       <Dialog open={isEmployeeModalOpen} onOpenChange={setIsEmployeeModalOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="master-modal-dialog flex max-h-[90vh] w-[95vw] max-w-2xl flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Employee Details</DialogTitle>
           </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-hide px-1 py-2">
           <div className="space-y-4">
             {/* Row 1 - Employee ID (read-only/auto-generated) and Employee Name */}
             <div className="grid grid-cols-2 gap-4">
@@ -12130,7 +12234,7 @@ export default function AdminDashboard() {
                   onChange={(date) => setEmployeeForm({ ...employeeForm, joiningDate: date ? date.toISOString().split('T')[0] : '' })}
                   placeholder="dd-mm-yyyy"
                   maxDate={new Date()}
-                  className="w-full"
+                  className="input-styled w-full rounded"
                 />
               </div>
               <div className="flex flex-col w-full">
@@ -12441,7 +12545,7 @@ export default function AdminDashboard() {
 
             <div className="flex justify-center pt-6">
               <Button
-                className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
+                className="rounded bg-[#2563EB] px-8 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
                 onClick={() => {
                   if (!employeeForm.name || !employeeForm.email) {
                     toast({
@@ -12459,6 +12563,7 @@ export default function AdminDashboard() {
                 {createEmployeeMutation.isPending ? 'Submitting...' : 'Submit'}
               </Button>
             </div>
+          </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -13084,26 +13189,54 @@ export default function AdminDashboard() {
 
       {/* Performance Graph Modal */}
       <Dialog open={isPerformanceGraphModalOpen} onOpenChange={setIsPerformanceGraphModalOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Overall Performance - Detailed View</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex justify-start space-x-4">
+          <div className="space-y-4 overflow-y-auto flex-1 p-1">
+            <div className="flex flex-wrap items-end gap-4">
+              <Select value={selectedDailyMetricsTeam} onValueChange={setSelectedDailyMetricsTeam}>
+                <SelectTrigger className={`w-44 h-9 ${ADMIN_FILTER_SELECT_CLASS}`} data-testid="select-performance-modal-team">
+                  <SelectValue placeholder="Team" />
+                </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="overall">Overall</SelectItem>
+                    {employees
+                      .filter((emp: Employee) => emp.role === 'team_leader' && emp.isActive)
+                      .map((teamLeader: Employee) => (
+                        <SelectItem key={teamLeader.id} value={teamLeader.id}>
+                          {teamLeader.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              <StandardDatePicker
+                value={selectedDate}
+                onChange={(date) => date && setSelectedDate(date)}
+                placeholder="Select date"
+                className={`w-44 h-9 ${ADMIN_FILTER_DATE_CLASS}`}
+              />
+            </div>
+            <div className="flex flex-wrap gap-4">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Team Performance</span>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Delivered (selected day)</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-0.5 bg-red-500"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (10)</span>
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Required (daily target)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-0.5 border-t-2 border-dashed border-gray-500"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Benchmark ({performanceBenchmark})</span>
               </div>
             </div>
             <div className="h-[420px]">
               <PerformanceChart
                 data={performanceData}
                 height="100%"
-                benchmarkValue={10}
+                benchmarkValue={performanceBenchmark}
+                showDualLines
               />
             </div>
           </div>

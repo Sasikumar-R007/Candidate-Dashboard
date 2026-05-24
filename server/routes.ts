@@ -7,6 +7,11 @@ import passport from "passport";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets, nudges, consentLogs, profiles, candidateApplicationComments } from "@shared/schema";
+import {
+  buildClientJdSourceDetails,
+  enrichRequirementWithJdExtras,
+  parseRequirementJdExtras,
+} from "@shared/requirement-jd-extras";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { sql, eq, and, or, desc, lte, gte, inArray, isNull } from "drizzle-orm";
@@ -49,6 +54,24 @@ function resolveClientInviteBaseUrl(req: Request): string {
   }
 
   return "http://localhost:5173";
+}
+
+/** Client Admin / Client Member sign-in page (same portal as internal employees). */
+function resolveClientPortalLoginUrl(req?: Request): string {
+  const fromEnv = (process.env.FRONTEND_URL || process.env.CLIENT_FRONTEND_URL || "")
+    .trim()
+    .replace(/\/$/, "");
+  if (fromEnv && !fromEnv.includes("localhost")) {
+    return `${fromEnv}/employer-login`;
+  }
+  if (process.env.NODE_ENV === "production") {
+    return "https://staffos.io/employer-login";
+  }
+  if (req) {
+    const base = resolveClientInviteBaseUrl(req);
+    return `${base.replace(/\/$/, "")}/employer-login`;
+  }
+  return "http://localhost:5173/employer-login";
 }
 
 function calculateQuartersSince(joiningDate: string | Date | null | undefined): number {
@@ -94,7 +117,13 @@ function calculateQuartersSince(joiningDate: string | Date | null | undefined): 
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { parseJDWithAI } from "./ai-jd-parser";
-import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
+import {
+  sendEmployeeWelcomeEmail,
+  sendCandidateWelcomeEmail,
+  sendOTPEmail,
+  sendClientAdminWelcomeEmail,
+  sendClientMemberWelcomeEmail,
+} from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
 import { DEFAULT_EMPLOYEE_WELCOME_MESSAGE, EMPLOYEE_WELCOME_MESSAGE_KEY, getAppSetting, upsertAppSetting } from "./admin-settings";
 import {
@@ -126,8 +155,8 @@ import {
   assignRequirementToClientMember,
   getClientInvitePreview,
   acceptClientMemberInvite,
+  generateClientTemporaryPassword,
 } from "./client-team";
-import { sendClientMemberInviteEmail } from "./email-service";
 import {
   syncAllTargetMappingsFromRevenue,
   enrichTargetMappingWithRevenue,
@@ -135,6 +164,11 @@ import {
   countQuartersTargetMet,
 } from "./target-revenue-sync";
 import { enrichRequirementsWithResumeCount } from "./requirement-resume-count";
+import {
+  profileImageUpload,
+  persistProfilePictureUpload,
+  fetchProfileMediaRecord,
+} from "./profile-media";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -402,6 +436,43 @@ function formatOrdinalShortDate(dateInput: string | Date | null | undefined): st
   return `${day}${suffix} ${month}`;
 }
 
+function calculateDailyPerformanceGrade(delivered: number, required: number): string {
+  if (required <= 0) {
+    return "A";
+  }
+  const performanceRatio = delivered / required;
+  if (performanceRatio >= 1.0) return "G";
+  if (performanceRatio >= 0.5) return "A";
+  return "B";
+}
+
+function findTeamLeaderByFilter(
+  allEmployees: Array<{ id: string; employeeId: string; name: string; role: string }>,
+  teamFilter: string,
+) {
+  const normalized = teamFilter.trim().toLowerCase();
+  return allEmployees.find(
+    (emp) =>
+      emp.role === "team_leader" &&
+      (emp.id === teamFilter ||
+        emp.employeeId === teamFilter ||
+        emp.name.toLowerCase() === normalized),
+  );
+}
+
+function getRecruitersForTeamLead(
+  allEmployees: Array<{ id: string; employeeId: string; name: string; role: string; reportingTo?: string | null; isActive?: boolean | null }>,
+  teamLead: { id: string; employeeId: string; name: string },
+) {
+  return allEmployees.filter(
+    (emp) =>
+      (emp.role === "recruiter" || emp.role === "talent_advisor" || emp.role === "ta") &&
+      emp.isActive !== false &&
+      (emp.reportingTo === teamLead.employeeId ||
+        emp.reportingTo === teamLead.id ||
+        emp.reportingTo === teamLead.name),
+  );
+}
 function getRevenueMappingRecencyTs(mapping: {
   closureDate?: string | null;
   createdAt?: string | null;
@@ -456,6 +527,97 @@ function getTeamLeaderRecruiters(teamLeader: { id: string; employeeId?: string |
         emp.reportingTo === teamLeader.id ||
         (emp.reportingTo || "").toLowerCase() === tlName),
   );
+}
+
+function requirementMatchesTeamLeader(
+  employee: { id: string; employeeId?: string | null; name?: string | null },
+  req: {
+    id: string;
+    teamLead?: string | null;
+    talentAdvisor?: string | null;
+    talentAdvisorId?: string | null;
+    isArchived?: boolean | null;
+  },
+  allEmployees: Array<{
+    id: string;
+    employeeId?: string | null;
+    name?: string | null;
+    role?: string | null;
+    reportingTo?: string | null;
+  }>,
+  activeAssignments: Array<{
+    requirementId: string;
+    teamLeadId?: string | null;
+    teamLeadName?: string | null;
+    status: string;
+    recruiterId?: string;
+  }>,
+): boolean {
+  if (req.isArchived) return false;
+  const tlName = (employee.name || "").trim().toLowerCase();
+  const reqTl = (req.teamLead || "").trim().toLowerCase();
+  if (reqTl && reqTl === tlName) return true;
+
+  const teamRecruiters = getTeamLeaderRecruiters(employee, allEmployees);
+  const teamRecruiterIds = new Set(teamRecruiters.map((r) => r.id));
+  if (req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId)) return true;
+  const taName = (req.talentAdvisor || "").trim().toLowerCase();
+  if (taName && teamRecruiters.some((r) => (r.name || "").trim().toLowerCase() === taName)) {
+    return true;
+  }
+
+  return activeAssignments.some(
+    (a) =>
+      a.requirementId === req.id &&
+      a.status === "active" &&
+      (a.teamLeadId === employee.id ||
+        (a.teamLeadName || "").trim().toLowerCase() === tlName),
+  );
+}
+
+function requirementMatchesTalentAdvisor(
+  employee: { id: string; employeeId?: string | null; name?: string | null },
+  req: {
+    id: string;
+    talentAdvisor?: string | null;
+    talentAdvisorId?: string | null;
+    isArchived?: boolean | null;
+  },
+  activeAssignments: Array<{ requirementId: string; recruiterId: string; status: string }>,
+): boolean {
+  if (req.isArchived) return false;
+  if (matchesEmployeeRef(employee, req.talentAdvisorId)) return true;
+  if (
+    (req.talentAdvisor || "").trim().toLowerCase() ===
+    (employee.name || "").trim().toLowerCase()
+  ) {
+    return true;
+  }
+  return activeAssignments.some(
+    (a) =>
+      a.requirementId === req.id &&
+      a.status === "active" &&
+      matchesEmployeeRef(employee, a.recruiterId),
+  );
+}
+
+function employeeCanEditApplicationSalary(role: string | null | undefined): boolean {
+  const r = (role || "").toLowerCase();
+  return r === "team_leader" || r === "recruiter" || r === "talent_advisor" || r === "ta";
+}
+
+function stripSalaryFromApplicationSession(details: Record<string, unknown>) {
+  const {
+    ctc: _c,
+    ectc: _e,
+    applicationCurrentCtc: _ac,
+    applicationExpectedCtc: _ae,
+    salaryEditedByName: _sn,
+    salaryEditedAt: _st,
+    salaryEditedByEmployeeId: _si,
+    ...rest
+  } = details;
+  return rest;
 }
 
 function revenueMappingBelongsToRecruiter(
@@ -542,7 +704,9 @@ async function buildEmployeeNotificationsFeed(employee: any) {
   const isAdmin = role === "admin";
 
   void maybeSyncActiveNudgeEscalations().catch(() => {});
-  const [allNudges, allEmployees, allRevenueMappings, allRequirements, allApplications] = await Promise.all([
+  const { requirementAssignments: requirementAssignmentsTable } = await import("@shared/schema");
+  const [allNudges, allEmployees, allRevenueMappings, allRequirements, allApplications, allRequirementAssignments] =
+    await Promise.all([
     storage.getActiveNudges().catch((err) => {
       console.error("[notifications-feed] getActiveNudges failed:", err);
       return [] as Awaited<ReturnType<typeof storage.getActiveNudges>>;
@@ -563,7 +727,18 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       console.error("[notifications-feed] getAllJobApplications failed:", err);
       return [] as Awaited<ReturnType<typeof storage.getAllJobApplications>>;
     }),
+    db
+      .select()
+      .from(requirementAssignmentsTable)
+      .catch((err) => {
+        console.error("[notifications-feed] requirement_assignments failed:", err);
+        return [] as typeof requirementAssignmentsTable.$inferSelect[];
+      }),
   ]);
+
+  const activeRequirementAssignments = allRequirementAssignments.filter(
+    (a) => (a.status || "").toLowerCase() === "active",
+  );
 
   const toIso = (value: any): string | null => {
     if (!value) return null;
@@ -638,7 +813,9 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       !!recruiterId && (myIds.includes(recruiterId) || teamMemberKeys.has(recruiterId));
 
     const newRequirements = allRequirements
-      .filter((r) => (r.teamLead || "").toLowerCase() === (employee.name || "").toLowerCase())
+      .filter((r) =>
+        requirementMatchesTeamLeader(employee, r, allEmployees, activeRequirementAssignments),
+      )
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .slice(0, 100)
       .map((r) => {
@@ -647,7 +824,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
           id: r.id,
           line: notificationFeedLine([r.position, r.company]),
           createdAt,
-          isUnread: isRecentNotification(createdAt),
+          isUnread: isRecentNotification(createdAt, 72),
         };
       });
 
@@ -831,11 +1008,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
 
   if (isTA) {
     const newRequirements = allRequirements
-      .filter(
-        (r) =>
-          matchesEmployeeRef(employee, r.talentAdvisorId) ||
-          (r.talentAdvisor || "").toLowerCase() === (employee.name || "").toLowerCase(),
-      )
+      .filter((r) => requirementMatchesTalentAdvisor(employee, r, activeRequirementAssignments))
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .slice(0, 100)
       .map((r) => {
@@ -844,7 +1017,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
           id: r.id,
           line: notificationFeedLine([r.position, r.company]),
           createdAt,
-          isUnread: isRecentNotification(createdAt),
+          isUnread: isRecentNotification(createdAt, 72),
         };
       });
 
@@ -1487,11 +1660,10 @@ async function resolveApplicationCandidateDetails(application: {
     profileRow?.noticePeriod ||
     null;
 
-  const ctc =
-    candidateRow?.ctc ||
-    candidateRow?.ectc ||
-    profileRow?.salaryRange ||
-    null;
+  const applicationCurrentCtc =
+    (application as { applicationCurrentCtc?: string }).applicationCurrentCtc ?? "0";
+  const applicationExpectedCtc =
+    (application as { applicationExpectedCtc?: string }).applicationExpectedCtc ?? "0";
 
   const preferredLocation =
     profileRow?.preferredLocation ||
@@ -1550,8 +1722,14 @@ async function resolveApplicationCandidateDetails(application: {
     highestQualification: profileRow?.highestQualification || null,
     collegeName: profileRow?.collegeName || null,
     noticePeriod,
-    ctc,
-    ectc: candidateRow?.ectc || null,
+    ctc: applicationCurrentCtc,
+    ectc: applicationExpectedCtc,
+    applicationCurrentCtc,
+    applicationExpectedCtc,
+    salaryEditedByName:
+      (application as { salaryEditedByName?: string | null }).salaryEditedByName ?? null,
+    salaryEditedAt:
+      (application as { salaryEditedAt?: Date | string | null }).salaryEditedAt ?? null,
     workSummary,
     preferences: preferences
       ? {
@@ -4060,7 +4238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/upload/profile", requireCandidateAuth, upload.single('profile'), async (req, res) => {
+  app.post("/api/upload/profile", requireCandidateAuth, profileImageUpload.single('profile'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -4073,11 +4251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      const fileUrl = await persistProfilePictureUpload(req.file, req);
 
       // Save profile picture URL to candidate profile
       await storage.updateCandidate(candidate.id, { profilePicture: fileUrl });
@@ -4284,7 +4458,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.send(svg);
   });
 
-  // Serve uploaded files
+  // Persistent profile images (stored in Postgres — survives Render redeploys)
+  app.get("/api/profile-media/:id", async (req, res) => {
+    try {
+      const id = String(req.params.id || "").trim();
+      if (!/^[a-f0-9]{32}$/i.test(id)) {
+        return res.status(400).json({ message: "Invalid media id" });
+      }
+      const record = await fetchProfileMediaRecord(id);
+      if (!record?.data) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      const buffer = Buffer.from(record.data, "base64");
+      res.setHeader("Content-Type", record.mimeType || "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.send(buffer);
+    } catch (error) {
+      console.error("Profile media serve error:", error);
+      res.status(500).json({ message: "Failed to load image" });
+    }
+  });
+
+  // Serve uploaded files (ephemeral on cloud hosts — prefer profile_media for avatars)
   app.use('/uploads', express.static('uploads'));
 
   // Get saved jobs for candidate
@@ -5493,17 +5688,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/team-leader/upload/profile", upload.single('file'), (req, res) => {
+  app.post("/api/team-leader/upload/profile", profileImageUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      const url = await persistProfilePictureUpload(req.file, req);
       res.json({ url });
     } catch (error) {
       console.error('Upload error:', error);
@@ -6307,17 +6498,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/upload/profile", upload.single('file'), (req, res) => {
+  app.post("/api/admin/upload/profile", profileImageUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      const url = await persistProfilePictureUpload(req.file, req);
       res.json({ url });
     } catch (error) {
       console.error('Upload error:', error);
@@ -7876,17 +8063,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/recruiter/upload/profile", upload.single('file'), (req, res) => {
+  app.post("/api/recruiter/upload/profile", profileImageUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      const url = await persistProfilePictureUpload(req.file, req);
       res.json({ url });
     } catch (error) {
       console.error('Upload error:', error);
@@ -7933,11 +8116,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             month: '2-digit',
             year: 'numeric'
           }).replace(/\//g, '-') : 'N/A',
-          requirement: {
+          requirement: enrichRequirementWithJdExtras({
             ...req,
             jdFile: req.jdFile || null,
-            jdText: req.jdText || null
-          } // Full requirement object for JD preview with JD details
+            jdText: req.jdText || null,
+          }),
         };
       }));
 
@@ -8394,17 +8577,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allRequirements = await db.select().from(requirements)
         .where(eq(requirements.isArchived, false));
 
-      // Use raw SQL to exclude last_login_at column (which may not exist in production)
-      const employeesResult = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
-        FROM employees
-      `);
-      const allEmployees = employeesResult.rows as any[];
+      // Use typed employee records (camelCase) for reliable team / tenure lookups
+      const allEmployees = await storage.getAllEmployees();
 
       const { requirementAssignments } = await import("@shared/schema");
       const allAssignments = await db.select().from(requirementAssignments);
@@ -8414,12 +8588,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return createdDate <= selectedDate;
       });
 
-      let selectedTeamLead: any = null;
-      let teamRecruiters: any[] = [];
+      let selectedTeamLead: (typeof allEmployees)[number] | null = null;
+      let teamRecruiters: typeof allEmployees = [];
       if (team && team !== 'overall') {
-        selectedTeamLead = allEmployees.find((emp: any) =>
-          emp.role === 'team_leader' && (emp.id === team || emp.employee_id === team)
-        );
+        selectedTeamLead = findTeamLeaderByFilter(allEmployees, team) ?? null;
 
         if (!selectedTeamLead) {
           return res.json({
@@ -8432,19 +8604,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalResumesRequired: 0,
             dailyDeliveryDelivered: 0,
             dailyDeliveryDefaulted: 0,
-            overallPerformance: "G",
-            date: selectedDate
+            overallPerformance: "A",
+            date: selectedDate,
+            performanceChart: { benchmarkValue: 10, members: [] },
           });
         }
 
-        teamRecruiters = allEmployees.filter((emp: any) =>
-          emp.role === 'recruiter' &&
-          (emp.reporting_to === selectedTeamLead.employee_id ||
-            emp.reporting_to === selectedTeamLead.id ||
-            emp.reporting_to === selectedTeamLead.name)
-        );
+        teamRecruiters = getRecruitersForTeamLead(allEmployees, selectedTeamLead);
 
-        const teamRecruiterIds = new Set(teamRecruiters.map((rec: any) => rec.id));
+        const teamRecruiterIds = new Set(teamRecruiters.map((rec) => rec.id));
         const assignedRequirementIds = new Set(
           allAssignments
             .filter((assignment: any) => assignment.status === 'active' && teamRecruiterIds.has(assignment.recruiterId))
@@ -8452,8 +8620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         filteredRequirements = filteredRequirements.filter((req: any) =>
-          req.teamLeadId === selectedTeamLead.id ||
-          req.teamLead === selectedTeamLead.name ||
+          req.teamLead === selectedTeamLead!.name ||
           (req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId)) ||
           assignedRequirementIds.has(req.id)
         );
@@ -8470,16 +8637,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return submittedDate <= selectedDate;
       });
 
-      // Also count recruiter-tagged applications for delivered/pipeline metrics
-      const allTaggedApplications = (await storage.getAllJobApplications())
-        .filter((app: any) => app.source === 'recruiter_tagged');
-
       const filteredRequirementIds = new Set(filteredRequirements.map((req: any) => req.id));
-      const filteredTaggedApplications = allTaggedApplications.filter(app => {
-        if (!app.appliedDate || !app.requirementId) return false;
-        const appliedDate = new Date(app.appliedDate).toISOString().split('T')[0];
-        return appliedDate <= selectedDate && filteredRequirementIds.has(app.requirementId);
-      });
+      const filteredTaggedApplications = (
+        await storage.getTaggedJobApplicationsUpToDate(selectedDate)
+      ).filter(
+        (app) => app.requirementId && filteredRequirementIds.has(app.requirementId),
+      );
+
+      const taggedOnSelectedDate = await storage.getTaggedJobApplicationsOnDate(selectedDate);
 
       const getUniqueDeliveryCount = (requirementId: string) => {
         const requirementSubmissions = filteredSubmissions.filter(s => s.requirementId === requirementId);
@@ -8527,9 +8692,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get count of active recruiters for requirements per recruiter calculation
       const activeRecruiters = team && team !== 'overall'
-        ? teamRecruiters.filter((emp: any) => emp.is_active === true)
-        : allEmployees.filter((emp: any) =>
-          (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
+        ? teamRecruiters.filter((emp) => emp.isActive !== false)
+        : allEmployees.filter((emp) =>
+          (emp.role === 'recruiter' || emp.role === 'talent_advisor' || emp.role === 'ta') &&
+          emp.isActive !== false
         );
       const recruiterCount = activeRecruiters.length;
       const requirementsPerRecruiter = recruiterCount > 0
@@ -8537,8 +8703,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : "0.00";
 
       const aggregateMetrics = team && team !== 'overall' && selectedTeamLead
-        ? await storage.calculateTeamDailyMetrics(selectedTeamLead.id, selectedDate)
-        : await storage.calculateOrgDailyMetrics(selectedDate);
+        ? await storage.calculateTeamDailyMetrics(selectedTeamLead.id, selectedDate, taggedOnSelectedDate)
+        : await storage.calculateOrgDailyMetrics(selectedDate, taggedOnSelectedDate);
+
+      const chartRecruitersForPerformance =
+        team && team !== 'overall' && selectedTeamLead
+          ? teamRecruiters.filter((emp) => emp.isActive !== false)
+          : allEmployees.filter(
+              (emp) =>
+                (emp.role === 'recruiter' || emp.role === 'talent_advisor' || emp.role === 'ta') &&
+                emp.isActive !== false,
+            );
+
+      const performanceChartMembers = await Promise.all(
+        chartRecruitersForPerformance.map(async (rec: any) => {
+          const metrics = await storage.calculateRecruiterDailyMetrics(
+            rec.id,
+            selectedDate,
+            taggedOnSelectedDate,
+          );
+          const nameParts = (rec.name || '').trim().split(/\s+/).filter(Boolean);
+          const memberLabel =
+            nameParts.length <= 1
+              ? nameParts[0] || 'Unknown'
+              : `${nameParts[0]} ${(nameParts[nameParts.length - 1][0] || '').toUpperCase()}`.trim();
+          return {
+            member: memberLabel,
+            fullName: rec.name,
+            delivered: metrics.delivered,
+            required: metrics.required,
+          };
+        }),
+      );
+
+      const performanceBenchmarkValue =
+        performanceChartMembers.length > 0
+          ? Math.max(
+              1,
+              Math.round(
+                performanceChartMembers.reduce((sum, m) => sum + m.required, 0) /
+                  performanceChartMembers.length,
+              ),
+            )
+          : 10;
+
+      const chartDeliveredTotal = performanceChartMembers.reduce((sum, m) => sum + m.delivered, 0);
+      const chartRequiredTotal = performanceChartMembers.reduce((sum, m) => sum + m.required, 0);
 
       // Return the calculated metrics
       res.json({
@@ -8551,14 +8761,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumesRequired,
         dailyDeliveryDelivered: aggregateMetrics.delivered,
         dailyDeliveryDefaulted: aggregateMetrics.defaulted,
-        overallPerformance: (() => {
-          if (aggregateMetrics.required === 0) return "G";
-          const performanceRatio = aggregateMetrics.delivered / aggregateMetrics.required;
-          if (performanceRatio >= 1.0) return "G"; // Good: 100% or more
-          if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
-          return "B"; // Bad: less than 50%
-        })(),
-        date: selectedDate
+        overallPerformance: calculateDailyPerformanceGrade(
+          chartRequiredTotal > 0 ? chartDeliveredTotal : aggregateMetrics.delivered,
+          chartRequiredTotal > 0 ? chartRequiredTotal : aggregateMetrics.required,
+        ),
+        date: selectedDate,
+        performanceChart: {
+          benchmarkValue: performanceBenchmarkValue,
+          members: performanceChartMembers,
+        },
       });
     } catch (error) {
       console.error('Daily metrics error:', error);
@@ -9942,6 +10153,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('SPOC employee created successfully:', employeeId, 'for company:', selectedCompany.brandName);
         console.log('No client record created - SPOC login profile only');
 
+        const loginUrl = resolveClientPortalLoginUrl(req);
+        let welcomeEmailSent = false;
+        if (createdEmployee.email) {
+          welcomeEmailSent = await sendClientAdminWelcomeEmail({
+            name: createdEmployee.name,
+            email: createdEmployee.email,
+            password: validatedData.password,
+            loginUrl,
+          });
+        }
+
         res.status(201).json({
           message: "Client Admin login created successfully",
           employee: createdEmployee,
@@ -9950,7 +10172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             brandName: selectedCompany.brandName,
             clientCode: selectedCompany.clientCode
           },
-          employeeId: employeeId
+          employeeId: employeeId,
+          welcomeEmailSent,
         });
       } catch (error: any) {
         console.error('Error creating SPOC employee:', error);
@@ -10496,6 +10719,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (paymentDetails) updateData.paymentDetails = paymentDetails;
       if (paymentStatus) updateData.paymentStatus = paymentStatus;
       if (incentivePaidMonth) updateData.incentivePaidMonth = incentivePaidMonth;
+      if (req.body.candidateName !== undefined) {
+        updateData.candidateName = req.body.candidateName || null;
+      }
+      if (receivedPayment !== undefined && receivedPayment !== null && receivedPayment !== "") {
+        updateData.receivedPayment = parseFloat(String(receivedPayment)) || null;
+      }
 
       const updatedRevenueMapping = await storage.updateRevenueMapping(id, updateData);
 
@@ -10575,24 +10804,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Filter by team if provided
       if (teamId && teamId !== 'all') {
-        const normalizedTeamId = String(teamId).toLowerCase();
-        const teamLeader = await db.execute(sql`
-          SELECT id, employee_id, name
-          FROM employees
-          WHERE LOWER(id) = ${normalizedTeamId}
-             OR LOWER(employee_id) = ${normalizedTeamId}
-             OR LOWER(name) = ${normalizedTeamId}
-          LIMIT 1
-        `);
+        const allEmployees = await storage.getAllEmployees();
+        const teamLeader = findTeamLeaderByFilter(allEmployees, String(teamId));
 
-        const teamLeaderRow = teamLeader.rows?.[0] as any;
-        if (teamLeaderRow) {
+        if (teamLeader) {
+          const teamRecruiters = getRecruitersForTeamLead(allEmployees, teamLeader);
+          const teamNames = new Set([
+            teamLeader.name.toLowerCase(),
+            ...teamRecruiters.map((r) => r.name.toLowerCase()),
+          ]);
           filteredRequirements = filteredRequirements.filter((req: any) => {
             const teamLeadRaw = String(req.teamLead || "").toLowerCase();
             return (
-              teamLeadRaw === String(teamLeaderRow.id || "").toLowerCase() ||
-              teamLeadRaw === String(teamLeaderRow.employee_id || "").toLowerCase() ||
-              teamLeadRaw === String(teamLeaderRow.name || "").toLowerCase()
+              teamLeadRaw === teamLeader.name.toLowerCase() ||
+              teamLeadRaw === teamLeader.id.toLowerCase() ||
+              teamLeadRaw === teamLeader.employeeId.toLowerCase() ||
+              (req.talentAdvisorId &&
+                teamRecruiters.some((rec) => rec.id === req.talentAdvisorId)) ||
+              (req.talentAdvisor && teamNames.has(String(req.talentAdvisor).toLowerCase()))
             );
           });
           const allowedRequirementIds = new Set(filteredRequirements.map((req: any) => req.id));
@@ -10819,22 +11048,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Performance Data - Returns team member performance metrics
   app.get("/api/admin/team-performance", requireAdminAuth, async (req, res) => {
     try {
-      const { employees, targetMappings, revenueMappings } = await import("@shared/schema");
+      const { targetMappings, revenueMappings } = await import("@shared/schema");
 
-      // Get all active recruiters/team members (excluding last_login_at)
-      const employeesResult = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
-        FROM employees
-      `);
-      const allEmployees = employeesResult.rows as any[];
-      const teamMembers = allEmployees.filter(emp =>
-        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
+      const formatDisplayDate = (dateStr: string | null | undefined): string => {
+        if (!dateStr?.trim()) return "N/A";
+        const parsed = new Date(dateStr);
+        if (Number.isNaN(parsed.getTime())) return dateStr;
+        return parsed.toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      };
+
+      const computeTenure = (dateStr: string | null | undefined): string => {
+        if (!dateStr?.trim()) return "N/A";
+        const joinDate = new Date(dateStr);
+        if (Number.isNaN(joinDate.getTime())) return "N/A";
+        const now = new Date();
+        let months =
+          (now.getFullYear() - joinDate.getFullYear()) * 12 +
+          (now.getMonth() - joinDate.getMonth());
+        if (now.getDate() < joinDate.getDate()) months -= 1;
+        if (months < 0) return "N/A";
+        const years = Math.floor(months / 12);
+        const remMonths = months % 12;
+        if (years > 0) {
+          return `${years}y ${remMonths}m`;
+        }
+        return `${remMonths}m`;
+      };
+
+      const allEmployees = await storage.getAllEmployees();
+      const teamRoles = new Set(["recruiter", "team_leader", "talent_advisor", "ta"]);
+      let teamMembers = allEmployees.filter(
+        (emp) => teamRoles.has((emp.role || "").toLowerCase()) && emp.isActive !== false,
       );
+
+      const teamIdParam = req.query.teamId as string | undefined;
+      if (teamIdParam && teamIdParam !== "all") {
+        const teamLead = findTeamLeaderByFilter(allEmployees, teamIdParam);
+        if (teamLead) {
+          const recruitersUnderLead = getRecruitersForTeamLead(allEmployees, teamLead);
+          const recruiterIds = new Set(recruitersUnderLead.map((r) => r.id));
+          teamMembers = teamMembers.filter(
+            (emp) =>
+              emp.id === teamLead.id ||
+              recruiterIds.has(emp.id),
+          );
+        } else {
+          teamMembers = [];
+        }
+      }
 
       // Get all target mappings
       const allTargetMappings = await db.select().from(targetMappings);
@@ -10855,31 +11120,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase()
         );
 
-        // Calculate tenure
-        let tenure = "N/A";
-        if (member.joiningDate) {
-          const joinDate = new Date(member.joiningDate);
-          const now = new Date();
-          const years = Math.floor((now.getTime() - joinDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-          const months = Math.floor(((now.getTime() - joinDate.getTime()) % (365.25 * 24 * 60 * 60 * 1000)) / (30.44 * 24 * 60 * 60 * 1000));
-          if (years > 0) {
-            tenure = `${years} yr${years > 1 ? 's' : ''},${months} month${months !== 1 ? 's' : ''}`;
-          } else {
-            tenure = `${months} month${months !== 1 ? 's' : ''}`;
-          }
-        }
+        const joiningDateRaw = member.joiningDate || null;
+        const tenure = computeTenure(joiningDateRaw);
 
-        // Get last closure date
         let lastClosure = "N/A";
         if (memberClosures.length > 0) {
-          const lastClosureRecord = memberClosures.sort((a, b) => {
-            const dateA = a.closureDate ? new Date(a.closureDate).getTime() : 0;
-            const dateB = b.closureDate ? new Date(b.closureDate).getTime() : 0;
-            return dateB - dateA;
-          })[0];
-          if (lastClosureRecord.closureDate) {
-            lastClosure = lastClosureRecord.closureDate;
-          }
+          const lastClosureRecord = [...memberClosures].sort(
+            (a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a),
+          )[0];
+          const lastDate =
+            lastClosureRecord.closureDate ||
+            lastClosureRecord.offeredDate ||
+            lastClosureRecord.createdAt;
+          lastClosure = formatDisplayDate(lastDate);
         }
 
         const enrichedMemberTargets = memberTargets.map((tm) =>
@@ -10907,7 +11160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           id: member.id,
           talentAdvisor: member.name,
-          joiningDate: member.joiningDate || "N/A",
+          joiningDate: formatDisplayDate(joiningDateRaw),
           tenure,
           closures: memberClosures.length,
           lastClosure,
@@ -11001,15 +11254,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : null;
         const closureAction = closureActionMap.get(rm.id) || null;
 
+        const paymentLabel =
+          rm.paymentStatus ||
+          (rm.receivedPayment && Number(rm.receivedPayment) > 0
+            ? rm.paymentDetails || "Received"
+            : "Pending");
+
         return {
           id: rm.id,
           candidate: rm.candidateName || "N/A",
+          candidateName: rm.candidateName || "N/A",
           position: rm.position,
           client: rm.clientName,
+          clientName: rm.clientName,
+          clientType: rm.clientType || "N/A",
+          partnerName: rm.partnerName || "N/A",
           talentAdvisor: rm.talentAdvisorName,
+          teamLead: rm.teamLeadName || "N/A",
+          teamLeadName: rm.teamLeadName || "N/A",
+          year: rm.year ?? "N/A",
+          quarter: rm.quarter || "N/A",
+          quarterYear: `${rm.quarter || "N/A"}, ${rm.year ?? "N/A"}`,
+          percentage: rm.percentage != null ? `${rm.percentage}%` : "N/A",
+          incentivePlan: rm.incentivePlan || "N/A",
+          incentive:
+            rm.incentive != null ? `₹${Number(rm.incentive).toLocaleString("en-IN")}` : "N/A",
+          source: rm.source || "N/A",
+          invoiceDate: formatDate(rm.invoiceDate),
+          invoiceNumber: rm.invoiceNumber || "N/A",
+          paymentStatus: paymentLabel,
+          paymentDetails: rm.paymentDetails || "N/A",
+          incentivePaidMonth: rm.incentivePaidMonth || "N/A",
+          createdAt: formatDate(rm.createdAt),
           fixedCTC: fixedCTC > 0 ? `₹${fixedCTC.toLocaleString('en-IN')}` : "N/A",
           offeredDate: formatDate(rm.offeredDate),
           joinedDate: formatDate(rm.closureDate),
+          closureDate: formatDate(rm.closureDate),
           offeredDateRaw: rm.offeredDate || null,
           joinedDateRaw: rm.closureDate || null,
           status: status,
@@ -11032,10 +11312,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sourceDetails: sourceRequirement.sourceDetails || null,
             }
             : null,
-          // Keep these for backward compatibility with other closures endpoints
-          quarter: `${rm.quarter}, ${rm.year}`,
           ctc: fixedCTC > 0 ? fixedCTC.toLocaleString('en-IN') : "N/A",
-          revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0",
+          revenue: rm.revenue ? `₹${Number(rm.revenue).toLocaleString('en-IN')}` : "N/A",
           closureAction,
         };
       });
@@ -12540,6 +12818,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get application session error:", error);
       return res.status(500).json({ message: "Failed to load candidate session" });
+    }
+  });
+
+  app.patch("/api/recruiter/applications/:id/salary", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      if (!employeeCanEditApplicationSalary(employee.role)) {
+        return res.status(403).json({ message: "Only Team Leaders and Talent Advisors can edit salary details" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const bodySchema = z.object({
+        currentCtc: z.union([z.string(), z.number()]),
+        expectedCtc: z.union([z.string(), z.number()]),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Current CTC and Expected CTC are required" });
+      }
+
+      const normalizeAmount = (value: string | number) => {
+        const raw = String(value).trim().replace(/[^\d.]/g, "");
+        return raw || "0";
+      };
+
+      const updated = await storage.updateJobApplicationSalary(id, {
+        applicationCurrentCtc: normalizeAmount(parsed.data.currentCtc),
+        applicationExpectedCtc: normalizeAmount(parsed.data.expectedCtc),
+        salaryEditedByEmployeeId: employee.id,
+        salaryEditedByName: employee.name,
+      });
+
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to update salary details" });
+      }
+
+      const details = await resolveApplicationCandidateDetails(updated);
+      return res.json({ application: details });
+    } catch (error) {
+      console.error("Update application salary error:", error);
+      return res.status(500).json({ message: "Failed to update salary details" });
     }
   });
 
@@ -14806,10 +15136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }).replace(/\//g, '-') : 'N/A',
           jdFile: req.jdFile || null,
           jdText: req.jdText || null,
-          primarySkills: req.primarySkills || null,
-          secondarySkills: req.secondarySkills || null,
-          knowledgeOnly: req.knowledgeOnly || null,
-          specialInstructions: req.specialInstructions || null,
+          ...parseRequirementJdExtras(req),
           createdAt: req.createdAt || null,
           sharedOnRaw: req.createdAt || null,
           lastActiveRaw: lastActiveDate || null,
@@ -15141,7 +15468,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const details = await resolveApplicationCandidateDetails(application);
-      return res.json({ application: details });
+      const canSeeSalary =
+        isClientAdminRole(employee.role) ||
+        Boolean((employee as { canSeeSalaryDetails?: boolean }).canSeeSalaryDetails);
+      const applicationPayload = canSeeSalary
+        ? details
+        : stripSalaryFromApplicationSession(details as Record<string, unknown>);
+      return res.json({ application: applicationPayload });
     } catch (error) {
       console.error("Get client application session error:", error);
       return res.status(500).json({ message: "Failed to load candidate session" });
@@ -15309,16 +15642,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only update your own requirements" });
       }
 
-      // Only allow updating JD-related fields
-      const allowedUpdates: any = {};
+      const existingExtras = parseRequirementJdExtras(requirement);
+      const allowedUpdates: Record<string, unknown> = {};
       if (req.body.jdText !== undefined) allowedUpdates.jdText = req.body.jdText;
       if (req.body.jdFile !== undefined) allowedUpdates.jdFile = req.body.jdFile;
       if (req.body.position !== undefined) allowedUpdates.position = req.body.position;
       if (req.body.noOfPositions !== undefined) {
         allowedUpdates.noOfPositions = Math.max(1, parseInt(String(req.body.noOfPositions), 10) || 1);
       }
-      // Note: Skills fields are not in requirements table schema, so we'll store them in jdText as JSON metadata
-      // For now, we'll just update jdText and jdFile, and position
+
+      const skillsTouched =
+        req.body.primarySkills !== undefined ||
+        req.body.secondarySkills !== undefined ||
+        req.body.knowledgeOnly !== undefined ||
+        req.body.specialInstructions !== undefined;
+
+      if (skillsTouched) {
+        allowedUpdates.sourceType = "client_jd";
+        allowedUpdates.sourceDetails = buildClientJdSourceDetails({
+          jdText: (allowedUpdates.jdText as string | undefined) ?? requirement.jdText,
+          jdFile: (allowedUpdates.jdFile as string | undefined) ?? requirement.jdFile,
+          primarySkills:
+            req.body.primarySkills !== undefined ? req.body.primarySkills : existingExtras.primarySkills,
+          secondarySkills:
+            req.body.secondarySkills !== undefined ? req.body.secondarySkills : existingExtras.secondarySkills,
+          knowledgeOnly:
+            req.body.knowledgeOnly !== undefined ? req.body.knowledgeOnly : existingExtras.knowledgeOnly,
+          specialInstructions:
+            req.body.specialInstructions !== undefined
+              ? req.body.specialInstructions
+              : existingExtras.specialInstructions,
+          submittedBy: employee.email,
+        });
+      }
 
       const updatedRequirement = await storage.updateRequirement(id, allowedUpdates);
       if (!updatedRequirement) {
@@ -15594,22 +15950,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name and valid email are required" });
       }
       const baseUrl = resolveClientInviteBaseUrl(req);
-      const { invite, inviteUrl } = await createClientMemberInvite(
+      const { invite } = await createClientMemberInvite(
         employee,
         parsed.data,
         baseUrl,
       );
 
-      const company = await findCompanyForEmployee(employee);
-      const emailSent = await sendClientMemberInviteEmail({
+      const temporaryPassword = generateClientTemporaryPassword();
+      await acceptClientMemberInvite(invite.token, temporaryPassword);
+
+      const loginUrl = resolveClientPortalLoginUrl(req);
+      const emailSent = await sendClientMemberWelcomeEmail({
         name: parsed.data.name,
         email: parsed.data.email,
-        companyName: company?.brandName || "your company",
-        inviteUrl,
-        expiresInDays: 7,
+        password: temporaryPassword,
+        loginUrl,
       });
 
-      res.status(201).json({ invite, inviteUrl, emailSent });
+      res.status(201).json({ invite, emailSent, loginUrl });
     } catch (error: any) {
       console.error("Create client invite error:", error);
       res.status(500).json({
@@ -15675,6 +16033,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: employee.role,
         clientRole: employee.role,
         isClientAdmin: isClientAdminRole(employee.role),
+        canSeeSalaryDetails:
+          isClientAdminRole(employee.role) ||
+          Boolean((employee as { canSeeSalaryDetails?: boolean }).canSeeSalaryDetails),
         clientCompanyId: employee.clientCompanyId || client?.id || null,
         employeeId: employee.employeeId,
         department: employee.department || null,
@@ -15780,18 +16141,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/client/upload/profile", requireClientAuth, upload.single("file"), async (req, res) => {
+  app.post("/api/client/upload/profile", requireClientAuth, profileImageUpload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const baseUrl = process.env.NODE_ENV === "production"
-        ? (process.env.BACKEND_URL || `https://${req.get("host")}`)
-        : `http://${req.get("host")}`;
-
-      const url = `${baseUrl}/uploads/${req.file.filename}`;
-      res.json({ url, filename: req.file.filename });
+      const url = await persistProfilePictureUpload(req.file, req);
+      res.json({ url });
     } catch (error) {
       console.error("Client profile upload error:", error);
       res.status(500).json({ message: "File upload failed" });
@@ -16166,25 +16523,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to generate unique role ID. Please try again." });
       }
 
-      // Combine all skills
-      const allSkills = [
-        ...(primarySkills ? primarySkills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
-        ...(secondarySkills ? secondarySkills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
-        ...(knowledgeOnly ? knowledgeOnly.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
-      ];
-
-      // Store JD details in notes as JSON
-      const jdDetails = {
+      const sourceDetails = buildClientJdSourceDetails({
         jdText: jdText || null,
         jdFile: jdFile || null,
         primarySkills: primarySkills || null,
         secondarySkills: secondarySkills || null,
         knowledgeOnly: knowledgeOnly || null,
-        allSkills: allSkills,
         specialInstructions: specialInstructions || null,
         submittedBy: employee.email,
-        submittedAt: new Date().toISOString()
-      };
+      });
 
       // Create requirement from JD with Role ID as the requirement ID
       // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
@@ -16205,8 +16552,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: 'open',
           isArchived: false,
           createdAt: new Date().toISOString(),
-          jdFile: jdFile || null, // Store JD file URL
-          jdText: jdText || null, // Store JD text content
+          jdFile: jdFile || null,
+          jdText: jdText || null,
+          sourceType: "client_jd",
+          sourceDetails,
         });
 
         console.log('Requirement created successfully:', requirement.id, requirement.company);
@@ -16253,6 +16602,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               createdAt: new Date().toISOString(),
               jdFile: jdFile || null,
               jdText: jdText || null,
+              sourceType: "client_jd",
+              sourceDetails,
             });
 
             res.json({

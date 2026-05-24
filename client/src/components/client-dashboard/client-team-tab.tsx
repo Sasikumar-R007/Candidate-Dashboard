@@ -186,7 +186,7 @@ export function ClientTeamTab() {
       toast({
         title: "Member added",
         description:
-          "This person has been saved to your team. To give them access to StaffOS, use the invite action in the team table below to send them an invitation email.",
+          "This person has been saved to your team. Use the invite action in the team table below to enable StaffOS access and send their welcome email with login credentials.",
       });
     },
     onError: (e: Error) => {
@@ -257,25 +257,25 @@ export function ClientTeamTab() {
         const err = await res.json();
         throw new Error(err.message || "Failed to send invite");
       }
-      return res.json() as Promise<{ emailSent?: boolean; inviteUrl?: string }>;
+      return res.json() as Promise<{ emailSent?: boolean; loginUrl?: string }>;
     },
     onSuccess: (result) => {
       setInviteTarget(null);
       setConfirmEmail("");
       invalidate();
-      const isLocalInvite =
-        result.inviteUrl?.includes("localhost") || result.inviteUrl?.includes("127.0.0.1");
+      const isLocalLogin =
+        result.loginUrl?.includes("localhost") || result.loginUrl?.includes("127.0.0.1");
       toast({
-        title: result.emailSent ? "Invitation sent" : "Invite created",
+        title: result.emailSent ? "Welcome email sent" : "Access enabled",
         description: result.emailSent
-          ? isLocalInvite
-            ? "Email sent. For local testing, open the invite link in a new browser tab (do not use the email preview pane). Copy the link from the server response or paste the URL from the email into the address bar."
-            : "The member will receive an email with the invite link."
-          : result.inviteUrl
-            ? `Email could not be sent. For testing, open this link in a new tab: ${result.inviteUrl}`
-            : "Email could not be sent. Try again or contact support.",
+          ? isLocalLogin
+            ? "Welcome email sent with login credentials. For local testing, sign in at /employer-login using the email and temporary password from the message (or server logs if email is not delivered)."
+            : "The member will receive a welcome email with their StaffOS login URL, username, and temporary password."
+          : result.loginUrl
+            ? `Welcome email could not be sent. Share login manually: ${result.loginUrl}`
+            : "Account was created but the welcome email could not be sent. Share login details manually.",
         variant: result.emailSent ? "default" : "destructive",
-        duration: isLocalInvite ? 12000 : 5000,
+        duration: isLocalLogin ? 12000 : 5000,
       });
     },
     onError: (e: Error) => {
@@ -818,7 +818,8 @@ export function ClientTeamTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Send invitation email?</AlertDialogTitle>
             <AlertDialogDescription>
-              Confirm the email address for {inviteTarget?.name}. An invite link will be sent to
+              Confirm the email address for {inviteTarget?.name}. A welcome email with login
+              credentials will be sent to
               this address so they can sign in to StaffOS.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -847,7 +848,7 @@ export function ClientTeamTab() {
                 });
               }}
             >
-              {inviteMutation.isPending ? "Sending…" : "Send invite"}
+              {inviteMutation.isPending ? "Sending…" : "Send welcome email"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -21,6 +21,12 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+/** Temporary password for newly provisioned client portal logins (email + first login). */
+export function generateClientTemporaryPassword(): string {
+  const raw = randomBytes(12).toString("base64url");
+  return raw.replace(/[^a-zA-Z0-9]/g, "x").slice(0, 12);
+}
+
 async function getCompanyById(companyId: string) {
   const clients = await storage.getAllClients();
   return clients.find((c) => c.id === companyId && !c.isLoginOnly);

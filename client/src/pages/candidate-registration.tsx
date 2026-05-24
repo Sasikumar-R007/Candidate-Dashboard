@@ -7,10 +7,11 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Check, Shield, ArrowLeft, BrainCircuit } from "lucide-react";
+import { Shield, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import staffosLogo2 from "@/assets/staffos logo 2.png";
+import staffosLogo3 from "@/assets/staffos logo 3.png";
 
 interface RegisterFormData {
   fullName: string;
@@ -155,43 +156,52 @@ export default function CandidateRegistration() {
 
   return (
     <div className="min-h-screen flex bg-white font-poppins">
-      {/* Left Decoration */}
+      {/* Left decoration — candidate login blue gradient theme */}
       <div
-        className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
-        style={{ background: 'linear-gradient(to bottom, #F5F3FF, #E8E4FF, #8776FF)' }}
+        className="relative hidden overflow-hidden lg:flex lg:w-1/2"
+        style={{
+          background:
+            "radial-gradient(circle at 18% 18%, rgba(96, 165, 250, 0.35), transparent 28%), radial-gradient(circle at 82% 78%, rgba(14, 165, 233, 0.28), transparent 32%), linear-gradient(135deg, #0B1F5E 0%, #1D4ED8 48%, #2563EB 100%)",
+        }}
       >
-        <div className="absolute inset-0 p-12 flex flex-col justify-between">
+        <div className="relative z-10 flex h-full min-h-screen w-full flex-col justify-between p-12">
           <div className="flex items-center space-x-2">
-            <img src={staffosLogo2} alt="StaffOS" className="h-10 w-10 rounded-lg" />
-            <span className="text-xl font-bold text-gray-900">StaffOS</span>
+            <img src={staffosLogo2} alt="StaffOS" className="h-10 w-10 rounded-lg object-contain" />
+            <span className="text-xl font-bold text-white">StaffOS</span>
           </div>
 
           <div className="max-w-md">
-            <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6">
-              Launch Your Career with <span className="text-purple-600">StaffOS</span>
+            <h1 className="mb-6 text-4xl font-bold leading-tight text-white lg:text-5xl">
+              Launch Your Career with{" "}
+              <span className="text-blue-200">StaffOS</span>
             </h1>
-            <p className="text-lg text-gray-700 leading-relaxed">
+            <p className="text-lg leading-relaxed text-blue-100/90">
               Find the perfect role, matched perfectly to your skills and aspirations.
               Simple, fast, and secure.
             </p>
           </div>
 
-          <div className="flex items-center space-x-2 text-gray-600">
-            <Shield className="w-5 h-5" />
-            <span className="text-sm">Trusted by top tech talent globally</span>
+          <div className="flex items-center space-x-2 text-sm text-blue-100/85">
+            <Shield className="h-5 w-5 shrink-0" />
+            <span>Trusted by top tech talent globally</span>
           </div>
         </div>
       </div>
 
       {/* Right Content */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12">
+      <div className="flex min-h-screen w-full items-center justify-center border-0 bg-white p-8 lg:w-1/2 lg:p-12">
         <div className="w-full max-w-md space-y-8">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-4 text-gray-600">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="ghost" size="sm" className="mb-4 text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Home
             </Button>
           </Link>
+
+          <div className="mb-2 flex items-center justify-center gap-2 lg:hidden">
+            <img src={staffosLogo3} alt="StaffOS" className="h-10 w-10 rounded-lg object-contain" />
+            <span className="text-xl font-bold text-gray-900">StaffOS</span>
+          </div>
 
           {!showOTP ? (
             <div className="space-y-8">
@@ -206,7 +216,7 @@ export default function CandidateRegistration() {
                   <Input
                     id="fullName"
                     placeholder="John Doe"
-                    className="h-12 border-gray-200 focus:border-purple-600 focus:ring-purple-50 rounded-xl"
+                    className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-blue-100 rounded-xl"
                     {...registerInput("fullName", { required: "Full name is required" })}
                   />
                   {inputErrors.fullName && <p className="text-xs text-red-500 mt-1">{inputErrors.fullName.message}</p>}
@@ -218,7 +228,7 @@ export default function CandidateRegistration() {
                     id="email"
                     type="email"
                     placeholder="you@example.com"
-                    className="h-12 border-gray-200 focus:border-purple-600 focus:ring-purple-50 rounded-xl"
+                    className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-blue-100 rounded-xl"
                     {...registerInput("email", {
                       required: "Email is required",
                       pattern: { value: /^\S+@\S+$/i, message: "Invalid email" }
@@ -230,14 +240,14 @@ export default function CandidateRegistration() {
                 <Button
                   type="submit"
                   disabled={registerMutation.isPending}
-                  className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg transition-all"
+                  className="w-full h-12 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all"
                 >
                   {registerMutation.isPending ? "Starting..." : "Continue"}
                 </Button>
 
                 <p className="text-center text-sm text-gray-500 font-poppins">
                   Already have an account?{" "}
-                  <Link href="/candidate-login" className="text-purple-600 font-semibold hover:underline">
+                  <Link href="/candidate-login" className="text-[#2563EB] font-semibold hover:underline">
                     Sign In
                   </Link>
                 </p>
@@ -247,8 +257,8 @@ export default function CandidateRegistration() {
             <div className="space-y-8">
               <div className="text-center lg:text-left space-y-2">
                 <div className="flex justify-center lg:justify-start mb-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-[#2563EB]" />
                   </div>
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 font-poppins">Verify Your Email</h2>
@@ -261,7 +271,7 @@ export default function CandidateRegistration() {
                     type="text"
                     maxLength={4}
                     placeholder="Enter code"
-                    className="h-16 text-center text-3xl font-mono tracking-widest border-2 border-gray-200 focus:border-purple-600 focus:ring-purple-50 rounded-2xl"
+                    className="h-16 text-center text-3xl font-mono tracking-widest border-2 border-gray-200 focus:border-[#2563EB] focus:ring-blue-100 rounded-2xl"
                     {...registerOTP("otp", {
                       required: "OTP is required",
                       pattern: { value: /^\d{4}$/, message: "Must be 4 digits" }
@@ -283,7 +293,7 @@ export default function CandidateRegistration() {
                 <Button
                   type="submit"
                   disabled={verifyOTPMutation.isPending}
-                  className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg shadow-purple-200 transition-all font-semibold"
+                  className="w-full h-12 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all font-semibold"
                 >
                   {verifyOTPMutation.isPending ? "Verifying..." : "Verify & Continue"}
                 </Button>
@@ -300,7 +310,7 @@ export default function CandidateRegistration() {
                     type="button"
                     onClick={() => resendOTPMutation.mutate()}
                     disabled={otpExpiry > 0 || resendOTPMutation.isPending}
-                    className="text-purple-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="text-[#2563EB] font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {resendOTPMutation.isPending ? "Resending..." : "Resend Code"}
                   </button>
@@ -311,8 +321,8 @@ export default function CandidateRegistration() {
             <div className="space-y-8">
               <div className="text-center lg:text-left space-y-2">
                 <div className="flex justify-center lg:justify-start mb-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-[#2563EB]" />
                   </div>
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 font-poppins">Set Password</h2>
@@ -343,7 +353,7 @@ export default function CandidateRegistration() {
                       type="password"
                       placeholder="••••••••"
                       required
-                      className="h-12 border-gray-200 focus:border-purple-600 focus:ring-purple-50 rounded-xl"
+                      className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-blue-100 rounded-xl"
                     />
                   </div>
                   <div className="space-y-2">
@@ -353,7 +363,7 @@ export default function CandidateRegistration() {
                       type="password"
                       placeholder="••••••••"
                       required
-                      className="h-12 border-gray-200 focus:border-purple-600 focus:ring-purple-50 rounded-xl"
+                      className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-blue-100 rounded-xl"
                     />
                   </div>
                 </div>
@@ -361,7 +371,7 @@ export default function CandidateRegistration() {
                 <Button
                   type="submit"
                   disabled={completeRegistrationMutation.isPending}
-                  className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg shadow-purple-200 transition-all font-semibold"
+                  className="w-full h-12 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all font-semibold"
                 >
                   {completeRegistrationMutation.isPending ? "Setting up..." : "Complete Registration"}
                 </Button>

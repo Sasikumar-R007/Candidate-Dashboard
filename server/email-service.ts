@@ -384,80 +384,298 @@ Team StaffOS
   }
 }
 
-export interface ClientMemberInviteEmailData {
-  name: string;
-  email: string;
-  companyName: string;
-  inviteUrl: string;
-  expiresInDays: number;
+const CLIENT_PORTAL_EMAIL_STYLES = `
+  body { margin: 0; padding: 0; background-color: #eef2ff; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #1f2937; }
+  .outer { width: 100%; padding: 24px 12px; box-sizing: border-box; }
+  .container { max-width: 600px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12); }
+  .header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 28px 24px; text-align: center; }
+  .header h1 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.3; }
+  .header p { margin: 8px 0 0; font-size: 14px; opacity: 0.95; }
+  .content { padding: 28px 24px 20px; }
+  .content p { margin: 0 0 14px; font-size: 15px; }
+  .section-title { margin: 22px 0 10px; font-size: 16px; font-weight: 700; color: #1e3a8a; }
+  .credentials { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 14px; }
+  .credentials th, .credentials td { border: 1px solid #dbeafe; padding: 10px 12px; text-align: left; vertical-align: top; }
+  .credentials th { background-color: #eff6ff; color: #1e40af; width: 34%; font-weight: 600; }
+  .credentials td { background-color: #ffffff; word-break: break-word; }
+  .callout { background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; font-size: 14px; }
+  .callout strong { display: block; margin-bottom: 6px; color: #92400e; }
+  ul { margin: 8px 0 14px; padding-left: 20px; }
+  li { margin-bottom: 6px; font-size: 14px; }
+  .cta-wrap { text-align: center; margin: 26px 0 8px; }
+  .cta-button { display: inline-block; background-color: #2563eb; color: #ffffff !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; }
+  .footer { text-align: center; padding: 20px 24px 28px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 13px; }
+  .footer strong { color: #1e40af; }
+`;
+
+function buildClientPortalEmailShell(options: {
+  title: string;
+  subtitle: string;
+  bodyHtml: string;
+  loginUrl: string;
+  ctaLabel?: string;
+}): string {
+  const ctaLabel = options.ctaLabel || "Access StaffOS";
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>${CLIENT_PORTAL_EMAIL_STYLES}</style>
+</head>
+<body>
+  <div class="outer">
+    <div class="container">
+      <div class="header">
+        <h1>${options.title}</h1>
+        <p>${options.subtitle}</p>
+      </div>
+      <div class="content">
+        ${options.bodyHtml}
+        <div class="cta-wrap">
+          <a class="cta-button" href="${options.loginUrl}" target="_blank" rel="noopener noreferrer">${ctaLabel}</a>
+        </div>
+      </div>
+      <div class="footer">
+        <p><strong>StaffOS</strong> — Powered by Nudges.</p>
+        <p>Transparent Hiring Starts Here.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
 }
 
-export async function sendClientMemberInviteEmail(
-  data: ClientMemberInviteEmailData,
+function buildCredentialsTable(loginUrl: string, username: string, password: string): string {
+  return `
+<table class="credentials" role="presentation">
+  <tr><th>Login URL</th><td><a href="${loginUrl}">${loginUrl}</a></td></tr>
+  <tr><th>Username</th><td>${username}</td></tr>
+  <tr><th>Temporary Password</th><td>${password}</td></tr>
+</table>
+  `.trim();
+}
+
+export interface ClientAdminWelcomeEmailData {
+  name: string;
+  email: string;
+  password: string;
+  loginUrl: string;
+}
+
+export interface ClientMemberWelcomeEmailData {
+  name: string;
+  email: string;
+  password: string;
+  loginUrl: string;
+}
+
+export async function sendClientAdminWelcomeEmail(
+  data: ClientAdminWelcomeEmailData,
 ): Promise<boolean> {
   try {
     const { client: resend, fromEmail } = await getUncachableResendClient();
     const senderEmail = fromEmail || "StaffOS <onboarding@resend.dev>";
+    const username = data.email;
 
     const emailContent = `
 Hi ${data.name},
 
-You have been invited to join ${data.companyName} on StaffOS as a Client Member.
+Welcome to StaffOS — The Operating System for Hiring.
 
-Accept your invitation and set your password using this link (valid for ${data.expiresInDays} days):
-${data.inviteUrl}
+Your Client Admin account has been successfully created. You can now access your hiring dashboard and manage your recruitment workflows with real-time visibility, structured communication, and centralized hiring operations.
 
-If you did not expect this invitation, you can ignore this email.
+Login Credentials:
+- Login URL: ${data.loginUrl}
+- Username: ${username}
+- Temporary Password: ${data.password}
 
-Warm regards,
-Team StaffOS
+Important Security Step:
+For security purposes, you will be required to change your password immediately after your first login. Please ensure your new password is kept secure and not shared with unauthorized users.
+
+Getting Started Inside StaffOS:
+- Create Departments
+- Add Team Members
+- Control Sensitive Data Visibility (CTC details, candidate visibility controls)
+
+What You Can Access:
+- Real-time hiring pipeline visibility
+- Candidate tracking
+- Structured recruiter communication
+- Hiring metrics & dashboards
+- Downloadable candidate profiles
+- Nudge-based update tracking
+
+Access StaffOS: ${data.loginUrl}
+
+StaffOS — Powered by Nudges.
+Transparent Hiring Starts Here.
     `.trim();
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background-color: #1a1a1a; color: white; padding: 20px; text-align: center; }
-    .content { padding: 30px 20px; background-color: #f9f9f9; }
-    .button { display: inline-block; background-color: #4F46E5; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0; }
-    .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header"><h1>StaffOS Client Invitation</h1></div>
-    <div class="content">
+    const bodyHtml = `
       <p>Hi ${data.name},</p>
-      <p>You have been invited to join <strong>${data.companyName}</strong> on StaffOS as a Client Member.</p>
-      <p><a class="button" href="${data.inviteUrl}" target="_blank" rel="noopener noreferrer">Accept invitation</a></p>
-      <p style="font-size: 14px; color: #666;">Or copy this link: ${data.inviteUrl}</p>
-      <p style="font-size: 14px; color: #666;">This link expires in ${data.expiresInDays} days.</p>
-    </div>
-    <div class="footer"><p>Team StaffOS</p></div>
-  </div>
-</body>
-</html>
-    `.trim();
+      <p>Welcome to <strong>StaffOS</strong> — The Operating System for Hiring.</p>
+      <p>Your <strong>Client Admin</strong> account has been successfully created. You can now access your hiring dashboard and manage your recruitment workflows with real-time visibility, structured communication, and centralized hiring operations.</p>
+      <p class="section-title">Login Credentials</p>
+      ${buildCredentialsTable(data.loginUrl, username, data.password)}
+      <div class="callout">
+        <strong>Important Security Step</strong>
+        For security purposes, you will be required to change your password immediately after your first login.
+        Please ensure your new password is kept secure and not shared with unauthorized users.
+      </div>
+      <p class="section-title">Getting Started Inside StaffOS</p>
+      <p>Once logged in, you can:</p>
+      <ul>
+        <li><strong>Create Departments</strong> — Set up departments based on your hiring structure and business functions.</li>
+        <li><strong>Add Team Members</strong> — Invite users under each department and manage access permissions accordingly.</li>
+        <li><strong>Control Sensitive Data Visibility</strong> — While creating users, you can allow or restrict access to sensitive candidate information such as CTC details (compensation data) and candidate visibility controls.</li>
+      </ul>
+      <p class="section-title">What You Can Access</p>
+      <ul>
+        <li>Real-time hiring pipeline visibility</li>
+        <li>Candidate tracking</li>
+        <li>Structured recruiter communication</li>
+        <li>Hiring metrics &amp; dashboards</li>
+        <li>Downloadable candidate profiles</li>
+        <li>Nudge-based update tracking</li>
+      </ul>
+      <p>If you face any issues while accessing the platform, please contact the StaffOS support team.</p>
+    `;
+
+    const htmlContent = buildClientPortalEmailShell({
+      title: "Welcome to StaffOS",
+      subtitle: "Your Client Admin account is ready",
+      bodyHtml,
+      loginUrl: data.loginUrl,
+    });
+
+    console.log(`[Client Admin Welcome] Sending to ${data.email}`);
+    console.log(`\n[DEV-TESTING] Client Admin welcome for ${data.email}\n${emailContent}\n`);
 
     const result = await resend.emails.send({
       from: senderEmail,
       to: data.email,
-      subject: `You're invited to ${data.companyName} on StaffOS`,
+      subject: "Welcome to StaffOS – Your Client Admin Account is Ready",
       text: emailContent,
       html: htmlContent,
     });
 
     if (result.error) {
-      console.error("[Client Invite Email] Resend error:", result.error);
+      console.error("[Client Admin Welcome] Resend error:", result.error);
       return false;
     }
-    console.log(`[Client Invite Email] Sent to ${data.email}`);
+    console.log(`[Client Admin Welcome] Sent to ${data.email}`);
     return true;
   } catch (error) {
-    console.error("Error sending client member invite email:", error);
+    console.error("Error sending client admin welcome email:", error);
     return false;
   }
 }
+
+export async function sendClientMemberWelcomeEmail(
+  data: ClientMemberWelcomeEmailData,
+): Promise<boolean> {
+  try {
+    const { client: resend, fromEmail } = await getUncachableResendClient();
+    const senderEmail = fromEmail || "StaffOS <onboarding@resend.dev>";
+    const username = data.email;
+
+    const emailContent = `
+Hi ${data.name},
+
+Welcome to StaffOS.
+
+Your account has been created by your organization's Client Admin. You can now access StaffOS to track hiring pipelines, review candidate progress, and collaborate through a centralized hiring workflow.
+
+Login Credentials:
+- Login URL: ${data.loginUrl}
+- Username: ${username}
+- Temporary Password: ${data.password}
+
+Important Security Step:
+For security purposes, you will be required to change your password during your first login. Please keep your login credentials secure and avoid sharing them with unauthorized users.
+
+What You Can Access (based on permissions assigned by your Client Admin):
+- View hiring pipelines
+- Track candidate progress
+- Access recruiter updates
+- Monitor hiring metrics
+- Download candidate profiles
+- Stay updated through structured communication workflows
+
+Please note that access to sensitive information such as compensation details may be restricted based on your assigned permissions.
+
+Getting Started:
+1. Login to StaffOS
+2. Change your password
+3. Explore your assigned dashboards
+4. Start tracking your hiring workflows
+
+Access StaffOS: ${data.loginUrl}
+
+StaffOS — Powered by Nudges.
+Transparent Hiring Starts Here.
+    `.trim();
+
+    const bodyHtml = `
+      <p>Hi ${data.name},</p>
+      <p>Welcome to <strong>StaffOS</strong>.</p>
+      <p>Your account has been created by your organization's <strong>Client Admin</strong>. You can now access StaffOS to track hiring pipelines, review candidate progress, and collaborate through a centralized hiring workflow.</p>
+      <p class="section-title">Login Credentials</p>
+      ${buildCredentialsTable(data.loginUrl, username, data.password)}
+      <div class="callout">
+        <strong>Important Security Step</strong>
+        For security purposes, you will be required to change your password during your first login.
+        Please keep your login credentials secure and avoid sharing them with unauthorized users.
+      </div>
+      <p class="section-title">What You Can Access</p>
+      <p>Based on the permissions assigned by your Client Admin, you may be able to:</p>
+      <ul>
+        <li>View hiring pipelines</li>
+        <li>Track candidate progress</li>
+        <li>Access recruiter updates</li>
+        <li>Monitor hiring metrics</li>
+        <li>Download candidate profiles</li>
+        <li>Stay updated through structured communication workflows</li>
+      </ul>
+      <p>Please note that access to sensitive information such as compensation details may be restricted based on your assigned permissions.</p>
+      <p class="section-title">Getting Started</p>
+      <ol>
+        <li>Login to StaffOS</li>
+        <li>Change your password</li>
+        <li>Explore your assigned dashboards</li>
+        <li>Start tracking your hiring workflows</li>
+      </ol>
+    `;
+
+    const htmlContent = buildClientPortalEmailShell({
+      title: "Welcome to StaffOS",
+      subtitle: "Your account has been created",
+      bodyHtml,
+      loginUrl: data.loginUrl,
+    });
+
+    console.log(`[Client Member Welcome] Sending to ${data.email}`);
+
+    const result = await resend.emails.send({
+      from: senderEmail,
+      to: data.email,
+      subject: "Welcome to StaffOS – Your Account Has Been Created!",
+      text: emailContent,
+      html: htmlContent,
+    });
+
+    if (result.error) {
+      console.error("[Client Member Welcome] Resend error:", result.error);
+      return false;
+    }
+    console.log(`[Client Member Welcome] Sent to ${data.email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending client member welcome email:", error);
+    return false;
+  }
+}
+

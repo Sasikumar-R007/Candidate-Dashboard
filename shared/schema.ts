@@ -103,6 +103,14 @@ export const passwordResets = pgTable("password_resets", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+/** Persistent profile/banner images (Render/local disk is ephemeral). */
+export const profileMedia = pgTable("profile_media", {
+  id: varchar("id").primaryKey(),
+  mimeType: text("mime_type").notNull(),
+  data: text("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const jobApplications = pgTable("job_applications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   profileId: varchar("profile_id").notNull(),
@@ -131,6 +139,12 @@ export const jobApplications = pgTable("job_applications", {
   statusNote: text("status_note"),
   rejectionReason: text("rejection_reason"),
   isCandidateConfirmed: boolean("is_candidate_confirmed").default(true),
+  /** Per-application salary (editable by TL/TA in pipeline comments session). */
+  applicationCurrentCtc: text("application_current_ctc").default("0"),
+  applicationExpectedCtc: text("application_expected_ctc").default("0"),
+  salaryEditedByEmployeeId: varchar("salary_edited_by_employee_id"),
+  salaryEditedByName: text("salary_edited_by_name"),
+  salaryEditedAt: timestamp("salary_edited_at"),
 });
 
 /** Internal discussion thread scoped to a single job application (pipeline card). */
@@ -1095,6 +1109,7 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type UserActivity = typeof userActivities.$inferSelect;
 export type EmailLog = typeof emailLogs.$inferSelect;
+export type ProfileMedia = typeof profileMedia.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertClientDepartment = z.infer<typeof insertClientDepartmentSchema>;

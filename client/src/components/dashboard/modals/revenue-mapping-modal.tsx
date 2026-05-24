@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { invalidateAdminPerformanceQueries } from "@/lib/admin-performance-queries";
+import { invalidateRevenueMappingQueries } from "@/lib/admin-performance-queries";
 
 interface RevenueMappingModalProps {
   isOpen: boolean;
@@ -128,12 +128,19 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
       setRevenue(editingRevenueMapping.revenue?.toString() || "");
       setIncentivePlan(editingRevenueMapping.incentivePlan || "");
       setIncentive(editingRevenueMapping.incentive?.toString() || "");
-      setPaymentStatus(editingRevenueMapping.paymentReceived ? "Received" : "Pending");
+      setPaymentStatus(
+        editingRevenueMapping.paymentStatus ||
+          (editingRevenueMapping.receivedPayment ? "Received" : "Pending"),
+      );
       setSource(editingRevenueMapping.source || "");
       setOtherSource(editingRevenueMapping.source === "Other" ? editingRevenueMapping.source : "");
       setInvoiceDate(editingRevenueMapping.invoiceDate ? new Date(editingRevenueMapping.invoiceDate) : undefined);
       setInvoiceNumber(editingRevenueMapping.invoiceNumber || "");
-      setReceivedPayment(editingRevenueMapping.paymentReceived ? "Yes" : "No");
+      setReceivedPayment(
+        editingRevenueMapping.receivedPayment && Number(editingRevenueMapping.receivedPayment) > 0
+          ? "Yes"
+          : "No",
+      );
       setPaymentDetails(editingRevenueMapping.paymentDetails || "");
       setIncentivePaidMonth(editingRevenueMapping.incentivePaidMonth || "");
     } else {
@@ -173,7 +180,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
       }
     },
     onSuccess: () => {
-      invalidateAdminPerformanceQueries(queryClient);
+      invalidateRevenueMappingQueries(queryClient);
       toast({
         title: "Success",
         description: editingRevenueMapping ? "Revenue mapping updated successfully" : "Revenue mapping created successfully",

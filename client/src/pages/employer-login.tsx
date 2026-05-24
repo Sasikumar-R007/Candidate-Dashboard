@@ -113,8 +113,8 @@ export default function EmployerLogin() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      <div className="relative hidden h-screen overflow-y-auto scrollbar-hide border-0 lg:flex lg:w-1/2">
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      <div className="relative hidden min-h-screen overflow-hidden border-0 lg:flex lg:h-screen lg:w-1/2 lg:shrink-0">
         <div
           className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#F8F7FF] via-[#F4F1FF] to-[#EEF4FF]"
           aria-hidden
@@ -136,29 +136,29 @@ export default function EmployerLogin() {
           }}
           aria-hidden
         />
-        <div className="relative z-10 flex h-full min-h-screen w-full flex-col justify-between gap-4 py-7 pl-10 pr-10 xl:pr-14">
-          <div className="shrink-0">
+        <div className="relative z-10 flex h-full min-h-0 w-full flex-col gap-4 py-6 pl-6 pr-6 xl:gap-5 xl:py-8 xl:pl-9 xl:pr-12 lg:max-xl:py-5 lg:max-xl:pl-7">
+          <header className="shrink-0">
             <p className="text-[11px] font-semibold tracking-[0.06em] text-[#4A3EC8]">Why StaffOS?</p>
             <div className="mt-1.5 h-[2px] w-9 rounded bg-[#4A3EC8]" />
-            <h1 className="mt-2 text-[32px] font-semibold leading-[1.12] tracking-[-0.01em] text-[#080C2A]">
-            All Your Hiring Needs 
+            <h1 className="mt-2 text-xl font-semibold leading-[1.15] tracking-[-0.01em] text-[#080C2A] xl:text-[28px] 2xl:text-[32px]">
+              All Your Hiring Needs
               <br />
               All in One Platform.
             </h1>
-          </div>
+          </header>
 
-
-          <div className="flex min-h-0 flex-1 flex-col justify-center gap-3">
-          <div className="grid w-full grid-cols-3 gap-3">
-            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
-              <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#F3EEFF]">
-                <img src={rocketIcon} alt="" className="h-7 w-7 object-contain" aria-hidden />
+          <div className="min-h-[12rem] flex-1 overflow-x-hidden overflow-y-auto overscroll-contain scrollbar-hide">
+            <div className="flex flex-col gap-3 pb-2">
+          <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3 xl:gap-3">
+            <div className="min-w-0 rounded-xl border border-white/80 bg-white/90 px-3 py-3 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px] xl:rounded-2xl xl:px-4 xl:py-3.5">
+              <div className="mb-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-[#F3EEFF] xl:h-11 xl:w-11">
+                <img src={rocketIcon} alt="" className="h-6 w-6 object-contain xl:h-7 xl:w-7" aria-hidden />
               </div>
-              <p className="text-[15px] leading-[1.2] font-semibold text-[#0D122B]">India&apos;s First Free ATS</p>
+              <p className="text-sm leading-[1.2] font-semibold text-[#0D122B] xl:text-[15px]">India&apos;s First Free ATS</p>
               <div className="my-1.5 h-[2px] w-8 rounded bg-[#5B43DD]" />
               <p className="text-[12px] leading-[1.35] text-[#2A304A]">Modern hiring<br />made simple.</p>
             </div>
-            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+            <div className="min-w-0 rounded-xl border border-white/80 bg-white/90 px-3 py-3 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px] xl:rounded-2xl xl:px-4 xl:py-3.5">
               <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#E9F9F0]">
                 <img src={suitcaseIcon} alt="" className="h-7 w-7 object-contain" aria-hidden />
               </div>
@@ -166,7 +166,7 @@ export default function EmployerLogin() {
               <div className="my-1.5 h-[2px] w-8 rounded bg-[#23A868]" />
               <p className="text-[12px] leading-[1.35] text-[#2A304A]">Post jobs for free.<br />Pay only when you hire.</p>
             </div>
-            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+            <div className="min-w-0 rounded-xl border border-white/80 bg-white/90 px-3 py-3 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px] xl:rounded-2xl xl:px-4 xl:py-3.5">
               <div className="mb-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] bg-[#EAF2FF]">
                 <img src={securityIcon} alt="" className="h-5 w-5 object-contain" aria-hidden />
               </div>
@@ -176,13 +176,13 @@ export default function EmployerLogin() {
             </div>
           </div>
 
-          <div>
+          <div className="[@media(max-height:720px)]:hidden">
             <p className="text-[11px] font-semibold tracking-[0.06em] text-[#4A3EC8]">HIGHLIGHTS</p>
             <div className="mt-1.5 h-[2px] w-9 rounded bg-[#4A3EC8]" />
           </div>
 
-          <div className="grid w-full grid-cols-3 gap-3">
-            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+          <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3 xl:gap-3">
+            <div className="min-w-0 rounded-xl border border-white/80 bg-white/90 px-3 py-3 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px] xl:rounded-2xl xl:px-4 xl:py-3.5">
               <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#FFF3E9]">
                 <Users className="h-7 w-7 text-[#DE7E33]" strokeWidth={1.9} />
               </div>
@@ -190,7 +190,7 @@ export default function EmployerLogin() {
               <div className="my-1.5 h-[2px] w-8 rounded bg-[#D97A32]" />
               <p className="text-[12px] leading-[1.35] text-[#2A304A]">Industry-trained recruiters<br />for faster and quality-driven hiring.</p>
             </div>
-            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+            <div className="min-w-0 rounded-xl border border-white/80 bg-white/90 px-3 py-3 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px] xl:rounded-2xl xl:px-4 xl:py-3.5">
               <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#F3EEFF]">
                 <PaperPlaneNudgeIcon className="h-7 w-7 text-[#6542D9]" />
               </div>
@@ -198,7 +198,7 @@ export default function EmployerLogin() {
               <div className="my-1.5 h-[2px] w-8 rounded bg-[#5B43DD]" />
               <p className="text-[12px] leading-[1.35] text-[#2A304A]">Structured updates with smart escalation.<br />No more chasing recruiters for updates.</p>
             </div>
-            <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 px-4 py-3.5 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px]">
+            <div className="min-w-0 rounded-xl border border-white/80 bg-white/90 px-3 py-3 shadow-sm shadow-[#5B43DD]/8 backdrop-blur-[2px] xl:rounded-2xl xl:px-4 xl:py-3.5">
               <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#E8F8F1]">
                 <img src={lineChartIcon} alt="" className="h-7 w-7 object-contain" aria-hidden />
               </div>
@@ -207,23 +207,23 @@ export default function EmployerLogin() {
               <p className="text-[12px] leading-[1.35] text-[#2A304A]">Track every hiring stage<br />and measure progress in real time.</p>
             </div>
           </div>
-
+            </div>
           </div>
 
-          <div className="flex w-full shrink-0 items-center justify-between rounded-2xl border border-[#E0DCFF] bg-white/75 px-4 py-4 shadow-md shadow-[#5B43DD]/10 backdrop-blur-sm">
+          <footer className="flex w-full shrink-0 items-center justify-between gap-2 rounded-xl border border-[#E0DCFF] bg-white/75 px-3 py-3 shadow-md shadow-[#5B43DD]/10 backdrop-blur-sm xl:rounded-2xl xl:px-4 xl:py-4">
             <div className="flex min-w-0 flex-1 items-center gap-3.5">
-              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[8px]">
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[8px] [@media(max-height:800px)]:h-9 [@media(max-height:800px)]:w-9">
                 <img src={staffosLogo2} alt="StaffOS" className="h-full w-full object-cover" />
               </div>
               <div className="min-w-0">
-                <p className="text-[15px] font-semibold leading-snug tracking-tight text-[#111827]">
+                <p className="text-[15px] font-semibold leading-snug tracking-tight text-[#111827] [@media(max-height:800px)]:text-sm">
                   <span className="text-[#4B43CC]">StaffOS</span> - The Operating System for Hiring.
                 </p>
-                <p className="mt-1 text-[12px] leading-snug text-[#2A304A]">ATS. Recruiters. Visibility. Verification.</p>
-                <p className="text-[12px] font-semibold leading-snug text-[#4B43CC]">All in one seamless workflow.</p>
+                <p className="mt-1 text-[12px] leading-snug text-[#2A304A] [@media(max-height:720px)]:hidden">ATS. Recruiters. Visibility. Verification.</p>
+                <p className="text-[12px] font-semibold leading-snug text-[#4B43CC] [@media(max-height:800px)]:mt-0.5 [@media(max-height:800px)]:text-[11px]">All in one seamless workflow.</p>
               </div>
             </div>
-            <div className="relative ml-3 h-16 w-16 shrink-0">
+            <div className="relative ml-3 hidden h-16 w-16 shrink-0 sm:block [@media(max-height:720px)]:hidden">
               <div className="absolute inset-0 rounded-full border border-dashed border-[#B9BDD6]" />
               <div className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[6px]">
                 <img src={staffosLogo2} alt="StaffOS" className="h-full w-full object-cover" />
@@ -233,13 +233,13 @@ export default function EmployerLogin() {
               <div className="absolute left-0 bottom-0 flex h-5 w-5 items-center justify-center rounded-[4px] bg-white text-[#1E6BFF] shadow-sm"><Shield className="h-3 w-3" /></div>
               <div className="absolute right-0 bottom-0 flex h-5 w-5 items-center justify-center rounded-[4px] bg-white text-[#23A868] shadow-sm"><Briefcase className="h-3 w-3" /></div>
             </div>
-          </div>
+          </footer>
         </div>
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex min-h-screen w-full items-center justify-center border-0 bg-white px-8 py-6 dark:bg-gray-900 lg:w-1/2 lg:px-14 xl:px-20">
-        <div className="w-full max-w-[26rem] space-y-8 lg:mx-auto">
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto border-0 bg-white px-4 py-8 dark:bg-gray-900 sm:px-8 lg:min-h-screen lg:w-1/2 lg:px-14 lg:py-6 xl:px-20">
+        <div className="my-auto w-full max-w-[26rem] space-y-6 sm:space-y-8 lg:mx-auto">
           {/* Back Button */}
           <Link href="/">
             <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">

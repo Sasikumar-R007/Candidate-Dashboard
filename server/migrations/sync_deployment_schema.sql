@@ -199,3 +199,17 @@ CREATE TABLE IF NOT EXISTS impact_metrics (
   fulfillment_rate real NOT NULL DEFAULT 20,
   revenue_recovered real NOT NULL DEFAULT 1.5
 );
+
+CREATE TABLE IF NOT EXISTS profile_media (
+  id varchar(64) PRIMARY KEY,
+  mime_type text NOT NULL,
+  data text NOT NULL,
+  created_at timestamp DEFAULT now()
+);
+
+ALTER TABLE job_applications
+  ADD COLUMN IF NOT EXISTS application_current_ctc text DEFAULT '0',
+  ADD COLUMN IF NOT EXISTS application_expected_ctc text DEFAULT '0',
+  ADD COLUMN IF NOT EXISTS salary_edited_by_employee_id varchar(255),
+  ADD COLUMN IF NOT EXISTS salary_edited_by_name text,
+  ADD COLUMN IF NOT EXISTS salary_edited_at timestamp;

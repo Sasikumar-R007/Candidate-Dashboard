@@ -12,6 +12,8 @@ import { useAuth, useCandidateAuth, useEmployeeAuth } from "@/contexts/auth-cont
 import { toast } from "@/hooks/use-toast";
 import { apiRequest, apiFileUpload, queryClient } from "@/lib/queryClient";
 import { isClientPortalRole } from "@shared/client-roles";
+import { formatEmployeeRoleDisplay, shouldShowEmployeeProfileId } from "@/lib/employee-display";
+import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -112,7 +114,7 @@ export function ProfileSettingsModal({
           department: data?.department || "",
           joiningDate: data?.joiningDate || "",
         });
-        setProfilePreview(data?.profilePicture || null);
+        setProfilePreview(resolveProfilePictureUrl(data?.profilePicture) || null);
       } catch {
         toast({
           title: "Error",
@@ -266,7 +268,12 @@ export function ProfileSettingsModal({
     }
   };
 
-  const profileImage = profilePreview || profileData?.profilePicture || null;
+  const profileImage =
+    profilePreview ||
+    resolveProfilePictureUrl(profileData?.profilePicture) ||
+    null;
+  const displayRole = formatEmployeeRoleDisplay(formData.role, { employeeRole: employee?.role });
+  const showProfileId = shouldShowEmployeeProfileId(employee?.role ?? formData.role, formData.employeeId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -326,18 +333,23 @@ export function ProfileSettingsModal({
                 />
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <h3 className="text-lg font-semibold text-slate-900">{formData.name || "Admin"}</h3>
-                {formData.employeeId ? (
-                  <span
-                    className="inline-flex rounded-[4px] border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-900"
-                    data-testid="text-account-profile-id"
-                  >
-                    {formData.employeeId}
-                  </span>
+              <div className="mt-5 space-y-2">
+                <h3 className="text-lg font-semibold text-slate-900">{formData.name || "User"}</h3>
+                {showProfileId ? (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Profile ID
+                    </p>
+                    <span
+                      className="mt-1 inline-flex rounded-[4px] border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-900"
+                      data-testid="text-account-profile-id"
+                    >
+                      {formData.employeeId}
+                    </span>
+                  </div>
                 ) : null}
+                <p className="text-sm font-medium text-slate-600">{displayRole}</p>
               </div>
-              <p className="text-sm text-slate-500">{formData.role || "Admin"}</p>
 
               <div className="mt-6 grid w-full gap-3">
                 <Card className="border-slate-200 bg-white/80 shadow-none">
@@ -355,7 +367,7 @@ export function ProfileSettingsModal({
                     <Shield className="mt-0.5 h-4 w-4 text-slate-400" />
                     <div>
                       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Role</div>
-                      <div className="mt-1 text-sm font-medium text-slate-700">{formData.role || "-"}</div>
+                      <div className="mt-1 text-sm font-medium text-slate-700">{displayRole}</div>
                     </div>
                   </CardContent>
                 </Card>

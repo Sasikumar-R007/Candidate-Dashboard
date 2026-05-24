@@ -293,9 +293,12 @@ export interface IStorage {
   getDailyMetricsSnapshot(date: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot | undefined>;
   getDailyMetricsSnapshotsByDateRange(startDate: string, endDate: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot[]>;
   updateDailyMetricsSnapshot(id: string, updates: Partial<DailyMetricsSnapshot>): Promise<DailyMetricsSnapshot | undefined>;
-  calculateRecruiterDailyMetrics(recruiterId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
-  calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
-  calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
+  getTaggedJobApplicationsOnDate(date: string): Promise<JobApplication[]>;
+  getTaggedJobApplicationsUpToDate(endDate: string): Promise<JobApplication[]>;
+  calculateRecruiterDailyMetrics(recruiterId: string, date: string, taggedOnDate?: JobApplication[]): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
+  countRecruiterUniqueDeliveriesOnDate(recruiterId: string, date: string, taggedOnDate?: JobApplication[]): Promise<number>;
+  calculateTeamDailyMetrics(teamLeadId: string, date: string, taggedOnDate?: JobApplication[]): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
+  calculateOrgDailyMetrics(date: string, taggedOnDate?: JobApplication[]): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
   
   // Interview Tracker methods
   createInterview(interview: InsertInterviewTracker): Promise<InterviewTracker>;
@@ -1706,7 +1709,60 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async calculateRecruiterDailyMetrics(recruiterId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+  async getTaggedJobApplicationsOnDate(date: string): Promise<JobApplication[]> {
+    return Array.from(this.jobApplications.values()).filter((app) => {
+      if ((app.source || "").toLowerCase() !== "recruiter_tagged") return false;
+      if (!app.appliedDate) return false;
+      return new Date(app.appliedDate).toISOString().split("T")[0] === date;
+    });
+  }
+
+  async getTaggedJobApplicationsUpToDate(endDate: string): Promise<JobApplication[]> {
+    return Array.from(this.jobApplications.values()).filter((app) => {
+      if ((app.source || "").toLowerCase() !== "recruiter_tagged") return false;
+      if (!app.appliedDate) return false;
+      return new Date(app.appliedDate).toISOString().split("T")[0] <= endDate;
+    });
+  }
+
+  async countRecruiterUniqueDeliveriesOnDate(
+    recruiterId: string,
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<number> {
+    const activeAssignments = Array.from(this.requirementAssignments.values()).filter(
+      (a) => a.recruiterId === recruiterId && a.status === "active",
+    );
+    const requirementIds = new Set(activeAssignments.map((a) => a.requirementId));
+    const unique = new Set<string>();
+
+    for (const submission of Array.from(this.resumeSubmissions.values())) {
+      if (submission.recruiterId !== recruiterId) continue;
+      if (!requirementIds.has(submission.requirementId)) continue;
+      const submittedDate = new Date(submission.submittedAt).toISOString().split("T")[0];
+      if (submittedDate !== date) continue;
+      unique.add(
+        `${submission.requirementId}::${(submission.candidateEmail || submission.candidateName || submission.id || "").toString().trim().toLowerCase()}`,
+      );
+    }
+
+    const taggedApplications =
+      taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
+    for (const app of taggedApplications) {
+      if (!app.requirementId || !requirementIds.has(app.requirementId)) continue;
+      unique.add(
+        `${app.requirementId}::${(app.candidateEmail || app.candidateName || app.id || "").toString().trim().toLowerCase()}`,
+      );
+    }
+
+    return unique.size;
+  }
+
+  async calculateRecruiterDailyMetrics(
+    recruiterId: string,
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
     const assignments = Array.from(this.requirementAssignments.values())
       .filter(a => a.recruiterId === recruiterId && a.status === "active");
     
@@ -1718,22 +1774,49 @@ export class MemStorage implements IStorage {
       }
     }
     
-    const delivered = await this.getResumeSubmissionsCountByRecruiterAndDate(recruiterId, date);
+    const delivered = await this.countRecruiterUniqueDeliveriesOnDate(
+      recruiterId,
+      date,
+      taggedOnDate,
+    );
     const defaulted = Math.max(0, required - delivered);
     
     return { delivered, defaulted, required, requirementCount: assignments.length };
   }
 
-  async calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
-    const teamMembers = Array.from(this.employees.values())
-      .filter(e => e.reportingTo === teamLeadId || e.id === teamLeadId);
+  async calculateTeamDailyMetrics(
+    teamLeadId: string,
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const tagged =
+      taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
+    const allEmployees = Array.from(this.employees.values());
+    const teamLead = allEmployees.find(
+      (emp) => emp.id === teamLeadId || emp.employeeId === teamLeadId,
+    );
+    if (!teamLead) {
+      return { delivered: 0, defaulted: 0, required: 0, requirementCount: 0 };
+    }
+
+    const teamMembers = allEmployees.filter(
+      (emp) =>
+        emp.id === teamLead.id ||
+        ((emp.role === "recruiter" ||
+          emp.role === "talent_advisor" ||
+          emp.role === "ta") &&
+          emp.isActive !== false &&
+          (emp.reportingTo === teamLead.employeeId ||
+            emp.reportingTo === teamLead.id ||
+            emp.reportingTo === teamLead.name)),
+    );
     
     let totalDelivered = 0;
     let totalRequired = 0;
     let totalRequirements = 0;
     
     for (const member of teamMembers) {
-      const metrics = await this.calculateRecruiterDailyMetrics(member.id, date);
+      const metrics = await this.calculateRecruiterDailyMetrics(member.id, date, tagged);
       totalDelivered += metrics.delivered;
       totalRequired += metrics.required;
       totalRequirements += metrics.requirementCount;
@@ -1744,7 +1827,12 @@ export class MemStorage implements IStorage {
     return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
   }
 
-  async calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+  async calculateOrgDailyMetrics(
+    date: string,
+    taggedOnDate?: JobApplication[],
+  ): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const tagged =
+      taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
     const recruiters = Array.from(this.employees.values())
       .filter(e => e.role === "recruiter" || e.role === "team_leader");
     
@@ -1753,7 +1841,7 @@ export class MemStorage implements IStorage {
     let totalRequirements = 0;
     
     for (const recruiter of recruiters) {
-      const metrics = await this.calculateRecruiterDailyMetrics(recruiter.id, date);
+      const metrics = await this.calculateRecruiterDailyMetrics(recruiter.id, date, tagged);
       totalDelivered += metrics.delivered;
       totalRequired += metrics.required;
       totalRequirements += metrics.requirementCount;
