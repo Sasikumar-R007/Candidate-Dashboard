@@ -96,3 +96,26 @@ export function enrichRequirementWithJdExtras<T extends Record<string, unknown>>
   const extras = parseRequirementJdExtras(requirement as Parameters<typeof parseRequirementJdExtras>[0]);
   return { ...requirement, ...extras };
 }
+
+/** Merge admin "Instructions" into requirement sourceDetails JSON (no extra DB column). */
+export function mergeRequirementInstructionsInSourceDetails(
+  existingSourceDetails: string | null | undefined,
+  specialInstructions: string | null | undefined,
+): string | null {
+  const trimmed = specialInstructions?.trim() ?? "";
+  let base: Record<string, unknown> = {};
+  if (existingSourceDetails?.trim()) {
+    try {
+      base = JSON.parse(existingSourceDetails) as Record<string, unknown>;
+    } catch {
+      base = {};
+    }
+  }
+  if (!trimmed && Object.keys(base).length === 0) {
+    return existingSourceDetails?.trim() ? existingSourceDetails : null;
+  }
+  return JSON.stringify({
+    ...base,
+    specialInstructions: trimmed || null,
+  });
+}

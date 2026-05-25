@@ -8148,55 +8148,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/requirements", requireAdminAuth, async (req, res) => {
     try {
-      const validatedData = insertRequirementSchema.parse(req.body);
-      const requirement = await storage.createRequirement(validatedData);
+      const {
+        additionalTeamLeads: additionalTeamLeadsRaw,
+        specialInstructions: specialInstructionsRaw,
+        ...requirementBody
+      } = req.body as Record<string, unknown>;
 
-      logRequirementAdded(
-        storage,
-        'admin',
-        'Admin',
-        'admin',
-        requirement.position,
-        requirement.company,
-        requirement.id
+      const validatedData = insertRequirementSchema.parse(requirementBody);
+      const { mergeRequirementInstructionsInSourceDetails } = await import(
+        "@shared/requirement-jd-extras"
       );
+      const sourceDetailsWithInstructions = mergeRequirementInstructionsInSourceDetails(
+        validatedData.sourceDetails ?? null,
+        typeof specialInstructionsRaw === "string"
+          ? specialInstructionsRaw
+          : specialInstructionsRaw != null
+            ? String(specialInstructionsRaw)
+            : null,
+      );
+      const additionalTeamLeads = Array.isArray(additionalTeamLeadsRaw)
+        ? additionalTeamLeadsRaw
+            .map((value) => String(value || "").trim())
+            .filter((value) => value && value !== "Unassigned")
+        : [];
+
+      const primaryTeamLead =
+        validatedData.teamLead && validatedData.teamLead !== "Unassigned"
+          ? validatedData.teamLead
+          : null;
+
+      const isSplitCreate =
+        Boolean(validatedData.splitRequirement) && additionalTeamLeads.length > 0;
+
+      const teamLeadsToCreate = isSplitCreate
+        ? [primaryTeamLead, ...additionalTeamLeads].filter(
+            (name): name is string => Boolean(name),
+          )
+        : primaryTeamLead
+          ? [primaryTeamLead]
+          : [];
+
+      if (isSplitCreate && teamLeadsToCreate.length < 2) {
+        return res.status(400).json({
+          message:
+            "Split requirement needs a primary Team Leader and at least one additional Team Leader.",
+        });
+      }
+
+      const uniqueTeamLeads = [...new Set(teamLeadsToCreate)];
+      if (uniqueTeamLeads.length !== teamLeadsToCreate.length) {
+        return res.status(400).json({
+          message: "Each Team Leader in a split requirement must be unique.",
+        });
+      }
+
+      const {
+        generateNextRequirementRoleId,
+        buildSplitRequirementSourceDetails,
+      } = await import("./requirement-role-id");
+
+      const createdRequirements = [];
+      const sharedRoleId = isSplitCreate
+        ? await generateNextRequirementRoleId(storage)
+        : null;
+
+      for (let index = 0; index < teamLeadsToCreate.length; index++) {
+        const teamLeadName = teamLeadsToCreate[index];
+        const requirementId = isSplitCreate
+          ? index === 0
+            ? sharedRoleId!
+            : await generateNextRequirementRoleId(storage)
+          : undefined;
+
+        const sourceDetails = isSplitCreate
+          ? buildSplitRequirementSourceDetails(
+              sharedRoleId!,
+              index + 1,
+              teamLeadsToCreate.length,
+              teamLeadName,
+              sourceDetailsWithInstructions,
+            )
+          : sourceDetailsWithInstructions;
+
+        const requirement = await storage.createRequirement({
+          ...validatedData,
+          id: requirementId,
+          teamLead: teamLeadName,
+          splitRequirement: isSplitCreate ? true : validatedData.splitRequirement ?? false,
+          sourceDetails,
+          talentAdvisor: null,
+          talentAdvisorId: null,
+        });
+
+        logRequirementAdded(
+          storage,
+          "admin",
+          "Admin",
+          "admin",
+          requirement.position,
+          requirement.company,
+          requirement.id,
+        );
+
+        createdRequirements.push(requirement);
+      }
+
+      if (createdRequirements.length === 0) {
+        return res.status(400).json({ message: "Team Leader is required." });
+      }
 
       // Recalculate and update daily metrics snapshot for today
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().split("T")[0];
         const metrics = await storage.calculateOrgDailyMetrics(today);
 
-        // Get or create snapshot for today
-        const existingSnapshot = await storage.getDailyMetricsSnapshot(today, 'organization');
+        const existingSnapshot = await storage.getDailyMetricsSnapshot(
+          today,
+          "organization",
+        );
 
         if (existingSnapshot) {
-          // Update existing snapshot
           await storage.updateDailyMetricsSnapshot(existingSnapshot.id, {
             delivered: metrics.delivered,
             defaulted: metrics.defaulted,
             requirementCount: metrics.requirementCount,
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           });
         } else {
-          // Create new snapshot
           await storage.createDailyMetricsSnapshot({
             date: today,
-            scopeType: 'organization',
+            scopeType: "organization",
             scopeId: null,
-            scopeName: 'Organization',
+            scopeName: "Organization",
             delivered: metrics.delivered,
             defaulted: metrics.defaulted,
             requirementCount: metrics.requirementCount,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
           });
         }
       } catch (metricsError) {
-        // Log error but don't fail the requirement creation
-        console.error('Error updating daily metrics after requirement creation:', metricsError);
+        console.error(
+          "Error updating daily metrics after requirement creation:",
+          metricsError,
+        );
       }
 
-      res.status(201).json(requirement);
+      if (createdRequirements.length === 1) {
+        return res.status(201).json(createdRequirements[0]);
+      }
+
+      return res.status(201).json({
+        requirements: createdRequirements,
+        sharedRoleId,
+        count: createdRequirements.length,
+      });
     } catch (error) {
+      console.error("Create requirement error:", error);
       res.status(400).json({ message: "Invalid requirement data" });
     }
   });
@@ -8204,7 +8311,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/requirements/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = { ...req.body };
+      const { specialInstructions: specialInstructionsRaw, ...bodyRest } = req.body as Record<
+        string,
+        unknown
+      >;
+      const updates = { ...bodyRest } as Record<string, unknown>;
+
+      if (specialInstructionsRaw !== undefined) {
+        const requirement = (await storage.getRequirements()).find(
+          (reqItem: { id: string }) => reqItem.id === id,
+        );
+        const { mergeRequirementInstructionsInSourceDetails } = await import(
+          "@shared/requirement-jd-extras"
+        );
+        updates.sourceDetails = mergeRequirementInstructionsInSourceDetails(
+          (requirement?.sourceDetails as string | null) ?? null,
+          typeof specialInstructionsRaw === "string"
+            ? specialInstructionsRaw
+            : specialInstructionsRaw != null
+              ? String(specialInstructionsRaw)
+              : null,
+        );
+      }
 
       // If teamLead is being updated, handle reassignment tracking
       if (updates.teamLead) {
@@ -10771,147 +10899,202 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===================== PERFORMANCE PAGE API ENDPOINTS =====================
 
-  // Performance Graph Data - Returns resume delivery counts grouped by time period
+  // Performance Graph Data - resume deliveries & required targets grouped by time period
   app.get("/api/admin/performance-graph", requireAdminAuth, async (req, res) => {
     try {
-      const { teamId, dateFrom, dateTo, period = 'monthly' } = req.query;
-      const { employees, deliveries, requirements } = await import("@shared/schema");
+      const { teamId, dateFrom, dateTo, period = "monthly" } = req.query;
+      const { getResumeTarget } = await import("@shared/constants");
+      const { requirements, resumeSubmissions } = await import("@shared/schema");
 
-      // Get all deliveries
-      const allDeliveries = await db.select().from(deliveries);
+      const periodType = String(period);
+      const endDateStr =
+        (dateTo as string) || new Date().toISOString().split("T")[0];
+      const startDateStr = dateFrom as string | undefined;
 
-      // Get all requirements
-      const allRequirements = await db.select().from(requirements);
+      const allRequirements = await db
+        .select()
+        .from(requirements)
+        .where(eq(requirements.isArchived, false));
 
-      let filteredDeliveries = allDeliveries;
       let filteredRequirements = allRequirements;
+      const allSubmissions = await db.select().from(resumeSubmissions);
+      const allTagged = await storage.getTaggedJobApplicationsUpToDate(endDateStr);
+      let teamRecruiterIds: Set<string> | null = null;
 
-      if (dateFrom || dateTo) {
-        filteredDeliveries = allDeliveries.filter(delivery => {
-          const deliveryDate = new Date(delivery.deliveredAt);
-          if (dateFrom && new Date(dateFrom as string) > deliveryDate) return false;
-          if (dateTo && new Date(dateTo as string) < deliveryDate) return false;
-          return true;
-        });
-
-        filteredRequirements = allRequirements.filter(req => {
-          const reqDate = new Date(req.createdAt);
-          if (dateFrom && new Date(dateFrom as string) > reqDate) return false;
-          if (dateTo && new Date(dateTo as string) < reqDate) return false;
-          return true;
-        });
-      }
-
-      // Filter by team if provided
-      if (teamId && teamId !== 'all') {
+      if (teamId && teamId !== "all") {
         const allEmployees = await storage.getAllEmployees();
         const teamLeader = findTeamLeaderByFilter(allEmployees, String(teamId));
 
         if (teamLeader) {
           const teamRecruiters = getRecruitersForTeamLead(allEmployees, teamLeader);
+          teamRecruiterIds = new Set(teamRecruiters.map((r) => r.id));
           const teamNames = new Set([
             teamLeader.name.toLowerCase(),
             ...teamRecruiters.map((r) => r.name.toLowerCase()),
           ]);
-          filteredRequirements = filteredRequirements.filter((req: any) => {
+
+          filteredRequirements = allRequirements.filter((req: any) => {
             const teamLeadRaw = String(req.teamLead || "").toLowerCase();
             return (
               teamLeadRaw === teamLeader.name.toLowerCase() ||
               teamLeadRaw === teamLeader.id.toLowerCase() ||
               teamLeadRaw === teamLeader.employeeId.toLowerCase() ||
-              (req.talentAdvisorId &&
-                teamRecruiters.some((rec) => rec.id === req.talentAdvisorId)) ||
-              (req.talentAdvisor && teamNames.has(String(req.talentAdvisor).toLowerCase()))
+              (req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId)) ||
+              (req.talentAdvisor &&
+                teamNames.has(String(req.talentAdvisor).toLowerCase()))
             );
           });
-          const allowedRequirementIds = new Set(filteredRequirements.map((req: any) => req.id));
-          filteredDeliveries = filteredDeliveries.filter((delivery: any) => allowedRequirementIds.has(delivery.requirementId));
         } else {
           filteredRequirements = [];
-          filteredDeliveries = [];
         }
       }
 
-      // Group data by time period
-      const periodData: Record<string, { resumesA: number; resumesB: number }> = {};
+      const allowedRequirementIds = new Set(
+        filteredRequirements.map((req: any) => req.id),
+      );
 
-      // Helper function to get period key
-      const getPeriodKey = (date: Date, periodType: string): string => {
-        if (periodType === 'monthly') {
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const getPeriodKey = (date: Date, periodKind: string): string => {
+        const monthNames = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+        if (periodKind === "monthly") {
           return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
-        } else if (periodType === 'quarterly') {
+        }
+        if (periodKind === "quarterly") {
           const quarter = Math.floor(date.getMonth() / 3) + 1;
           return `Q${quarter} ${date.getFullYear()}`;
-        } else { // yearly
-          return date.getFullYear().toString();
         }
+        return date.getFullYear().toString();
       };
 
-      // Process deliveries (Delivered - resumesA)
-      filteredDeliveries.forEach(delivery => {
-        const deliveryDate = new Date(delivery.deliveredAt);
-        const periodKey = getPeriodKey(deliveryDate, period as string);
+      const isWithinRange = (dateStr: string | null | undefined): boolean => {
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (Number.isNaN(d.getTime())) return false;
+        if (startDateStr && d < new Date(startDateStr)) return false;
+        if (dateTo && d > new Date(dateTo as string)) return false;
+        return true;
+      };
+
+      const periodData: Record<string, { resumesA: number; resumesB: number }> = {};
+      const deliveryKeysByPeriod: Record<string, Set<string>> = {};
+
+      const addDelivery = (
+        periodKey: string,
+        requirementId: string,
+        candidateKey: string,
+        ownerEmployeeId?: string | null,
+      ) => {
+        const onAllowedRequirement = allowedRequirementIds.has(requirementId);
+        const ownedByTeamRecruiter =
+          teamRecruiterIds &&
+          ownerEmployeeId &&
+          teamRecruiterIds.has(ownerEmployeeId);
+
+        if (!onAllowedRequirement && !ownedByTeamRecruiter) return;
 
         if (!periodData[periodKey]) {
           periodData[periodKey] = { resumesA: 0, resumesB: 0 };
+          deliveryKeysByPeriod[periodKey] = new Set();
         }
+        const uniqueKey = `${requirementId}::${candidateKey}`;
+        if (deliveryKeysByPeriod[periodKey].has(uniqueKey)) return;
+        deliveryKeysByPeriod[periodKey].add(uniqueKey);
         periodData[periodKey].resumesA += 1;
-      });
+      };
 
-      // Process requirements (Required - resumesB)
-      filteredRequirements.forEach(req => {
+      for (const submission of allSubmissions) {
+        if (!isWithinRange(submission.submittedAt)) continue;
+        const submittedDate = new Date(submission.submittedAt);
+        const periodKey = getPeriodKey(submittedDate, periodType);
+        const candidateKey = (
+          submission.candidateEmail ||
+          submission.candidateName ||
+          submission.id ||
+          ""
+        )
+          .toString()
+          .trim()
+          .toLowerCase();
+        addDelivery(periodKey, submission.requirementId, candidateKey, submission.recruiterId);
+      }
+
+      for (const app of allTagged) {
+        if (!app.requirementId || !app.appliedDate) continue;
+        if (!isWithinRange(app.appliedDate)) continue;
+        const appliedDate = new Date(app.appliedDate as string);
+        const periodKey = getPeriodKey(appliedDate, periodType);
+        const candidateKey = (
+          app.candidateEmail ||
+          app.candidateName ||
+          app.id ||
+          ""
+        )
+          .toString()
+          .trim()
+          .toLowerCase();
+        addDelivery(periodKey, app.requirementId, candidateKey, app.ownerEmployeeId);
+      }
+
+      for (const req of filteredRequirements) {
+        if (!isWithinRange(req.createdAt)) continue;
         const reqDate = new Date(req.createdAt);
-        const periodKey = getPeriodKey(reqDate, period as string);
-
+        const periodKey = getPeriodKey(reqDate, periodType);
         if (!periodData[periodKey]) {
           periodData[periodKey] = { resumesA: 0, resumesB: 0 };
         }
+        periodData[periodKey].resumesB += getResumeTarget(
+          req.criticality,
+          req.toughness,
+        );
+      }
 
-        // Calculate expected resumes based on criticality
-        if (req.criticality === 'HIGH') periodData[periodKey].resumesB += 1;
-        else if (req.criticality === 'MEDIUM') periodData[periodKey].resumesB += 3;
-        else periodData[periodKey].resumesB += 5;
-      });
-
-      // Convert to array and sort by period
       const performanceData = Object.entries(periodData).map(([periodKey, data]) => ({
         period: periodKey,
         resumesA: data.resumesA,
-        resumesB: data.resumesB
+        resumesB: data.resumesB,
       }));
 
-      // Sort by period
       performanceData.sort((a, b) => {
-        if (period === 'monthly') {
-          // Parse "Jan 2024" format
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const [monthA, yearA] = a.period.split(' ');
-          const [monthB, yearB] = b.period.split(' ');
+        if (periodType === "monthly") {
+          const monthNames = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+          ];
+          const [monthA, yearA] = a.period.split(" ");
+          const [monthB, yearB] = b.period.split(" ");
           if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
           return monthNames.indexOf(monthA) - monthNames.indexOf(monthB);
-        } else if (period === 'quarterly') {
-          const [qA, yA] = a.period.split(' ');
-          const [qB, yB] = b.period.split(' ');
+        }
+        if (periodType === "quarterly") {
+          const [qA, yA] = a.period.split(" ");
+          const [qB, yB] = b.period.split(" ");
           if (yA !== yB) return parseInt(yA) - parseInt(yB);
           return parseInt(qA.substring(1)) - parseInt(qB.substring(1));
-        } else { // yearly
-          return parseInt(a.period) - parseInt(b.period);
         }
+        return parseInt(a.period) - parseInt(b.period);
       });
 
-      // Fill in missing periods to ensure complete display
       const now = new Date();
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+      ];
       const completeData: Array<{ period: string; resumesA: number; resumesB: number }> = [];
-      const periodMap = new Map(performanceData.map(item => [item.period, item]));
+      const periodMap = new Map(performanceData.map((item) => [item.period, item]));
 
-      if (period === 'monthly') {
-        // Show all 12 months of the current year (or year range if data spans multiple years)
-        const years = new Set(performanceData.map(item => item.period.split(' ')[1] || now.getFullYear().toString()));
-        const yearList = years.size > 0 ? Array.from(years).map(y => parseInt(y)).sort() : [now.getFullYear()];
+      if (periodType === "monthly") {
+        const years = new Set(
+          performanceData.map(
+            (item) => item.period.split(" ")[1] || now.getFullYear().toString(),
+          ),
+        );
+        const yearList =
+          years.size > 0
+            ? Array.from(years).map((y) => parseInt(y)).sort()
+            : [now.getFullYear()];
 
-        // If data spans multiple years, show all months for all years
         if (yearList.length > 1) {
           for (const year of yearList) {
             for (let month = 0; month < 12; month++) {
@@ -10920,12 +11103,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               completeData.push({
                 period: periodKey,
                 resumesA: existing?.resumesA ?? 0,
-                resumesB: existing?.resumesB ?? 0
+                resumesB: existing?.resumesB ?? 0,
               });
             }
           }
         } else {
-          // Single year - show last 12 months
           for (let i = 11; i >= 0; i--) {
             const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const periodKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
@@ -10933,17 +11115,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             completeData.push({
               period: periodKey,
               resumesA: existing?.resumesA ?? 0,
-              resumesB: existing?.resumesB ?? 0
+              resumesB: existing?.resumesB ?? 0,
             });
           }
         }
-      } else if (period === 'quarterly') {
-        // Show all 4 quarters for years that have data
-        const years = new Set(performanceData.map(item => {
-          const parts = item.period.split(' ');
-          return parts.length > 1 ? parts[1] : now.getFullYear().toString();
-        }));
-        const yearList = years.size > 0 ? Array.from(years).map(y => parseInt(y)).sort() : [now.getFullYear()];
+      } else if (periodType === "quarterly") {
+        const years = new Set(
+          performanceData.map((item) => {
+            const parts = item.period.split(" ");
+            return parts.length > 1 ? parts[1] : now.getFullYear().toString();
+          }),
+        );
+        const yearList =
+          years.size > 0
+            ? Array.from(years).map((y) => parseInt(y)).sort()
+            : [now.getFullYear()];
 
         for (const year of yearList) {
           for (let q = 1; q <= 4; q++) {
@@ -10952,12 +11138,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             completeData.push({
               period: periodKey,
               resumesA: existing?.resumesA ?? 0,
-              resumesB: existing?.resumesB ?? 0
+              resumesB: existing?.resumesB ?? 0,
             });
           }
         }
-      } else { // yearly
-        // Show all years that have data (no need to fill gaps)
+      } else {
         return res.json(performanceData);
       }
 
@@ -10973,71 +11158,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { memberId } = req.params;
       const { dateFrom, dateTo } = req.query;
-      const { employees, requirements } = await import("@shared/schema");
+      const { requirements, resumeSubmissions, requirementAssignments } = await import("@shared/schema");
+      const {
+        buildRecruiterRequirementIdSet,
+        countUniqueDeliveriesForRequirement,
+        getDefaultRateCriticalityKey,
+        isRequirementDeliveryComplete,
+        matchesEmployeeRef,
+      } = await import("./delivery-counting");
 
-      // Get the member (excluding last_login_at)
-      const employeesResult = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
-        FROM employees
-      `);
-      const allEmployees = employeesResult.rows as any[];
-      const member = allEmployees.find(emp => emp.id === memberId || emp.name === memberId);
+      const allEmployees = await storage.getAllEmployees();
+      const member = allEmployees.find(
+        (emp) =>
+          emp.id === memberId ||
+          emp.employeeId === memberId ||
+          (emp.name || "").toLowerCase() === String(memberId).toLowerCase(),
+      );
 
       if (!member) {
         return res.json({
           memberName: memberId,
-          stats: {}
+          stats: {},
         });
       }
 
-      // Get requirements assigned to this member
-      const allRequirements = await db.select().from(requirements);
-      let memberRequirements = allRequirements.filter(req =>
-        req.talentAdvisor?.toLowerCase() === member.name.toLowerCase() ||
-        req.talentAdvisorId === member.id
+      const activeAssignments = await db
+        .select()
+        .from(requirementAssignments)
+        .where(
+          and(
+            eq(requirementAssignments.recruiterId, member.id),
+            eq(requirementAssignments.status, "active"),
+          ),
+        );
+
+      const allRequirements = await db
+        .select()
+        .from(requirements)
+        .where(eq(requirements.isArchived, false));
+
+      const memberRequirementIds = buildRecruiterRequirementIdSet(
+        member,
+        allRequirements,
+        activeAssignments,
       );
 
-      // Filter by date if provided
+      let memberRequirements = allRequirements.filter((req) =>
+        memberRequirementIds.has(req.id),
+      );
+
       if (dateFrom || dateTo) {
-        memberRequirements = memberRequirements.filter(req => {
+        memberRequirements = memberRequirements.filter((req) => {
           const reqDate = new Date(req.createdAt);
-          if (dateFrom && new Date(dateFrom as string) > reqDate) return false;
-          if (dateTo && new Date(dateTo as string) < reqDate) return false;
+          if (Number.isNaN(reqDate.getTime())) return false;
+          if (dateFrom && reqDate < new Date(dateFrom as string)) return false;
+          if (dateTo && reqDate > new Date(dateTo as string)) return false;
           return true;
         });
       }
 
-      // Group by criticality and toughness combination
-      const criticalityMap: Record<string, { total: number, completed: number }> = {
-        'HT': { total: 0, completed: 0 }, // High criticality, Tough
-        'HM': { total: 0, completed: 0 }, // High criticality, Medium
-        'MM': { total: 0, completed: 0 }, // Medium criticality, Medium
-        'ME': { total: 0, completed: 0 }  // Medium/Low criticality, Easy
+      const allSubmissions = await db
+        .select()
+        .from(resumeSubmissions)
+        .where(eq(resumeSubmissions.recruiterId, member.id));
+
+      const endDate =
+        (dateTo as string) || new Date().toISOString().split("T")[0];
+      const allTagged = await storage.getTaggedJobApplicationsUpToDate(endDate);
+      const memberTagged = allTagged.filter(
+        (app) =>
+          (app.source || "").toLowerCase() === "recruiter_tagged" &&
+          (matchesEmployeeRef(member, app.ownerEmployeeId) ||
+            (!!app.requirementId && memberRequirementIds.has(app.requirementId))),
+      );
+
+      const criticalityMap: Record<string, { total: number; completed: number }> = {
+        HT: { total: 0, completed: 0 },
+        HM: { total: 0, completed: 0 },
+        MM: { total: 0, completed: 0 },
+        ME: { total: 0, completed: 0 },
       };
 
-      memberRequirements.forEach(req => {
-        let key = '';
-        if (req.criticality === 'HIGH' && req.toughness === 'Tough') key = 'HT';
-        else if (req.criticality === 'HIGH') key = 'HM';
-        else if (req.criticality === 'MEDIUM' && req.toughness !== 'Easy') key = 'MM';
-        else key = 'ME';
+      for (const req of memberRequirements) {
+        const key = getDefaultRateCriticalityKey(req.criticality, req.toughness);
+        if (!criticalityMap[key]) continue;
 
-        if (criticalityMap[key]) {
-          criticalityMap[key].total++;
-          if (req.status === 'completed') {
-            criticalityMap[key].completed++;
-          }
+        criticalityMap[key].total += 1;
+
+        const deliveryCount = countUniqueDeliveriesForRequirement(
+          req.id,
+          allSubmissions,
+          memberTagged,
+          member,
+          dateFrom as string | undefined,
+          dateTo as string | undefined,
+        );
+
+        if (isRequirementDeliveryComplete(req, deliveryCount)) {
+          criticalityMap[key].completed += 1;
         }
-      });
+      }
 
       res.json({
         memberName: member.name,
-        stats: criticalityMap
+        stats: criticalityMap,
       });
     } catch (error) {
       console.error("Default rate error:", error);
@@ -11410,100 +11634,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Revenue Analysis Data - Returns revenue by team member for chart
   app.get("/api/admin/revenue-analysis", requireAdminAuth, async (req, res) => {
     try {
-      const { teamId, dateFrom, dateTo, period = 'monthly' } = req.query;
-      const { employees, revenueMappings } = await import("@shared/schema");
+      const { teamId, dateFrom, dateTo, period = "monthly" } = req.query;
+      const { revenueMappings } = await import("@shared/schema");
 
-      // Get all active employees (excluding last_login_at)
-      const employeesResult = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
-        FROM employees
-      `);
-      const allEmployees = employeesResult.rows as any[];
-      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.is_active === true);
-      const recruiters = allEmployees.filter(emp =>
-        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
-      );
+      const allEmployees = await storage.getAllEmployees();
+      const recruiterRoles = new Set(["recruiter", "talent_advisor", "ta"]);
 
-      // Get all revenue mappings
       let allRevenueMappings = await db.select().from(revenueMappings);
 
-      // Filter by date range if provided
+      const getMappingDate = (rm: (typeof allRevenueMappings)[number]): Date | null => {
+        for (const value of [rm.closureDate, rm.offeredDate, rm.createdAt]) {
+          if (!value) continue;
+          const parsed = new Date(value);
+          if (!Number.isNaN(parsed.getTime())) return parsed;
+        }
+        return null;
+      };
+
+      const periodType = String(period || "monthly");
+      const now = new Date();
+
       if (dateFrom || dateTo) {
-        allRevenueMappings = allRevenueMappings.filter(rm => {
-          const rmDate = rm.closureDate ? new Date(rm.closureDate) : new Date(rm.createdAt);
-          if (dateFrom && new Date(dateFrom as string) > rmDate) return false;
-          if (dateTo && new Date(dateTo as string) < rmDate) return false;
+        const rangeStart = dateFrom ? new Date(dateFrom as string) : null;
+        if (rangeStart) rangeStart.setHours(0, 0, 0, 0);
+        const rangeEnd = dateTo ? new Date(dateTo as string) : null;
+        if (rangeEnd) rangeEnd.setHours(23, 59, 59, 999);
+
+        allRevenueMappings = allRevenueMappings.filter((rm) => {
+          const rmDate = getMappingDate(rm);
+          if (!rmDate) return false;
+          if (rangeStart && rmDate < rangeStart) return false;
+          if (rangeEnd && rmDate > rangeEnd) return false;
           return true;
+        });
+      } else if (periodType === "yearly") {
+        allRevenueMappings = allRevenueMappings.filter((rm) => {
+          const rmDate = getMappingDate(rm);
+          return rmDate ? rmDate.getFullYear() === now.getFullYear() : false;
+        });
+      } else if (periodType === "quarterly") {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        allRevenueMappings = allRevenueMappings.filter((rm) => {
+          const rmDate = getMappingDate(rm);
+          if (!rmDate) return false;
+          return (
+            rmDate.getFullYear() === now.getFullYear() &&
+            Math.floor(rmDate.getMonth() / 3) === currentQuarter
+          );
+        });
+      } else {
+        const rangeStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        allRevenueMappings = allRevenueMappings.filter((rm) => {
+          const rmDate = getMappingDate(rm);
+          return rmDate ? rmDate >= rangeStart : false;
         });
       }
 
-      let targetMembers: typeof recruiters = [];
+      let targetMembers = allEmployees.filter(
+        (emp) => recruiterRoles.has((emp.role || "").toLowerCase()) && emp.isActive !== false,
+      );
 
-      // Filter by team if specified
-      if (teamId && teamId !== 'all') {
-        // Find the team leader - try matching by id, name, or employeeId (case-insensitive)
-        const teamIdLower = (teamId as string).toLowerCase();
-        const teamLeader = teamLeaders.find(tl =>
-          tl.id.toLowerCase() === teamIdLower ||
-          tl.name.toLowerCase() === teamIdLower ||
-          (tl.employeeId && tl.employeeId.toLowerCase() === teamIdLower)
-        );
-
+      if (teamId && teamId !== "all") {
+        const teamLeader = findTeamLeaderByFilter(allEmployees, String(teamId));
         if (teamLeader) {
-          // Get only recruiters (TAs) reporting to this team leader (exclude TL)
-          targetMembers = allEmployees.filter(rec => {
-            const reportingTo = rec.reporting_to || rec.reportingTo;
-            const isActive = rec.is_active !== undefined ? rec.is_active : rec.isActive;
-            return rec.role === 'recruiter' &&
-              isActive === true &&
-              (reportingTo === teamLeader.employeeId ||
-                reportingTo === teamLeader.name ||
-                reportingTo === teamLeader.id ||
-                (teamLeader.employeeId && reportingTo?.toLowerCase() === teamLeader.employeeId.toLowerCase()) ||
-                (teamLeader.name && reportingTo?.toLowerCase() === teamLeader.name.toLowerCase()));
-          });
+          targetMembers = getRecruitersForTeamLead(allEmployees, teamLeader);
+          const memberIds = new Set(targetMembers.map((m) => m.id));
+          const memberNames = new Set(
+            targetMembers.map((m) => m.name.toLowerCase()),
+          );
+          allRevenueMappings = allRevenueMappings.filter(
+            (rm) =>
+              rm.teamLeadId === teamLeader.id ||
+              rm.teamLeadName?.toLowerCase() === teamLeader.name.toLowerCase() ||
+              memberIds.has(rm.talentAdvisorId) ||
+              memberNames.has((rm.talentAdvisorName || "").toLowerCase()),
+          );
         } else {
-          // If team leader not found, return empty data
-          return res.json({
-            data: [],
-            benchmark: 0
-          });
+          return res.json({ data: [], benchmark: 0 });
         }
-      } else {
-        // All teams - show active recruiters so the chart is representative.
-        targetMembers = allEmployees.filter((emp: any) =>
-          emp.role === 'recruiter' && emp.is_active === true
-        );
       }
 
-      // Calculate total revenue per member
-      const revenueData = targetMembers.map(member => {
+      const formatShortName = (fullName: string): string => {
+        const parts = fullName.trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return "Unknown";
+        if (parts.length === 1) return parts[0];
+        return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+      };
+
+      const revenueData = targetMembers.map((member) => {
         const memberRevenue = allRevenueMappings
-          .filter(rm =>
-            (rm.status === 'closed' || rm.status === 'Closed') &&
-            (rm.talentAdvisorId === member.id ||
-              rm.talentAdvisorName?.toLowerCase() === member.name.toLowerCase())
+          .filter(
+            (rm) =>
+              rm.talentAdvisorId === member.id ||
+              rm.talentAdvisorName?.toLowerCase() === member.name.toLowerCase(),
           )
-          .reduce((sum, rm) => sum + (parseFloat(rm.revenue?.toString() || '0') || 0), 0);
+          .reduce(
+            (sum, rm) => sum + (Number(rm.revenue) || 0),
+            0,
+          );
 
         return {
-          member: member.name,
-          revenue: memberRevenue
+          member: formatShortName(member.name),
+          fullName: member.name,
+          revenue: memberRevenue,
         };
-      }); // Keep all members, including zero values, to show graph structure
+      });
 
-      // Calculate average for benchmark
+      revenueData.sort((a, b) => b.revenue - a.revenue);
+
       const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);
-      const avgRevenue = revenueData.length > 0 ? totalRevenue / revenueData.length : 0;
+      const membersWithRevenue = revenueData.filter((d) => d.revenue > 0);
+      const avgRevenue =
+        membersWithRevenue.length > 0
+          ? totalRevenue / membersWithRevenue.length
+          : revenueData.length > 0
+            ? totalRevenue / revenueData.length
+            : 0;
 
       res.json({
         data: revenueData,
-        benchmark: avgRevenue
+        benchmark: avgRevenue,
+        totalRevenue,
       });
     } catch (error) {
       console.error("Revenue analysis error:", error);
@@ -13261,6 +13512,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...revenueMappingData,
         createdAt: new Date().toISOString()
       } as InsertRevenueMapping & { createdAt: string });
+
+      await syncAllTargetMappingsFromRevenue(storage);
 
       // Update application status to 'Closure'
       await storage.updateJobApplicationStatus(applicationId, 'Closure');

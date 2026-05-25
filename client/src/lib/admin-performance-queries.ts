@@ -30,6 +30,8 @@ export function invalidateRevenueMappingQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["/api/recruiter/closure-reports"] });
   queryClient.invalidateQueries({ queryKey: ["/api/recruiter/quarterly-performance"] });
   queryClient.invalidateQueries({ queryKey: ["/api/recruiter/performance-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/recruiter/aggregated-targets"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/recruiter/target-metrics"] });
   queryClient.invalidateQueries({ queryKey: ["/api/recruiter/profile"] });
 
   queryClient.invalidateQueries({ queryKey: ["/api/client/closures"] });

@@ -97,6 +97,13 @@ import { db } from "./db";
 import { eq, and, desc, sql, count, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
+import {
+  enrichTargetMappingWithRevenue,
+  formatRelativeClosureTime,
+  getCalendarTargetQuarterLabel,
+  getRevenueMappingBestDate,
+  getRevenueMappingRecencyTs,
+} from "./target-revenue-sync";
 
 // Helper function to convert snake_case employee object to camelCase
 function normalizeEmployee(emp: any): Employee {
@@ -1308,21 +1315,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(targetMappings.teamLeadId, teamLeadId))
       .orderBy(desc(targetMappings.year), desc(targetMappings.quarter));
 
+    const allRevenue = await db.select().from(revenueMappings);
     const now = new Date();
-    const month = now.getMonth();
     const year = now.getFullYear();
-    let currentQuarterLabel = "";
-
-    if (month >= 0 && month <= 2) {
-      currentQuarterLabel = "Q1";
-    } else if (month >= 3 && month <= 5) {
-      currentQuarterLabel = "Q2";
-    } else if (month >= 6 && month <= 8) {
-      currentQuarterLabel = "Q3";
-    } else {
-      currentQuarterLabel = "Q4";
-    }
-
+    const currentQuarterLabel = getCalendarTargetQuarterLabel(now);
     const currentKey = `${currentQuarterLabel}-${year}`;
     const quarterOrder: Record<string, number> = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 };
     const getTargetStatus = (
@@ -1389,13 +1385,14 @@ export class DatabaseStorage implements IStorage {
 
       const entry = quarterMap.get(key)!;
       const member = teamMemberMap.get(mapping.teamMemberId);
-      const memberTargetAchieved = mapping.targetAchieved || 0;
+      const enriched = enrichTargetMappingWithRevenue(mapping, allRevenue);
+      const memberTargetAchieved = enriched.targetAchieved || 0;
       const memberDefaultAmount = Math.max(mapping.minimumTarget - memberTargetAchieved, 0);
 
       entry.minimumTarget += mapping.minimumTarget;
       entry.targetAchieved += memberTargetAchieved;
-      entry.incentiveEarned += mapping.incentives || 0;
-      entry.closures += mapping.closures || 0;
+      entry.incentiveEarned += enriched.incentives || 0;
+      entry.closures += enriched.closures || 0;
       entry.members.push({
         teamMemberId: mapping.teamMemberId,
         teamMemberName: member?.name || "Unknown Member",
@@ -1403,8 +1400,8 @@ export class DatabaseStorage implements IStorage {
         minimumTarget: mapping.minimumTarget,
         targetAchieved: memberTargetAchieved,
         defaultAmount: memberDefaultAmount,
-        incentiveEarned: mapping.incentives || 0,
-        closures: mapping.closures || 0,
+        incentiveEarned: enriched.incentives || 0,
+        closures: enriched.closures || 0,
         status: getTargetStatus(
           mapping.minimumTarget,
           memberTargetAchieved,
@@ -1486,21 +1483,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(targetMappings.teamMemberId, recruiterId))
       .orderBy(desc(targetMappings.year), desc(targetMappings.quarter));
 
+    const allRevenue = await db.select().from(revenueMappings);
     const now = new Date();
-    const month = now.getMonth();
     const year = now.getFullYear();
-    let currentQuarterLabel = "";
-    
-    // Quarter labels match the Admin Target Mapping UI: Q1, Q2, Q3, Q4
-    if (month >= 0 && month <= 2) {
-      currentQuarterLabel = "Q1"; // January-February-March
-    } else if (month >= 3 && month <= 5) {
-      currentQuarterLabel = "Q2"; // April-May-June
-    } else if (month >= 6 && month <= 8) {
-      currentQuarterLabel = "Q3"; // July-August-September
-    } else {
-      currentQuarterLabel = "Q4"; // October-November-December
-    }
+    const currentQuarterLabel = getCalendarTargetQuarterLabel(now);
 
     const quarterMap = new Map<string, {
       quarter: string;
@@ -1524,10 +1510,11 @@ export class DatabaseStorage implements IStorage {
         });
       }
       const entry = quarterMap.get(key)!;
+      const enriched = enrichTargetMappingWithRevenue(mapping, allRevenue);
       entry.minimumTarget += mapping.minimumTarget;
-      entry.targetAchieved += mapping.targetAchieved || 0;
-      entry.incentiveEarned += mapping.incentives || 0;
-      entry.closures += mapping.closures || 0;
+      entry.targetAchieved += enriched.targetAchieved || 0;
+      entry.incentiveEarned += enriched.incentives || 0;
+      entry.closures += enriched.closures || 0;
     }
 
     const currentKey = `${currentQuarterLabel}-${year}`;
@@ -1891,24 +1878,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRequirementsByTalentAdvisorId(talentAdvisorId: string): Promise<Requirement[]> {
+    const employee = await this.getEmployeeById(talentAdvisorId);
+    const advisorName = (employee?.name || "").trim().toLowerCase();
+
     try {
-      return await db.select().from(requirements)
-        .where(and(
-          eq(requirements.talentAdvisorId, talentAdvisorId),
-          eq(requirements.isArchived, false)
-        ))
+      const rows = await db
+        .select()
+        .from(requirements)
+        .where(eq(requirements.isArchived, false))
         .orderBy(desc(requirements.createdAt));
+
+      return rows.filter(
+        (req) =>
+          req.talentAdvisorId === talentAdvisorId ||
+          (!!advisorName &&
+            (req.talentAdvisor || "").trim().toLowerCase() === advisorName),
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error || "");
-      if (!message.includes("talent_advisor_id") && !message.includes("is_archived")) throw error;
-
-      try {
-        return await db.select().from(requirements)
-          .where(eq(requirements.talentAdvisorId, talentAdvisorId))
-          .orderBy(desc(requirements.createdAt));
-      } catch {
-        return [];
+      if (!message.includes("talent_advisor_id") && !message.includes("is_archived")) {
+        throw error;
       }
+
+      const rows = await db.select().from(requirements).orderBy(desc(requirements.createdAt));
+      return rows.filter(
+        (req) =>
+          !req.isArchived &&
+          (req.talentAdvisorId === talentAdvisorId ||
+            (!!advisorName &&
+              (req.talentAdvisor || "").trim().toLowerCase() === advisorName)),
+      );
     }
   }
 
@@ -2086,6 +2085,8 @@ export class DatabaseStorage implements IStorage {
     recentClosure: string | null;
     lastClosureMonths: number;
     lastClosureDays: number;
+    lastClosureRelative: string;
+    lastClosureDate: string | null;
     totalRevenue: number;
     totalIncentives: number;
   }> {
@@ -2111,11 +2112,16 @@ export class DatabaseStorage implements IStorage {
       tenure = Math.floor(monthsDiff / 3);
     }
     
-    // Get all revenue mappings for this recruiter
-    const mappings = await db.select().from(revenueMappings)
-      .where(eq(revenueMappings.talentAdvisorId, recruiterId))
-      .orderBy(desc(revenueMappings.closureDate));
-    
+    const allRevenueMappings = await db.select().from(revenueMappings);
+    const mappings = allRevenueMappings
+      .filter(
+        (rm) =>
+          rm.talentAdvisorId === recruiterId ||
+          (employee?.name &&
+            (rm.talentAdvisorName || "").toLowerCase() === employee.name.toLowerCase()),
+      )
+      .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a));
+
     const totalClosures = mappings.length;
     
     // Get total resumes delivered (same logic as quarterly performance)
@@ -2137,16 +2143,22 @@ export class DatabaseStorage implements IStorage {
     
     totalResumesDelivered = deliveries.length;
     
-    // Get most recent closure candidate name
     const recentClosure = mappings.length > 0 ? (mappings[0].candidateName || null) : null;
-    
-    // Calculate time since last closure
+
+    const lastClosureBestDate =
+      mappings.length > 0 ? getRevenueMappingBestDate(mappings[0]) : null;
+    const { relative: lastClosureRelative, dateLabel: lastClosureDate } =
+      formatRelativeClosureTime(lastClosureBestDate);
+
     let lastClosureMonths = 0;
     let lastClosureDays = 0;
-    if (mappings.length > 0 && mappings[0].closureDate) {
-      const lastClosureDate = new Date(mappings[0].closureDate);
-      const now = new Date();
-      const totalDays = Math.floor((now.getTime() - lastClosureDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (lastClosureBestDate) {
+      const totalDays = Math.max(
+        0,
+        Math.floor(
+          (Date.now() - lastClosureBestDate.getTime()) / (1000 * 60 * 60 * 24),
+        ),
+      );
       lastClosureMonths = Math.floor(totalDays / 30);
       lastClosureDays = totalDays % 30;
     }
@@ -2162,6 +2174,8 @@ export class DatabaseStorage implements IStorage {
       recentClosure,
       lastClosureMonths,
       lastClosureDays,
+      lastClosureRelative,
+      lastClosureDate,
       totalRevenue,
       totalIncentives
     };
@@ -2292,6 +2306,9 @@ export class DatabaseStorage implements IStorage {
     date: string,
     taggedOnDate?: JobApplication[],
   ): Promise<number> {
+    const employee = await this.getEmployeeById(recruiterId);
+    if (!employee) return 0;
+
     const activeAssignments = await db
       .select()
       .from(requirementAssignments)
@@ -2302,48 +2319,37 @@ export class DatabaseStorage implements IStorage {
         ),
       );
 
-    const requirementIds = new Set(
-      activeAssignments.map((assignment) => assignment.requirementId),
+    const allRequirements = await db
+      .select()
+      .from(requirements)
+      .where(eq(requirements.isArchived, false));
+
+    const {
+      buildRecruiterRequirementIdSet,
+      countUniqueDeliveries,
+    } = await import("./delivery-counting");
+
+    const requirementIds = buildRecruiterRequirementIdSet(
+      employee,
+      allRequirements,
+      activeAssignments,
     );
-
-    const advisorRequirements = await this.getRequirementsByTalentAdvisorId(recruiterId);
-    for (const req of advisorRequirements) {
-      if (!req.isArchived) {
-        requirementIds.add(req.id);
-      }
-    }
-
-    if (requirementIds.size === 0) {
-      return 0;
-    }
-
-    const unique = new Set<string>();
 
     const submissions = await db
       .select()
       .from(resumeSubmissions)
-      .where(
-        and(
-          eq(resumeSubmissions.recruiterId, recruiterId),
-          sql`${resumeSubmissions.submittedAt}::date = ${date}::date`,
-        ),
-      );
-
-    for (const submission of submissions) {
-      if (!requirementIds.has(submission.requirementId)) continue;
-      const key = `${submission.requirementId}::${(submission.candidateEmail || submission.candidateName || submission.id || "").toString().trim().toLowerCase()}`;
-      unique.add(key);
-    }
+      .where(eq(resumeSubmissions.recruiterId, recruiterId));
 
     const taggedApplications =
       taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
-    for (const app of taggedApplications) {
-      if (!app.requirementId || !requirementIds.has(app.requirementId)) continue;
-      const key = `${app.requirementId}::${(app.candidateEmail || app.candidateName || app.id || "").toString().trim().toLowerCase()}`;
-      unique.add(key);
-    }
 
-    return unique.size;
+    return countUniqueDeliveries({
+      requirementIds,
+      submissions,
+      taggedApplications,
+      recruiter: employee,
+      exactDate: date,
+    });
   }
 
   async calculateRecruiterDailyMetrics(

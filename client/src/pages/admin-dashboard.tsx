@@ -506,6 +506,114 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
   );
 }
 
+// Performance trend chart (time-series) — matches Daily Metrics colors
+interface PerformanceTrendChartProps {
+  data: Array<{ period: string; delivered: number; required: number }>;
+  height?: string;
+  chartId?: string;
+}
+
+function PerformanceTrendChart({
+  data,
+  height = "100%",
+  chartId = "main",
+}: PerformanceTrendChartProps) {
+  const chartData = data || [];
+  const hasValues = chartData.some(
+    (point) => point.delivered > 0 || point.required > 0,
+  );
+
+  if (!chartData.length || !hasValues) {
+    return (
+      <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
+          <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+            Delivered and required totals will appear once resume activity is recorded
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const maxVal = Math.max(
+    ...chartData.map((d) => Math.max(d.delivered, d.required)),
+    4,
+  );
+  const roundedMax = Math.max(6, Math.ceil(maxVal / 3) * 3);
+  const tickStep = roundedMax <= 12 ? 3 : Math.ceil(roundedMax / 5);
+  const ticks = Array.from(
+    { length: Math.floor(roundedMax / tickStep) + 1 },
+    (_, i) => i * tickStep,
+  );
+
+  const deliveredGradientId = `colorDeliveredTrend-${chartId}`;
+  const requiredGradientId = `colorRequiredTrend-${chartId}`;
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={chartData}>
+        <defs>
+          <linearGradient id={deliveredGradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
+          </linearGradient>
+          <linearGradient id={requiredGradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
+        <XAxis
+          dataKey="period"
+          stroke="#6b7280"
+          interval={0}
+          angle={-35}
+          textAnchor="end"
+          height={56}
+          tick={{ fill: "#6b7280", fontSize: 10 }}
+        />
+        <YAxis
+          stroke="#6b7280"
+          style={{ fontSize: "12px" }}
+          tick={{ fill: "#6b7280" }}
+          ticks={ticks}
+          domain={[0, roundedMax]}
+        />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+          }}
+        />
+        <Legend />
+        <Area
+          type="monotone"
+          dataKey="delivered"
+          stroke="#22c55e"
+          strokeWidth={2}
+          fill={`url(#${deliveredGradientId})`}
+          dot={{ fill: "#22c55e", r: 4 }}
+          activeDot={{ r: 6 }}
+          name="Delivered"
+        />
+        <Area
+          type="monotone"
+          dataKey="required"
+          stroke="#ef4444"
+          strokeWidth={2}
+          fill={`url(#${requiredGradientId})`}
+          fillOpacity={0.6}
+          dot={{ fill: "#ef4444", r: 4 }}
+          activeDot={{ r: 6 }}
+          name="Required"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
 // Revenue Chart Component
 interface RevenueChartProps {
   data: Array<{ member: string; revenue: number }>;
@@ -545,8 +653,13 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
   const benchmark = benchmarkValue || 0;
 
   // Set Y-axis domain to start from zero or minimum value with some padding
-  const yAxisMin = 0; // Always start from zero for better visibility
-  const yAxisMax = Math.max(maxRevenue, benchmark, 1000) * 1.1; // Go slightly above maximum or benchmark, minimum 1000
+  const yAxisMin = 0;
+  const yAxisMax =
+    maxRevenue > 0
+      ? Math.max(maxRevenue, benchmark) * 1.15
+      : benchmark > 0
+        ? benchmark * 1.15
+        : 1000;
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -1322,6 +1435,19 @@ export default function AdminDashboard() {
   const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
   const [selectedPerformancePeriod, setSelectedPerformancePeriod] = useState<string>(() => getStoredAdminSetting('adminDefaultPerformancePeriod', 'monthly'));
+
+  useEffect(() => {
+    if (isRevenueGraphModalOpen && sidebarTab === "performance") {
+      setRevenueTeam(selectedPerformanceTeam);
+      setRevenuePeriod(selectedPerformancePeriod);
+    }
+  }, [
+    isRevenueGraphModalOpen,
+    sidebarTab,
+    selectedPerformanceTeam,
+    selectedPerformancePeriod,
+  ]);
+
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
   const [isEditingFeedbackModal, setIsEditingFeedbackModal] = useState(false);
@@ -2230,28 +2356,58 @@ export default function AdminDashboard() {
     return 'Early Exit';
   };
 
-  // Fetch revenue analysis data from API (with team filter)
+  // Revenue analysis — detailed modal uses its own filters; Performance tab chart follows performance filters
+  const useRevenueModalFilters = isRevenueGraphModalOpen;
+  const revenueAnalysisTeam = useRevenueModalFilters
+    ? revenueTeam
+    : sidebarTab === "performance"
+      ? selectedPerformanceTeam
+      : revenueTeam;
+  const revenueAnalysisPeriod = useRevenueModalFilters
+    ? revenuePeriod
+    : sidebarTab === "performance"
+      ? selectedPerformancePeriod
+      : revenuePeriod;
+  const revenueAnalysisDateFrom = useRevenueModalFilters
+    ? revenueDateFrom
+    : sidebarTab === "performance"
+      ? undefined
+      : revenueDateFrom;
+  const revenueAnalysisDateTo = useRevenueModalFilters
+    ? revenueDateTo
+    : sidebarTab === "performance"
+      ? undefined
+      : revenueDateTo;
+
   const { data: revenueAnalysis } = useQuery<{
-    data: Array<{ member: string; revenue: number }>;
+    data: Array<{ member: string; revenue: number; fullName?: string }>;
     benchmark: number;
+    totalRevenue?: number;
   }>({
-    queryKey: ['/api/admin/revenue-analysis', revenueTeam, revenueDateFrom?.toISOString(), revenueDateTo?.toISOString(), revenuePeriod],
+    queryKey: [
+      "/api/admin/revenue-analysis",
+      revenueAnalysisTeam,
+      revenueAnalysisDateFrom?.toISOString(),
+      revenueAnalysisDateTo?.toISOString(),
+      revenueAnalysisPeriod,
+      useRevenueModalFilters,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (revenueTeam && revenueTeam !== 'all') {
-        params.append('teamId', revenueTeam);
+      if (revenueAnalysisTeam && revenueAnalysisTeam !== "all") {
+        params.append("teamId", revenueAnalysisTeam);
       }
-      if (revenueDateFrom) {
-        params.append('dateFrom', revenueDateFrom.toISOString());
+      if (revenueAnalysisDateFrom) {
+        params.append("dateFrom", revenueAnalysisDateFrom.toISOString());
       }
-      if (revenueDateTo) {
-        params.append('dateTo', revenueDateTo.toISOString());
+      if (revenueAnalysisDateTo) {
+        params.append("dateTo", revenueAnalysisDateTo.toISOString());
       }
-      if (revenuePeriod) {
-        params.append('period', revenuePeriod);
+      if (revenueAnalysisPeriod) {
+        params.append("period", revenueAnalysisPeriod);
       }
-      const url = `/api/admin/revenue-analysis${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await apiRequest('GET', url);
+      const url = `/api/admin/revenue-analysis${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await apiRequest("GET", url);
       return await response.json();
     },
   });
@@ -3324,6 +3480,22 @@ export default function AdminDashboard() {
     }
 
     return null;
+  };
+
+  const getRequirementSplitMeta = (requirement: Requirement) => {
+    if (!requirement.sourceDetails) return null;
+    try {
+      const parsed = JSON.parse(requirement.sourceDetails) as {
+        splitRequirementGroup?: {
+          roleId?: string;
+          splitIndex?: number;
+          totalSplits?: number;
+        };
+      };
+      return parsed.splitRequirementGroup ?? null;
+    } catch {
+      return null;
+    }
   };
 
   const getManageActionLabels = () => {
@@ -6401,54 +6573,22 @@ export default function AdminDashboard() {
                       <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Button>
                   </div>
+                  <div className="flex flex-wrap justify-start gap-x-3 gap-y-1 mb-2">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <span className="text-xs text-gray-600 dark:text-gray-400">Delivered</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full" />
+                      <span className="text-xs text-gray-600 dark:text-gray-400">Required</span>
+                    </div>
+                  </div>
                   <div className="h-[260px]">
-                    {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
-                      <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
-                        <div className="text-center">
-                          <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
-                          <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={outerPerformanceChartData}>
-                          <defs>
-                            <linearGradient id="colorDeliveredOuter" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
-                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
-                            </linearGradient>
-                            <linearGradient id="colorRequiredOuter" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
-                              <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="period" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Area
-                            type="monotone"
-                            dataKey="delivered"
-                            stroke="#ef4444"
-                            strokeWidth={2}
-                            fill="url(#colorDeliveredOuter)"
-                            dot={{ fill: '#ef4444', r: 4 }}
-                            name="Delivered"
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="required"
-                            stroke="#22c55e"
-                            strokeWidth={2}
-                            fill="url(#colorRequiredOuter)"
-                            fillOpacity={0.6}
-                            dot={{ fill: '#22c55e', r: 4 }}
-                            name="Required"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    )}
+                    <PerformanceTrendChart
+                      data={outerPerformanceChartData}
+                      height="100%"
+                      chartId="performance-tab"
+                    />
                   </div>
                 </div>
 
@@ -7197,8 +7337,22 @@ export default function AdminDashboard() {
                                   {getRequirementStateBadge(requirement)}
                                 </div>
                                 <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
-                                  {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
-                                  {requirement.splitRequirement ? ' • Split' : ''}
+                                  {(() => {
+                                    const splitMeta = getRequirementSplitMeta(requirement);
+                                    return (
+                                      <>
+                                        {splitMeta?.roleId ? (
+                                          <span>Role ID {splitMeta.roleId} • </span>
+                                        ) : null}
+                                        {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
+                                        {requirement.splitRequirement
+                                          ? splitMeta?.totalSplits
+                                            ? ` • Split ${splitMeta.splitIndex}/${splitMeta.totalSplits}`
+                                            : ' • Split'
+                                          : ''}
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                               </td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
@@ -8125,54 +8279,22 @@ export default function AdminDashboard() {
                           <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                         </Button>
                       </div>
+                      <div className="flex flex-wrap justify-start gap-x-3 gap-y-1 mb-2">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full" />
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Delivered</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-red-500 rounded-full" />
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Required</span>
+                        </div>
+                      </div>
                       <div className="h-[260px]">
-                        {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
-                          <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
-                            <div className="text-center">
-                              <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
-                              <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={outerPerformanceChartData}>
-                              <defs>
-                                <linearGradient id="colorDeliveredOuterAlt" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
-                                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
-                                </linearGradient>
-                                <linearGradient id="colorRequiredOuterAlt" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
-                                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="period" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
-                              <Area
-                                type="monotone"
-                                dataKey="delivered"
-                                stroke="#ef4444"
-                                strokeWidth={2}
-                                fill="url(#colorDeliveredOuterAlt)"
-                                dot={{ fill: '#ef4444', r: 4 }}
-                                name="Delivered"
-                              />
-                              <Area
-                                type="monotone"
-                                dataKey="required"
-                                stroke="#22c55e"
-                                strokeWidth={2}
-                                fill="url(#colorRequiredOuterAlt)"
-                                fillOpacity={0.6}
-                                dot={{ fill: '#22c55e', r: 4 }}
-                                name="Required"
-                              />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        )}
+                        <PerformanceTrendChart
+                          data={outerPerformanceChartData}
+                          height="100%"
+                          chartId="performance-tab-alt"
+                        />
                       </div>
                     </div>
 
@@ -10844,6 +10966,7 @@ export default function AdminDashboard() {
                     noOfPositions: req.noOfPositions || 1,
                     jdFile: req.jdFile || null,
                     jdText: req.jdText || null,
+                    sourceDetails: req.sourceDetails || null,
                   });
                   setEditingRequirement(null);
                   setIsAddToRequirementAlertOpen(false);
@@ -11472,8 +11595,22 @@ export default function AdminDashboard() {
                               {getRequirementStateBadge(requirement)}
                             </div>
                             <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
-                              {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
-                              {requirement.splitRequirement ? ' • Split' : ''}
+                              {(() => {
+                                const splitMeta = getRequirementSplitMeta(requirement);
+                                return (
+                                  <>
+                                    {splitMeta?.roleId ? (
+                                      <span>Role ID {splitMeta.roleId} • </span>
+                                    ) : null}
+                                    {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
+                                    {requirement.splitRequirement
+                                      ? splitMeta?.totalSplits
+                                        ? ` • Split ${splitMeta.splitIndex}/${splitMeta.totalSplits}`
+                                        : ' • Split'
+                                      : ''}
+                                  </>
+                                );
+                              })()}
                             </div>
                           </td>
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>

@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Check, FileText, Upload, X } from "lucide-react";
+import { parseRequirementJdExtras } from "@shared/requirement-jd-extras";
+import { Check, FileText, Upload, X, Plus, Trash2 } from "lucide-react";
 
 interface AddRequirementModalProps {
   isOpen: boolean;
@@ -71,6 +72,9 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   const [isUploadingJd, setIsUploadingJd] = useState(false);
   const [jdText, setJdText] = useState<string>('');
   const [positionsInput, setPositionsInput] = useState<string>(String(initialData?.noOfPositions ?? 1));
+  const [instructions, setInstructions] = useState('');
+  /** Additional TL names when split requirement is enabled (Team Leader 2, 3, …). */
+  const [additionalTeamLeads, setAdditionalTeamLeads] = useState<string[]>([]);
 
   // Update form data when initialData changes
   useEffect(() => {
@@ -96,6 +100,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       if (initialData.jdText) {
         setJdText(initialData.jdText);
       }
+      const extras = parseRequirementJdExtras(initialData);
+      setInstructions(extras.specialInstructions || '');
     } else if (isOpen) {
       setFormData({
         position: '',
@@ -112,6 +118,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       setJdText('');
       setJdFile(null);
       setJdFilePreviewUrl(null);
+      setAdditionalTeamLeads([]);
+      setInstructions('');
     }
   }, [initialData, isOpen]);
 
@@ -125,44 +133,60 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   const teamLeads = employees.filter(emp => emp.role === 'team_leader');
 
   const createRequirementMutation = useMutation({
-    mutationFn: async (data: typeof formData & { jdFile?: string | null; jdText?: string | null; sourceType?: string | null; sourceDetails?: string | null }) => {
-      const response = await apiRequest('POST', '/api/admin/requirements', {
+    mutationFn: async (
+      data: typeof formData & {
+        jdFile?: string | null;
+        jdText?: string | null;
+        sourceType?: string | null;
+        sourceDetails?: string | null;
+        additionalTeamLeads?: string[];
+        specialInstructions?: string | null;
+      },
+    ) => {
+      const response = await apiRequest("POST", "/api/admin/requirements", {
         ...data,
-        // Admin doesn't assign TA - TL will assign later
         talentAdvisor: null,
-        teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
+        teamLead: data.teamLead === "Unassigned" ? null : data.teamLead,
         jdFile: data.jdFile || null,
         jdText: data.jdText || null,
         sourceType: data.sourceType || null,
         sourceDetails: data.sourceDetails || null,
-        createdAt: new Date().toISOString()
+        specialInstructions: data.specialInstructions?.trim() || null,
+        additionalTeamLeads: data.additionalTeamLeads || [],
+        createdAt: new Date().toISOString(),
       });
       return response.json();
     },
-    onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
-      
-      // Delete the JD requirement if it was converted from a client JD
+    onSuccess: async (result: { requirements?: unknown[]; count?: number; sharedRoleId?: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/requirements"] });
+
       if (jdIdToDelete) {
         try {
-          await apiRequest('DELETE', `/api/admin/requirements/${jdIdToDelete}`);
-          queryClient.invalidateQueries({ queryKey: ['/api/admin/client-jds'] });
+          await apiRequest("DELETE", `/api/admin/requirements/${jdIdToDelete}`);
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/client-jds"] });
         } catch (error) {
-          console.error('Failed to delete JD requirement:', error);
-          // Don't show error to user, just log it
+          console.error("Failed to delete JD requirement:", error);
         }
       }
-      
+
+      const createdCount = Array.isArray(result?.requirements)
+        ? result.requirements.length
+        : 1;
+      const sharedRoleId = result?.sharedRoleId;
+
       toast({
         title: "Success",
-        description: "Requirement added successfully!",
+        description:
+          createdCount > 1
+            ? `${createdCount} requirements created for selected teams${sharedRoleId ? ` (Role ID ${sharedRoleId})` : ""}.`
+            : "Requirement added successfully!",
         className: "bg-green-50 border-green-200 text-green-800",
       });
-      
+
       if (onSuccess) {
         onSuccess();
       }
-      
+
       handleClose();
     },
     onError: () => {
@@ -175,12 +199,13 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   });
 
   const updateRequirementMutation = useMutation({
-    mutationFn: async (data: typeof formData & { jdFile?: string | null; jdText?: string | null; sourceType?: string | null; sourceDetails?: string | null }) => {
+    mutationFn: async (data: typeof formData & { jdFile?: string | null; jdText?: string | null; sourceType?: string | null; sourceDetails?: string | null; specialInstructions?: string | null }) => {
       const response = await apiRequest('PATCH', `/api/admin/requirements/${initialData?.id}`, {
         ...data,
         teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
         jdFile: data.jdFile || null,
         jdText: data.jdText || null,
+        specialInstructions: data.specialInstructions?.trim() || null,
         sourceType: data.sourceType || null,
         sourceDetails: data.sourceDetails || null,
       });
@@ -214,10 +239,31 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     if (!formData.position || !formData.criticality || !formData.toughness || !formData.company || !formData.spoc || !formData.teamLead || formData.teamLead === 'Unassigned') {
       toast({
         title: "Missing Fields",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields including Team Leader.",
         variant: "destructive",
       });
       return;
+    }
+
+    if (formData.splitRequirement) {
+      const extraLeads = additionalTeamLeads.map((name) => name.trim()).filter(Boolean);
+      if (extraLeads.length === 0) {
+        toast({
+          title: "Split Requirement",
+          description: "Select at least one additional Team Leader (Team Leader 2).",
+          variant: "destructive",
+        });
+        return;
+      }
+      const allLeads = [formData.teamLead, ...extraLeads];
+      if (new Set(allLeads).size !== allLeads.length) {
+        toast({
+          title: "Duplicate Team Leaders",
+          description: "Each Team Leader in a split requirement must be different.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     if (!jdFilePreviewUrl && !jdFile) {
       toast({
@@ -278,11 +324,15 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       const payload = {
         ...formData,
         noOfPositions: Number(formData.noOfPositions) || 1,
-        splitRequirement: formData.noOfPositions >= 5 ? formData.splitRequirement : false,
+        splitRequirement: formData.splitRequirement,
+        additionalTeamLeads: formData.splitRequirement
+          ? additionalTeamLeads.map((name) => name.trim()).filter(Boolean)
+          : [],
         jdFile: jdFileUrl,
         jdText: jdText.trim() || null,
         sourceType: initialData?.sourceType || null,
         sourceDetails: initialData?.sourceDetails || null,
+        specialInstructions: instructions.trim() || null,
       };
 
       if (isEditMode) {
@@ -312,6 +362,9 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       teamLead: ''
     });
     setPositionsInput('1');
+    setAdditionalTeamLeads([]);
+    setInstructions('');
+    setJdText('');
     setJdFile(null);
     if (jdFilePreviewUrl) {
       URL.revokeObjectURL(jdFilePreviewUrl);
@@ -375,7 +428,6 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       setFormData(prev => ({
         ...prev,
         noOfPositions: 0,
-        splitRequirement: false
       }));
       return;
     }
@@ -384,7 +436,6 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     setFormData(prev => ({
       ...prev,
       noOfPositions: Number.isFinite(parsed) && parsed > 0 ? parsed : 1,
-      splitRequirement: parsed >= 5 ? prev.splitRequirement : false
     }));
   };
 
@@ -394,9 +445,60 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       setFormData(prev => ({
         ...prev,
         noOfPositions: 1,
-        splitRequirement: false
       }));
     }
+  };
+
+  const handleSplitRequirementToggle = () => {
+    if (isEditMode) return;
+    setFormData((prev) => {
+      const nextSplit = !prev.splitRequirement;
+      if (nextSplit) {
+        setAdditionalTeamLeads((current) => (current.length === 0 ? [""] : current));
+      } else {
+        setAdditionalTeamLeads([]);
+      }
+      return { ...prev, splitRequirement: nextSplit };
+    });
+  };
+
+  const getTeamLeadOptionsForSlot = (slotIndex: number | 'primary') => {
+    const selected = new Set<string>();
+    if (formData.teamLead && formData.teamLead !== 'Unassigned') {
+      selected.add(formData.teamLead);
+    }
+    additionalTeamLeads.forEach((name, index) => {
+      if (slotIndex !== index && name) {
+        selected.add(name);
+      }
+    });
+    return teamLeads.filter(
+      (lead) => !selected.has(lead.name) || (slotIndex === 'primary' ? formData.teamLead === lead.name : additionalTeamLeads[slotIndex as number] === lead.name),
+    );
+  };
+
+  const canAddAnotherTeamLead = () => {
+    const selectedCount =
+      (formData.teamLead && formData.teamLead !== 'Unassigned' ? 1 : 0) +
+      additionalTeamLeads.filter((name) => name.trim()).length;
+    return selectedCount < teamLeads.length;
+  };
+
+  const handleAddTeamLeadSlot = () => {
+    if (!canAddAnotherTeamLead()) return;
+    setAdditionalTeamLeads((prev) => [...prev, '']);
+  };
+
+  const handleRemoveTeamLeadSlot = (index: number) => {
+    setAdditionalTeamLeads((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAdditionalTeamLeadChange = (index: number, value: string) => {
+    setAdditionalTeamLeads((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
   };
 
   return (
@@ -432,175 +534,243 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="position" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Position *
-                </Label>
-                <Input
-                  id="position"
-                  type="text"
-                  value={formData.position}
-                  onChange={(e) => handleInputChange('position', e.target.value)}
-                  placeholder="HR"
-                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
-                  required
-                  data-testid="input-position"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="company" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Company *
-                </Label>
-                <Input
-                  id="company"
-                  type="text"
-                  value={formData.company}
-                  onChange={(e) => handleInputChange('company', e.target.value)}
-                  placeholder="Gumlet Marketing Private Limited"
-                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
-                  required
-                  data-testid="input-company"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="noOfPositions" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  No. of Positions *
-                </Label>
-                <Input
-                  id="noOfPositions"
-                  type="text"
-                  inputMode="numeric"
-                  min={1}
-                  value={positionsInput}
-                  onChange={(e) => handlePositionsChange(e.target.value)}
-                  onBlur={handlePositionsBlur}
-                  placeholder="1"
-                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
-                  required
-                  data-testid="input-no-of-positions"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="spoc" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  SPOC *
-                </Label>
-                <Input
-                  id="spoc"
-                  type="text"
-                  value={formData.spoc}
-                  onChange={(e) => handleInputChange('spoc', e.target.value)}
-                  placeholder="Dheena"
-                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
-                  required
-                  data-testid="input-spoc"
-                />
-              </div>
-
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="position" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Position *
+              </Label>
+              <Input
+                id="position"
+                type="text"
+                value={formData.position}
+                onChange={(e) => handleInputChange('position', e.target.value)}
+                placeholder="HR"
+                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                required
+                data-testid="input-position"
+              />
             </div>
 
-            {/* Right Column */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="criticality" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Criticality *
-                </Label>
-                <Select 
-                  value={formData.criticality} 
-                  onValueChange={(value) => handleInputChange('criticality', value)}
-                  required
-                >
-                  <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-criticality">
-                    <SelectValue placeholder="Select criticality" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="HIGH">HIGH</SelectItem>
-                    <SelectItem value="MEDIUM">MEDIUM</SelectItem>
-                    <SelectItem value="LOW">LOW</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Team Leader *
-                </Label>
-                <Select 
-                  value={formData.teamLead} 
-                  onValueChange={(value) => handleInputChange('teamLead', value)}
-                  disabled={isLoadingEmployees}
-                >
-                  <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-team-lead">
-                    <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team lead *"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teamLeads.map(lead => (
-                      <SelectItem key={lead.id} value={lead.name}>{lead.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="company" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Company *
+              </Label>
+              <Input
+                id="company"
+                type="text"
+                value={formData.company}
+                onChange={(e) => handleInputChange('company', e.target.value)}
+                placeholder="Gumlet Marketing Private Limited"
+                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                required
+                data-testid="input-company"
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Split Requirement
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (formData.noOfPositions >= 5) {
-                      setFormData(prev => ({ ...prev, splitRequirement: !prev.splitRequirement }));
-                    }
-                  }}
-                  title={formData.noOfPositions < 5 ? 'only when positions are 5+' : undefined}
-                  className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-colors ${
-                    formData.noOfPositions < 5
-                      ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500'
-                      : formData.splitRequirement
-                        ? 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-900/20 dark:text-sky-300'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:bg-sky-900/10'
+            <div className="space-y-2">
+              <Label htmlFor="spoc" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                SPOC *
+              </Label>
+              <Input
+                id="spoc"
+                type="text"
+                value={formData.spoc}
+                onChange={(e) => handleInputChange('spoc', e.target.value)}
+                placeholder="Dheena"
+                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                required
+                data-testid="input-spoc"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="noOfPositions" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                No. of Positions *
+              </Label>
+              <Input
+                id="noOfPositions"
+                type="text"
+                inputMode="numeric"
+                min={1}
+                value={positionsInput}
+                onChange={(e) => handlePositionsChange(e.target.value)}
+                onBlur={handlePositionsBlur}
+                placeholder="1"
+                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                required
+                data-testid="input-no-of-positions"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="criticality" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Criticality *
+              </Label>
+              <Select
+                value={formData.criticality}
+                onValueChange={(value) => handleInputChange('criticality', value)}
+                required
+              >
+                <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-criticality">
+                  <SelectValue placeholder="Select criticality" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="HIGH">HIGH</SelectItem>
+                  <SelectItem value="MEDIUM">MEDIUM</SelectItem>
+                  <SelectItem value="LOW">LOW</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="toughness" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Toughness *
+              </Label>
+              <Select
+                value={formData.toughness}
+                onValueChange={(value) => handleInputChange('toughness', value)}
+                required
+              >
+                <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-toughness">
+                  <SelectValue placeholder="Select toughness" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Easy">Easy</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Tough">Tough</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Team Leader *
+              </Label>
+              <Select
+                value={formData.teamLead}
+                onValueChange={(value) => handleInputChange('teamLead', value)}
+                disabled={isLoadingEmployees}
+              >
+                <SelectTrigger className="h-10 bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-team-lead">
+                  <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team leader"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {getTeamLeadOptionsForSlot('primary').map((lead) => (
+                    <SelectItem key={lead.id} value={lead.name}>
+                      {lead.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col justify-end space-y-2">
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Split Requirement
+              </Label>
+              <button
+                type="button"
+                onClick={handleSplitRequirementToggle}
+                disabled={isEditMode}
+                title={isEditMode ? "Split teams are set when creating a requirement" : "Assign this requirement to multiple team leaders as separate records"}
+                className={`flex h-10 w-full items-center gap-2 rounded-md border px-3 text-left transition-colors ${
+                  isEditMode
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500'
+                    : formData.splitRequirement
+                      ? 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-900/20 dark:text-sky-300'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
+                }`}
+                data-testid="button-split-requirement"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${
+                    formData.splitRequirement
+                      ? 'border-sky-500 bg-sky-500 text-white'
+                      : 'border-slate-300 bg-white text-transparent dark:border-slate-600 dark:bg-slate-900'
                   }`}
-                  data-testid="button-split-requirement"
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`flex h-5 w-5 items-center justify-center rounded-sm border ${
-                      formData.splitRequirement
-                        ? 'border-sky-500 bg-sky-500 text-white'
-                        : 'border-slate-300 bg-white text-transparent dark:border-slate-600 dark:bg-slate-900'
-                    }`}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="text-sm font-medium">Split Requirement</span>
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="toughness" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Toughness *
-                </Label>
-                <Select 
-                  value={formData.toughness} 
-                  onValueChange={(value) => handleInputChange('toughness', value)}
-                  required
-                >
-                  <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-toughness">
-                    <SelectValue placeholder="Select toughness" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Easy">Easy</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="Tough">Tough</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <Check className="h-3 w-3" />
+                </span>
+                <span className="text-sm font-medium truncate">Split</span>
+              </button>
             </div>
+          </div>
+
+          {formData.splitRequirement && !isEditMode && (
+            <div className="space-y-3 rounded-xl border border-sky-100 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/20">
+              <p className="text-xs text-sky-800 dark:text-sky-300">
+                One requirement record per team — same details, JD, and instructions.
+              </p>
+              {additionalTeamLeads.map((teamLeadValue, index) => (
+                <div key={`additional-tl-${index}`} className="flex items-end gap-2">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      Team Leader {index + 2} *
+                    </Label>
+                    <Select
+                      value={teamLeadValue}
+                      onValueChange={(value) => handleAdditionalTeamLeadChange(index, value)}
+                      disabled={isLoadingEmployees}
+                    >
+                      <SelectTrigger
+                        className="bg-white border-slate-200 dark:bg-gray-800 dark:border-slate-700"
+                        data-testid={`select-team-lead-${index + 2}`}
+                      >
+                        <SelectValue placeholder="Select team leader" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getTeamLeadOptionsForSlot(index).map((lead) => (
+                          <SelectItem key={lead.id} value={lead.name}>
+                            {lead.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {additionalTeamLeads.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-red-600 hover:text-red-700"
+                      onClick={() => handleRemoveTeamLeadSlot(index)}
+                      data-testid={`button-remove-team-lead-${index + 2}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {canAddAnotherTeamLead() && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-dashed border-sky-300 text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-300"
+                  onClick={handleAddTeamLeadSlot}
+                  data-testid="button-add-team-lead"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add TL
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="instructions" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Instructions
+            </Label>
+            <Textarea
+              id="instructions"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Notes or instructions for the team working on this requirement..."
+              rows={3}
+              className="resize-y bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700"
+              data-testid="textarea-instructions"
+            />
           </div>
 
           <div className="space-y-2">

@@ -168,11 +168,11 @@ export default function PerformanceChartModal({
           <div className="bg-gray-50 dark:bg-gray-900 rounded-md p-4" data-testid="chart-performance">
             <div className="flex justify-start space-x-4 mb-2">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">Delivered</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-red-500 rounded-full" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">Required</span>
               </div>
             </div>
@@ -190,12 +190,12 @@ export default function PerformanceChartModal({
                   <AreaChart data={filteredPerformanceData}>
                     <defs>
                       <linearGradient id="colorResumesAModal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
-                      </linearGradient>
-                      <linearGradient id="colorResumesBModal" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
                         <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="colorResumesBModal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
@@ -226,21 +226,21 @@ export default function PerformanceChartModal({
                     <Area 
                       type="monotone" 
                       dataKey="resumesA" 
-                      stroke="#ef4444" 
+                      stroke="#22c55e" 
                       strokeWidth={2} 
                       fill="url(#colorResumesAModal)"
-                      dot={{ fill: '#ef4444', r: 4 }}
+                      dot={{ fill: '#22c55e', r: 4 }}
                       activeDot={{ r: 6 }}
                       name="Delivered"
                     />
                     <Area 
                       type="monotone" 
                       dataKey="resumesB" 
-                      stroke="#22c55e" 
+                      stroke="#ef4444" 
                       strokeWidth={2} 
                       fill="url(#colorResumesBModal)"
                       fillOpacity={0.6}
-                      dot={{ fill: '#22c55e', r: 4 }}
+                      dot={{ fill: '#ef4444', r: 4 }}
                       activeDot={{ r: 6 }}
                       name="Required"
                     />

@@ -252,6 +252,8 @@ export interface IStorage {
     recentClosure: string | null;
     lastClosureMonths: number;
     lastClosureDays: number;
+    lastClosureRelative: string;
+    lastClosureDate: string | null;
     totalRevenue: number;
     totalIncentives: number;
   }>;
@@ -1037,8 +1039,17 @@ export class MemStorage implements IStorage {
   }
 
   async getRequirementsByTalentAdvisorId(talentAdvisorId: string): Promise<Requirement[]> {
-    return Array.from(this.requirements.values()).filter(req => 
-      !req.isArchived && req.talentAdvisorId === talentAdvisorId
+    const employee = Array.from(this.employees.values()).find(
+      (emp) => emp.id === talentAdvisorId,
+    );
+    const advisorName = (employee?.name || "").trim().toLowerCase();
+
+    return Array.from(this.requirements.values()).filter(
+      (req) =>
+        !req.isArchived &&
+        (req.talentAdvisorId === talentAdvisorId ||
+          (!!advisorName &&
+            (req.talentAdvisor || "").trim().toLowerCase() === advisorName)),
     );
   }
 
@@ -1730,32 +1741,45 @@ export class MemStorage implements IStorage {
     date: string,
     taggedOnDate?: JobApplication[],
   ): Promise<number> {
-    const activeAssignments = Array.from(this.requirementAssignments.values()).filter(
-      (a) => a.recruiterId === recruiterId && a.status === "active",
+    const employee = Array.from(this.employees.values()).find(
+      (emp) => emp.id === recruiterId || emp.employeeId === recruiterId,
     );
-    const requirementIds = new Set(activeAssignments.map((a) => a.requirementId));
-    const unique = new Set<string>();
+    if (!employee) return 0;
 
-    for (const submission of Array.from(this.resumeSubmissions.values())) {
-      if (submission.recruiterId !== recruiterId) continue;
-      if (!requirementIds.has(submission.requirementId)) continue;
-      const submittedDate = new Date(submission.submittedAt).toISOString().split("T")[0];
-      if (submittedDate !== date) continue;
-      unique.add(
-        `${submission.requirementId}::${(submission.candidateEmail || submission.candidateName || submission.id || "").toString().trim().toLowerCase()}`,
-      );
-    }
+    const activeAssignments = Array.from(this.requirementAssignments.values()).filter(
+      (assignment) =>
+        assignment.recruiterId === recruiterId && assignment.status === "active",
+    );
+
+    const allRequirements = Array.from(this.requirements.values()).filter(
+      (req) => !req.isArchived,
+    );
+
+    const {
+      buildRecruiterRequirementIdSet,
+      countUniqueDeliveries,
+    } = await import("./delivery-counting");
+
+    const requirementIds = buildRecruiterRequirementIdSet(
+      employee,
+      allRequirements,
+      activeAssignments,
+    );
+
+    const submissions = Array.from(this.resumeSubmissions.values()).filter(
+      (submission) => submission.recruiterId === recruiterId,
+    );
 
     const taggedApplications =
       taggedOnDate ?? (await this.getTaggedJobApplicationsOnDate(date));
-    for (const app of taggedApplications) {
-      if (!app.requirementId || !requirementIds.has(app.requirementId)) continue;
-      unique.add(
-        `${app.requirementId}::${(app.candidateEmail || app.candidateName || app.id || "").toString().trim().toLowerCase()}`,
-      );
-    }
 
-    return unique.size;
+    return countUniqueDeliveries({
+      requirementIds,
+      submissions,
+      taggedApplications,
+      recruiter: employee,
+      exactDate: date,
+    });
   }
 
   async calculateRecruiterDailyMetrics(
@@ -1763,9 +1787,14 @@ export class MemStorage implements IStorage {
     date: string,
     taggedOnDate?: JobApplication[],
   ): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
-    const assignments = Array.from(this.requirementAssignments.values())
-      .filter(a => a.recruiterId === recruiterId && a.status === "active");
-    
+    const employee = Array.from(this.employees.values()).find(
+      (emp) => emp.id === recruiterId,
+    );
+    const assignments = Array.from(this.requirementAssignments.values()).filter(
+      (assignment) =>
+        assignment.recruiterId === recruiterId && assignment.status === "active",
+    );
+
     let required = 0;
     for (const assignment of assignments) {
       const requirement = this.requirements.get(assignment.requirementId);
@@ -1773,15 +1802,31 @@ export class MemStorage implements IStorage {
         required += getResumeTarget(requirement.criticality, requirement.toughness);
       }
     }
-    
+
+    const talentAdvisorRequirements =
+      await this.getRequirementsByTalentAdvisorId(recruiterId);
+    for (const req of talentAdvisorRequirements) {
+      if (req.isArchived) continue;
+      const alreadyCounted = assignments.some(
+        (assignment) => assignment.requirementId === req.id,
+      );
+      if (!alreadyCounted) {
+        required += getResumeTarget(req.criticality, req.toughness);
+      }
+    }
+
     const delivered = await this.countRecruiterUniqueDeliveriesOnDate(
       recruiterId,
       date,
       taggedOnDate,
     );
     const defaulted = Math.max(0, required - delivered);
-    
-    return { delivered, defaulted, required, requirementCount: assignments.length };
+    const requirementCount = new Set([
+      ...assignments.map((assignment) => assignment.requirementId),
+      ...talentAdvisorRequirements.filter((req) => !req.isArchived).map((req) => req.id),
+    ]).size;
+
+    return { delivered, defaulted, required, requirementCount };
   }
 
   async calculateTeamDailyMetrics(

@@ -27,6 +27,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight, Clock, Zap, AlertTriangle, Send } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateRevenueMappingQueries } from "@/lib/admin-performance-queries";
 import { useDashboardSync } from "@/lib/dashboard-sync";
 import {
   CandidateCommentsSession,
@@ -537,10 +538,9 @@ export default function RecruiterDashboard2() {
           [selectedCandidateForClosure.id]: 'Closure'
         }));
       }
-      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/closure-reports'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/pipeline'] });
+      invalidateRevenueMappingQueries(queryClient);
 
       toast({
         title: "Closure Created",
@@ -1418,6 +1418,8 @@ export default function RecruiterDashboard2() {
     recentClosure: string | null;
     lastClosureMonths: number;
     lastClosureDays: number;
+    lastClosureRelative?: string;
+    lastClosureDate?: string | null;
     totalRevenue: number;
     totalIncentives: number;
   }>({
@@ -3136,8 +3138,17 @@ export default function RecruiterDashboard2() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Last Closure</h4>
-                  <div className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-1" data-testid="value-last-closure-months">{performanceSummary?.lastClosureMonths || 0}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Month{(performanceSummary?.lastClosureMonths || 0) !== 1 ? 's' : ''} {performanceSummary?.lastClosureDays || 0} days</div>
+                  <div className="text-base font-bold text-gray-800 dark:text-gray-200 mb-1" data-testid="value-last-closure-relative">
+                    {performanceSummary?.lastClosureRelative ??
+                      (performanceSummary?.totalClosures
+                        ? `${performanceSummary.lastClosureMonths || 0} month${(performanceSummary.lastClosureMonths || 0) !== 1 ? 's' : ''} ${performanceSummary.lastClosureDays || 0} day${(performanceSummary.lastClosureDays || 0) !== 1 ? 's' : ''} ago`
+                        : 'N/A')}
+                  </div>
+                  {performanceSummary?.lastClosureDate && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400" data-testid="value-last-closure-date">
+                      {performanceSummary.lastClosureDate}
+                    </div>
+                  )}
                 </div>
               </div>
 
