@@ -37,6 +37,16 @@ export function formatEmployeeRoleDisplay(
   }
 }
 
+/** True for Talent Advisor workspace users (DB role is often `recruiter`). */
+export function isTalentAdvisorEmployee(role?: string | null): boolean {
+  const normalized = (role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return (
+    normalized === "talent_advisor" ||
+    normalized === "ta" ||
+    normalized === "recruiter"
+  );
+}
+
 /** Profile ID is shown only for client portal users. */
 export function shouldShowEmployeeProfileId(role?: string | null, employeeId?: string | null): boolean {
   if (!employeeId?.trim()) return false;

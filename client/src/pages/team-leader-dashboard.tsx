@@ -609,15 +609,7 @@ export default function TeamLeaderDashboard() {
       knowledgeOnly: skills.slice(10, 15),
       companyLogo: job.companyLogo || ''
     });
-    
-    // Ensure arrays have at least one element for inputs
-    setJobFormData(prev => ({
-      ...prev,
-      primarySkills: prev.primarySkills.length > 0 ? prev.primarySkills : [''],
-      secondarySkills: prev.secondarySkills.length > 0 ? prev.secondarySkills : [''],
-      knowledgeOnly: prev.knowledgeOnly.length > 0 ? prev.knowledgeOnly : ['']
-    }));
-    
+
     setIsPostJobModalOpen(true);
   };
 
@@ -859,9 +851,9 @@ export default function TeamLeaderDashboard() {
     aboutCompany: '',
     roleDefinitions: '',
     keyResponsibility: '',
-    primarySkills: [''],
-    secondarySkills: [''],
-    knowledgeOnly: [''],
+    primarySkills: [],
+    secondarySkills: [],
+    knowledgeOnly: [],
     companyLogo: ''
   });
   const [resumeFormData, setResumeFormData] = useState({

@@ -6,7 +6,6 @@ import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-description-details-modal';
-import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
@@ -285,12 +284,10 @@ export default function RecruiterDashboard2() {
     return `${year}-${month}-${day}`;
   };
 
-  // New state variables for Post Jobs and Upload Resume functionality
-  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
+  // Upload Resume functionality
   const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
-  const [formError, setFormError] = useState('');
   const [resumeFormData, setResumeFormData] = useState({
     firstName: '',
     lastName: '',
@@ -316,27 +313,6 @@ export default function RecruiterDashboard2() {
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeFormError, setResumeFormError] = useState('');
-  const [jobFormData, setJobFormData] = useState({
-    companyName: '',
-    companyTagline: '',
-    companyType: '',
-    market: '',
-    field: '',
-    noOfPositions: '',
-    role: '',
-    experience: '',
-    location: '',
-    workMode: '',
-    employmentType: '',
-    salaryPackage: '',
-    aboutCompany: '',
-    roleDefinitions: '',
-    keyResponsibility: '',
-    primarySkills: [''],
-    secondarySkills: [''],
-    knowledgeOnly: [''],
-    companyLogo: ''
-  });
   const [chatMessages, setChatMessages] = useState([
     { id: 1, sender: "Kumaravel R", message: "Good morning! Please review today's recruitment targets", time: "9:00 AM", isOwn: true },
     { id: 2, sender: "Priya", message: "Good morning sir. I've shortlisted 5 candidates for the Frontend role.", time: "9:05 AM", isOwn: false },
@@ -621,52 +597,6 @@ export default function RecruiterDashboard2() {
     };
 
     alert(`${stage}\n\n${stageActions[stage] || 'Manage candidates in this stage.'}`);
-  };
-
-  // Form validation and handling functions for Post Jobs and Upload Resume
-  const validateForm = () => {
-    const required = ['companyName', 'experience', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
-    return required.every(field => (jobFormData as Record<string, any>)[field]?.trim() !== '');
-  };
-
-  const handlePostJob = () => {
-    if (!validateForm()) {
-      // Show inline error message instead of alert
-      setFormError('Please fill out all required fields');
-      return;
-    }
-
-    setIsPostJobModalOpen(false);
-    setSuccessMessage('Job posted successfully!');
-    setShowSuccessAlert(true);
-    setFormError(''); // Clear any form errors
-    setTimeout(() => {
-      setShowSuccessAlert(false);
-      setSuccessMessage('');
-    }, 3000);
-
-    // Reset form
-    setJobFormData({
-      companyName: '',
-      companyTagline: '',
-      companyType: '',
-      market: '',
-      field: '',
-      noOfPositions: '',
-      role: '',
-      experience: '',
-      location: '',
-      workMode: '',
-      employmentType: '',
-      salaryPackage: '',
-      aboutCompany: '',
-      roleDefinitions: '',
-      keyResponsibility: '',
-      primarySkills: [''],
-      secondarySkills: [''],
-      knowledgeOnly: [''],
-      companyLogo: ''
-    });
   };
 
   // Sync fetched interviews to local state for compatibility
@@ -1613,12 +1543,6 @@ export default function RecruiterDashboard2() {
                   <CardTitle className="text-lg font-semibold text-gray-900">Applicant Overview</CardTitle>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setIsPostJobModalOpen(true)}
-                      className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
-                      data-testid="button-post-jobs">
-                      Post Jobs
-                    </button>
-                    <button
                       onClick={() => setIsUploadResumeModalOpen(true)}
                       className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
                       data-testid="button-upload-resume">
@@ -1655,14 +1579,6 @@ export default function RecruiterDashboard2() {
                         Applications will appear here when candidates apply to your job postings or when you tag candidates to requirements.
                       </p>
                       <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsPostJobModalOpen(true)}
-                          data-testid="button-post-job-empty"
-                        >
-                          Post a Job
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -3889,24 +3805,6 @@ export default function RecruiterDashboard2() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Post Job Modal */}
-      <PostJobModal
-        isOpen={isPostJobModalOpen}
-        onClose={() => setIsPostJobModalOpen(false)}
-        onSuccess={() => {
-          setSuccessMessage('Job posted successfully!');
-          setShowSuccessAlert(true);
-          setTimeout(() => {
-            setShowSuccessAlert(false);
-            setSuccessMessage('');
-          }, 3000);
-        }}
-        formData={jobFormData}
-        setFormData={setJobFormData}
-        formError={formError}
-        setFormError={setFormError}
-      />
 
       {/* Upload Resume Modal */}
       <UploadResumeModal

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,20 +56,61 @@ export default function PostJobModal({
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [skillInputs, setSkillInputs] = useState({ primary: '', secondary: '', knowledge: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const closeDropdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openDropdown = useCallback((id: string) => {
+    if (closeDropdownTimerRef.current) {
+      clearTimeout(closeDropdownTimerRef.current);
+      closeDropdownTimerRef.current = null;
+    }
+    setActiveDropdown(id);
+  }, []);
+
+  const scheduleCloseDropdown = useCallback(() => {
+    if (closeDropdownTimerRef.current) {
+      clearTimeout(closeDropdownTimerRef.current);
+    }
+    closeDropdownTimerRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+      closeDropdownTimerRef.current = null;
+    }, 120);
+  }, []);
+
+  const cancelCloseDropdown = useCallback(() => {
+    if (closeDropdownTimerRef.current) {
+      clearTimeout(closeDropdownTimerRef.current);
+      closeDropdownTimerRef.current = null;
+    }
+  }, []);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const validateForm = () => {
-    const required = ['companyName', 'role', 'experience', 'location', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
-    return required.every(field => {
-      const value = formData[field as keyof JobFormData];
-      return value !== undefined && value !== null && value.toString().trim() !== '';
-    });
-  };
+  const getFilteredSkills = (skills: string[] | undefined | null) =>
+    (skills || []).filter((s) => s && s.trim() !== "");
 
-  const isFormValid = validateForm();
-  
-  const getFilteredSkills = (skills: string[] | undefined | null) => (skills || []).filter(s => s && s.trim() !== '');
+  const hasRequiredText = (value: unknown) =>
+    value !== undefined && value !== null && String(value).trim() !== "";
+
+  const isFormValid = useMemo(() => {
+    const requiredTextFields = [
+      "companyName",
+      "role",
+      "experience",
+      "location",
+      "salaryPackage",
+      "aboutCompany",
+      "roleDefinitions",
+      "keyResponsibility",
+    ] as const;
+
+    const textFieldsValid = requiredTextFields.every((field) =>
+      hasRequiredText(formData[field]),
+    );
+    const primarySkillsValid = getFilteredSkills(formData.primarySkills).length > 0;
+    const secondarySkillsValid = getFilteredSkills(formData.secondarySkills).length > 0;
+
+    return textFieldsValid && primarySkillsValid && secondarySkillsValid;
+  }, [formData]);
 
   const postJobMutation = useMutation({
     mutationFn: async (jobData: any) => {
@@ -129,6 +170,8 @@ export default function PostJobModal({
     return { min: null, max: null };
   };
 
+  const sanitizeSalaryInput = (value: string) => value.replace(/\D/g, "");
+
   const parseSalary = (salary: string): { min: number | null; max: number | null } => {
     if (!salary) return { min: null, max: null };
     const match = salary.match(/(\d+)/g);
@@ -141,39 +184,55 @@ export default function PostJobModal({
   };
 
 // Custom Suggestions Dropdown Component
-const SuggestionsList = ({ 
-  options, 
+const SuggestionsList = ({
+  options,
   searchTerm,
-  onSelect, 
-  isVisible, 
-  onClose 
-}: { 
-  options: string[], 
-  searchTerm: string,
-  onSelect: (val: string) => void, 
-  isVisible: boolean, 
-  onClose: () => void 
+  onSelect,
+  isVisible,
+  onClose,
+  onPointerDownInList,
+}: {
+  options: string[];
+  searchTerm: string;
+  onSelect: (val: string) => void;
+  isVisible: boolean;
+  onClose: () => void;
+  onPointerDownInList?: () => void;
 }) => {
-  const filteredOptions = options.filter(opt => 
-    opt.toLowerCase().includes((searchTerm || '').toLowerCase())
+  const trimmed = (searchTerm || '').trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (opt) => !trimmed || opt.toLowerCase().includes(trimmed),
   );
 
-  if (!isVisible || filteredOptions.length === 0) return null;
+  if (!isVisible) return null;
 
   return (
-    <div className="absolute z-50 w-full top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1 duration-200">
-      {filteredOptions.map((opt) => (
-        <div
-          key={opt}
-          className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer transition-colors font-medium text-left"
-          onClick={() => {
-            onSelect(opt);
-            onClose();
-          }}
-        >
-          {opt}
-        </div>
-      ))}
+    <div
+      data-suggestion-list
+      className="absolute z-50 w-full top-full left-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto py-1"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onPointerDownInList?.();
+      }}
+    >
+      {filteredOptions.length === 0 ? (
+        <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">No matches</div>
+      ) : (
+        filteredOptions.map((opt) => (
+          <div
+            key={opt}
+            role="option"
+            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-600 cursor-pointer transition-colors font-medium text-left"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onSelect(opt);
+              onClose();
+            }}
+          >
+            {opt}
+          </div>
+        ))
+      )}
     </div>
   );
 };
@@ -196,8 +255,10 @@ const deriveLocationType = (workMode: string): string => {
   };
 
   const handlePostJob = () => {
-    if (!validateForm()) {
-      setFormError('Please fill out all required fields');
+    if (!isFormValid) {
+      setFormError(
+        "Please fill out all required fields, including at least one primary and one secondary skill.",
+      );
       return;
     }
 
@@ -304,7 +365,15 @@ const deriveLocationType = (workMode: string): string => {
   return (
     <>
       {/* Post Job Modal */}
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveDropdown(null);
+            onClose();
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden">
           <DialogHeader className="flex flex-row items-center justify-between pr-8">
             <DialogTitle>{formData.id ? 'Edit Job' : 'Post the job'}</DialogTitle>
@@ -371,8 +440,8 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <Input
                     value={formData.companyType}
-                    onFocus={() => setActiveDropdown('companyType')}
-                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                    onFocus={() => openDropdown('companyType')}
+                    onBlur={scheduleCloseDropdown}
                     onChange={(e) => setFormData({...formData, companyType: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Company Type"
@@ -383,6 +452,7 @@ const deriveLocationType = (workMode: string): string => {
                     options={["MNC", "Startup", "Product Based", "Service Based", "Corporate", "Mid-size"]}
                     onSelect={(val) => setFormData({...formData, companyType: val})}
                     onClose={() => setActiveDropdown(null)}
+                    onPointerDownInList={cancelCloseDropdown}
                   />
                 </div>
                 <div className="relative">
@@ -391,8 +461,8 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <Input
                     value={formData.market}
-                    onFocus={() => setActiveDropdown('market')}
-                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                    onFocus={() => openDropdown('market')}
+                    onBlur={scheduleCloseDropdown}
                     onChange={(e) => setFormData({...formData, market: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Market"
@@ -403,6 +473,7 @@ const deriveLocationType = (workMode: string): string => {
                     options={["Domestic", "International", "B2B", "B2C", "SaaS", "Fintech", "Healthcare"]}
                     onSelect={(val) => setFormData({...formData, market: val})}
                     onClose={() => setActiveDropdown(null)}
+                    onPointerDownInList={cancelCloseDropdown}
                   />
                 </div>
               </div>
@@ -415,8 +486,8 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <Input
                     value={formData.field}
-                    onFocus={() => setActiveDropdown('field')}
-                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                    onFocus={() => openDropdown('field')}
+                    onBlur={scheduleCloseDropdown}
                     onChange={(e) => setFormData({...formData, field: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Field"
@@ -427,6 +498,7 @@ const deriveLocationType = (workMode: string): string => {
                     options={["Engineering", "Marketing", "Sales", "Human Resources", "Finance", "Operations", "Design"]}
                     onSelect={(val) => setFormData({...formData, field: val})}
                     onClose={() => setActiveDropdown(null)}
+                    onPointerDownInList={cancelCloseDropdown}
                   />
                 </div>
                 <div className="relative">
@@ -483,8 +555,8 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <Input
                     value={formData.location}
-                    onFocus={() => setActiveDropdown('location')}
-                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                    onFocus={() => openDropdown('location')}
+                    onBlur={scheduleCloseDropdown}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Location *"
@@ -496,6 +568,7 @@ const deriveLocationType = (workMode: string): string => {
                     options={["Bengaluru", "Mumbai", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Remote"]}
                     onSelect={(val) => setFormData({...formData, location: val})}
                     onClose={() => setActiveDropdown(null)}
+                    onPointerDownInList={cancelCloseDropdown}
                   />
                 </div>
                 <div className="relative">
@@ -504,8 +577,8 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <Input
                     value={formData.workMode}
-                    onFocus={() => setActiveDropdown('workMode')}
-                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                    onFocus={() => openDropdown('workMode')}
+                    onBlur={scheduleCloseDropdown}
                     onChange={(e) => setFormData({...formData, workMode: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Work Type"
@@ -517,6 +590,7 @@ const deriveLocationType = (workMode: string): string => {
                     options={["On-site", "Remote", "Hybrid"]}
                     onSelect={(val) => setFormData({...formData, workMode: val})}
                     onClose={() => setActiveDropdown(null)}
+                    onPointerDownInList={cancelCloseDropdown}
                   />
                 </div>
               </div>
@@ -529,8 +603,8 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <Input
                     value={formData.employmentType}
-                    onFocus={() => setActiveDropdown('employmentType')}
-                    onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                    onFocus={() => openDropdown('employmentType')}
+                    onBlur={scheduleCloseDropdown}
                     onChange={(e) => setFormData({...formData, employmentType: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Employment Type"
@@ -542,6 +616,7 @@ const deriveLocationType = (workMode: string): string => {
                     options={["Full-time", "Part-time", "Contract", "Internship"]}
                     onSelect={(val) => setFormData({...formData, employmentType: val})}
                     onClose={() => setActiveDropdown(null)}
+                    onPointerDownInList={cancelCloseDropdown}
                   />
                 </div>
                 <div className="relative">
@@ -549,10 +624,18 @@ const deriveLocationType = (workMode: string): string => {
                     <DollarSign size={16} />
                   </div>
                   <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={formData.salaryPackage}
-                    onChange={(e) => setFormData({...formData, salaryPackage: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        salaryPackage: sanitizeSalaryInput(e.target.value),
+                      })
+                    }
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
-                    placeholder="Salary Package *"
+                    placeholder="Salary Package in LPA* e.g. 15"
                     data-testid="input-salary"
                   />
                 </div>
@@ -609,12 +692,14 @@ const deriveLocationType = (workMode: string): string => {
                 
                 {/* Primary Skills */}
                 <div className="space-y-3">
-                  <Label className="text-xs text-gray-500 font-medium block">Primary Skills</Label>
+                  <Label className="text-xs text-gray-500 font-medium block">
+                    Primary Skills <span className="text-red-500">*</span>
+                  </Label>
                   <div className="flex gap-2 max-w-sm relative">
                     <Input 
                       value={skillInputs.primary}
-                      onFocus={() => setActiveDropdown('primarySkill')}
-                      onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                      onFocus={() => openDropdown('primarySkill')}
+                      onBlur={scheduleCloseDropdown}
                       onChange={(e) => setSkillInputs({...skillInputs, primary: e.target.value})}
                       placeholder="Add primary skill..."
                       className="bg-gray-50 h-9 text-sm"
@@ -635,6 +720,7 @@ const deriveLocationType = (workMode: string): string => {
                         setSkillInputs({...skillInputs, primary: ''});
                       }}
                       onClose={() => setActiveDropdown(null)}
+                      onPointerDownInList={cancelCloseDropdown}
                     />
                     <Button 
                       type="button" 
@@ -659,12 +745,14 @@ const deriveLocationType = (workMode: string): string => {
 
                 {/* Secondary Skills */}
                 <div className="space-y-3">
-                  <Label className="text-xs text-gray-500 font-medium block">Secondary Skills</Label>
+                  <Label className="text-xs text-gray-500 font-medium block">
+                    Secondary Skills <span className="text-red-500">*</span>
+                  </Label>
                   <div className="flex gap-2 max-w-sm relative">
                     <Input 
                       value={skillInputs.secondary}
-                      onFocus={() => setActiveDropdown('secondarySkill')}
-                      onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                      onFocus={() => openDropdown('secondarySkill')}
+                      onBlur={scheduleCloseDropdown}
                       onChange={(e) => setSkillInputs({...skillInputs, secondary: e.target.value})}
                       placeholder="Add secondary skill..."
                       className="bg-gray-50 h-9 text-sm"
@@ -685,6 +773,7 @@ const deriveLocationType = (workMode: string): string => {
                         setSkillInputs({...skillInputs, secondary: ''});
                       }}
                       onClose={() => setActiveDropdown(null)}
+                      onPointerDownInList={cancelCloseDropdown}
                     />
                     <Button 
                       type="button" 
@@ -713,8 +802,8 @@ const deriveLocationType = (workMode: string): string => {
                   <div className="flex gap-2 max-w-sm relative">
                     <Input 
                       value={skillInputs.knowledge}
-                      onFocus={() => setActiveDropdown('knowledgeSkill')}
-                      onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                      onFocus={() => openDropdown('knowledgeSkill')}
+                      onBlur={scheduleCloseDropdown}
                       onChange={(e) => setSkillInputs({...skillInputs, knowledge: e.target.value})}
                       placeholder="Add knowledge-only skill..."
                       className="bg-gray-50 h-9 text-sm"
@@ -735,6 +824,7 @@ const deriveLocationType = (workMode: string): string => {
                         setSkillInputs({...skillInputs, knowledge: ''});
                       }}
                       onClose={() => setActiveDropdown(null)}
+                      onPointerDownInList={cancelCloseDropdown}
                     />
                     <Button 
                       type="button" 
