@@ -207,6 +207,19 @@ CREATE TABLE IF NOT EXISTS profile_media (
   created_at timestamp DEFAULT now()
 );
 
+ALTER TABLE revenue_mappings
+  ADD COLUMN IF NOT EXISTS in_revenue_data boolean NOT NULL DEFAULT false;
+
+-- Existing admin revenue rows (non-zero revenue/incentive) count as Revenue Data
+UPDATE revenue_mappings
+SET in_revenue_data = true
+WHERE in_revenue_data = false
+  AND (
+    COALESCE(revenue, 0) > 0
+    OR COALESCE(incentive, 0) > 0
+    OR COALESCE(percentage, 0) > 0
+  );
+
 ALTER TABLE job_applications
   ADD COLUMN IF NOT EXISTS application_current_ctc text DEFAULT '0',
   ADD COLUMN IF NOT EXISTS application_expected_ctc text DEFAULT '0',

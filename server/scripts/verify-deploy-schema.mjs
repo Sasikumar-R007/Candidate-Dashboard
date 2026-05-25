@@ -19,6 +19,7 @@ const checks = [
   ["requirements", "source_details"],
   ["requirements", "talent_advisor_id"],
   ["profile_media", "id"],
+  ["revenue_mappings", "in_revenue_data"],
 ];
 
 let failed = 0;

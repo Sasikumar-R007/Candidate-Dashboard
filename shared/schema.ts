@@ -640,6 +640,8 @@ export const revenueMappings = pgTable("revenue_mappings", {
   paymentDetails: text("payment_details"), // Fully paid, Part paid
   paymentStatus: text("payment_status"),
   incentivePaidMonth: text("incentive_paid_month"),
+  /** false = Closure Reports only (TA closure); true = Admin Revenue Data + targets/charts */
+  inRevenueData: boolean("in_revenue_data").notNull().default(false),
   createdAt: text("created_at").notNull(),
 });
 

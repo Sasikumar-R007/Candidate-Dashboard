@@ -224,6 +224,8 @@ export interface IStorage {
   // Revenue Mapping methods
   createRevenueMapping(mapping: InsertRevenueMapping): Promise<RevenueMapping>;
   getAllRevenueMappings(): Promise<RevenueMapping[]>;
+  getRevenueDataMappings(): Promise<RevenueMapping[]>;
+  getClosureReportMappings(): Promise<RevenueMapping[]>;
   getRevenueMappingsByRecruiterId(recruiterId: string): Promise<RevenueMapping[]>;
   getRevenueMappingsByTalentAdvisorId(talentAdvisorId: string): Promise<RevenueMapping[]>;
   getRevenueMappingsByTeamLeaderId(teamLeaderId: string): Promise<RevenueMapping[]>;

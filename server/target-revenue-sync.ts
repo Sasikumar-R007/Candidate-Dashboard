@@ -47,7 +47,7 @@ export async function syncAllTargetMappingsFromRevenue(
   storage: IStorage,
 ): Promise<void> {
   const allMappings = await storage.getAllTargetMappings();
-  const allRevenue = await storage.getAllRevenueMappings();
+  const allRevenue = await storage.getRevenueDataMappings();
 
   for (const mapping of allMappings) {
     const stats = computeTargetStatsFromRevenue(mapping, allRevenue);

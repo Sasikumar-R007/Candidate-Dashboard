@@ -41,6 +41,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
   const [receivedPayment, setReceivedPayment] = useState<string>("");
   const [paymentDetails, setPaymentDetails] = useState<string>("");
   const [incentivePaidMonth, setIncentivePaidMonth] = useState<string>("");
+  const [selectedClosureId, setSelectedClosureId] = useState<string>("");
 
   // Fetch employees for TA and TL dropdowns
   const { data: employees } = useQuery<any[]>({
@@ -50,6 +51,13 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
   // Fetch clients for Client dropdown
   const { data: clients } = useQuery<any[]>({
     queryKey: ['/api/admin/clients'],
+  });
+
+  const { data: closureCandidates = [] } = useQuery<
+    Array<{ id: string; candidateName: string; position: string; label: string }>
+  >({
+    queryKey: ['/api/admin/revenue-mapping-closure-candidates'],
+    enabled: isOpen && !editingRevenueMapping,
   });
 
   // Filter TAs and TLs from employees
@@ -167,8 +175,41 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
       setReceivedPayment("");
       setPaymentDetails("");
       setIncentivePaidMonth("");
+      setSelectedClosureId("");
     }
   }, [editingRevenueMapping, isOpen]);
+
+  const applyClosurePrefill = async (closureId: string) => {
+    if (!closureId) return;
+    try {
+      const response = await apiRequest(
+        'GET',
+        `/api/admin/revenue-mapping-closure-candidates/${closureId}`,
+      );
+      const data = await response.json();
+      setTeamLead(data.teamLeadId || '');
+      setTalentAdvisor(data.talentAdvisorId || '');
+      setYear(data.year?.toString() || '');
+      setQuarter(mapQuarterValue(data.quarter || ''));
+      setPosition(data.position || '');
+      setClient(data.clientId || '');
+      setOfferedDate(data.offeredDate ? new Date(data.offeredDate) : undefined);
+      setClosureDate(data.closureDate ? new Date(data.closureDate) : undefined);
+    } catch {
+      toast({
+        title: 'Could not load closure details',
+        description: 'Please fill the form manually.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleClosureCandidateChange = (closureId: string) => {
+    setSelectedClosureId(closureId);
+    if (closureId) {
+      applyClosurePrefill(closureId);
+    }
+  };
 
   // Create/Update revenue mapping mutation
   const revenueMappingMutation = useMutation({
@@ -199,6 +240,15 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
   const handleSubmit = () => {
     // Validate required fields
     const finalSource = source === "Other" ? otherSource : source;
+
+    if (!editingRevenueMapping && !selectedClosureId) {
+      toast({
+        title: "Error",
+        description: "Please select a closed candidate to map revenue",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Check basic required fields
     if (!talentAdvisor || !teamLead || !year || !quarter || !position || !client || !clientType || !percentage || !revenue || !incentivePlan || !incentive || !finalSource) {
@@ -231,7 +281,14 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
     }
 
     // Send as strings - backend will parse them
+    const selectedClosure = closureCandidates.find((c) => c.id === selectedClosureId);
+
     const data = {
+      promoteClosureId: editingRevenueMapping ? undefined : selectedClosureId,
+      candidateName:
+        editingRevenueMapping?.candidateName ||
+        selectedClosure?.candidateName ||
+        null,
       talentAdvisorId: talentAdvisor,
       teamLeadId: teamLead,
       year, // string
@@ -274,6 +331,46 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
         </DialogHeader>
         
         <div className="space-y-4 py-4">
+          {!editingRevenueMapping ? (
+            <div>
+              <RequiredLabel text="Candidate Name" />
+              <Select value={selectedClosureId} onValueChange={handleClosureCandidateChange}>
+                <SelectTrigger
+                  className="w-full bg-gray-50 dark:bg-gray-700"
+                  data-testid="select-closure-candidate"
+                >
+                  <SelectValue placeholder="Select closed candidate (role)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {closureCandidates.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No closed candidates pending revenue mapping
+                    </SelectItem>
+                  ) : (
+                    closureCandidates.map((candidate) => (
+                      <SelectItem key={candidate.id} value={candidate.id}>
+                        {candidate.label}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Each candidate can be added to Revenue Data only once. Already mapped candidates are not listed.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Candidate</span>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {editingRevenueMapping.candidateName || 'N/A'}
+                {editingRevenueMapping.position
+                  ? ` — ${editingRevenueMapping.position}`
+                  : ''}
+              </p>
+            </div>
+          )}
+
           {/* Row 1 - Team Lead & Talent Advisor */}
           <div className="grid grid-cols-2 gap-6">
             <div>
@@ -631,16 +728,19 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
 
           {/* Submit Buttons */}
           <div className="pt-4 flex justify-end gap-3 border-t">
-            <Button 
+            <Button
+              type="button"
               variant="outline"
               onClick={onClose}
+              className="rounded-[6px] border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
               data-testid="button-cancel"
             >
-              Cancel
+              Close
             </Button>
-            <Button 
+            <Button
+              type="button"
               onClick={handleSubmit}
-              className="bg-violet-600 hover:bg-violet-700"
+              className="rounded-[6px] bg-blue-600 text-white shadow-sm hover:bg-blue-700"
               data-testid="button-submit"
             >
               Submit

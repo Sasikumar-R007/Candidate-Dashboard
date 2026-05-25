@@ -10411,7 +10411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/target-mappings", requireAdminAuth, async (req, res) => {
     try {
       const targetMappings = await storage.getAllTargetMappings();
-      const allRevenue = await storage.getAllRevenueMappings();
+      const allRevenue = await storage.getRevenueDataMappings();
 
       // Enrich with employee data and live revenue aggregates
       const enrichedMappings = await Promise.all(
@@ -10508,10 +10508,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Revenue Mappings CRUD operations
 
+  const mapRevenueQuarterToForm = (quarter: string): string => {
+    const q = (quarter || "").trim().toUpperCase();
+    const alias: Record<string, string> = {
+      JFM: "Q1",
+      AMJ: "Q2",
+      JAS: "Q3",
+      OND: "Q4",
+    };
+    return alias[q] || quarter;
+  };
+
+  const mapFormQuarterToStorage = (quarter: string): string => {
+    const q = (quarter || "").trim().toUpperCase();
+    const alias: Record<string, string> = {
+      Q1: "JFM",
+      Q2: "AMJ",
+      Q3: "JAS",
+      Q4: "OND",
+    };
+    return alias[q] || quarter;
+  };
+
+  // Closures available for first-time Revenue Data mapping (not yet in Revenue Data)
+  app.get(
+    "/api/admin/revenue-mapping-closure-candidates",
+    requireAdminAuth,
+    async (_req, res) => {
+      try {
+        const pending = await storage.getClosureReportMappings();
+        const candidates = pending
+          .filter((rm) => (rm.candidateName || "").trim())
+          .map((rm) => ({
+            id: rm.id,
+            candidateName: rm.candidateName,
+            position: rm.position,
+            label: `${rm.candidateName} — ${rm.position}`,
+          }));
+        res.json(candidates);
+      } catch (error) {
+        console.error("Revenue mapping closure candidates error:", error);
+        res.status(500).json({ message: "Failed to load closure candidates" });
+      }
+    },
+  );
+
+  app.get(
+    "/api/admin/revenue-mapping-closure-candidates/:id",
+    requireAdminAuth,
+    async (req, res) => {
+      try {
+        const mapping = await storage.getRevenueMappingById(req.params.id);
+        if (!mapping) {
+          return res.status(404).json({ message: "Closure not found" });
+        }
+        if (mapping.inRevenueData) {
+          return res
+            .status(400)
+            .json({ message: "This candidate is already in Revenue Data" });
+        }
+        res.json({
+          promoteClosureId: mapping.id,
+          candidateName: mapping.candidateName,
+          talentAdvisorId: mapping.talentAdvisorId,
+          teamLeadId: mapping.teamLeadId,
+          year: mapping.year,
+          quarter: mapRevenueQuarterToForm(mapping.quarter),
+          position: mapping.position,
+          clientId: mapping.clientId,
+          offeredDate: mapping.offeredDate,
+          closureDate: mapping.closureDate,
+        });
+      } catch (error) {
+        console.error("Revenue mapping prefill error:", error);
+        res.status(500).json({ message: "Failed to load closure details" });
+      }
+    },
+  );
+
   // Create revenue mapping
   app.post("/api/admin/revenue-mappings", requireAdminAuth, async (req, res) => {
     try {
       const {
+        promoteClosureId,
         talentAdvisorId,
         teamLeadId,
         candidateName,
@@ -10553,14 +10632,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Client not found" });
       }
 
-      const revenueMappingData = insertRevenueMappingSchema.parse({
+      const storageQuarter = mapFormQuarterToStorage(quarter);
+      const parsedPayload = {
         talentAdvisorId,
         talentAdvisorName: talentAdvisor.name,
         teamLeadId,
         teamLeadName: teamLead.name,
         candidateName: candidateName || null,
         year: parseInt(year),
-        quarter,
+        quarter: storageQuarter,
         position,
         clientId,
         clientName: client.brandName,
@@ -10579,26 +10659,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentDetails,
         paymentStatus,
         incentivePaidMonth,
-        createdAt: new Date().toISOString(),
-      });
+        inRevenueData: true,
+      };
 
-      const revenueMapping = await storage.createRevenueMapping(revenueMappingData);
+      let revenueMapping;
+
+      if (promoteClosureId) {
+        const existing = await storage.getRevenueMappingById(String(promoteClosureId));
+        if (!existing) {
+          return res.status(404).json({ message: "Selected closure not found" });
+        }
+        if (existing.inRevenueData) {
+          return res.status(400).json({
+            message: "This candidate already has a Revenue Data entry",
+          });
+        }
+        revenueMapping = await storage.updateRevenueMapping(existing.id, parsedPayload);
+        if (!revenueMapping) {
+          return res.status(500).json({ message: "Failed to promote closure to Revenue Data" });
+        }
+      } else {
+        const revenueMappingData = insertRevenueMappingSchema.parse({
+          ...parsedPayload,
+          createdAt: new Date().toISOString(),
+        });
+        revenueMapping = await storage.createRevenueMapping(revenueMappingData);
+      }
 
       await syncAllTargetMappingsFromRevenue(storage);
 
-      logClosureMade(
-        storage,
-        talentAdvisorId,
-        talentAdvisor.name,
-        'recruiter',
-        candidateName || 'Candidate',
-        position,
-        client.brandName,
-        revenueMapping.id
-      );
+      if (!promoteClosureId) {
+        logClosureMade(
+          storage,
+          talentAdvisorId,
+          talentAdvisor.name,
+          "recruiter",
+          candidateName || "Candidate",
+          position,
+          client.brandName,
+          revenueMapping!.id,
+        );
+      }
 
       res.status(201).json({
-        message: "Revenue mapping created successfully",
+        message: promoteClosureId
+          ? "Closure added to Revenue Data successfully"
+          : "Revenue mapping created successfully",
         revenueMapping,
       });
     } catch (error: any) {
@@ -10613,10 +10719,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all revenue mappings
+  // Get revenue mappings for Admin Revenue Data table (excludes TA closure-only rows)
   app.get("/api/admin/revenue-mappings", requireAdminAuth, async (req, res) => {
     try {
-      const revenueMappings = await storage.getAllRevenueMappings();
+      const revenueMappings = await storage.getRevenueDataMappings();
       res.json(revenueMappings);
     } catch (error) {
       console.error("Get revenue mappings error:", error);
@@ -10828,7 +10934,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (teamLeadId) updateData.teamLeadId = teamLeadId;
       if (teamLeadName) updateData.teamLeadName = teamLeadName;
       if (year) updateData.year = parseInt(year);
-      if (quarter) updateData.quarter = quarter;
+      if (quarter) updateData.quarter = mapFormQuarterToStorage(quarter);
+      updateData.inRevenueData = true;
       if (position) updateData.position = position;
       if (clientId) updateData.clientId = clientId;
       if (clientName) updateData.clientName = clientName;
@@ -11328,8 +11435,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all target mappings
       const allTargetMappings = await db.select().from(targetMappings);
 
-      // Get all revenue mappings for closures
       const allRevenueMappings = await db.select().from(revenueMappings);
+      const revenueDataMappings = allRevenueMappings.filter(
+        (rm) => rm.inRevenueData,
+      );
 
       // Build team performance data
       const performanceData = teamMembers.map(member => {
@@ -11338,7 +11447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tm.teamMemberId === member.id
         );
 
-        // Get closures for this member
+        // All placement rows (TA closure reports + Revenue Data)
         const memberClosures = allRevenueMappings.filter(rm =>
           rm.talentAdvisorId === member.id ||
           rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase()
@@ -11359,13 +11468,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastClosure = formatDisplayDate(lastDate);
         }
 
+        const memberRevenueData = revenueDataMappings.filter(
+          (rm) =>
+            rm.talentAdvisorId === member.id ||
+            rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase(),
+        );
+
         const enrichedMemberTargets = memberTargets.map((tm) =>
-          enrichTargetMappingWithRevenue(tm, allRevenueMappings),
+          enrichTargetMappingWithRevenue(tm, revenueDataMappings),
         );
 
         const quartersAchieved = countQuartersTargetMet(enrichedMemberTargets);
 
-        const totalRevenue = memberClosures.reduce(
+        const totalRevenue = memberRevenueData.reduce(
           (sum, rm) => sum + (Number(rm.revenue) || 0),
           0,
         );
@@ -11640,7 +11755,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allEmployees = await storage.getAllEmployees();
       const recruiterRoles = new Set(["recruiter", "talent_advisor", "ta"]);
 
-      let allRevenueMappings = await db.select().from(revenueMappings);
+      let allRevenueMappings = (await db.select().from(revenueMappings)).filter(
+        (rm) => rm.inRevenueData,
+      );
 
       const getMappingDate = (rm: (typeof allRevenueMappings)[number]): Date | null => {
         for (const value of [rm.closureDate, rm.offeredDate, rm.createdAt]) {
@@ -13504,16 +13621,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentDetails: null,
         paymentStatus: null,
         incentivePaidMonth: null,
+        inRevenueData: false,
       });
 
       // Add createdAt since it's required by the database but omitted from the schema
       // Pass it explicitly to createRevenueMapping
       const revenueMapping = await storage.createRevenueMapping({
         ...revenueMappingData,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       } as InsertRevenueMapping & { createdAt: string });
-
-      await syncAllTargetMappingsFromRevenue(storage);
 
       // Update application status to 'Closure'
       await storage.updateJobApplicationStatus(applicationId, 'Closure');
