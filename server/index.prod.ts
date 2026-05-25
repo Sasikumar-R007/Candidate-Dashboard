@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
+import { applyCorsHeaders, corsOptions } from "./cors-config";
 import session from "express-session";
 import { registerRoutes } from "./routes";
 
@@ -17,21 +18,10 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-const corsOptions = {
-  origin: [
-    process.env.FRONTEND_URL || 'https://your-app.vercel.app',
-    /\.vercel\.app$/,
-    /localhost:\d+$/
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-};
-
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.options("*", cors(corsOptions));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'staffos-secret-key-change-in-production',
@@ -76,11 +66,23 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  server.timeout = 5 * 60 * 1000;
+  server.requestTimeout = 5 * 60 * 1000;
+  server.headersTimeout = 5 * 60 * 1000;
+
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    applyCorsHeaders(req, res);
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error('Server error:', err);
-    res.status(status).json({ message });
+    let message = err.message || "Internal Server Error";
+    if (err?.code === "LIMIT_FILE_SIZE") {
+      message = "One or more files exceed the 10MB size limit.";
+    } else if (err?.code === "LIMIT_FILE_COUNT") {
+      message = "Too many files in one upload batch. Try fewer files per batch.";
+    }
+    console.error("Server error:", err);
+    if (!res.headersSent) {
+      res.status(status).json({ message });
+    }
   });
 
   log("Production mode — frontend served from Vercel");

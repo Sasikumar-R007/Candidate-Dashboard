@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
@@ -348,9 +349,8 @@ export default function CandidateRegistration() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 font-poppins">New Password</Label>
-                    <Input
+                    <PasswordInput
                       name="password"
-                      type="password"
                       placeholder="••••••••"
                       required
                       className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-blue-100 rounded-xl"
@@ -358,9 +358,8 @@ export default function CandidateRegistration() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 font-poppins">Confirm Password</Label>
-                    <Input
+                    <PasswordInput
                       name="confirmPassword"
-                      type="password"
                       placeholder="••••••••"
                       required
                       className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-blue-100 rounded-xl"

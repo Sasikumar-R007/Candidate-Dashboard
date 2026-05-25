@@ -47,6 +47,59 @@ import { getPipelineStageBadgeClass } from "@/lib/pipeline-session-utils";
 
 const BTN_RADIUS = "rounded-[6px]";
 
+export const CLIENT_REJECTION_COMMENT_PREFIX = "Reason from Client for Rejection:";
+
+export function isClientRejectionComment(body: string, authorRole?: string): boolean {
+  const text = (body || "").trim();
+  return (
+    text.startsWith(CLIENT_REJECTION_COMMENT_PREFIX) ||
+    (authorRole === "Client" && /^rejected by client:/i.test(text))
+  );
+}
+
+/** Matches server `isTalentAdvisorRole` — TA accounts use role `recruiter` in DB. */
+function isTalentAdvisorEmployeeRole(role: string | null | undefined): boolean {
+  const normalized = (role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return normalized === "recruiter" || normalized === "talent_advisor" || normalized === "ta";
+}
+
+function parseSkillsList(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw
+      .map((s) => (typeof s === "string" || typeof s === "number" ? String(s).trim() : ""))
+      .filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map((s) => String(s).trim()).filter(Boolean);
+        }
+      } catch {
+        // fall through
+      }
+    }
+    return trimmed.split(/[,;|]/).map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function uniqueSkillsList(raw: unknown): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const skill of parseSkillsList(raw)) {
+    const key = skill.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(skill);
+  }
+  return out;
+}
+
 export type CandidateCommentsSessionApplicant = {
   id: string;
   candidateName?: string;
@@ -120,30 +173,13 @@ type ApplicationComment = {
   createdAt: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 
 function normalizeUploadAssetUrl(
   filePath?: string | null,
   defaultSubdir = "uploads",
 ): string | null {
-  if (!filePath) return null;
-  let url = filePath.trim();
-  if (!url) return null;
-
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
-  }
-
-  if (url.startsWith("/api/profile-media")) {
-    return `${API_BASE_URL}${url}`;
-  }
-
-  if (!url.startsWith("/")) {
-    if (url.startsWith("uploads/")) url = `/${url}`;
-    else url = `/${defaultSubdir}/${url}`;
-  }
-
-  return `${API_BASE_URL}${url}`;
+  return resolveUploadAssetUrl(filePath, defaultSubdir);
 }
 
 function normalizeResumeUrl(resumeFile?: string | null): string | null {
@@ -228,6 +264,7 @@ function SalaryDetailsSection({
   lastEditedAt,
   canEdit,
   onSaved,
+  railVariant = "default",
 }: {
   applicationId: string;
   apiMode: "recruiter" | "client";
@@ -237,7 +274,9 @@ function SalaryDetailsSection({
   lastEditedAt?: string | null;
   canEdit: boolean;
   onSaved: () => void;
+  railVariant?: "default" | "ta";
 }) {
+  const taRail = railVariant === "ta";
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
   const [draftCurrent, setDraftCurrent] = useState(currentCtc);
@@ -249,9 +288,15 @@ function SalaryDetailsSection({
     if (!canEdit) setExpanded(false);
   }, [applicationId, currentCtc, expectedCtc, canEdit]);
 
+  const encodedId = encodeURIComponent(applicationId);
+  const salaryEndpoint =
+    apiMode === "client"
+      ? `/api/client/applications/${encodedId}/salary`
+      : `/api/recruiter/applications/${encodedId}/salary`;
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("PATCH", `/api/recruiter/applications/${applicationId}/salary`, {
+      const res = await apiRequest("PATCH", salaryEndpoint, {
         currentCtc: draftCurrent,
         expectedCtc: draftExpected,
       });
@@ -263,9 +308,19 @@ function SalaryDetailsSection({
       onSaved();
     },
     onError: (error: Error) => {
+      let description = error.message || "Please try again.";
+      const jsonStart = description.indexOf("{");
+      if (jsonStart >= 0) {
+        try {
+          const parsed = JSON.parse(description.slice(jsonStart)) as { message?: string };
+          if (parsed.message) description = parsed.message;
+        } catch {
+          // keep raw message
+        }
+      }
       toast({
         title: "Could not save salary",
-        description: error.message,
+        description,
         variant: "destructive",
       });
     },
@@ -276,12 +331,18 @@ function SalaryDetailsSection({
   return (
     <div
       className={cn(
-        "mx-4 mb-2 mt-2 shrink-0 border border-gray-300 bg-gray-200/70",
+        "shrink-0 border border-gray-300 bg-gray-200/70",
         BTN_RADIUS,
+        taRail ? "mx-3 mb-1 mt-1" : "mx-4 mb-2 mt-2",
       )}
       data-testid="salary-details-bar"
     >
-      <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 px-3",
+          taRail ? "min-h-[44px] py-3" : "py-2.5",
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <IndianRupee className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
           <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -311,7 +372,7 @@ function SalaryDetailsSection({
           </TooltipProvider>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {canEdit && apiMode === "recruiter" && (
+          {canEdit && (
             <button
               type="button"
               onClick={() => setExpanded((prev) => !prev)}
@@ -379,7 +440,12 @@ function SalaryDetailsSection({
       </div>
 
       {!expanded && (
-        <div className="border-t border-gray-300/60 px-3 pb-2.5 pt-2">
+        <div
+          className={cn(
+            "border-t border-gray-300/60 px-3",
+            taRail ? "min-h-[40px] pb-3 pt-2" : "pb-2.5 pt-2",
+          )}
+        >
           <p className="text-sm font-medium text-gray-800">{summary}</p>
           {lastEditedBy && (
             <p className="mt-1 text-xs text-gray-500">Last edited by {lastEditedBy}</p>
@@ -411,6 +477,17 @@ function formatEducation(app?: SessionApplication): string | undefined {
   return unique.length ? unique.join(" · ") : undefined;
 }
 
+function getClientRejectionReason(app?: SessionApplication | null): string | null {
+  if (!app) return null;
+  const direct = app.rejectionReason?.trim();
+  if (direct) return direct;
+  const note = app.statusNote?.trim();
+  if (note && /^rejected by client:/i.test(note)) {
+    return note.replace(/^rejected by client:\s*/i, "").trim() || null;
+  }
+  return null;
+}
+
 function formatCtcLabel(
   app?: SessionApplication,
   normalized?: { current: string; expected: string },
@@ -436,10 +513,16 @@ type CandidateCommentsSessionProps = {
   canViewSalaryDetails?: boolean;
   viewerName?: string;
   clientReject?: {
-    canReject: boolean;
+    /** Optional; session derives from application status when omitted */
+    canReject?: boolean;
     isRejecting?: boolean;
-    onReject: (reason: string) => void;
+    /** @deprecated Reject is handled inside the session (status + comment). Use onClientRejected for side effects. */
+    onReject?: (reason: string) => void;
   };
+  /** After a successful client reject (pipeline refresh, etc.) */
+  onClientRejected?: (reason: string) => void;
+  /** TA pipeline: taller right-rail blocks, tighter vertical spacing */
+  commentsRailVariant?: "default" | "ta";
 };
 
 export function CandidateCommentsSession({
@@ -452,9 +535,12 @@ export function CandidateCommentsSession({
   canViewSalaryDetails = true,
   viewerName,
   clientReject,
+  onClientRejected,
+  commentsRailVariant = "default",
 }: CandidateCommentsSessionProps) {
+  const taCommentsRail = commentsRailVariant === "ta";
   const { toast } = useToast();
-  const { employee } = useEmployeeAuth();
+  const employee = useEmployeeAuth();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState("");
   const [rejectReason, setRejectReason] = useState("");
@@ -464,10 +550,11 @@ export function CandidateCommentsSession({
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const prevApplicationIdRef = useRef(applicationId);
 
+  const encodedApplicationId = encodeURIComponent(applicationId);
   const apiBase =
     apiMode === "client"
-      ? `/api/client/applications/${applicationId}`
-      : `/api/recruiter/applications/${applicationId}`;
+      ? `/api/client/applications/${encodedApplicationId}`
+      : `/api/recruiter/applications/${encodedApplicationId}`;
   const sessionQueryKey =
     apiMode === "client"
       ? ["/api/client/applications", applicationId, "session"]
@@ -557,8 +644,9 @@ export function CandidateCommentsSession({
     app?.currentCompany || app?.company || fallbackApplicant?.company || "—";
   const email = app?.candidateEmail || fallbackApplicant?.email;
   const phone = app?.candidatePhone || fallbackApplicant?.phone;
-  const skills =
-    app?.skills?.length ? app.skills : fallbackApplicant?.skills?.length ? fallbackApplicant.skills : [];
+  const skills = uniqueSkillsList(
+    app?.skills ?? (fallbackApplicant?.skills?.length ? fallbackApplicant.skills : []),
+  );
   const resumeUrl = normalizeResumeUrl(app?.resumeFile || fallbackApplicant?.resumeFile);
   const profilePictureUrl = normalizeProfilePictureUrl(
     app?.profilePicture || fallbackApplicant?.profilePicture,
@@ -584,21 +672,28 @@ export function CandidateCommentsSession({
     current: applicationCurrentCtc,
     expected: applicationExpectedCtc,
   });
-  const employeeRole = (employee?.role || "").toLowerCase();
   const canEditSalary =
-    apiMode === "recruiter" &&
-    (employeeRole === "team_leader" ||
-      employeeRole === "recruiter" ||
-      employeeRole === "talent_advisor" ||
-      employeeRole === "ta");
+    apiMode !== "client" && isTalentAdvisorEmployeeRole(employee?.role);
   const showSalarySection = apiMode !== "client" || canViewSalaryDetails;
+  const clientRejectionReason = getClientRejectionReason(app);
 
   const showContentFade = isSwitching || sessionFetching || commentsFetching;
+
+  const displayComments = useMemo(() => {
+    const seenRejectionBodies = new Set<string>();
+    return comments.filter((c) => {
+      if (!isClientRejectionComment(c.body, c.authorRole)) return true;
+      const key = c.body.trim();
+      if (seenRejectionBodies.has(key)) return false;
+      seenRejectionBodies.add(key);
+      return true;
+    });
+  }, [comments]);
 
   const commentsByDay = useMemo(() => {
     const groups: { label: string; items: ApplicationComment[] }[] = [];
     const map = new Map<string, ApplicationComment[]>();
-    for (const c of comments) {
+    for (const c of displayComments) {
       const dayKey = formatCommentDayKey(c.createdAt);
       if (!map.has(dayKey)) map.set(dayKey, []);
       map.get(dayKey)!.push(c);
@@ -610,11 +705,122 @@ export function CandidateCommentsSession({
       });
     }
     return groups;
-  }, [comments]);
+  }, [displayComments]);
 
+  const pipelineStatus = (app?.status || fallbackApplicant?.currentStatus || "").toLowerCase();
   const isRejected =
-    (app?.status || fallbackApplicant?.currentStatus || "").toLowerCase() === "rejected";
+    pipelineStatus === "rejected" ||
+    pipelineStatus.includes("screened out") ||
+    pipelineStatus === "withdrawn";
   const posterName = employee?.name || viewerName;
+
+  const builtInClientRejectMutation = useMutation({
+    mutationFn: async (reason: string) => {
+      const trimmed = reason.trim();
+      if (!trimmed) {
+        throw new Error("Please enter a rejection reason.");
+      }
+      const commentBody = `${CLIENT_REJECTION_COMMENT_PREFIX} ${trimmed}`;
+
+      const statusRes = await apiRequest("PATCH", `${apiBase}/status`, {
+        status: "Rejected",
+        reason: trimmed,
+        rejectionReason: trimmed,
+      });
+      await statusRes.json();
+
+      let savedComment: ApplicationComment | null = null;
+      try {
+        const commentRes = await apiRequest("POST", `${apiBase}/comments`, { body: commentBody });
+        savedComment = (await commentRes.json()) as ApplicationComment;
+      } catch {
+        // PATCH handler may already have created the comment
+      }
+
+      return { reason: trimmed, commentBody, comment: savedComment };
+    },
+    onMutate: async (reason) => {
+      const trimmed = reason.trim();
+      const commentBody = `${CLIENT_REJECTION_COMMENT_PREFIX} ${trimmed}`;
+      const optimistic: ApplicationComment = {
+        id: `optimistic-client-reject-${Date.now()}`,
+        applicationId,
+        authorEmployeeId: employee?.id || "",
+        authorName: employee?.name || viewerName || "Client",
+        authorRole: "Client",
+        body: commentBody,
+        createdAt: new Date().toISOString(),
+      };
+      await queryClient.cancelQueries({ queryKey: commentsQueryKey });
+      const previous = queryClient.getQueryData<ApplicationComment[]>(commentsQueryKey);
+      queryClient.setQueryData<ApplicationComment[]>(commentsQueryKey, [
+        ...(previous || []),
+        optimistic,
+      ]);
+      return { previous, optimisticId: optimistic.id };
+    },
+    onSuccess: async (data, _reason, context) => {
+      queryClient.setQueryData<ApplicationComment[]>(commentsQueryKey, (old = []) => {
+        const withoutOptimistic = old.filter((c) => c.id !== context?.optimisticId);
+        const hasComment = withoutOptimistic.some(
+          (c) => c.body.trim() === data.commentBody || isClientRejectionComment(c.body, c.authorRole),
+        );
+        if (hasComment) return withoutOptimistic;
+        if (data.comment) return [...withoutOptimistic, data.comment];
+        return [
+          ...withoutOptimistic,
+          {
+            id: `client-reject-${Date.now()}`,
+            applicationId,
+            authorEmployeeId: employee?.id || "",
+            authorName: employee?.name || viewerName || "Client",
+            authorRole: "Client",
+            body: data.commentBody,
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      });
+
+      await queryClient.refetchQueries({ queryKey: commentsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
+      void queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/client/dashboard-stats"] });
+
+      onClientRejected?.(data.reason);
+      clientReject?.onReject?.(data.reason);
+
+      setRejectReason("");
+      setShowRejectForm(false);
+      setConfirmRejectOpen(false);
+
+      setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 150);
+      toast({
+        title: "Candidate rejected",
+        description: "Rejection reason was added to the comment thread.",
+      });
+    },
+    onError: (error: Error, _reason, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(commentsQueryKey, context.previous);
+      }
+      toast({
+        title: "Could not reject candidate",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const effectiveClientReject =
+    apiMode === "client"
+      ? {
+          canReject: clientReject?.canReject ?? !isRejected,
+          isRejecting: builtInClientRejectMutation.isPending,
+          onReject: (reason: string) => {
+            builtInClientRejectMutation.mutate(reason);
+          },
+        }
+      : clientReject;
 
   useEffect(() => {
     if (isRejected) {
@@ -625,11 +831,8 @@ export function CandidateCommentsSession({
   }, [isRejected, applicationId]);
 
   const handleConfirmReject = () => {
-    if (!clientReject || !rejectReason.trim()) return;
-    clientReject.onReject(rejectReason.trim());
-    setConfirmRejectOpen(false);
-    setShowRejectForm(false);
-    setRejectReason("");
+    if (!effectiveClientReject || !rejectReason.trim()) return;
+    effectiveClientReject.onReject(rejectReason.trim());
   };
 
   const handleSubmitComment = () => {
@@ -840,9 +1043,9 @@ export function CandidateCommentsSession({
                   <div className="mt-4">
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Skills</p>
                     <div className="flex flex-wrap gap-2">
-                      {skills.map((skill) => (
+                      {skills.map((skill, index) => (
                         <span
-                          key={skill}
+                          key={`${skill}-${index}`}
                           className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-800"
                         >
                           {skill}
@@ -889,17 +1092,18 @@ export function CandidateCommentsSession({
                 </DetailCard>
               )}
 
-              {(app?.statusNote || app?.rejectionReason) && (
+              {(app?.statusNote || clientRejectionReason) && (
                 <DetailCard title="Notes">
-                  {app.rejectionReason && (
+                  {clientRejectionReason && (
                     <p className="text-sm text-red-700">
-                      <span className="font-medium">Rejection: </span>
-                      {app.rejectionReason}
+                      <span className="font-medium">Rejection Reason by Client: </span>
+                      {clientRejectionReason}
                     </p>
                   )}
-                  {app.statusNote && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">{app.statusNote}</p>
-                  )}
+                  {app.statusNote &&
+                    !(clientRejectionReason && /^rejected by client:/i.test(app.statusNote)) && (
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">{app.statusNote}</p>
+                    )}
                 </DetailCard>
               )}
 
@@ -954,17 +1158,18 @@ export function CandidateCommentsSession({
         </section>
 
         <section
-          className="flex w-[42%] min-w-0 flex-col bg-gray-100 text-gray-900"
+          className="flex w-[42%] min-h-0 flex-col bg-gray-100 text-gray-900"
           aria-label="Candidate Comments"
         >
           <SectionHeader
             title="Comments"
             mutedPanel
+            taRail={taCommentsRail}
             right={
-              clientReject ? (
+              effectiveClientReject ? (
                 isRejected ? (
                   <span className="text-xs font-medium text-red-600">Rejected</span>
-                ) : clientReject.canReject ? (
+                ) : effectiveClientReject.canReject ? (
                   showRejectForm ? (
                     <Button
                       type="button"
@@ -997,7 +1202,22 @@ export function CandidateCommentsSession({
               ) : null
             }
           />
-          {showRejectForm && clientReject?.canReject && !isRejected && (
+          {clientRejectionReason ? (
+            <div
+              className={cn(
+                "shrink-0 border border-red-200 bg-red-50 px-3 py-2.5",
+                BTN_RADIUS,
+                taCommentsRail ? "mx-3 mt-1.5" : "mx-4 mt-3",
+              )}
+              data-testid="client-rejection-reason-banner"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-800">
+                Rejection Reason by Client
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-red-900">{clientRejectionReason}</p>
+            </div>
+          ) : null}
+          {showRejectForm && effectiveClientReject?.canReject && !isRejected && (
             <div className="shrink-0 space-y-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
               <Textarea
                 value={rejectReason}
@@ -1014,7 +1234,7 @@ export function CandidateCommentsSession({
                 variant="destructive"
                 size="sm"
                 className={cn("w-full", BTN_RADIUS)}
-                disabled={!rejectReason.trim() || clientReject.isRejecting}
+                disabled={!rejectReason.trim() || effectiveClientReject.isRejecting}
                 onClick={() => setConfirmRejectOpen(true)}
                 data-testid="button-session-reject-candidate"
               >
@@ -1037,6 +1257,7 @@ export function CandidateCommentsSession({
                     : String(app.salaryEditedAt)
               }
               canEdit={canEditSalary}
+              railVariant={taCommentsRail ? "ta" : "default"}
               onSaved={() => {
                 void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
               }}
@@ -1045,7 +1266,8 @@ export function CandidateCommentsSession({
 
           <div
             className={cn(
-              "relative flex-1 overflow-y-auto px-5 py-4 transition-opacity duration-200",
+              "relative min-h-0 flex-1 overflow-y-auto transition-opacity duration-200",
+              taCommentsRail ? "px-4 py-2" : "px-5 py-4",
               showContentFade ? "opacity-50" : "opacity-100",
             )}
           >
@@ -1053,7 +1275,7 @@ export function CandidateCommentsSession({
               <div className="flex justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               </div>
-            ) : comments.length === 0 ? (
+            ) : displayComments.length === 0 ? (
               <p className="py-12 text-center text-sm text-gray-500">
                 No comments yet. Start the discussion about {displayName}&apos;s interviews and performance.
               </p>
@@ -1084,7 +1306,16 @@ export function CandidateCommentsSession({
                                 {formatCommentTime(comment.createdAt)}
                               </span>
                             </div>
-                            <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{comment.body}</p>
+                            <p
+                              className={cn(
+                                "mt-1 whitespace-pre-wrap text-sm",
+                                isClientRejectionComment(comment.body, comment.authorRole)
+                                  ? "font-medium text-red-700"
+                                  : "text-gray-700",
+                              )}
+                            >
+                              {comment.body}
+                            </p>
                           </div>
                         </article>
                       ))}
@@ -1096,8 +1327,13 @@ export function CandidateCommentsSession({
             )}
           </div>
 
-          <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-4 py-3">
-            <p className="mb-2 text-[11px] text-gray-600">
+          <div
+            className={cn(
+              "shrink-0 border-t border-gray-200 bg-gray-50",
+              taCommentsRail ? "px-3 py-2.5" : "px-4 py-3",
+            )}
+          >
+            <p className={cn("text-[11px] text-gray-600", taCommentsRail ? "mb-1.5" : "mb-2")}>
               {apiMode === "client"
                 ? "Comments are shared with your hiring team on this application."
                 : "Comments are visible only to your team on this application."}
@@ -1146,7 +1382,7 @@ export function CandidateCommentsSession({
         </section>
       </div>
 
-      {clientReject && (
+      {effectiveClientReject && (
         <AlertDialog open={confirmRejectOpen} onOpenChange={setConfirmRejectOpen}>
           <AlertDialogContent className={cn("max-w-md", BTN_RADIUS)}>
             <AlertDialogHeader>
@@ -1163,16 +1399,16 @@ export function CandidateCommentsSession({
               </p>
             )}
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={clientReject.isRejecting}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={effectiveClientReject.isRejecting}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-red-600 hover:bg-red-700"
-                disabled={clientReject.isRejecting || !rejectReason.trim()}
+                disabled={effectiveClientReject.isRejecting || !rejectReason.trim()}
                 onClick={(e) => {
                   e.preventDefault();
                   handleConfirmReject();
                 }}
               >
-                {clientReject.isRejecting ? "Rejecting…" : "Reject"}
+                {effectiveClientReject.isRejecting ? "Rejecting…" : "Reject"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1187,16 +1423,19 @@ function SectionHeader({
   left,
   right,
   mutedPanel = false,
+  taRail = false,
 }: {
   title: string;
   left?: ReactNode;
   right?: ReactNode;
   mutedPanel?: boolean;
+  taRail?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5",
+        "flex shrink-0 items-center justify-between gap-3 border-b px-4",
+        taRail ? "min-h-[44px] py-3" : "py-2.5",
         mutedPanel ? "border-gray-200 bg-gray-50/80" : "border-gray-200",
       )}
     >

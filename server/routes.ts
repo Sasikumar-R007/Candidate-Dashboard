@@ -12,6 +12,7 @@ import {
   enrichRequirementWithJdExtras,
   parseRequirementJdExtras,
 } from "@shared/requirement-jd-extras";
+import { normalizePipelineDisplayStatus } from "@shared/pipeline-stages";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { sql, eq, and, or, desc, lte, gte, inArray, isNull } from "drizzle-orm";
@@ -116,6 +117,8 @@ function calculateQuartersSince(joiningDate: string | Date | null | undefined): 
 
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
+import { normalizeParsedEducation, normalizeParsedSkills } from "./parsed-field-format";
+import { applyCorsHeaders } from "./cors-config";
 import { parseJDWithAI } from "./ai-jd-parser";
 import {
   sendEmployeeWelcomeEmail,
@@ -453,24 +456,76 @@ function findTeamLeaderByFilter(
   const normalized = teamFilter.trim().toLowerCase();
   return allEmployees.find(
     (emp) =>
-      emp.role === "team_leader" &&
+      (emp.role === "team_leader" || emp.role === "teamLead") &&
       (emp.id === teamFilter ||
         emp.employeeId === teamFilter ||
         emp.name.toLowerCase() === normalized),
   );
 }
 
+function findEmployeeByFilter(
+  allEmployees: Array<{ id: string; employeeId: string; name: string; role: string }>,
+  filter: string,
+) {
+  const normalized = filter.trim().toLowerCase();
+  return allEmployees.find(
+    (emp) =>
+      emp.id === filter ||
+      emp.employeeId === filter ||
+      (emp.name || "").toLowerCase() === normalized,
+  );
+}
+
+function isTalentAdvisorRole(role: string | null | undefined): boolean {
+  const normalized = (role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return normalized === "recruiter" || normalized === "talent_advisor" || normalized === "ta";
+}
+
+const ARCHIVED_CANDIDATE_STATUSES = new Set([
+  "screened out",
+  "rejected",
+  "archived",
+  "offer drop",
+  "declined",
+  "withdrawn",
+]);
+
+function mapArchivedCandidateRow(app: any) {
+  return {
+    id: app.id,
+    candidateName: app.candidateName || "Unknown",
+    candidateEmail: app.candidateEmail || "N/A",
+    jobTitle: app.jobTitle || app.roleApplied || "N/A",
+    company: app.company || "N/A",
+    status: app.status || app.currentStatus || "Rejected",
+    appliedDate: app.appliedDate || app.updatedAt || null,
+    requirementId: app.requirementId || null,
+  };
+}
+
+function filterArchivedCandidates(applications: any[]): any[] {
+  return applications
+    .filter((app: any) => {
+      const status = (app.status || app.currentStatus || "").trim().toLowerCase();
+      return ARCHIVED_CANDIDATE_STATUSES.has(status) || status.includes("reject");
+    })
+    .map(mapArchivedCandidateRow);
+}
+
 function getRecruitersForTeamLead(
   allEmployees: Array<{ id: string; employeeId: string; name: string; role: string; reportingTo?: string | null; isActive?: boolean | null }>,
   teamLead: { id: string; employeeId: string; name: string },
 ) {
+  const reportingKeys = new Set(
+    [teamLead.employeeId, teamLead.id, teamLead.name]
+      .filter(Boolean)
+      .map((value) => String(value).trim().toLowerCase()),
+  );
   return allEmployees.filter(
     (emp) =>
-      (emp.role === "recruiter" || emp.role === "talent_advisor" || emp.role === "ta") &&
+      isTalentAdvisorRole(emp.role) &&
       emp.isActive !== false &&
-      (emp.reportingTo === teamLead.employeeId ||
-        emp.reportingTo === teamLead.id ||
-        emp.reportingTo === teamLead.name),
+      reportingKeys.has(String(emp.reportingTo || "").trim().toLowerCase()),
   );
 }
 function getRevenueMappingRecencyTs(mapping: {
@@ -602,8 +657,7 @@ function requirementMatchesTalentAdvisor(
 }
 
 function employeeCanEditApplicationSalary(role: string | null | undefined): boolean {
-  const r = (role || "").toLowerCase();
-  return r === "team_leader" || r === "recruiter" || r === "talent_advisor" || r === "ta";
+  return isTalentAdvisorRole(role);
 }
 
 function stripSalaryFromApplicationSession(details: Record<string, unknown>) {
@@ -1481,6 +1535,14 @@ async function employeeCanAccessRecruiterApplication(
   }
 
   return hasAccess;
+}
+
+function employeeHasSourcingAccess(employee: { role: string }): boolean {
+  const roleLower = (employee.role || "").toLowerCase();
+  if (roleLower === "admin" || roleLower === "manager" || roleLower.includes("admin")) {
+    return true;
+  }
+  return normalizeSourcingRole(employee.role) !== null;
 }
 
 async function employeeCanViewCandidateRecord(
@@ -3425,7 +3487,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = {
         id: candidate.id,
         candidateId: candidate.candidateId,
-        registrationStage: (candidate.resumeFile && (candidate.registrationStage === 'registered' || candidate.registrationStage === 'verified')) ? 'resume_uploaded' : candidate.registrationStage,
         userId: candidate.id,
         firstName: profileData?.firstName || nameParts[0] || '',
         lastName: profileData?.lastName || nameParts.slice(1).join(' ') || '',
@@ -4174,7 +4235,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid status for candidate action" });
       }
 
-      const updated = await storage.updateJobApplicationStatus(id, status, undefined, statusNote, rejectionReason);
+      let updated;
+      if (status === "Withdrawn") {
+        const previousStage = application.status || "Resume Review";
+        const withdrawNote =
+          (typeof statusNote === "string" && statusNote.trim()) ||
+          (typeof rejectionReason === "string" && rejectionReason.trim()) ||
+          "Candidate withdrew application.";
+        const composedNote = [
+          withdrawNote,
+          "[[TERMINAL:WITHDRAW]]",
+          `[[REJECT_STAGE:${previousStage}]]`,
+          `[[REJECTED_AT:${new Date().toISOString()}]]`,
+        ].join("\n");
+        updated = await storage.updateJobApplicationStatus(
+          id,
+          "Screened Out",
+          undefined,
+          composedNote,
+          typeof rejectionReason === "string" ? rejectionReason : undefined,
+        );
+      } else {
+        updated = await storage.updateJobApplicationStatus(id, status, undefined, statusNote, rejectionReason);
+      }
       if (!updated) {
         return res.status(404).json({ message: "Application not found" });
       }
@@ -4313,6 +4396,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (parsedData && parsedData.aiParsed) {
             const ai = parsedData.aiParsed;
+            const normalizedSkillCsv = normalizeParsedSkills(ai.skills);
+            const normalizedEducation = normalizeParsedEducation(ai.education);
 
             // 1. Update Candidate Master Record
             await storage.updateCandidate(candidate.id, {
@@ -4322,8 +4407,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               designation: ai.designation || null,
               experience: ai.experience || null,
               location: ai.location || null,
-              skills: ai.skills || null,
-              education: ai.education || null,
+              skills: normalizedSkillCsv ?? null,
+              education: normalizedEducation ?? null,
               currentRole: ai.current_role || null,
               portfolioUrl: ai.portfolio_url || null,
               website_url: ai.website_url || null,
@@ -4370,7 +4455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               collegeName: ai.college || ai.university || null,
               course: ai.course || null,
               graduationYear: ai.graduation_year || null,
-              skills: ai.skills || null,
+              skills: normalizedSkillCsv || null,
               currentCompany: ai.company || null,
               currentRole: ai.current_role || null,
               noticePeriod: ai.notice_period || null,
@@ -4382,8 +4467,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : await storage.createProfile({ ...profileData, userId: candidate.id } as any);
 
             // 3. Sync Skills Table (Convert CSV to separate rows)
-            if (savedProfile && ai.skills) {
-              const skillList = ai.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+            if (savedProfile && normalizedSkillCsv) {
+              const skillList = normalizedSkillCsv.split(',').map((s: string) => s.trim()).filter(Boolean);
               const skillInsertions = skillList.map((skill: string, index: number) => ({
                 profileId: savedProfile.id,
                 name: skill.charAt(0).toUpperCase() + skill.slice(1),
@@ -4479,8 +4564,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const uploadsRoot = path.join(process.cwd(), "uploads");
+  const resumeFilesRoot = path.join(uploadsRoot, "resumes");
+
+  /** Serve resume PDFs via API (works when frontend is on a different host than the backend). */
+  app.get("/api/files/resumes/:filename", (req, res) => {
+    try {
+      const safeName = path.basename(req.params.filename || "");
+      if (!safeName) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      const candidates = [
+        path.join(resumeFilesRoot, safeName),
+        path.join(uploadsRoot, safeName),
+        path.join(uploadsRoot, "resumes", safeName),
+      ];
+      for (const filePath of candidates) {
+        if (fs.existsSync(filePath)) {
+          return res.sendFile(path.resolve(filePath));
+        }
+      }
+      return res.status(404).json({
+        message:
+          "Resume file not found on the server. It may have been uploaded before the last deploy, or storage is not persistent on this host — please re-upload the resume.",
+      });
+    } catch (error) {
+      console.error("Serve resume file error:", error);
+      return res.status(500).json({ message: "Failed to load resume file" });
+    }
+  });
+
   // Serve uploaded files (ephemeral on cloud hosts — prefer profile_media for avatars)
-  app.use('/uploads', express.static('uploads'));
+  app.use("/uploads", express.static(uploadsRoot));
 
   // Get saved jobs for candidate
   app.get("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
@@ -5177,10 +5292,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Interview Scheduled' // Maps to L1
       ]);
 
-      // Filter to only include candidates in pipeline stages (exclude Rejected, Screened Out, Archived, etc.)
       const pipelineApplications = allPipelineApplications.filter((app: any) => {
-        const status = (app.status || '').trim();
-        return validPipelineStatuses.has(status);
+        const status = (app.status || "").trim().toLowerCase();
+        return status !== "archived" && status !== "";
       });
 
       // Format pipeline data similar to recruiter pipeline
@@ -5248,34 +5362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Map status to pipeline format (normalize to match frontend expectations)
-        const statusMap: Record<string, string> = {
-          'In Process': 'In-Process',
-          'In-Process': 'In-Process',
-          'Sourced': 'In-Process',
-          'Shortlisted': 'Shortlisted',
-          'Intro Call': 'Intro Call',
-          'Assignment': 'Assignment',
-          'L1': 'L1',
-          'Level 1': 'L1',
-          'L2': 'L2',
-          'Level 2': 'L2',
-          'L3': 'L3',
-          'Level 3': 'L3',
-          'Final Round': 'Final Round',
-          'HR Round': 'HR Round',
-          'Offer Stage': 'Offer Stage',
-          'Selected': 'Offer Stage',
-          'Closure': 'Closure',
-          'Joined': 'Closure',
-          'Offer Drop': 'Offer Drop',
-          'Declined': 'Offer Drop',
-          'Interview Scheduled': 'L1',
-          'Applied': 'In-Process',
-          'Submitted': 'In-Process'
-        };
-
-        const mappedStatus = statusMap[app.status] || app.status || 'In-Process';
+        const mappedStatus = normalizePipelineDisplayStatus(app.status);
 
         return {
           id: app.id,
@@ -7929,6 +8016,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }, async (req, res) => {
     try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      if (!employeeHasSourcingAccess(employee)) {
+        return res.status(403).json({ message: "Only recruiters, talent advisors, and team leaders can parse resumes" });
+      }
+
       if (!req.file) {
         return res.status(400).json({ message: "No resume file uploaded" });
       }
@@ -8469,6 +8564,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/archived-candidates", requireAdminAuth, async (req, res) => {
+    try {
+      const allApplications = await storage.getAllJobApplications();
+      res.json(filterArchivedCandidates(allApplications));
+    } catch (error) {
+      console.error("Get admin archived candidates error:", error);
+      res.status(500).json({ message: "Failed to get archived candidates" });
+    }
+  });
+
   app.get("/api/team-leader/archived-requirements", requireEmployeeAuth, async (req, res) => {
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -8492,6 +8597,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/team-leader/archived-candidates", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(401).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== "team_leader" && employee.role !== "teamLead") {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const allEmployees = await storage.getAllEmployees();
+      const teamRecruiters = getRecruitersForTeamLead(allEmployees, employee);
+      const teamMemberIds = new Set([
+        employee.id,
+        ...teamRecruiters.map((member) => member.id),
+      ]);
+      const allApplications = await storage.getAllJobApplications();
+      const scoped = allApplications.filter(
+        (app: any) => app.ownerEmployeeId && teamMemberIds.has(app.ownerEmployeeId),
+      );
+      res.json(filterArchivedCandidates(scoped));
+    } catch (error) {
+      console.error("Get team leader archived candidates error:", error);
+      res.status(500).json({ message: "Failed to get archived candidates" });
+    }
+  });
+
   app.get("/api/recruiter/archived-requirements", requireEmployeeAuth, async (req, res) => {
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -8512,6 +8645,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get recruiter archived requirements error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/recruiter/archived-candidates", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(401).json({ message: "Employee not found" });
+      }
+
+      if (!isTalentAdvisorRole(employee.role)) {
+        return res.status(403).json({ message: "Access denied. Talent Advisor role required." });
+      }
+
+      const allApplications = await storage.getAllJobApplications();
+      const scoped = allApplications.filter(
+        (app: any) =>
+          app.ownerEmployeeId === employee.id ||
+          (!app.ownerEmployeeId &&
+            app.source === "recruiter_tagged" &&
+            app.requirementId),
+      );
+      res.json(filterArchivedCandidates(scoped));
+    } catch (error) {
+      console.error("Get recruiter archived candidates error:", error);
+      res.status(500).json({ message: "Failed to get archived candidates" });
     }
   });
 
@@ -9470,15 +9629,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email is required" });
       }
 
+      const normalizedEmail = String(email).trim().toLowerCase();
+
       // Check if email exists in employees OR candidates
-      const [employee] = await db.select().from(employees).where(eq(employees.email, email)).limit(1);
-      const [candidate] = await db.select().from(candidates).where(eq(candidates.email, email)).limit(1);
+      const employee = await storage.getEmployeeByEmail(normalizedEmail);
+      const candidate = await storage.getCandidateByEmail(normalizedEmail);
 
       if (!employee && !candidate) {
         return res.status(404).json({ message: "No account found with this email address" });
       }
 
-      const userName = employee ? employee.name : candidate.fullName;
+      const userName = employee ? employee.name : candidate!.fullName;
 
       // Generate 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -9486,7 +9647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Save OTP to database
       await db.insert(passwordResets).values({
-        email,
+        email: normalizedEmail,
         otp,
         expiresAt,
         isVerified: false
@@ -9495,7 +9656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send OTP via email
       const emailSent = await sendOTPEmail({
         fullName: userName,
-        email,
+        email: normalizedEmail,
         otp,
         expiresInMinutes: 15
       });
@@ -9520,11 +9681,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and OTP are required" });
       }
 
+      const normalizedEmail = String(email).trim().toLowerCase();
+
       // Find the latest unverified OTP for this email
       const [resetRecord] = await db.select()
         .from(passwordResets)
         .where(and(
-          eq(passwordResets.email, email),
+          eq(passwordResets.email, normalizedEmail),
           eq(passwordResets.otp, otp),
           eq(passwordResets.isVerified, false)
         ))
@@ -9560,11 +9723,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email, OTP, and new password are required" });
       }
 
+      const normalizedEmail = String(email).trim().toLowerCase();
+
       // Check if OTP was verified
       const [resetRecord] = await db.select()
         .from(passwordResets)
         .where(and(
-          eq(passwordResets.email, email),
+          eq(passwordResets.email, normalizedEmail),
           eq(passwordResets.otp, otp),
           eq(passwordResets.isVerified, true)
         ))
@@ -9578,25 +9743,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash new password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-      // Update in employees OR candidates
-      const [employee] = await db.select().from(employees).where(eq(employees.email, email)).limit(1);
-      const [candidate] = await db.select().from(candidates).where(eq(candidates.email, email)).limit(1);
+      // Update in employees OR candidates (candidate login uses candidates.password)
+      const employee = await storage.getEmployeeByEmail(normalizedEmail);
+      const candidate = await storage.getCandidateByEmail(normalizedEmail);
 
       if (employee) {
         await db.update(employees)
           .set({ password: hashedPassword })
           .where(eq(employees.id, employee.id));
       } else if (candidate) {
-        // Find user by username (which is email for candidates)
-        const [candidateUser] = await db.select()
-          .from(users)
-          .where(eq(users.username, email))
-          .limit(1);
-          
-        if (candidateUser) {
-          await db.update(users)
-            .set({ password: hashedPassword })
-            .where(eq(users.id, candidateUser.id));
+        const updated = await storage.updateCandidatePassword(normalizedEmail, hashedPassword);
+        if (!updated) {
+          return res.status(500).json({ message: "Failed to update password" });
         }
       } else {
         return res.status(404).json({ message: "Account not found" });
@@ -11030,7 +11188,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (teamId && teamId !== "all") {
         const allEmployees = await storage.getAllEmployees();
-        const teamLeader = findTeamLeaderByFilter(allEmployees, String(teamId));
+        const { buildRecruiterRequirementIdSet } = await import("./delivery-counting");
+        const { requirementAssignments } = await import("@shared/schema");
+        const filterValue = String(teamId);
+        const teamLeader = findTeamLeaderByFilter(allEmployees, filterValue);
+        const selectedEmployee =
+          teamLeader || findEmployeeByFilter(allEmployees, filterValue);
 
         if (teamLeader) {
           const teamRecruiters = getRecruitersForTeamLead(allEmployees, teamLeader);
@@ -11051,6 +11214,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamNames.has(String(req.talentAdvisor).toLowerCase()))
             );
           });
+        } else if (selectedEmployee && isTalentAdvisorRole(selectedEmployee.role)) {
+          teamRecruiterIds = new Set([selectedEmployee.id]);
+          const activeAssignments = await db
+            .select()
+            .from(requirementAssignments)
+            .where(
+              and(
+                eq(requirementAssignments.recruiterId, selectedEmployee.id),
+                eq(requirementAssignments.status, "active"),
+              ),
+            );
+          const memberRequirementIds = buildRecruiterRequirementIdSet(
+            selectedEmployee,
+            allRequirements,
+            activeAssignments,
+          );
+          filteredRequirements = allRequirements.filter((req: any) =>
+            memberRequirementIds.has(req.id),
+          );
         } else {
           filteredRequirements = [];
         }
@@ -12434,13 +12616,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const ownerRole = normalizeSourcingRole(employee.role);
-      if (ownerRole) {
-        const hasAccess =
-          (candidate.ownerEmployeeId === employee.id && candidate.ownerRole === ownerRole) ||
-          (ownerRole === 'recruiter' && !candidate.ownerEmployeeId && candidate.addedBy === employee.name);
-
-        if (!hasAccess) {
+      if (!employeeHasSourcingAccess(employee)) {
+        const canView = await employeeCanViewCandidateRecord(employee, candidate);
+        if (!canView) {
           return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
         }
       }
@@ -12470,16 +12648,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const ownerRole = normalizeSourcingRole(employee.role);
-      if (!ownerRole) {
-        return res.status(403).json({ message: "Only recruiters and team leaders can update sourced candidates" });
-      }
-
-      const hasAccess =
-        (candidate.ownerEmployeeId === employee.id && candidate.ownerRole === ownerRole) ||
-        (ownerRole === 'recruiter' && !candidate.ownerEmployeeId && candidate.addedBy === employee.name);
-      if (!hasAccess) {
-        return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
+      if (!employeeHasSourcingAccess(employee)) {
+        return res.status(403).json({ message: "Only recruiters, talent advisors, and team leaders can update sourced candidates" });
       }
 
       // Validate update data
@@ -12824,12 +12994,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobIds = jobs.map(j => j.id);
       console.log('[RECRUITER APPLICATIONS] Found jobs for', employee.name, ':', jobIds.length);
 
-      // Get all applications and filter to those for owned jobs OR manual tags owned by this actor
       const allApplications = await storage.getAllJobApplications();
-      let recruiterApplications = allApplications.filter(app =>
-        (app.recruiterJobId && jobIds.includes(app.recruiterJobId)) ||
-        (app.ownerEmployeeId === employee.id && app.ownerRole === ownerRole)
-      );
+      let recruiterApplications: typeof allApplications = [];
+
+      if (ownerRole === "recruiter") {
+        let taRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+        if (!taRequirements.length) {
+          taRequirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+        }
+        const taRequirementIds = new Set(taRequirements.map((r) => r.id));
+
+        recruiterApplications = allApplications.filter(
+          (app) =>
+            (app.recruiterJobId && jobIds.includes(app.recruiterJobId)) ||
+            (app.requirementId && taRequirementIds.has(app.requirementId)) ||
+            (app.ownerEmployeeId === employee.id && app.ownerRole === "recruiter"),
+        );
+      } else {
+        const allEmployees = await storage.getAllEmployees();
+        const tlEmployeeId = employee.employeeId || employee.id;
+        const teamRecruiterIds = new Set(
+          allEmployees
+            .filter(
+              (emp) =>
+                normalizeSourcingRole(emp.role) === "recruiter" &&
+                (emp.reportingTo === tlEmployeeId || emp.reportingTo === employee.id),
+            )
+            .map((emp) => emp.id),
+        );
+
+        const teamRequirementIds = new Set<string>();
+        const teamRecruiters = allEmployees.filter(
+          (emp) =>
+            (emp.role === "recruiter" || emp.role === "talent_advisor" || emp.role === "ta") &&
+            (emp.reportingTo === tlEmployeeId || emp.reportingTo === employee.id),
+        );
+        for (const recruiter of teamRecruiters) {
+          const byId = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
+          const reqs =
+            byId.length > 0 ? byId : await storage.getRequirementsByTalentAdvisor(recruiter.name);
+          reqs.forEach((req) => teamRequirementIds.add(req.id));
+        }
+        const allReqs = await storage.getRequirements();
+        allReqs
+          .filter(
+            (req) => req.teamLead === employee.name && !req.talentAdvisorId && !req.isArchived,
+          )
+          .forEach((req) => teamRequirementIds.add(req.id));
+
+        recruiterApplications = allApplications.filter(
+          (app) =>
+            (app.recruiterJobId && jobIds.includes(app.recruiterJobId)) ||
+            (app.ownerEmployeeId === employee.id && app.ownerRole === ownerRole) ||
+            (app.ownerEmployeeId != null && teamRecruiterIds.has(app.ownerEmployeeId)) ||
+            (app.requirementId != null && teamRequirementIds.has(app.requirementId)),
+        );
+      }
 
       // Enrich applications with candidate profile data and StaffOS usage status
       const profileIds = [...new Set(recruiterApplications.map(app => app.profileId).filter(Boolean))] as string[];
@@ -12878,9 +13098,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (!app.resumeFile && candidate.resumeFile) app.resumeFile = candidate.resumeFile;
             }
           }
+          (app as any).profilePicture =
+            candidate?.profilePicture ||
+            profile?.profilePicture ||
+            (app as any).profilePicture ||
+            null;
         } else {
           (app as any).isUsingStaffOS = false;
+          (app as any).profilePicture = null;
         }
+        (app as any).taggedByTeamLead = app.source === "tl_tagged";
         return app;
       });
 
@@ -13031,18 +13258,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      let applicationOwnerId = employee.id;
+      let applicationOwnerRole = ownerRole;
+      let applicationSource =
+        ownerRole === "team_leader" ? "tl_tagged" : "recruiter_tagged";
+
+      if (ownerRole === "team_leader" && requirementId) {
+        const allRequirements = await storage.getRequirements();
+        const requirement = allRequirements.find((r) => r.id === requirementId);
+        if (requirement?.talentAdvisorId) {
+          const assignedTa = await storage.getEmployeeById(
+            requirement.talentAdvisorId,
+          );
+          if (assignedTa) {
+            applicationOwnerId = assignedTa.id;
+            applicationOwnerRole = "recruiter";
+            applicationSource = "tl_tagged";
+          }
+        }
+      }
+
       let application;
       if (existingApplication) {
-        // Reuse existing application: set status to In Process and reset confirmation
         const [updated] = await db.update(jobApplications)
           .set({ 
             status: "In Process",
             isCandidateConfirmed: hasPriorRecruiterConsent,
-            // Clear out rejection/withdraw reasons so it doesn't show up as archived anymore
             rejectionReason: null,
             statusNote: null,
             withdrawReason: null,
-            appliedDate: new Date() // Reset applied date to now
+            appliedDate: new Date(),
+            requirementId: requirementId || (existingApplication as any).requirement_id || null,
+            ownerEmployeeId: applicationOwnerId,
+            ownerRole: applicationOwnerRole,
+            source: applicationSource,
           })
           .where(eq(jobApplications.id, existingApplication.id as string))
           .returning();
@@ -13053,12 +13302,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applicationData = {
         profileId: `recruiter-tagged-${Date.now()}`,
         requirementId: requirementId || null,
-        ownerEmployeeId: employee.id,
-        ownerRole,
+        ownerEmployeeId: applicationOwnerId,
+        ownerRole: applicationOwnerRole,
         jobTitle: jobTitle.trim(),
         company: company.trim(),
         status: "In Process",
-        source: "recruiter_tagged",
+        source: applicationSource,
           // Ask explicit consent only once for recruiter-invited flow.
           isCandidateConfirmed: hasPriorRecruiterConsent,
         candidateName: candidateName.trim(),
@@ -13073,11 +13322,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         application = await storage.createJobApplication(applicationData);
       }
 
+      const logActorId = application.ownerEmployeeId || req.session.employeeId || "unknown";
+      const logActor = await storage.getEmployeeById(logActorId);
       logCandidateSubmitted(
         storage,
-        req.session.employeeId || 'unknown',
-        employee?.name || 'Recruiter',
-        'recruiter',
+        logActorId,
+        logActor?.name || employee?.name || "Recruiter",
+        "recruiter",
         candidateName.trim(),
         jobTitle.trim(),
         application.id
@@ -13197,7 +13448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
       if (!employeeCanEditApplicationSalary(employee.role)) {
-        return res.status(403).json({ message: "Only Team Leaders and Talent Advisors can edit salary details" });
+        return res.status(403).json({ message: "Only Talent Advisors can edit salary details" });
       }
 
       const application = await storage.getJobApplicationById(id);
@@ -13770,7 +14021,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Offer Drop', 'Declined',
         'Interview Scheduled'
       ]);
-      const pipelineSourceApps = dedupedPipelineApps.filter((app: any) => validPipelineStatuses.has(String(app.status || '').trim()));
+      const pipelineSourceApps = dedupedPipelineApps.filter((app: any) => {
+        const status = String(app.status || "").trim().toLowerCase();
+        return status !== "archived" && status !== "";
+      });
 
       // Format pipeline data (allEmployees, allRequirements, allRecruiterJobs already fetched above)
 
@@ -13838,24 +14092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Map status to pipeline format
-        const statusMap: Record<string, string> = {
-          'In Process': 'In-Process',
-          'In-Process': 'In-Process',
-          'Shortlisted': 'Shortlisted',
-          'Rejected': 'Rejected',
-          'Screened Out': 'Screened Out',
-          'L1': 'L1',
-          'L2': 'L2',
-          'L3': 'L3',
-          'Final Round': 'Final Round',
-          'HR Round': 'HR Round',
-          'Closure': 'Closure',
-          'Selected': 'Selected',
-          'Interview Scheduled': 'L1',
-          'Applied': 'In-Process',
-          'Sourced': 'In-Process'
-        };
+        const pipelineStatus = normalizePipelineDisplayStatus(app.status);
 
         return {
           id: app.id,
@@ -13863,8 +14100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           company: app.company || 'N/A',
           jobTitle: app.jobTitle || 'N/A',
           roleApplied: app.jobTitle || 'N/A',
-          status: statusMap[app.status] || app.status || 'In-Process',
-          currentStatus: statusMap[app.status] || app.status || 'In-Process',
+          status: pipelineStatus,
+          currentStatus: pipelineStatus,
           recruiter: recruiterName,
           recruiterId: recruiterId,
           teamLeader: teamLeaderName,
@@ -14378,8 +14615,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Parse bulk resumes (increased limit to 50 for better productivity)
-  app.post("/api/admin/parse-resumes-bulk", requireAdminAuth, resumeUpload.array('resumes', 50), async (req, res) => {
+  const BULK_RESUME_FILES_PER_REQUEST = 5;
+
+  const extendBulkParseTimeouts = (req: Request, res: Response, next: NextFunction) => {
+    req.setTimeout(5 * 60 * 1000);
+    res.setTimeout(5 * 60 * 1000);
+    next();
+  };
+
+  const handleBulkResumeUpload = (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    resumeUpload.array("resumes", BULK_RESUME_FILES_PER_REQUEST)(req, res, (err: unknown) => {
+      if (err) {
+        applyCorsHeaders(req, res);
+        const multerErr = err as { code?: string; message?: string };
+        if (multerErr.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "Each resume must be 10MB or smaller." });
+        }
+        if (multerErr.code === "LIMIT_FILE_COUNT") {
+          return res.status(400).json({
+            message: `Upload at most ${BULK_RESUME_FILES_PER_REQUEST} resumes per request.`,
+          });
+        }
+        return res.status(400).json({
+          message: multerErr.message || "Invalid resume upload",
+        });
+      }
+      next();
+    });
+  };
+
+  // Parse bulk resumes (client batches; max 5 files per request to avoid proxy timeouts)
+  app.post(
+    "/api/admin/parse-resumes-bulk",
+    extendBulkParseTimeouts,
+    requireAdminAuth,
+    handleBulkResumeUpload,
+    async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
@@ -14441,9 +14716,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Bulk parse resume error:', error);
+      applyCorsHeaders(req, res);
       res.status(500).json({ message: "Failed to parse resumes" });
     }
-  });
+  },
+  );
 
   // Import single candidate from resume
   app.post("/api/admin/import-candidate", requireAdminAuth, async (req, res) => {
@@ -14479,10 +14756,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: cleanValue(phone),
         designation: cleanValue(designation),
         experience: cleanValue(experience),
-        skills: cleanValue(skills),
+        skills: normalizeParsedSkills(skills) ?? cleanValue(skills),
         location: cleanValue(location),
         company: cleanValue(company),
-        education: cleanValue(education),
+        education: normalizeParsedEducation(education) ?? cleanValue(education),
         linkedinUrl: cleanValue(linkedinUrl),
         portfolioUrl: cleanValue(portfolioUrl),
         websiteUrl: cleanValue(websiteUrl),
@@ -14510,7 +14787,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk import candidates from resumes
-  app.post("/api/admin/import-candidates-bulk", requireAdminAuth, async (req, res) => {
+  app.post(
+    "/api/admin/import-candidates-bulk",
+    extendBulkParseTimeouts,
+    requireAdminAuth,
+    async (req, res) => {
     try {
       const { candidates, addedBy } = req.body;
 
@@ -14561,10 +14842,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             phone: cleanValue(candidate.phone),
             designation: cleanValue(candidate.designation),
             experience: cleanValue(candidate.experience),
-            skills: cleanValue(candidate.skills),
+            skills: normalizeParsedSkills(candidate.skills) ?? cleanValue(candidate.skills),
             location: cleanValue(candidate.location),
             company: cleanValue(candidate.company),
-            education: cleanValue(candidate.education),
+            education: normalizeParsedEducation(candidate.education) ?? cleanValue(candidate.education),
             linkedinUrl: cleanValue(candidate.linkedinUrl),
             portfolioUrl: cleanValue(candidate.portfolioUrl),
             websiteUrl: cleanValue(candidate.websiteUrl),
@@ -15571,58 +15852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Transform applications to pipeline data format with TA information
       const pipelineData = applications.map((app: any) => {
-        const statusMap: Record<string, string> = {
-          'In Process': 'L1',
-          'In-Process': 'L1',
-          'Resume Review': 'L1',
-          'Evaluating': 'L1',
-          'Screening': 'L1',
-          'Intro Call': 'L1',
-          'Assignment': 'L1',
-          'Sourced': 'L1',
-          'Shortlisted': 'L1',
-          'Reviewed': 'L1',
-          'Screened Out': 'Rejected',
-          'L1': 'L1',
-          'L2': 'L2',
-          'L3': 'L3',
-          'Final Round': 'Final Round',
-          'HR Round': 'HR Round',
-          'Selected': 'Closure',
-          'Joined': 'Closure',
-          'Interview Scheduled': 'L1',
-          'Applied': 'L1',
-          'Offer Stage': 'Offer Stage',
-          'Closure': 'Closure',
-          'Offer Drop': 'Rejected',
-          'Declined': 'Rejected',
-          'Rejected': 'Rejected',
-          'Hired': 'Closure',
-        };
-
-        const raw = (app.status || '').trim();
-        const statusLower = raw.toLowerCase();
-        const mappedFromMap =
-          statusMap[raw] ||
-          statusMap[raw.replace(/\s+/g, ' ')] ||
-          Object.entries(statusMap).find(([k]) => k.toLowerCase() === statusLower)?.[1];
-
-        const resolvePipelineColumn = (): string => {
-          if (statusLower.includes('reject') || statusLower.includes('declin') || statusLower.includes('screened out'))
-            return 'Rejected';
-          if (statusLower.includes('offer') && !statusLower.includes('drop')) return 'Offer Stage';
-          if (mappedFromMap) return mappedFromMap;
-          if (statusLower.includes('join') || statusLower.includes('hired') || statusLower.includes('selected'))
-            return 'Closure';
-          if (statusLower.includes('hr round') || statusLower === 'hr') return 'HR Round';
-          if (statusLower.includes('final')) return 'Final Round';
-          if (statusLower === 'l2' || statusLower.includes('level 2')) return 'L2';
-          if (statusLower === 'l3' || statusLower.includes('level 3')) return 'L3';
-          if (statusLower === 'l1' || statusLower.includes('level 1')) return 'L1';
-          return 'L1';
-        };
-
-        const currentStatus = resolvePipelineColumn();
+        const currentStatus = normalizePipelineDisplayStatus(app.status);
 
         // Find requirement and TA information
         let requirementPosition = 'N/A';
@@ -15933,7 +16163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/client/applications/:id/status", requireClientAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const { status, reason } = req.body;
+      const { status, reason, rejectionReason: rejectionReasonBody } = req.body;
 
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
@@ -15944,41 +16174,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      const { allowed } = await clientCanAccessJobApplication(employee, id);
+      const existingApplication = await storage.getJobApplicationById(id);
+      if (!existingApplication) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      const allowed = await clientEmployeeCanAccessApplication(employee, existingApplication);
       if (!allowed) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const trimmedReason = typeof reason === "string" ? reason.trim() : "";
-      const statusNote =
-        status === "Rejected" && trimmedReason
-          ? `Rejected by client: ${trimmedReason}`
-          : undefined;
+      const trimmedReason =
+        (typeof reason === "string" ? reason.trim() : "") ||
+        (typeof rejectionReasonBody === "string" ? rejectionReasonBody.trim() : "");
 
-      const application = await storage.updateJobApplicationStatus(
-        id,
-        status,
-        trimmedReason || undefined,
-        statusNote,
-        trimmedReason || undefined,
-      );
+      let application;
+      if (status === "Rejected") {
+        const previousStage = existingApplication.status || "Resume Review";
+        const rejectLine = trimmedReason
+          ? `Rejected by client: ${trimmedReason}`
+          : "Rejected by client";
+        const statusNote = [
+          rejectLine,
+          "[[TERMINAL:CLIENT_REJECT]]",
+          `[[REJECT_STAGE:${previousStage}]]`,
+          `[[REJECTED_AT:${new Date().toISOString()}]]`,
+        ].join("\n");
+        application = await storage.updateJobApplicationStatus(
+          id,
+          "Screened Out",
+          undefined,
+          statusNote,
+          trimmedReason || undefined,
+        );
+      } else {
+        const statusNote =
+          status === "Rejected" && trimmedReason
+            ? `Rejected by client: ${trimmedReason}`
+            : undefined;
+        application = await storage.updateJobApplicationStatus(
+          id,
+          status,
+          undefined,
+          statusNote,
+          trimmedReason || undefined,
+        );
+      }
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
 
+      if (status === "Rejected" && trimmedReason) {
+        const rejectionCommentBody = `Reason from Client for Rejection: ${trimmedReason}`;
+        try {
+          await storage.createCandidateApplicationComment({
+            applicationId: id,
+            authorEmployeeId: employee.id,
+            authorName: employee.name,
+            authorRole: "Client",
+            body: rejectionCommentBody,
+          });
+        } catch (dbError) {
+          console.error("Client rejection comment failed:", dbError);
+          try {
+            await db.insert(candidateApplicationComments).values({
+              applicationId: id,
+              authorEmployeeId: employee.id,
+              authorName: employee.name,
+              authorRole: "Client",
+              body: rejectionCommentBody,
+            });
+          } catch (insertErr) {
+            console.error("Client rejection comment insert fallback failed:", insertErr);
+          }
+        }
+      }
+
       // Log pipeline change for recruiter visibility
-      if (status === 'Rejected') {
+      if (status === "Rejected") {
         const session = req.session as any;
         logCandidatePipelineChanged(
           storage,
-          session.employeeId || 'client',
-          session.employeeName || 'Client',
-          'client',
-          application.candidateName || 'Candidate',
-          application.status || 'Previous',
-          'Rejected',
-          application.id
-        ).catch(err => console.error('Failed to log pipeline change:', err));
+          session.employeeId || "client",
+          session.employeeName || "Client",
+          "client",
+          application.candidateName || "Candidate",
+          existingApplication.status || "Previous",
+          "Screened Out",
+          application.id,
+        ).catch((err) => console.error("Failed to log pipeline change:", err));
       }
 
       res.json({ success: true, application });
@@ -16107,23 +16391,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isClosureApplicationStatus(app.status)
       );
 
+      const formatClosureDate = (dateStr: string | null | undefined): string => {
+        if (!dateStr) return "N/A";
+        try {
+          const date = new Date(dateStr);
+          if (Number.isNaN(date.getTime())) return dateStr;
+          const day = String(date.getDate()).padStart(2, "0");
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const year = date.getFullYear();
+          return `${day}-${month}-${year}`;
+        } catch {
+          return dateStr;
+        }
+      };
+
       const mergedClosureReports = [
         ...closuresByClientName.map((closure) => ({
-          candidate: closure.candidateName || 'N/A',
-          position: closure.position || 'N/A',
-          advisor: closure.talentAdvisorName || 'N/A',
-          offered: closure.offeredDate || 'N/A',
-          joined: closure.closureDate || 'N/A',
-          _key: `rev-${closure.id}`
+          id: closure.id,
+          candidate: closure.candidateName || "N/A",
+          position: closure.position || "N/A",
+          client: closure.clientName || companyName,
+          talentAdvisor: closure.talentAdvisorName || "N/A",
+          quarter: closure.quarter || "N/A",
+          offeredDate: formatClosureDate(closure.offeredDate),
+          joinedDate: formatClosureDate(closure.closureDate),
+          advisor: closure.talentAdvisorName || "N/A",
+          offered: formatClosureDate(closure.offeredDate),
+          joined: formatClosureDate(closure.closureDate),
+          _key: `rev-${closure.id}`,
         })),
         ...clientClosureApplications.map((app: any) => ({
-          candidate: app.candidateName || 'N/A',
-          position: app.jobTitle || app.roleApplied || 'N/A',
-          advisor: 'N/A',
-          offered: 'N/A',
-          joined: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : 'N/A',
-          _key: `app-${app.id}`
-        }))
+          id: app.id,
+          candidate: app.candidateName || "N/A",
+          position: app.jobTitle || app.roleApplied || "N/A",
+          client: companyName,
+          talentAdvisor: "N/A",
+          quarter: "N/A",
+          offeredDate: "N/A",
+          joinedDate: formatClosureDate(app.appliedDate),
+          advisor: "N/A",
+          offered: "N/A",
+          joined: formatClosureDate(app.appliedDate),
+          _key: `app-${app.id}`,
+        })),
       ];
 
       // Deduplicate by candidate+position+joined

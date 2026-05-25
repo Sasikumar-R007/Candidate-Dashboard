@@ -561,9 +561,18 @@ export default function MasterDatabase() {
 
   const { toast } = useToast();
 
-  // Bulk upload limit: Minimum 10, Maximum 50 (optimal: 20-30 for best performance)
-  // Increased to 50 to allow more files per batch while maintaining reasonable processing time
-  const BULK_UPLOAD_LIMIT = 50;
+  // Up to 30 files per drop; parsed in small batches to stay under Render/proxy ~100s limits
+  const BULK_UPLOAD_LIMIT = 30;
+  const BULK_PARSE_BATCH_SIZE = 5;
+  const BULK_IMPORT_BATCH_SIZE = 15;
+  const BULK_PARSE_BATCH_RETRIES = 2;
+  const [bulkParseProgress, setBulkParseProgress] = useState<{
+    batch: number;
+    totalBatches: number;
+    filesDone: number;
+    fileTotal: number;
+  } | null>(null);
+  const [showImportCloseConfirm, setShowImportCloseConfirm] = useState(false);
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -1044,6 +1053,34 @@ export default function MasterDatabase() {
       .slice(0, 2);
   };
 
+  const importModalHasUnsavedProgress = () => {
+    if (isProcessing) return true;
+    if (importStep === "confirm") {
+      if (isBulkUpload && bulkParsedResults.length > 0) return true;
+      if (!isBulkUpload && parsedData) return true;
+    }
+    return false;
+  };
+
+  const handleImportModalOpenChange = (open: boolean) => {
+    if (open) {
+      setIsImportModalOpen(true);
+      return;
+    }
+    if (importModalHasUnsavedProgress()) {
+      setShowImportCloseConfirm(true);
+      return;
+    }
+    setIsImportModalOpen(false);
+    resetImportModal();
+  };
+
+  const confirmLeaveImportModal = () => {
+    setShowImportCloseConfirm(false);
+    setIsImportModalOpen(false);
+    resetImportModal();
+  };
+
   // Reset import modal state
   const resetImportModal = () => {
     setUploadedFile(null);
@@ -1135,45 +1172,179 @@ export default function MasterDatabase() {
 
   // Handle bulk files drop
   const onBulkDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) {
+      toast({
+        title: "No files selected",
+        description: "Choose PDF, DOC, or DOCX resume files to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const limitedFiles = acceptedFiles.slice(0, BULK_UPLOAD_LIMIT);
+    if (acceptedFiles.length > BULK_UPLOAD_LIMIT) {
+      toast({
+        title: "Too many files",
+        description: `You selected ${acceptedFiles.length} files. Only the first ${BULK_UPLOAD_LIMIT} will be processed. Upload at most ${BULK_UPLOAD_LIMIT} resumes at a time.`,
+      });
+    }
+
     setBulkFiles(limitedFiles);
     setIsProcessing(true);
-    
-    try {
+    const totalBatches = Math.max(1, Math.ceil(limitedFiles.length / BULK_PARSE_BATCH_SIZE));
+    setBulkParseProgress({
+      batch: 0,
+      totalBatches,
+      filesDone: 0,
+      fileTotal: limitedFiles.length,
+    });
+
+    type BulkParseRow = {
+      fileName: string;
+      success: boolean;
+      data?: {
+        fullName: string | null;
+        email: string | null;
+        phone: string | null;
+        designation?: string | null;
+        experience?: string | null;
+        skills?: string | null;
+        location?: string | null;
+        filePath?: string;
+        company?: string | null;
+        education?: string | null;
+        linkedinUrl?: string | null;
+        portfolioUrl?: string | null;
+        websiteUrl?: string | null;
+        currentRole?: string | null;
+      };
+      error?: string;
+    };
+
+    const failedBatchRows = (batch: File[], reason: string): BulkParseRow[] =>
+      batch.map((file) => ({
+        fileName: file.name,
+        success: false,
+        error: reason,
+      }));
+
+    const parseOneBatch = async (batch: File[]): Promise<BulkParseRow[]> => {
       const formData = new FormData();
-      limitedFiles.forEach(file => {
-        formData.append('resumes', file);
+      batch.forEach((file) => {
+        formData.append("resumes", file);
       });
-      
-      const response = await fetch(createApiUrl('/api/admin/parse-resumes-bulk'), {
-        method: 'POST',
+
+      const response = await fetch(createApiUrl("/api/admin/parse-resumes-bulk"), {
+        method: "POST",
         body: formData,
-        credentials: 'include'
+        credentials: "include",
       });
-      
-      const result = await response.json();
-      
-      if (!response.ok || !result.results) {
-        throw new Error(result.message || 'Failed to parse resumes');
+
+      let result: { message?: string; results?: BulkParseRow[] } = {};
+      try {
+        result = await response.json();
+      } catch {
+        // non-JSON (e.g. gateway timeout HTML)
       }
-      
-      setBulkParsedResults(result.results);
-      setImportStep('confirm');
-      
-      const successCount = result.results.filter((r: any) => r.success).length;
-      const failedCount = result.results.filter((r: any) => !r.success).length;
-      
-      toast({
-        title: "Parsing Complete",
-        description: `Successfully parsed ${successCount} of ${result.results.length} resumes. ${failedCount > 0 ? `${failedCount} failed.` : ''}`,
-        variant: failedCount > 0 ? "default" : "default"
+
+      if (!response.ok || !Array.isArray(result.results)) {
+        throw new Error(
+          result.message || "Server could not parse this batch (timeout or error).",
+        );
+      }
+
+      return result.results;
+    };
+
+    try {
+      const allResults: BulkParseRow[] = [];
+      let batchFailures = 0;
+
+      for (let offset = 0; offset < limitedFiles.length; offset += BULK_PARSE_BATCH_SIZE) {
+        const batchIndex = Math.floor(offset / BULK_PARSE_BATCH_SIZE) + 1;
+        const batch = limitedFiles.slice(offset, offset + BULK_PARSE_BATCH_SIZE);
+        setBulkParseProgress({
+          batch: batchIndex,
+          totalBatches,
+          filesDone: offset,
+          fileTotal: limitedFiles.length,
+        });
+
+        let batchRows: BulkParseRow[] | null = null;
+        let lastError = "Unknown error";
+
+        for (let attempt = 0; attempt < BULK_PARSE_BATCH_RETRIES; attempt++) {
+          try {
+            batchRows = await parseOneBatch(batch);
+            break;
+          } catch (err: unknown) {
+            lastError =
+              err instanceof Error ? err.message : "Failed to parse batch";
+            if (attempt < BULK_PARSE_BATCH_RETRIES - 1) {
+              await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+            }
+          }
+        }
+
+        if (batchRows) {
+          allResults.push(...batchRows);
+        } else {
+          batchFailures += 1;
+          allResults.push(
+            ...failedBatchRows(
+              batch,
+              lastError || `Batch ${batchIndex} failed after retries`,
+            ),
+          );
+        }
+      }
+
+      setBulkParseProgress({
+        batch: totalBatches,
+        totalBatches,
+        filesDone: limitedFiles.length,
+        fileTotal: limitedFiles.length,
       });
-    } catch (error: any) {
-      console.error('Parse bulk resumes error:', error);
+
+      if (allResults.length === 0) {
+        toast({
+          title: "Parsing failed",
+          description:
+            limitedFiles.length > 0
+              ? `None of the ${limitedFiles.length} resume(s) could be parsed. Try again with up to ${BULK_UPLOAD_LIMIT} smaller PDF/DOC files, or check that the API server and OpenAI key are configured.`
+              : "No resume files were processed. Select up to 30 files and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setBulkParsedResults(allResults);
+      setImportStep("confirm");
+
+      const successCount = allResults.filter((r) => r.success).length;
+      const failedCount = allResults.filter((r) => !r.success).length;
+      const validCount = allResults.filter(
+        (r) => r.success && r.data?.fullName && r.data?.email,
+      ).length;
+
+      toast({
+        title: "Parsing complete",
+        description:
+          validCount > 0
+            ? `${validCount} of ${allResults.length} resume(s) are ready to import.${failedCount > 0 ? ` ${failedCount} could not be used.` : ""}`
+            : `${allResults.length} file(s) processed, but none have both a name and email. Edit the PDFs or try different files.`,
+        variant: validCount > 0 ? "default" : "destructive",
+      });
+    } catch (error: unknown) {
+      console.error("Parse bulk resumes error:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to parse resumes. Please ensure all files are valid PDF, DOC, or DOCX files and try again.";
       toast({
         title: "Error",
-        description: error.message || "Failed to parse resumes. Please ensure all files are valid PDF, DOC, or DOCX files and try again.",
-        variant: "destructive"
+        description: message,
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -1192,7 +1363,19 @@ export default function MasterDatabase() {
   });
 
   const bulkDropzone = useDropzone({
-    onDrop: onBulkDrop,
+    onDrop: (acceptedFiles, fileRejections) => {
+      const tooManyFiles = fileRejections.some((r) =>
+        r.errors.some((e) => e.code === "too-many-files"),
+      );
+      if (tooManyFiles) {
+        toast({
+          title: "Too many files",
+          description: `You can upload at most ${BULK_UPLOAD_LIMIT} resumes at once. Remove extra files and try again.`,
+          variant: "destructive",
+        });
+      }
+      void onBulkDrop(acceptedFiles);
+    },
     accept: {
       'application/pdf': ['.pdf'],
       'application/msword': ['.doc'],
@@ -1285,33 +1468,72 @@ export default function MasterDatabase() {
     }
     
     setIsProcessing(true);
-    
+
+    const aggregated = {
+      total: validCandidates.length,
+      successCount: 0,
+      failedCount: 0,
+      results: [] as Array<{ fileName: string; success: boolean; error?: string }>,
+    };
+
     try {
-      const response = await fetch(createApiUrl('/api/admin/import-candidates-bulk'), {
-        method: 'POST',
-        body: JSON.stringify({
-          candidates: validCandidates,
-          addedBy: 'Admin Bulk Import'
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to import candidates');
+      for (let offset = 0; offset < validCandidates.length; offset += BULK_IMPORT_BATCH_SIZE) {
+        const chunk = validCandidates.slice(offset, offset + BULK_IMPORT_BATCH_SIZE);
+        const response = await fetch(createApiUrl('/api/admin/import-candidates-bulk'), {
+          method: 'POST',
+          body: JSON.stringify({
+            candidates: chunk,
+            addedBy: 'Admin Bulk Import',
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        let chunkResult: {
+          message?: string;
+          successCount?: number;
+          failedCount?: number;
+          results?: typeof aggregated.results;
+        } = {};
+        try {
+          chunkResult = await response.json();
+        } catch {
+          // non-JSON
+        }
+
+        if (!response.ok || !Array.isArray(chunkResult.results)) {
+          const msg = chunkResult.message || 'Failed to import a batch of candidates';
+          chunk.forEach((c) => {
+            aggregated.failedCount += 1;
+            aggregated.results.push({
+              fileName: c.fileName,
+              success: false,
+              error: msg,
+            });
+          });
+          continue;
+        }
+
+        aggregated.successCount += chunkResult.successCount ?? 0;
+        aggregated.failedCount += chunkResult.failedCount ?? 0;
+        aggregated.results.push(...chunkResult.results);
       }
-      
-      const result = await response.json();
-      setImportResults(result);
+
+      if (aggregated.successCount === 0 && aggregated.failedCount === 0) {
+        throw new Error('No candidates were imported');
+      }
+
+      setImportResults(aggregated);
       setImportStep('result');
-      
+
       queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
-      
+
       toast({
         title: "Import Complete",
-        description: `${result.successCount} candidates imported, ${result.failedCount} failed.`,
+        description: `${aggregated.successCount} candidates imported, ${aggregated.failedCount} failed.`,
+        variant: aggregated.successCount > 0 ? "default" : "destructive",
       });
     } catch (error) {
       toast({
@@ -2110,11 +2332,20 @@ export default function MasterDatabase() {
       </Dialog>
 
       {/* Import Resume Modal */}
-      <Dialog open={isImportModalOpen} onOpenChange={(open) => {
-        setIsImportModalOpen(open);
-        if (!open) resetImportModal();
-      }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-import-resume">
+      <Dialog open={isImportModalOpen} onOpenChange={handleImportModalOpenChange}>
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          data-testid="dialog-import-resume"
+          onInteractOutside={(e) => {
+            if (importModalHasUnsavedProgress()) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (importModalHasUnsavedProgress()) {
+              e.preventDefault();
+              setShowImportCloseConfirm(true);
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5" />
@@ -2136,7 +2367,7 @@ export default function MasterDatabase() {
                     setIsBulkUpload(checked);
                     resetImportModal();
                   }}
-                  disabled={importStep !== 'upload'}
+                  disabled={importStep !== 'upload' || isProcessing}
                   data-testid="switch-bulk-upload"
                 />
               </div>
@@ -2289,7 +2520,15 @@ export default function MasterDatabase() {
                     {isProcessing ? (
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">Parsing {bulkFiles.length} resumes...</p>
+                        <p className="text-sm text-muted-foreground">
+                          Parsing {bulkFiles.length} resumes
+                          {bulkParseProgress
+                            ? ` (batch ${bulkParseProgress.batch}/${bulkParseProgress.totalBatches}, ${bulkParseProgress.filesDone}/${bulkParseProgress.fileTotal} done)`
+                            : "…"}
+                        </p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          Please keep this window open until parsing finishes.
+                        </p>
                       </div>
                     ) : (
                       <>
@@ -2401,7 +2640,7 @@ export default function MasterDatabase() {
             {importStep === 'upload' && (
               <Button 
                 variant="outline" 
-                onClick={() => setIsImportModalOpen(false)}
+                onClick={() => handleImportModalOpenChange(false)}
                 data-testid="button-cancel-import"
               >
                 Cancel
@@ -2482,6 +2721,29 @@ export default function MasterDatabase() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showImportCloseConfirm} onOpenChange={setShowImportCloseConfirm}>
+        <AlertDialogContent data-testid="dialog-import-leave-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave import?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isProcessing
+                ? "Resumes are still being parsed. If you close now, progress will be lost and nothing will be imported. Please stay on this screen until parsing finishes."
+                : "These resumes have not been imported yet. If you close now, they will not be saved to the database. Stay on this screen and click Import when you are ready."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-stay-import">Stay</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmLeaveImportModal}
+              data-testid="button-leave-import"
+            >
+              Leave anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Modal for Employee */}
       {itemToEdit && profileType === 'employee' && (

@@ -249,27 +249,24 @@ export default function AdminTopHeader({
         }
         return data as EmployeeNotificationFeed;
       } catch (err) {
-        console.error("[notifications-feed] fetch failed:", err);
-        if (isAdmin) {
-          return {
-            role: "admin",
-            closures: [],
-            nudges: [],
-            escalatedNudges: [],
-            newRequirements: [],
-            newCandidateApplied: [],
-            unreadCount: 0,
-          };
-        }
-        throw err;
+        console.warn("[notifications-feed] fetch failed:", err);
+        return {
+          role: isAdmin ? "admin" : "employee",
+          closures: [],
+          nudges: [],
+          escalatedNudges: [],
+          newRequirements: [],
+          newCandidateApplied: [],
+          unreadCount: 0,
+        } as EmployeeNotificationFeed;
       }
     },
     enabled: isAdmin || isTL || isTA,
     staleTime: 10_000,
     refetchInterval: 15_000,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    retry: 2,
+    retry: 1,
   });
 
   useEffect(() => {

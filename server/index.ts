@@ -2,6 +2,7 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer as createNetServer } from "node:net";
 import cors from "cors";
+import { applyCorsHeaders, corsOptions } from "./cors-config";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
@@ -10,7 +11,13 @@ import {
   ensureRequirementManagementColumns,
   pool,
   verifyPoolConnection,
+  warmPoolConnections,
 } from "./db";
+import {
+  createPgSessionStore,
+  ensureSessionStoreTable,
+  warmSessionPool,
+} from "./session-store";
 import {
   ensureClientOrgSchema,
   migrateLegacyClientLogins,
@@ -75,27 +82,10 @@ const app = express();
 // Trust proxy for proper host/protocol handling on cloud platforms
 app.set('trust proxy', 1);
 
-// CORS configuration for cross-origin requests
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        process.env.FRONTEND_URL || 'https://your-app.vercel.app',
-        'https://www.staffos.io',  // Production domain
-        'https://staffos.io',       // Production domain (without www)
-        /\.vercel\.app$/,  // Allow all Vercel preview deployments
-        /localhost:\d+$/   // Allow localhost for development
-      ]
-    : true, // Allow all origins in development
-  credentials: true, // Allow cookies and credentials
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-};
-
 app.use(cors(corsOptions));
-// Handle CORS preflight requests
-app.options('*', cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+app.options("*", cors(corsOptions));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
 function registerRequestLogging() {
   app.use((req, res, next) => {
@@ -163,18 +153,40 @@ async function registerSessionMiddleware() {
     return;
   }
 
+  try {
+    await ensureSessionStoreTable(pool);
+    await warmSessionPool(pool);
+    log("Session table ready.", "db");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[session] Failed to prepare session table: ${message}`);
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
+    }
+    console.warn("[session] Falling back to in-memory sessions for this dev run.");
+    app.use(
+      session({
+        name: "staffos.sid",
+        secret: process.env.SESSION_SECRET || "staffos-secret-key-change-in-production",
+        resave: false,
+        saveUninitialized: false,
+        rolling: false,
+        cookie: {
+          secure: false,
+          httpOnly: true,
+          maxAge: 24 * 60 * 60 * 1000,
+          sameSite: "lax",
+          path: "/",
+        },
+      }),
+    );
+    return;
+  }
+
   log("PostgreSQL connected — using persistent session store.", "db");
   app.use(
     session({
-      store: new PgSession({
-        pool,
-        tableName: "session",
-        createTableIfMissing: true,
-        pruneSessionInterval: 60 * 15,
-        errorLog: (err: Error) => {
-          console.error("[session] PostgreSQL session store error:", err.message);
-        },
-      }),
+      store: createPgSessionStore(PgSession, pool),
       name: "staffos.sid",
       secret: process.env.SESSION_SECRET || "staffos-secret-key-change-in-production",
       resave: false,
@@ -223,15 +235,49 @@ async function registerSessionMiddleware() {
     console.error("Failed to initialize client org schema/migration:", error);
   }
 
+  try {
+    await warmPoolConnections(3);
+    log("Database pool warmed for incoming requests.", "db");
+  } catch (error) {
+    console.warn(
+      "[db] Pool warm-up failed (app will still start):",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // Long-running uploads (bulk resume parse) — Render/proxy may still cap lower than this
+  server.timeout = 5 * 60 * 1000;
+  server.requestTimeout = 5 * 60 * 1000;
+  server.headersTimeout = 5 * 60 * 1000;
 
-    console.error('Server error:', err);
-    res.status(status).json({ message });
-    // Don't throw err to prevent process crashes in production
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    applyCorsHeaders(req, res);
+    const isSessionStoreFailure =
+      /connection terminated|connection timeout/i.test(String(err?.message || "")) &&
+      String(err?.stack || "").includes("connect-pg-simple");
+    if (isSessionStoreFailure && !req.path.startsWith("/api")) {
+      console.warn(
+        `[session] Non-API request skipped after session store error: ${req.method} ${req.path}`,
+      );
+      if (!res.headersSent) {
+        return res.status(503).send("Database is starting up. Please refresh in a few seconds.");
+      }
+      return;
+    }
+    const status = err.status || err.statusCode || 500;
+    let message = err.message || "Internal Server Error";
+    if (err?.code === "LIMIT_FILE_SIZE") {
+      message = "One or more files exceed the 10MB size limit.";
+    } else if (err?.code === "LIMIT_FILE_COUNT") {
+      message = "Too many files in one upload batch. Try fewer files per batch.";
+    }
+
+    console.error("Server error:", err);
+    if (!res.headersSent) {
+      res.status(status).json({ message });
+    }
   });
 
   // importantly only setup vite in development and after

@@ -74,12 +74,20 @@ const isLocalDatabase = fixedDatabaseUrl.includes('localhost') ||
                          !fixedDatabaseUrl.includes('render.com') &&
                          !fixedDatabaseUrl.includes('sslmode=require'));
 
+const remoteDbConnectTimeoutMs = Number.parseInt(
+  process.env.PG_CONNECTION_TIMEOUT_MS || "60000",
+  10,
+);
+
 // Parse connection string and remove SSL requirements for local databases
 let connectionConfig: any = {
-  // Single shared pool (app + sessions). Remote DBs need headroom for parallel dashboard loads.
-  max: process.env.NODE_ENV === "production" ? 20 : 10,
-  idleTimeoutMillis: isLocalDatabase ? 30000 : 20000,
-  connectionTimeoutMillis: isLocalDatabase ? 10000 : 30000,
+  // Shared pool (app + sessions). Dev first load opens many parallel Vite + API requests.
+  max: Number.parseInt(
+    process.env.PG_POOL_MAX || (process.env.NODE_ENV === "production" ? "20" : "15"),
+    10,
+  ),
+  idleTimeoutMillis: isLocalDatabase ? 30000 : 60000,
+  connectionTimeoutMillis: isLocalDatabase ? 10000 : remoteDbConnectTimeoutMs,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
   maxLifetimeSeconds: isLocalDatabase ? 0 : 300,
@@ -115,9 +123,63 @@ pool.on("error", (err) => {
   console.error("[db] Unexpected error on idle pool client:", err.message);
 });
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryablePoolError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? `${error.message} ${error.cause instanceof Error ? error.cause.message : ""}`
+      : String(error);
+  return /connection terminated|connection timeout|ECONNRESET|ETIMEDOUT|timeout expired/i.test(
+    message,
+  );
+}
+
+/** Retry transient pool errors (common on cold remote Postgres during first page load). */
+const poolQuery = pool.query.bind(pool);
+(pool as Pool & { query: typeof pool.query }).query = async function queryWithRetry(
+  ...args: Parameters<typeof pool.query>
+) {
+  const maxAttempts = 3;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await poolQuery(...args);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryablePoolError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+      console.warn(
+        `[db] Query failed (attempt ${attempt}/${maxAttempts}), retrying: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      await sleep(Math.min(1500 * attempt, 5000));
+    }
+  }
+  throw lastError;
+};
+
 export const db = drizzle({ client: pool, schema });
 
 /** Verify DB is reachable before session store / migrations run. */
+export async function warmPoolConnections(count = 3): Promise<void> {
+  const clients = [];
+  try {
+    for (let i = 0; i < count; i += 1) {
+      clients.push(await pool.connect());
+    }
+    await pool.query("SELECT 1");
+  } finally {
+    for (const client of clients) {
+      client.release();
+    }
+  }
+}
+
 export async function verifyPoolConnection(maxAttempts = 5): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     let client;

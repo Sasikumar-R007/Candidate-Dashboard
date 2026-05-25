@@ -1,68 +1,158 @@
 import type { CandidateCommentsSessionApplicant } from "@/components/dashboard/candidate-comments-session";
+import {
+  FULL_PIPELINE_STAGE_ORDER,
+  groupCandidatesByPipelineStage,
+  resolvePipelineStageKey,
+  type PipelineStageKey,
+} from "@shared/pipeline-stages";
+
+export {
+  FULL_PIPELINE_STAGES,
+  FULL_PIPELINE_STAGE_ORDER,
+  groupCandidatesByPipelineStage,
+  normalizePipelineDisplayStatus,
+  resolvePipelineStageKey,
+  type PipelineStageKey,
+} from "@shared/pipeline-stages";
+
+/** @deprecated Use FULL_PIPELINE_STAGE_ORDER */
+export const RECRUITER_PIPELINE_STAGE_ORDER = FULL_PIPELINE_STAGE_ORDER;
+/** @deprecated Use FULL_PIPELINE_STAGE_ORDER */
+export const ADMIN_PIPELINE_STAGE_ORDER = FULL_PIPELINE_STAGE_ORDER;
+/** @deprecated Use FULL_PIPELINE_STAGE_ORDER */
+export const TL_PIPELINE_STAGE_ORDER = FULL_PIPELINE_STAGE_ORDER;
+/** @deprecated Use FULL_PIPELINE_STAGE_ORDER */
+export const CLIENT_PIPELINE_STAGE_ORDER = FULL_PIPELINE_STAGE_ORDER;
 
 /** Real job-application IDs only (excludes TL resume-submission pseudo IDs). */
 export function isPipelineApplicationSessionId(id: string | null | undefined): boolean {
   return Boolean(id) && !String(id).startsWith("submission-");
 }
 
-export const RECRUITER_PIPELINE_STAGE_ORDER = [
-  "level1",
-  "level2",
-  "level3",
-  "hrRound",
-  "finalRound",
-  "offerStage",
-  "closure",
-] as const;
+export function parseRejectedMeta(statusNote?: string | null) {
+  const note = statusNote || "";
+  const stageMatch = note.match(/\[\[REJECT_STAGE:([^\]]+)\]\]/);
+  const atMatch = note.match(/\[\[REJECTED_AT:([^\]]+)\]\]/);
+  return {
+    rejectedFromStage: stageMatch ? stageMatch[1] : null,
+    rejectedAt: atMatch ? atMatch[1] : null,
+  };
+}
 
-export const ADMIN_PIPELINE_STAGE_ORDER = [
-  "shortlisted",
-  "screening",
-  "level1",
-  "level2",
-  "level3",
-  "hrRound",
-  "finalRound",
-  "offerStage",
-  "closure",
-] as const;
+export type TerminalOutcomeKind = "withdraw" | "client_reject";
 
-export const TL_PIPELINE_STAGE_ORDER = [
-  "L1",
-  "L2",
-  "L3",
-  "HR Round",
-  "Final Round",
-  "Offer Stage",
-  "Closure",
-] as const;
+export type TerminalOutcome = {
+  kind: TerminalOutcomeKind | null;
+  hoverLabel: string | null;
+  rejectedFromStage: string | null;
+  rejectedAt: string | null;
+  showInApplicantOverview: boolean;
+};
 
-export const CLIENT_PIPELINE_STAGE_ORDER = [
-  "L1",
-  "L2",
-  "L3",
-  "HR Round",
-  "Final Round",
-  "Offer Stage",
-  "Closure",
-  "Rejected",
-] as const;
+/** Withdrawn / client-rejected applications shown in Applicant Overview as Screened Out. */
+export function parseTerminalOutcome(
+  status?: string | null,
+  statusNote?: string | null,
+): TerminalOutcome {
+  const note = statusNote || "";
+  const lower = (status || "").trim().toLowerCase();
+  const meta = parseRejectedMeta(statusNote);
+
+  if (note.includes("[[TERMINAL:WITHDRAW]]") || lower === "withdrawn") {
+    return {
+      kind: "withdraw",
+      hoverLabel: "Candidate Withdraw",
+      ...meta,
+      showInApplicantOverview: true,
+    };
+  }
+
+  if (
+    note.includes("[[TERMINAL:CLIENT_REJECT]]") ||
+    /^rejected by client:/im.test(note) ||
+    (lower === "rejected" && /client/i.test(note))
+  ) {
+    return {
+      kind: "client_reject",
+      hoverLabel: "Rejected by Client",
+      ...meta,
+      showInApplicantOverview: true,
+    };
+  }
+
+  return {
+    kind: null,
+    hoverLabel: null,
+    rejectedFromStage: meta.rejectedFromStage,
+    rejectedAt: meta.rejectedAt,
+    showInApplicantOverview: false,
+  };
+}
+
+const RECRUITER_APPLICANT_STATUS_MAP: Record<string, string> = {
+  "In Process": "Resume Review",
+  "In-Process": "Resume Review",
+  Evaluating: "Resume Review",
+  "Resume Review": "Resume Review",
+  Screening: "Screening",
+  Shortlisted: "Shortlisted",
+  Rejected: "Screened Out",
+  "Screened Out": "Screened Out",
+  Withdrawn: "Screened Out",
+  L1: "L1",
+  L2: "L2",
+  L3: "L3",
+  "Final Round": "Final Round",
+  "HR Round": "HR Round",
+  Closure: "Closure",
+  Selected: "Selected",
+  "Interview Scheduled": "L1",
+  Applied: "Resume Review",
+};
+
+export function mapRecruiterApplicantDisplayStatus(
+  rawStatus?: string | null,
+  statusNote?: string | null,
+): string {
+  const terminal = parseTerminalOutcome(rawStatus, statusNote);
+  if (terminal.kind) return "Screened Out";
+  const key = (rawStatus || "").trim();
+  return RECRUITER_APPLICANT_STATUS_MAP[key] || key || "Resume Review";
+}
+
+export function groupApplicantsByPipelineStage<
+  T extends { currentStatus?: string | null; status?: string | null },
+>(applicants: T[]): Record<PipelineStageKey, T[]> {
+  return groupCandidatesByPipelineStage(applicants, { excludeArchived: true });
+}
 
 export function getPipelineStageBadgeClass(status: string): string {
-  const s = (status || "").toLowerCase().trim();
-  if (s === "l1" || s.includes("level 1")) return "bg-emerald-500 text-white";
-  if (s === "l2" || s.includes("level 2")) return "bg-teal-500 text-white";
-  if (s === "l3" || s.includes("level 3")) return "bg-cyan-600 text-white";
-  if (s.includes("final")) return "bg-violet-500 text-white";
-  if (s.includes("hr")) return "bg-indigo-500 text-white";
-  if (s.includes("offer") && !s.includes("drop")) return "bg-amber-500 text-white";
-  if (s.includes("closure") || s === "joined") return "bg-green-600 text-white";
-  if (s.includes("shortlist")) return "bg-lime-500 text-white";
-  if (s.includes("screen") || s.includes("resume review") || s.includes("evaluating")) {
-    return "bg-sky-500 text-white";
+  const key = resolvePipelineStageKey(status);
+  switch (key) {
+    case "level1":
+      return "bg-emerald-500 text-white";
+    case "level2":
+      return "bg-teal-500 text-white";
+    case "level3":
+      return "bg-cyan-600 text-white";
+    case "finalRound":
+      return "bg-violet-500 text-white";
+    case "hrRound":
+      return "bg-indigo-500 text-white";
+    case "offerStage":
+      return "bg-amber-500 text-white";
+    case "closure":
+      return "bg-green-600 text-white";
+    case "shortlisted":
+      return "bg-lime-500 text-white";
+    case "screening":
+    case "resumeReview":
+      return "bg-sky-500 text-white";
+    case "rejected":
+      return "bg-red-500 text-white";
+    default:
+      return "bg-blue-600 text-white";
   }
-  if (s.includes("reject") || s.includes("screened out")) return "bg-red-500 text-white";
-  return "bg-blue-600 text-white";
 }
 
 export function buildPipelineSessionList(
@@ -92,7 +182,7 @@ export function mapRecruiterPipelineCandidate(
     candidateName: candidate.candidateName,
     roleApplied: candidate.roleApplied,
     jobTitle: candidate.jobTitle,
-    company: candidate.company,
+    company: candidate.company || candidate.currentCompany,
     currentStatus: statusOverride ?? candidate.currentStatus,
     email: candidate.email,
     phone: candidate.phone,

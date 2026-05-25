@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import FileUploadModal from '../modals/file-upload-modal';
 import { useSkills, useProfile, useUpdateProfile } from '@/hooks/use-profile';
+import { api } from '@/lib/api';
 
 export default function ResumeTab() {
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -13,34 +14,19 @@ export default function ResumeTab() {
 
   const handleResumeUpload = async (file: File) => {
     try {
-      const formData = new FormData();
-      formData.append('resume', file);
-      
-      const response = await fetch('/api/upload/resume', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        await updateProfile.mutateAsync({ resumeFile: result.url });
-        
-        // Log activity for resume upload
-        try {
-          await fetch('/api/activities', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              description: 'Resume updated',
-              type: 'resume_upload'
-            }),
-          });
-        } catch (error) {
-          console.warn('Failed to log activity:', error);
-        }
-        
-        setShowResumeModal(false);
+      const result = await api.uploadResume(file);
+      await updateProfile.mutateAsync({ resumeFile: result.url });
+
+      try {
+        await api.logActivity({
+          description: 'Resume updated',
+          type: 'resume_upload',
+        });
+      } catch (error) {
+        console.warn('Failed to log activity:', error);
       }
+
+      setShowResumeModal(false);
     } catch (error) {
       console.error('Resume upload failed:', error);
     }

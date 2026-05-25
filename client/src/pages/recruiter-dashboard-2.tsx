@@ -22,12 +22,13 @@ import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchBar } from '@/components/ui/search-bar';
+import { RequirementRoleCell } from '@/components/dashboard/requirement-role-cell';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight, Clock, Zap, AlertTriangle, Send } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateRevenueMappingQueries } from "@/lib/admin-performance-queries";
-import { useDashboardSync } from "@/lib/dashboard-sync";
+import { broadcastDashboardEvent, useDashboardSync } from "@/lib/dashboard-sync";
 import {
   CandidateCommentsSession,
   type CandidateCommentsSessionApplicant,
@@ -35,8 +36,14 @@ import {
 import {
   RECRUITER_PIPELINE_STAGE_ORDER,
   buildPipelineSessionList,
+  groupApplicantsByPipelineStage,
+  mapRecruiterApplicantDisplayStatus,
   mapRecruiterPipelineCandidate,
+  parseTerminalOutcome,
+  type TerminalOutcome,
 } from "@/lib/pipeline-session-utils";
+import { TaPipelineTab } from "@/components/dashboard/ta-pipeline-tab";
+import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
@@ -136,6 +143,33 @@ const APPLICANT_STATUS_STYLES: Record<string, { trigger: string; item: string }>
     item: 'focus:bg-red-100 focus:text-red-800',
   },
 };
+
+type ApplicantOverviewRow = {
+  id: string;
+  currentStatus: string;
+  rawStatus?: string;
+  statusNote?: string | null;
+  terminalOutcome?: TerminalOutcome;
+  taggedByTeamLead?: boolean;
+  [key: string]: unknown;
+};
+
+function getApplicantTerminal(applicant: ApplicantOverviewRow): TerminalOutcome {
+  return (
+    applicant.terminalOutcome ??
+    parseTerminalOutcome(applicant.rawStatus ?? applicant.currentStatus, applicant.statusNote)
+  );
+}
+
+function applicantOverviewRowClass(
+  applicant: ApplicantOverviewRow,
+  isUpdating: boolean,
+): string {
+  if (isUpdating) return "opacity-70 bg-blue-50";
+  if (getApplicantTerminal(applicant).kind) return "bg-red-50/90 hover:bg-red-100/90";
+  if (applicant.taggedByTeamLead) return "bg-sky-50/90 hover:bg-sky-100/90";
+  return "hover:bg-gray-50";
+}
 
 function getApplicantStatusStyles(status: string) {
   return (
@@ -336,7 +370,7 @@ export default function RecruiterDashboard2() {
   });
 
   // Query for all job applications
-  const { data: allApplications = [] } = useQuery<any[]>({
+  const { data: allApplications = [], isLoading: isLoadingApplications } = useQuery<any[]>({
     queryKey: ['/api/recruiter/applications'],
     // Refetch when this tab regains focus so a fresh tag from the Source
     // Resume tab is reflected even without the cross-tab broadcast.
@@ -345,7 +379,7 @@ export default function RecruiterDashboard2() {
     // registers/logs in on their own device, so we can't broadcast that
     // event â€” polling is what flips the Onboard button to disabled
     // (`isUsingStaffOS = true`) shortly after the candidate verifies.
-    refetchInterval: 30000,
+    refetchInterval: sidebarTab === "pipeline" ? 10000 : 30000,
     refetchIntervalInBackground: false,
     // Treat data as stale immediately so the polled refetch actually fires
     // (the global default is `staleTime: Infinity`).
@@ -415,16 +449,18 @@ export default function RecruiterDashboard2() {
       return { id, status, application: responseData.application };
     },
     onSuccess: (data) => {
-      // Clear the override since the server now has the correct status
-      setApplicantStatusOverrides(prev => {
-        const newOverrides = { ...prev };
-        delete newOverrides[data.id];
-        return newOverrides;
+      const app = data.application as { status?: string; statusNote?: string | null } | undefined;
+      const mappedStatus = mapRecruiterApplicantDisplayStatus(app?.status, app?.statusNote);
+      setApplicantStatusOverrides((prev) => ({
+        ...prev,
+        [data.id]: mappedStatus,
+      }));
+      broadcastDashboardEvent({
+        type: "applications:changed",
+        source: "recruiter-status-update",
       });
-      // Invalidate and refetch applications to ensure UI reflects database state
-      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
-      // Force refetch to ensure pipeline updates immediately
-      queryClient.refetchQueries({ queryKey: ['/api/recruiter/applications'] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/recruiter/applications"] });
+      void queryClient.refetchQueries({ queryKey: ["/api/recruiter/applications"] });
       setUpdatingApplicantId(null);
       toast({
         title: "Status Updated",
@@ -845,26 +881,8 @@ export default function RecruiterDashboard2() {
         }
       }
 
-      // Map backend status to UI-friendly format
-      const statusMap: Record<string, string> = {
-        'In Process': 'Resume Review',
-        'In-Process': 'Resume Review',
-        'Evaluating': 'Resume Review',
-        'Resume Review': 'Resume Review',
-        'Screening': 'Screening',
-        'Shortlisted': 'Shortlisted',
-        'Rejected': 'Rejected',
-        'Screened Out': 'Screened Out',
-        'L1': 'L1',
-        'L2': 'L2',
-        'L3': 'L3',
-        'Final Round': 'Final Round',
-        'HR Round': 'HR Round',
-        'Closure': 'Closure',
-        'Selected': 'Selected',
-        'Interview Scheduled': 'L1',
-        'Applied': 'Resume Review'
-      };
+      const terminalOutcome = parseTerminalOutcome(app.status, app.statusNote);
+      const displayStatus = mapRecruiterApplicantDisplayStatus(app.status, app.statusNote);
 
       // Get candidate name - prioritize candidateName from app, fallback to profile lookup
       let candidateName = app.candidateName;
@@ -879,8 +897,14 @@ export default function RecruiterDashboard2() {
         candidateName: candidateName,
         company: app.company || 'N/A',
         roleApplied: app.jobTitle || 'N/A',
-        submission: app.source === 'recruiter_tagged' ? 'Uploaded' : 'Inbound',
-        currentStatus: statusMap[app.status] || app.status || 'Resume Review',
+        submission:
+          app.source === 'recruiter_tagged' || app.source === 'tl_tagged'
+            ? 'Uploaded'
+            : 'Inbound',
+        taggedByTeamLead: Boolean(app.taggedByTeamLead || app.source === 'tl_tagged'),
+        rawStatus: app.status,
+        terminalOutcome,
+        currentStatus: displayStatus,
         email: app.candidateEmail || null,
         phone: app.candidatePhone || null,
         location: app.location || 'N/A',
@@ -890,6 +914,7 @@ export default function RecruiterDashboard2() {
         currentCompany: app.company || 'N/A',
         rating: 4.0,
         resumeFile: app.resumeFile || null,
+        profilePicture: app.profilePicture || null,
         profileId: app.profileId || null,
         isUsingStaffOS: app.isUsingStaffOS || false,
         appliedDate: app.appliedDate || null,
@@ -917,96 +942,40 @@ export default function RecruiterDashboard2() {
     };
   };
 
-  // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
   const getPipelineCandidatesByStage = useMemo(() => {
-    let effectiveApplicants = applicantData.map(a => ({
+    let effectiveApplicants = applicantData.map((a) => ({
       ...a,
-      currentStatus: applicantStatusOverrides[a.id] || a.currentStatus
-    })).filter(a =>
-      applicantStatusOverrides[a.id] !== 'Archived'
-    );
+      currentStatus: applicantStatusOverrides[a.id] || a.currentStatus,
+    })).filter((a) => applicantStatusOverrides[a.id] !== "Archived");
 
-    // Filter by pipelineDate if set
     if (pipelineDate) {
-      const filterDate = format(pipelineDate, 'yyyy-MM-dd');
+      const filterDate = format(pipelineDate, "yyyy-MM-dd");
       effectiveApplicants = effectiveApplicants.filter((a: any) => {
-        // Parse appliedDate or appliedOn date
         let dateToCheck: string | null = null;
-        
-        // Try appliedDate first (ISO format)
         if (a.appliedDate) {
           try {
-            const date = new Date(a.appliedDate);
-            dateToCheck = format(date, 'yyyy-MM-dd');
+            dateToCheck = format(new Date(a.appliedDate), "yyyy-MM-dd");
           } catch {
-            // If parsing fails, try appliedOn format (DD-MM-YYYY)
-            if (a.appliedOn && a.appliedOn !== 'N/A') {
-              try {
-                const [day, month, year] = a.appliedOn.split('-');
-                const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
-              } catch {
-                return false;
-              }
-            }
+            /* fall through */
           }
-        } else if (a.appliedOn && a.appliedOn !== 'N/A') {
-          // Parse appliedOn date (format: DD-MM-YYYY)
+        }
+        if (!dateToCheck && a.appliedOn && a.appliedOn !== "N/A") {
           try {
-            const [day, month, year] = a.appliedOn.split('-');
-            const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-            dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+            const [day, month, year] = a.appliedOn.split("-");
+            dateToCheck = format(
+              new Date(parseInt(year), parseInt(month) - 1, parseInt(day)),
+              "yyyy-MM-dd",
+            );
           } catch {
             return false;
           }
         }
-        
-        // If no date found, exclude from results
-        if (!dateToCheck) return false;
-        
-        // Check if the date matches the filter date
         return dateToCheck === filterDate;
       });
     }
 
-    // Each status maps to exactly one pipeline column to prevent duplicates
-    const stageMapping: Record<string, string[]> = {
-      'Screening': ['Evaluating', 'Resume Review', 'Screening', 'Intro Call', 'Assignment'],
-      'Shortlisted': ['Shortlisted'],
-      'L1': ['L1'],
-      'L2': ['L2'],
-      'L3': ['L3'],
-      'Final Round': ['Final Round'],
-      'HR Round': ['HR Round'],
-      'Offer Stage': ['Offer Stage', 'Selected'],
-      'Closure': ['Closure', 'Joined'],
-      'Offer Drop': ['Offer Drop', 'Declined']
-    };
-
-    const getCandidatesForStage = (stage: string) => {
-      const statusesToMatch = stageMapping[stage] || [];
-      return effectiveApplicants.filter((a: any) => {
-        if (statusesToMatch.includes(a.currentStatus)) return true;
-        if (a.currentStatus !== 'Screened Out' && a.currentStatus !== 'Rejected') return false;
-        const meta = parseRejectedMeta(a.statusNote);
-        const previousStage = meta.rejectedFromStage || rejectedStageOverrides[a.id];
-        return !!previousStage && statusesToMatch.includes(previousStage);
-      });
-    };
-
-    return {
-      screening: getCandidatesForStage('Screening'),
-      shortlisted: getCandidatesForStage('Shortlisted'),
-      level1: getCandidatesForStage('L1'),
-      level2: getCandidatesForStage('L2'),
-      level3: getCandidatesForStage('L3'),
-      finalRound: getCandidatesForStage('Final Round'),
-      hrRound: getCandidatesForStage('HR Round'),
-      offerStage: getCandidatesForStage('Offer Stage'),
-      closure: getCandidatesForStage('Closure'),
-      offerDrop: getCandidatesForStage('Offer Drop')
-    };
-  }, [applicantData, applicantStatusOverrides, pipelineDate, rejectedStageOverrides]);
+    return groupApplicantsByPipelineStage(effectiveApplicants);
+  }, [applicantData, applicantStatusOverrides, pipelineDate]);
 
   useEffect(() => {
     const now = Date.now();
@@ -1182,18 +1151,85 @@ export default function RecruiterDashboard2() {
   // Get effective status (with local overrides for optimistic updates)
   const getEffectiveApplicantData = () => {
     return applicantData
-      .filter(a => {
+      .filter((a) => {
         const effectiveStatus = applicantStatusOverrides[a.id] || a.currentStatus;
-        // Filter out Archived, Closure, Screened Out, and Removed statuses - these should not appear in Applicant Overview
-        return effectiveStatus !== 'Archived'
-          && effectiveStatus !== 'Closure'
-          && effectiveStatus !== 'Screened Out'
-          && effectiveStatus !== 'Removed';
+        const terminal = getApplicantTerminal({
+          ...a,
+          currentStatus: effectiveStatus,
+        });
+        if (terminal.showInApplicantOverview) return true;
+        return (
+          effectiveStatus !== "Archived" &&
+          effectiveStatus !== "Closure" &&
+          effectiveStatus !== "Screened Out" &&
+          effectiveStatus !== "Removed"
+        );
       })
-      .map(a => ({
-        ...a,
-        currentStatus: applicantStatusOverrides[a.id] || a.currentStatus
-      }));
+      .map((a) => {
+        const currentStatus = applicantStatusOverrides[a.id] || a.currentStatus;
+        return {
+          ...a,
+          currentStatus,
+          terminalOutcome: parseTerminalOutcome(a.rawStatus ?? currentStatus, a.statusNote),
+        };
+      });
+  };
+
+  const renderApplicantStatusCell = (applicant: ApplicantOverviewRow, isUpdating: boolean) => {
+    const terminal = getApplicantTerminal(applicant);
+    if (terminal.kind) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className={`inline-flex h-8 min-w-[9rem] items-center justify-center rounded-md border px-2 text-sm font-medium ${getApplicantStatusStyles("Screened Out").trigger}`}
+              >
+                Screened Out
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{terminal.hoverLabel}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return (
+      <div className="relative">
+        {isUpdating && (
+          <div className="absolute inset-0 z-10 flex animate-pulse items-center justify-center rounded-md bg-white/90 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <span className="text-xs font-medium text-blue-600">Updating...</span>
+            </div>
+          </div>
+        )}
+        <Select
+          value={applicant.currentStatus}
+          onValueChange={(value) => handleStatusChange(applicant, value)}
+          disabled={isUpdating}
+        >
+          <SelectTrigger
+            className={`h-8 w-36 border text-sm font-medium transition-all duration-300 ${getApplicantStatusStyles(applicant.currentStatus).trigger} ${isUpdating ? "cursor-wait opacity-50" : ""}`}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {statuses.map((status) => (
+              <SelectItem
+                key={status}
+                value={status}
+                className={`transition-colors ${getApplicantStatusStyles(status).item}`}
+              >
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
   };
 
   const handleAssign = (requirement: any) => {
@@ -1330,6 +1366,21 @@ export default function RecruiterDashboard2() {
   const { data: closureReports = [], isLoading: isLoadingClosureReports } = useQuery<any[]>({
     queryKey: ['/api/recruiter/closure-reports'],
   });
+
+  const taClosureReportsForPipeline = useMemo(
+    () =>
+      (closureReports as any[]).map((report: any) => ({
+        id: report.id,
+        candidate: report.candidate || "N/A",
+        position: report.position || "N/A",
+        client: report.client || "N/A",
+        talentAdvisor: report.talentAdvisor || "N/A",
+        quarter: report.quarter || "N/A",
+        offeredDate: report.offeredOn || report.offeredDate || "—",
+        joinedDate: report.joinedOn || report.joinedDate || "—",
+      })),
+    [closureReports],
+  );
 
   // Fetch quarterly performance data for the performance graph
   const { data: quarterlyPerformance = [], isLoading: isLoadingQuarterlyPerformance } = useQuery<Array<{
@@ -1607,11 +1658,16 @@ export default function RecruiterDashboard2() {
                         <tbody>
                           {getEffectiveApplicantData().slice(0, 5).map((applicant, index) => {
                             const isUpdating = updatingApplicantId === applicant.id;
+                            const isTlTagged = Boolean(applicant.taggedByTeamLead);
+                            const terminal = getApplicantTerminal(applicant);
                             return (
                               <tr
                                 key={applicant.id || index}
-                                className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${isUpdating ? 'opacity-70 bg-blue-50' : ''
-                                  }`}
+                                title={
+                                  terminal.hoverLabel ??
+                                  (isTlTagged ? "Tagged by your TL" : undefined)
+                                }
+                                className={`border-b border-gray-100 transition-all duration-300 ${applicantOverviewRowClass(applicant, isUpdating)}`}
                               >
                                 <td className="py-3 px-6 text-gray-900 transition-colors duration-200">{applicant.appliedOn}</td>
                                 <td className="py-3 px-6 text-gray-900 font-medium transition-colors duration-200">{applicant.candidateName}</td>
@@ -1626,39 +1682,7 @@ export default function RecruiterDashboard2() {
                                   </span>
                                 </td>
                                 <td className="py-3 px-6">
-                                  <div className="relative">
-                                    {isUpdating && (
-                                      <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-md z-10 backdrop-blur-sm animate-pulse">
-                                        <div className="flex items-center gap-2">
-                                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                                          <span className="text-xs text-blue-600 font-medium">Updating...</span>
-                                        </div>
-                                      </div>
-                                    )}
-                                    <Select
-                                      value={applicant.currentStatus}
-                                      onValueChange={(value) => handleStatusChange(applicant, value)}
-                                      disabled={isUpdating}
-                                    >
-                                      <SelectTrigger
-                                        className={`w-36 h-8 text-sm font-medium border transition-all duration-300 ${getApplicantStatusStyles(applicant.currentStatus).trigger} ${isUpdating ? 'opacity-50 cursor-wait' : ''
-                                          }`}
-                                      >
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {statuses.map((status) => (
-                                          <SelectItem
-                                            key={status}
-                                            value={status}
-                                            className={`transition-colors ${getApplicantStatusStyles(status).item}`}
-                                          >
-                                            {status}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                                  {renderApplicantStatusCell(applicant, isUpdating)}
                                 </td>
                                 <td className="py-3 px-6">
                                   <TooltipProvider>
@@ -2129,7 +2153,6 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">No. of Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
@@ -2140,7 +2163,7 @@ export default function RecruiterDashboard2() {
                         <tbody>
                           {isLoadingRequirements ? (
                             <tr>
-                              <td colSpan={9} className="py-8 text-center text-gray-500">
+                              <td colSpan={8} className="py-8 text-center text-gray-500">
                                 <div className="flex items-center justify-center gap-2">
                                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
                                   <span>Loading requirements...</span>
@@ -2149,7 +2172,7 @@ export default function RecruiterDashboard2() {
                             </tr>
                           ) : filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="py-8 text-center text-gray-500">
+                              <td colSpan={8} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet. Requirements will appear here once your Team Lead assigns them.'}
                               </td>
                             </tr>
@@ -2168,24 +2191,28 @@ export default function RecruiterDashboard2() {
                                   className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : 'hover:bg-gray-50'} ${index % 2 === 0 && !isReassigned && !isOnHold && !isRecentlyClosed ? 'bg-white' : isReassigned ? 'bg-gray-100' : isRecentlyClosed ? 'bg-red-100' : isOnHold ? 'bg-yellow-100/80' : 'bg-gray-50'}`}
                                   title={isReassigned ? "Reassigned to another TA" : isRecentlyClosed ? "Requirement was closed and will leave this list after 24 hours" : isOnHold ? "Requirement is on Hold" : undefined}
                                 >
-                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">
-                                    <div className="flex items-center gap-2">
-                                      <span>{req.position}</span>
-                                      {isRecentlyClosed && (
-                                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
-                                          Closed
-                                        </span>
-                                      )}
-                                      {isOnHold && (
-                                        <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
-                                          On Hold
-                                        </span>
-                                      )}
-                                    </div>
+                                  <td className="py-3 px-4 text-sm">
+                                    <RequirementRoleCell
+                                      title={req.position}
+                                      noOfPositions={req.noOfPositions}
+                                      badges={
+                                        <>
+                                          {isRecentlyClosed && (
+                                            <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
+                                              Closed
+                                            </span>
+                                          )}
+                                          {isOnHold && (
+                                            <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
+                                              On Hold
+                                            </span>
+                                          )}
+                                        </>
+                                      }
+                                    />
                                   </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
-                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.noOfPositions ?? 1}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">
                                     {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
                                       <span className="text-cyan-500">Unassigned</span>
@@ -2260,7 +2287,6 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">No. of Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
@@ -2271,7 +2297,7 @@ export default function RecruiterDashboard2() {
                         <tbody>
                           {filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="py-8 text-center text-gray-500">
+                              <td colSpan={8} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet.'}
                               </td>
                             </tr>
@@ -2289,24 +2315,28 @@ export default function RecruiterDashboard2() {
                                   className={`border-b border-gray-100 ${isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : `hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}`}
                                   title={isRecentlyClosed ? 'Requirement was closed and will leave this list after 24 hours' : isOnHold ? 'Requirement is on Hold' : undefined}
                                 >
-                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">
-                                    <div className="flex items-center gap-2">
-                                      <span>{req.position}</span>
-                                      {isRecentlyClosed && (
-                                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
-                                          Closed
-                                        </span>
-                                      )}
-                                      {isOnHold && (
-                                        <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
-                                          On Hold
-                                        </span>
-                                      )}
-                                    </div>
+                                  <td className="py-3 px-4 text-sm">
+                                    <RequirementRoleCell
+                                      title={req.position}
+                                      noOfPositions={req.noOfPositions}
+                                      badges={
+                                        <>
+                                          {isRecentlyClosed && (
+                                            <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
+                                              Closed
+                                            </span>
+                                          )}
+                                          {isOnHold && (
+                                            <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
+                                              On Hold
+                                            </span>
+                                          )}
+                                        </>
+                                      }
+                                    />
                                   </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
-                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.noOfPositions ?? 1}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">
                                     {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
                                       <span className="text-cyan-500">Unassigned</span>
@@ -2623,227 +2653,69 @@ export default function RecruiterDashboard2() {
 
 
 
-  // Pipeline stages with display names
-  const pipelineStages = [
-    { key: 'level1', display: 'Level 1' },
-    { key: 'level2', display: 'Level 2' },
-    { key: 'level3', display: 'Level 3' },
-    { key: 'hrRound', display: 'HR Round' },
-    { key: 'finalRound', display: 'Final Round' },
-    { key: 'offerStage', display: 'Offer Stage' },
-    { key: 'closure', display: 'Closure' }
-  ];
-
   const renderPipelineContent = () => {
-    // Closure report data fetched from backend (Revenue Mappings provided by Admin)
-    const closureReportData = closureReports;
-
-    if (pipelineView === "candidate-session" && sessionApplicationId) {
-      return (
-        <div className="flex min-h-screen">
-          <div className="ml-16 flex min-h-0 flex-1 flex-col bg-white">
-            <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
-            <div className="h-[calc(100vh-64px)] min-h-0 overflow-hidden">
-              <CandidateCommentsSession
-                applicationId={sessionApplicationId}
-                fallbackApplicant={sessionApplicantSnapshot}
-                pipelineApplicants={pipelineSessionList}
-                onSelectApplicant={handleSelectSessionApplicant}
-                onBack={handleCloseCandidateSession}
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
-      <div className="flex min-h-screen">
-        <div className="flex-1 ml-16 bg-gray-50">
+      <div className="flex h-screen max-h-screen overflow-hidden">
+        <div className="ml-16 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
           <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
-          <div className="flex h-screen">
-            {/* Main Content Area */}
-            <div className="flex-1 px-6 py-6 overflow-y-auto">
-              {/* Header */}
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
-                <div className="flex items-center gap-3">
-                  <StandardDatePicker
-                    value={pipelineDate || undefined}
-                    onChange={(date) => setPipelineDate(date || null)}
-                    placeholder="Select date"
-                    className="h-10 w-40 rounded"
-                    data-testid="button-pipeline-date-picker"
+          <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col overflow-hidden">
+            <TaPipelineTab
+              isLoading={isLoadingApplications}
+              isEmpty={!applicantData || applicantData.length === 0}
+              groupedByStage={getPipelineCandidatesByStage}
+              onCandidateClick={handlePipelineCandidateClick}
+              pipelineDate={pipelineDate}
+              onPipelineDateChange={setPipelineDate}
+              getCandidateName={(c) => c.candidateName || "N/A"}
+              getRoleApplied={(c) => c.roleApplied || c.jobTitle || "N/A"}
+              getCompany={(c) => c.company || c.currentCompany || "N/A"}
+              getProfilePicture={(c) => c.profilePicture || c.profile_picture || null}
+              getAppliedTimestamp={(c) =>
+                calculateDaysAgo(c.appliedDate || c.updatedAt || c.createdAt)
+              }
+              isRejectedCandidate={(c) => {
+                const status =
+                  applicantStatusOverrides[c.id] || c.currentStatus || "";
+                return status === "Screened Out" || status === "Rejected";
+              }}
+              pipelineView={pipelineView}
+              candidateSession={
+                sessionApplicationId ? (
+                  <CandidateCommentsSession
+                    applicationId={sessionApplicationId}
+                    fallbackApplicant={sessionApplicantSnapshot}
+                    pipelineApplicants={pipelineSessionList}
+                    onSelectApplicant={handleSelectSessionApplicant}
+                    onBack={handleCloseCandidateSession}
+                    commentsRailVariant="ta"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPipelineDate(new Date())}
-                    className="h-10"
-                    title="Reset to today"
-                  >
-                    Today
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setPipelineDate(null)}
-                    className="h-10"
-                    title="Show all candidates (clear date filter)"
-                  >
-                    All
-                  </Button>
-                </div>
-              </div>
-
-              {/* Pipeline Stages - Kanban Board Layout */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6" style={{ height: 'calc(100vh - 200px)' }}>
-                <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
-                  <div className="flex gap-1.5 w-full h-full">
-                    {pipelineStages.map((stage) => {
-                      const candidates = getPipelineCandidatesByStage[stage.key as keyof typeof getPipelineCandidatesByStage] || [];
-                      const count = Array.isArray(candidates) ? candidates.length : 0;
-                      return (
-                        <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
-                          {/* Column Header - Fixed */}
-                          <div className="mb-1 flex-shrink-0">
-                            <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 rounded-t px-2 py-1 border-b border-gray-200 dark:border-gray-600">
-                              <h3 className="text-[10px] font-medium text-gray-700 dark:text-gray-300 truncate" data-testid={`header-pipeline-${stage.key}`}>{stage.display}</h3>
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Column Content - Scrollable Vertically */}
-                          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
-                            {count === 0 ? (
-                              <div className="flex items-center justify-center h-full min-h-[100px]">
-                                <p className="text-[10px] text-gray-400 dark:text-gray-500">No candidates</p>
-                              </div>
-                            ) : (
-                              (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
-                                const initials = getInitials(candidate.candidateName || '');
-                                const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt || candidate.createdAt);
-                                const roleApplied = candidate.roleApplied || candidate.jobTitle || 'N/A';
-                                const company = candidate.company || 'N/A';
-                                const effectiveStatus = applicantStatusOverrides[candidate.id] || candidate.currentStatus || candidate.status || '';
-                                const isRejectedCandidate =
-                                  effectiveStatus === 'Screened Out' || effectiveStatus === 'Rejected';
-                                
-                                return (
-                                  <div
-                                    key={candidate.id || index}
-                                    onClick={() => handlePipelineCandidateClick(candidate)}
-                                    className={`bg-white dark:bg-gray-800 border rounded p-1.5 cursor-pointer hover:shadow-sm transition-all relative ${
-                                      isRejectedCandidate
-                                        ? 'border-red-400 dark:border-red-500 ring-1 ring-red-300/60'
-                                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
-                                    }`}
-                                    data-testid={`candidate-${stage.key}-${index}`}
-                                  >
-                                    {isRejectedCandidate && (
-                                      <div className="absolute top-1 right-1 flex items-center justify-center">
-                                        <span className="absolute inline-flex h-4 w-4 rounded-full bg-red-400 opacity-75 animate-ping"></span>
-                                        <span className="relative inline-flex h-4 w-4 rounded-full bg-red-100 items-center justify-center">
-                                          <AlertTriangle className="w-2.5 h-2.5 text-red-600" />
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* Card Content */}
-                                    <div className="flex items-start gap-1.5">
-                                      {/* Avatar - Very Small */}
-                                      <div className="flex-shrink-0">
-                                        <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                          <span className="text-[9px] font-medium text-blue-700 dark:text-blue-300">
-                                            {initials}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Candidate Info - Very Compact */}
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] mb-0.5 truncate leading-tight">
-                                          {candidate.candidateName || 'N/A'}
-                                        </h4>
-                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 mb-0.5 truncate leading-tight">
-                                          {roleApplied}
-                                        </p>
-                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 truncate leading-tight">
-                                          {company}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Timestamp in bottom right */}
-                                    <div className="absolute bottom-1 right-1.5">
-                                      <p className="text-[8px] text-gray-500 dark:text-gray-400">
-                                        {daysAgo}
-                                      </p>
-                                    </div>
-
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                ) : null
+              }
+              closureReportsFooter={
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
+                    {closureReports.length > 5 && (
+                      <Button
+                        variant="outline"
+                        className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                        style={{ borderRadius: 6 }}
+                        onClick={() => setIsClosureDetailsModalOpen(true)}
+                        data-testid="button-view-more-closures"
+                      >
+                        View More
+                      </Button>
+                    )}
                   </div>
+                  <ClosureReportsCardList
+                    reports={taClosureReportsForPipeline}
+                    isLoading={isLoadingClosureReports}
+                    emptyMessage="No closures yet."
+                    maxRows={5}
+                  />
                 </div>
-              </div>
-
-
-            </div>
-
-            {/* Right Sidebar with Stats - Matching Admin/TL Design */}
-            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
-              <div className="p-4 space-y-1">
-                <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SCREENING</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-screening">{getPipelineCandidatesByStage.screening.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
-                  <span className="text-sm font-medium text-white">LEVEL 1</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded">
-                  <span className="text-sm font-medium text-white">LEVEL 2</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded">
-                  <span className="text-sm font-medium text-white">LEVEL 3</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded">
-                  <span className="text-sm font-medium text-white">FINAL ROUND</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded">
-                  <span className="text-sm font-medium text-white">HR ROUND</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded">
-                  <span className="text-sm font-medium text-white">OFFER STAGE</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded">
-                  <span className="text-sm font-medium text-white">CLOSURE</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-closure">{getPipelineCandidatesByStage.closure.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
-                  <span className="text-sm font-medium text-white">OFFER DROP</span>
-                  <span className="text-lg font-bold text-white" data-testid="count-offerdrop">{getPipelineCandidatesByStage.offerDrop.length}</span>
-                </div>
-              </div>
-            </div>
+              }
+            />
           </div>
         </div>
       </div>
@@ -3235,7 +3107,13 @@ export default function RecruiterDashboard2() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div
+      className={
+        sidebarTab === "pipeline"
+          ? "h-screen max-h-screen overflow-hidden"
+          : "min-h-screen"
+      }
+    >
       <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} chatUnreadCount={totalUnreadCount} />
       {renderMainContent()}
 
@@ -3872,7 +3750,7 @@ export default function RecruiterDashboard2() {
                   </tr>
                 </thead>
                 <tbody>
-                  {applicantData
+                  {getEffectiveApplicantData()
                     .filter((applicant) => {
                       if (!applicantSearchQuery) return true;
                       const query = applicantSearchQuery.toLowerCase();
@@ -3886,11 +3764,16 @@ export default function RecruiterDashboard2() {
                     })
                     .map((applicant, index) => {
                       const isUpdating = updatingApplicantId === applicant.id;
+                      const isTlTagged = Boolean(applicant.taggedByTeamLead);
+                      const terminal = getApplicantTerminal(applicant);
                       return (
                         <tr
-                          key={index}
-                          className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${isUpdating ? 'opacity-70 bg-blue-50' : ''
-                            }`}
+                          key={applicant.id || index}
+                          title={
+                            terminal.hoverLabel ??
+                            (isTlTagged ? "Tagged by your TL" : undefined)
+                          }
+                          className={`border-b border-gray-100 transition-all duration-300 ${applicantOverviewRowClass(applicant, isUpdating)}`}
                         >
                           <td className="py-3 px-4 text-gray-900 transition-colors duration-200">{applicant.appliedOn}</td>
                           <td className="py-3 px-4 text-gray-900 font-medium transition-colors duration-200">{applicant.candidateName}</td>
@@ -3905,39 +3788,7 @@ export default function RecruiterDashboard2() {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="relative">
-                              {isUpdating && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-md z-10 backdrop-blur-sm animate-pulse">
-                                  <div className="flex items-center gap-2">
-                                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                                    <span className="text-xs text-blue-600 font-medium">Updating...</span>
-                                  </div>
-                                </div>
-                              )}
-                              <Select
-                                value={applicant.currentStatus}
-                                onValueChange={(value) => handleStatusChange(applicant, value)}
-                                disabled={isUpdating}
-                              >
-                                <SelectTrigger
-                                  className={`w-36 h-8 text-sm font-medium border transition-all duration-300 ${getApplicantStatusStyles(applicant.currentStatus).trigger} ${isUpdating ? 'opacity-50 cursor-wait' : ''
-                                    }`}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {statuses.map((status) => (
-                                    <SelectItem
-                                      key={status}
-                                      value={status}
-                                      className={`transition-colors ${getApplicantStatusStyles(status).item}`}
-                                    >
-                                      {status}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
+                            {renderApplicantStatusCell(applicant, isUpdating)}
                           </td>
                           <td className="py-3 px-4">
                             <TooltipProvider>

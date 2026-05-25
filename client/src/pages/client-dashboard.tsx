@@ -25,6 +25,21 @@ import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
+import { RequirementRoleCell } from '@/components/dashboard/requirement-role-cell';
+import { ClientPipelineTab } from '@/components/dashboard/client-pipeline-tab';
+import { ClientMemberPipelineTab } from '@/components/dashboard/client-member-pipeline-tab';
+import { PIPELINE_BUTTON_RADIUS_PX } from '@/lib/pipeline-ui-tokens';
+import {
+  ClosureReportsCardList,
+  type ClosureReportRow,
+} from '@/components/dashboard/closure-reports-card-list';
+import {
+  CLIENT_PIPELINE_STAGE_ORDER,
+  buildPipelineSessionList,
+  groupCandidatesByPipelineStage,
+  mapClientPipelineCandidate,
+  isPipelineApplicationSessionId,
+} from '@/lib/pipeline-session-utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
@@ -46,11 +61,6 @@ import { ClientSettingsTab } from "@/components/client-dashboard/client-settings
 import { ClientRequirementAssignModal } from "@/components/client-dashboard/client-requirement-assign-modal";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
 import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
-import {
-  buildPipelineSessionList,
-  CLIENT_PIPELINE_STAGE_ORDER,
-  mapClientPipelineCandidate,
-} from '@/lib/pipeline-session-utils';
 
 export default function ClientDashboard() {
   const { logout } = useAuth();
@@ -318,10 +328,11 @@ export default function ClientDashboard() {
   }, [pipelineData]);
 
   // Fetch closure reports from API
-  const { data: allClosureReports, isLoading: isLoadingClosures } = useQuery({
+  const { data: allClosureReports = [], isLoading: isLoadingClosures } = useQuery<ClosureReportRow[]>({
     queryKey: ['/api/client/closures'],
-    placeholderData: []
+    placeholderData: [],
   });
+  const closureReportsList = Array.isArray(allClosureReports) ? allClosureReports : [];
 
   const computedDashboardStats = useMemo(() => {
     const roles = Array.isArray(allRolesData) ? (allRolesData as any[]) : [];
@@ -338,9 +349,9 @@ export default function ClientDashboard() {
       activeRoles: activeRoles || dashboardStats.activeRoles,
       pausedRoles: pausedRoles || dashboardStats.pausedRoles,
       withdrawnRoles: dashboardStats.withdrawnRoles,
-      successfulHires: Array.isArray(allClosureReports) ? allClosureReports.length : dashboardStats.successfulHires,
+      successfulHires: closureReportsList.length || dashboardStats.successfulHires,
     };
-  }, [allRolesData, allClosureReports, dashboardStats]);
+  }, [allRolesData, closureReportsList, dashboardStats]);
 
   // Fetch client profile from API
   const { data: clientProfile, isLoading: isLoadingProfile } = useQuery({
@@ -447,46 +458,6 @@ export default function ClientDashboard() {
       });
     }
   };
-
-  // Mutation for rejecting a candidate
-  const rejectCandidateMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      // Prevent rejecting sample candidates (they don't exist in database)
-      if (id && id.startsWith('sample-')) {
-        throw new Error('Cannot reject sample candidates. Please reject real candidates only.');
-      }
-      const response = await apiRequest('PATCH', `/api/client/applications/${id}/status`, {
-        status: 'Rejected',
-        reason
-      });
-      return response;
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/client/pipeline'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/client/dashboard-stats'] });
-      queryClient.invalidateQueries({
-        queryKey: ['/api/client/applications', variables.id, 'session'],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['/api/client/applications', variables.id, 'comments'],
-      });
-      toast({
-        title: "Candidate Rejected",
-        description: "The candidate has been rejected successfully.",
-      });
-      setSessionApplicantSnapshot((prev) =>
-        prev && prev.id === variables.id ? { ...prev, currentStatus: 'Rejected' } : prev,
-      );
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to reject candidate. Please try again.",
-        variant: "destructive"
-      });
-    }
-  });
-
 
   // Mutation for deleting a requirement/role
   const deleteRoleMutation = useMutation({
@@ -603,28 +574,10 @@ export default function ClientDashboard() {
     return filtered;
   }, [mergedPipelineData, pipelinePeriod, pipelineDate, selectedRole, allRolesData, sampleRoles]);
 
-  // Group pipeline data by stage for the column view
-  const pipelineStages = [
-    { key: 'L1', display: 'Level 1' },
-    { key: 'L2', display: 'Level 2' },
-    { key: 'L3', display: 'Level 3' },
-    { key: 'HR Round', display: 'HR Round' },
-    { key: 'Final Round', display: 'Final Round' },
-    { key: 'Offer Stage', display: 'Offer Stage' },
-    { key: 'Closure', display: 'Closure' },
-    { key: 'Rejected', display: 'Rejected' }
-  ];
-  const matchesStage = (candidate: any, stageKey: string) => {
-    const status = candidate?.currentStatus;
-    if (stageKey === 'Offer Stage') {
-      return status === 'Offer Stage';
-    }
-    return status === stageKey;
-  };
-  const groupedPipeline = pipelineStages.reduce((acc, stage) => {
-    acc[stage.key] = filteredPipelineData.filter(c => matchesStage(c, stage.key));
-    return acc;
-  }, {} as Record<string, any[]>);
+  const groupedPipeline = useMemo(
+    () => groupCandidatesByPipelineStage(filteredPipelineData),
+    [filteredPipelineData],
+  );
 
   const clientPipelineSessionList = useMemo(
     () =>
@@ -636,46 +589,15 @@ export default function ClientDashboard() {
     [groupedPipeline],
   );
 
-  // Calculate stage counts for sidebar (using filtered data)
-  const stageCounts = {
-    'Screening': filteredPipelineData.filter(c =>
-      c.currentStatus === 'Screening' ||
-      c.currentStatus === 'Evaluating' ||
-      c.currentStatus === 'Resume Review' ||
-      c.currentStatus === 'In-Process' ||
-      c.currentStatus === 'In Process' ||
-      c.currentStatus === 'Intro Call' ||
-      c.currentStatus === 'Assignment' ||
-      c.currentStatus === 'Sourced'
-    ).length,
-    'Shortlisted': filteredPipelineData.filter(c => c.currentStatus === 'Shortlisted').length,
-    'L1': groupedPipeline['L1']?.length || 0,
-    'L2': groupedPipeline['L2']?.length || 0,
-    'L3': groupedPipeline['L3']?.length || 0,
-    'Level 1': groupedPipeline['L1']?.length || 0,
-    'Level 2': groupedPipeline['L2']?.length || 0,
-    'Level 3': groupedPipeline['L3']?.length || 0,
-    'Final Round': groupedPipeline['Final Round']?.length || 0,
-    'HR Round': groupedPipeline['HR Round']?.length || 0,
-    'Offer Stage': groupedPipeline['Offer Stage']?.length || 0,
-    'Closure': groupedPipeline['Closure']?.length || 0,
-    'Rejected': filteredPipelineData.filter(c => c.currentStatus === 'Rejected').length,
-  };
+  const clientPipelineRoleOptions = useMemo(
+    () =>
+      (Array.isArray(allRolesData) ? allRolesData : []).map((role: any) => ({
+        id: String(role.id || role.roleId),
+        label: role.position || role.role || "Requirement",
+      })),
+    [allRolesData],
+  );
 
-  // Stage color mapping
-  const getStageColor = (stage: string) => {
-    switch (stage) {
-      case 'L1': return { bg: 'bg-green-200', hover: 'hover:bg-green-300', text: 'text-gray-800' };
-      case 'L2': return { bg: 'bg-green-300', hover: 'hover:bg-green-400', text: 'text-gray-800' };
-      case 'L3': return { bg: 'bg-green-400', hover: 'hover:bg-green-500', text: 'text-gray-800' };
-      case 'Final Round': return { bg: 'bg-green-500', hover: 'hover:bg-green-600', text: 'text-white' };
-      case 'HR Round': return { bg: 'bg-green-600', hover: 'hover:bg-green-700', text: 'text-white' };
-      case 'Offer Stage': return { bg: 'bg-green-700', hover: 'hover:bg-green-800', text: 'text-white' };
-      case 'Closure': return { bg: 'bg-green-800', hover: 'hover:bg-green-900', text: 'text-white' };
-      case 'Rejected': return { bg: 'bg-red-100', hover: 'hover:bg-red-200', text: 'text-gray-800' };
-      default: return { bg: 'bg-gray-200', hover: 'hover:bg-gray-300', text: 'text-gray-800' };
-    }
-  };
 
   // Safely get first impact metrics with default values
   const firstImpactMetrics = (impactMetrics && Array.isArray(impactMetrics) && impactMetrics.length > 0) 
@@ -730,15 +652,14 @@ export default function ClientDashboard() {
   };
 
   const handlePipelineCandidateClick = (candidate: any) => {
-    if (candidate.id && candidate.id.startsWith('sample-')) {
+    if (!candidate?.id || !isPipelineApplicationSessionId(candidate.id)) {
       toast({
-        title: "Sample Candidate",
-        description: "This is a sample candidate. Open a real pipeline card to view details.",
-        variant: "default",
+        title: "Cannot open candidate",
+        description: "This pipeline card is not linked to a job application yet.",
+        variant: "destructive",
       });
       return;
     }
-    if (!candidate?.id) return;
     const snapshot = mapClientPipelineCandidate(candidate);
     setSessionApplicationId(snapshot.id);
     setSessionApplicantSnapshot(snapshot);
@@ -758,38 +679,6 @@ export default function ClientDashboard() {
 
   const renderMainContent = () => {
     const activeTab = normalizeClientPortalTab(sidebarTab);
-    if (
-      activeTab === 'pipeline' &&
-      pipelineView === 'candidate-session' &&
-      sessionApplicationId
-    ) {
-      return (
-        <div className="flex h-screen flex-col overflow-hidden bg-white">
-          <CandidateCommentsSession
-            applicationId={sessionApplicationId}
-            fallbackApplicant={sessionApplicantSnapshot}
-            pipelineApplicants={clientPipelineSessionList}
-            onSelectApplicant={handleSelectSessionApplicant}
-            onBack={handleCloseCandidateSession}
-            apiMode="client"
-            canViewSalaryDetails={
-              isClientAdmin ||
-              (clientProfile as { canSeeSalaryDetails?: boolean } | undefined)?.canSeeSalaryDetails ===
-                true
-            }
-            viewerName={userName}
-            clientReject={{
-              canReject:
-                (sessionApplicantSnapshot?.currentStatus || '').toLowerCase() !== 'rejected',
-              isRejecting: rejectCandidateMutation.isPending,
-              onReject: (reason) =>
-                rejectCandidateMutation.mutate({ id: sessionApplicationId, reason }),
-            }}
-          />
-        </div>
-      );
-    }
-
     switch (activeTab) {
       case 'overview':
       case 'dashboard':
@@ -1165,7 +1054,13 @@ export default function ClientDashboard() {
                           return (
                             <tr key={role.roleId || index} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{formatRoleId(role.roleId)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.role}</td>
+                              <td className="px-6 py-4 text-sm text-gray-700">
+                                <RequirementRoleCell
+                                  title={role.role}
+                                  noOfPositions={role.noOfPositions}
+                                  titleClassName="text-sm font-semibold text-gray-900"
+                                />
+                              </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.team}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.recruiter}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{role.sharedOn}</td>
@@ -1285,242 +1180,116 @@ export default function ClientDashboard() {
         );
 
       case 'pipeline':
-      case 'requirements':
+      case 'requirements': {
+        const pipelineCandidateSession = sessionApplicationId ? (
+          <CandidateCommentsSession
+            applicationId={sessionApplicationId}
+            fallbackApplicant={sessionApplicantSnapshot}
+            pipelineApplicants={clientPipelineSessionList}
+            onSelectApplicant={handleSelectSessionApplicant}
+            onBack={handleCloseCandidateSession}
+            apiMode="client"
+            canViewSalaryDetails={
+              isClientAdmin ||
+              (clientProfile as { canSeeSalaryDetails?: boolean } | undefined)
+                ?.canSeeSalaryDetails === true
+            }
+            viewerName={userName}
+            onClientRejected={() => {
+              if (!sessionApplicationId) return;
+              setSessionApplicantSnapshot((prev) =>
+                prev && prev.id === sessionApplicationId
+                  ? { ...prev, currentStatus: "Screened Out" }
+                  : prev,
+              );
+              queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/client/dashboard-stats"] });
+            }}
+          />
+        ) : null;
+
+        const sharedPipelineTabProps = {
+          isLoading: isLoadingPipeline,
+          isEmpty: !isLoadingPipeline && filteredPipelineData.length === 0,
+          groupedByStage: groupedPipeline,
+          selectedRequirement,
+          onRequirementChange: setSelectedRequirement,
+          roleOptions: clientPipelineRoleOptions,
+          pipelineDate,
+          pipelinePeriod,
+          onPipelineDateChange: (date: Date) => {
+            setPipelinePeriod("today");
+            setPipelineDate(date);
+          },
+          onTodayClick: () => {
+            setPipelinePeriod("today");
+            setPipelineDate(new Date());
+          },
+          onAllClick: () => {
+            setPipelinePeriod("all");
+            setPipelineDate(new Date());
+          },
+          onCandidateClick: handlePipelineCandidateClick,
+          getCandidateName: (c: any) => c.candidateName || "N/A",
+          getRoleApplied: (c: any) =>
+            c.roleApplied || c.requirementPosition || "N/A",
+          getSubtitle: (c: any) => `TA: ${c.talentAdvisorName || "N/A"}`,
+          getAppliedTimestamp: (c: any) =>
+            calculateDaysAgo(c.appliedDate || c.updatedAt),
+          isRejectedCandidate: (c: any) => {
+            const s = (c.currentStatus || c.status || "").toLowerCase();
+            return s.includes("reject") || s.includes("screened out");
+          },
+          shouldSkipCandidate: (c: any) =>
+            Boolean(c.id && String(c.id).startsWith("sample-")),
+          pipelineView,
+          candidateSession: pipelineCandidateSession,
+        };
+
+        const closureReportsFooter = (
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
+              {closureReportsList.length > 5 ? (
+                <Button
+                  variant="outline"
+                  className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                  style={{ borderRadius: PIPELINE_BUTTON_RADIUS_PX }}
+                  onClick={() => setIsClosureModalOpen(true)}
+                >
+                  View More
+                </Button>
+              ) : null}
+            </div>
+            <ClosureReportsCardList
+              reports={closureReportsList}
+              isLoading={isLoadingClosures}
+              maxRows={5}
+              emptyMessage="No closure reports for your assigned requirements yet."
+            />
+          </div>
+        );
+
         return (
-          <div className="flex h-full min-h-0 flex-col">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
             <SimpleClientHeader {...clientHeaderProps} />
-            <div className="flex min-h-0 flex-1">
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="space-y-6 p-6">
-                  {/* Pipeline Header with Filters - Matching Image Design */}
-                  <div className="flex flex-shrink-0 justify-between items-center">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      {isClientAdmin ? 'Pipeline & Closures' : 'Pipeline'}
-                    </h2>
-                    <div className="flex items-center gap-3">
-                      {/* Requirement Filter */}
-                      <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
-                        <SelectTrigger className="h-10 w-48 rounded border border-gray-200 bg-gray-50 text-gray-900 shadow-sm hover:bg-gray-100">
-                          <SelectValue placeholder="All Requirements" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Requirements</SelectItem>
-                          {(allRolesData as any[]).map((role) => (
-                            <SelectItem key={role.id || role.roleId} value={role.id || role.roleId}>
-                              {role.position || role.role}
-                            </SelectItem>
-                          ))}
-                          {(allRolesData as any[]).length === 0 && (
-                            <SelectItem value="no-requirements" disabled>No requirements available</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-
-                      {/* Period Selector */}
-                      <Select
-                        value={pipelinePeriod}
-                        onValueChange={(value) => {
-                          setPipelinePeriod(value);
-                          if (value === 'today') {
-                            setPipelineDate(new Date());
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="h-10 w-32 rounded border border-gray-200 bg-gray-50 text-gray-900 shadow-sm hover:bg-gray-100">
-                          <SelectValue placeholder="Period" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="today">Today</SelectItem>
-                          <SelectItem value="all">All</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      {pipelinePeriod === 'today' && (
-                        <StandardDatePicker
-                          value={pipelineDate}
-                          onChange={(date) => setPipelineDate(date || new Date())}
-                          className="h-10 w-40 border-gray-200 bg-gray-50 shadow-sm hover:bg-gray-100"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Pipeline Stages - Kanban Board */}
-                  <div
-                    className="mb-6 flex flex-col rounded-lg border border-gray-200 bg-gray-50 p-2"
-                    style={{ height: "calc(100vh - 200px)", minHeight: "420px" }}
-                  >
-                    <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
-                      <div className="flex gap-1.5 w-full h-full">
-                        {pipelineStages.map((stage) => {
-                          const candidates = groupedPipeline[stage.key] || [];
-                          const count = candidates.length;
-                          return (
-                            <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
-                              {/* Column Header - Fixed */}
-                              <div className="mb-1 flex-shrink-0">
-                                <div className="flex items-center justify-between bg-gray-100 rounded-t px-2 py-1 border-b border-gray-200">
-                                  <h3 className="text-[10px] font-medium text-gray-700 truncate">{stage.display}</h3>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                    <span className="text-[10px] font-medium text-gray-700">{count}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* Column Content - Scrollable Vertically */}
-                              <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
-                                {candidates.length === 0 ? (
-                                  <div className="flex items-center justify-center h-full min-h-[100px]">
-                                    <p className="text-[10px] text-gray-400">No candidates</p>
-                                  </div>
-                                ) : (
-                                  candidates.map((candidate: any) => {
-                                    // Skip sample candidates - only show real data
-                                    if (candidate.id && candidate.id.startsWith('sample-')) {
-                                      return null;
-                                    }
-                                    
-                                    const initials = getInitials(candidate.candidateName || '');
-                                    const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt);
-                                    const roleApplied = candidate.roleApplied || candidate.requirementPosition || 'N/A';
-                                    const company = candidate.company || 'N/A';
-                                    const talentAdvisor = candidate.talentAdvisorName || 'N/A';
-                                    const isRejected = candidate.currentStatus === 'Rejected' || candidate.status === 'Rejected';
-                                    
-                                    return (
-                                      <div
-                                        key={candidate.id}
-                                        onClick={() => handlePipelineCandidateClick(candidate)}
-                                        className={`border rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 relative ${
-                                          isRejected 
-                                            ? 'bg-red-50 border-red-200' 
-                                            : 'bg-white border-gray-200'
-                                        }`}
-                                        data-testid={`candidate-card-${candidate.id}`}
-                                      >
-                                        {/* Card Content */}
-                                        <div className="flex items-start gap-1.5">
-                                          {/* Avatar - Very Small */}
-                                          <div className="flex-shrink-0">
-                                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                                              <span className="text-[9px] font-medium text-blue-700">
-                                                {initials}
-                                              </span>
-                                            </div>
-                                          </div>
-                                          
-                                          {/* Candidate Info - Very Compact */}
-                                          <div className="flex-1 min-w-0">
-                                            <h4 className="font-semibold text-gray-900 text-[10px] mb-0.5 truncate leading-tight">
-                                              {candidate.candidateName || 'N/A'}
-                                            </h4>
-                                            <p className="text-[9px] text-gray-600 mb-0.5 truncate leading-tight">
-                                              {roleApplied}
-                                            </p>
-                                            <p className="text-[9px] text-gray-500 truncate leading-tight">
-                                              TA: {talentAdvisor}
-                                            </p>
-                                          </div>
-                                        </div>
-                                        
-                                        {/* Timestamp in bottom right */}
-                                        <div className="absolute bottom-1 right-1.5">
-                                          <p className="text-[8px] text-gray-500">
-                                            {daysAgo}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {isClientAdmin && (
-                  <Card>
-                    <CardHeader className="border-b border-gray-200 bg-gray-50">
-                      <div className="flex justify-between items-center">
-                        <CardTitle className="text-lg font-semibold text-gray-900">Closure report</CardTitle>
-                        <Button
-                          onClick={() => setIsClosureModalOpen(true)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
-                        >
-                          View All
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="border-b border-gray-200 bg-gray-100">
-                              <th className="text-left p-3 font-medium text-gray-700 text-sm">Candidate</th>
-                              <th className="text-left p-3 font-medium text-gray-700 text-sm">Positions</th>
-                              <th className="text-left p-3 font-medium text-gray-700 text-sm">Talent Advisor</th>
-                              <th className="text-left p-3 font-medium text-gray-700 text-sm">Offered Date</th>
-                              <th className="text-left p-3 font-medium text-gray-700 text-sm">Joined Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(Array.isArray(allClosureReports) ? allClosureReports : []).length === 0 ? (
-                              <tr>
-                                <td colSpan={5} className="p-6 text-center text-sm text-gray-500">
-                                  No closure reports yet
-                                </td>
-                              </tr>
-                            ) : (
-                              (allClosureReports as { candidate: string; position: string; advisor: string; offered: string; joined: string }[])
-                                .slice(0, 5)
-                                .map((row, index) => (
-                                  <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                                    <td className="p-3 text-gray-900">{row.candidate}</td>
-                                    <td className="p-3 text-gray-600">{row.position}</td>
-                                    <td className="p-3 text-gray-600">{row.advisor}</td>
-                                    <td className="p-3 text-gray-600">{row.offered}</td>
-                                    <td className="p-3 text-gray-600">{row.joined}</td>
-                                  </tr>
-                                ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Sidebar with Stats */}
-              <div className="w-64 bg-white border-l border-gray-200">
-                <div className="p-4 space-y-1">
-                  {[
-                    { label: 'SHORTLISTED', stageKey: 'Shortlisted', color: 'bg-green-200' },
-                    { label: 'SCREENING', stageKey: 'Screening', color: 'bg-green-100' },
-                    { label: 'LEVEL 1', stageKey: 'L1', color: 'bg-green-500 text-white' },
-                    { label: 'LEVEL 2', stageKey: 'L2', color: 'bg-green-600 text-white' },
-                    { label: 'LEVEL 3', stageKey: 'L3', color: 'bg-green-700 text-white' },
-                    { label: 'FINAL ROUND', stageKey: 'Final Round', color: 'bg-green-800 text-white' },
-                    { label: 'HR ROUND', stageKey: 'HR Round', color: 'bg-green-900 text-white' },
-                    { label: 'OFFER STAGE', stageKey: 'Offer Stage', color: 'bg-green-900 text-white' },
-                    { label: 'CLOSURE', stageKey: 'Closure', color: 'bg-green-950 text-white' },
-                    { label: 'REJECTED', stageKey: 'Rejected', color: 'bg-red-100' }
-                  ].map((item, index) => (
-                    <div key={index} className={`flex justify-between items-center py-3 px-4 rounded ${item.color}`}>
-                      <span className={`text-sm font-medium ${item.color.includes('text-white') ? 'text-white' : 'text-gray-700'}`}>{item.label}</span>
-                      <span className={`text-lg font-bold ${item.color.includes('text-white') ? 'text-white' : 'text-gray-900'}`} data-testid={`count-${item.stageKey}`}>{stageCounts[item.stageKey as keyof typeof stageCounts] || 0}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+              {isClientAdmin ? (
+                <ClientPipelineTab
+                  title="Pipeline"
+                  {...sharedPipelineTabProps}
+                  closureReportsFooter={closureReportsFooter}
+                />
+              ) : (
+                <ClientMemberPipelineTab
+                  {...sharedPipelineTabProps}
+                  closureReportsFooter={closureReportsFooter}
+                />
+              )}
             </div>
           </div>
         );
+      }
 
       case 'reports':
         return (
@@ -2135,9 +1904,9 @@ export default function ClientDashboard() {
         />
 
         {/* Main Content Area */}
-        <div className="flex min-h-0 flex-1 ml-16">
+        <div className="flex min-h-0 min-w-0 flex-1 ml-16 overflow-x-hidden">
           {/* Middle Section */}
-          <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
+          <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-white">
             {renderMainContent()}
           </div>
         </div>
@@ -2173,7 +1942,13 @@ export default function ClientDashboard() {
                   (Array.isArray(allRolesData) ? allRolesData : []).map((role, index) => (
                     <tr key={role.roleId || index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{formatRoleId(role.roleId)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <RequirementRoleCell
+                          title={role.role}
+                          noOfPositions={role.noOfPositions}
+                          titleClassName="text-sm font-semibold text-gray-900"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.sharedOn}</td>
@@ -2923,33 +2698,18 @@ export default function ClientDashboard() {
 
       {/* Closure Reports Modal */}
       <Dialog open={isClosureModalOpen} onOpenChange={setIsClosureModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+        <DialogContent className="mx-auto max-h-[80vh] max-w-5xl overflow-hidden">
           <DialogHeader>
-            <DialogTitle>All Closure Reports</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-gray-900">
+              All Closure Reports
+            </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[60vh]">
-            <table className="w-full border-collapse">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Talent Advisor</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Offered Date</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Joined Date</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {(Array.isArray(allClosureReports) ? allClosureReports : []).map((report, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{report.candidate}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.position}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.advisor}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.offered}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.joined}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="max-h-[60vh] overflow-y-auto px-1 pb-2">
+            <ClosureReportsCardList
+              reports={closureReportsList}
+              isLoading={isLoadingClosures}
+              emptyMessage="No closure reports available"
+            />
           </div>
         </DialogContent>
       </Dialog>

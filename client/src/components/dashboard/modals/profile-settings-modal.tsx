@@ -79,7 +79,7 @@ export function ProfileSettingsModal({
     if (employee?.role === "team_leader") return "/api/team-leader/profile";
     if (employee?.role === "recruiter" || employee?.role === "talent_advisor") return "/api/recruiter/profile";
     if (isClientPortalRole(employee?.role)) return "/api/client/profile";
-    if (candidate) return "/api/candidate/profile";
+    if (candidate) return "/api/profile";
     return null;
   }, [candidate, employee?.role]);
 

@@ -62,25 +62,32 @@ export default function Archives() {
     return '/api/admin/archived-requirements';
   }, [employee?.role, isClientPortal]);
 
+  const archivedCandidatesEndpoint = useMemo(() => {
+    if (isClientPortal) {
+      return '/api/client/archived-candidates';
+    }
+
+    if (employee?.role === 'team_leader' || employee?.role === 'teamLead') {
+      return '/api/team-leader/archived-candidates';
+    }
+
+    if (employee?.role === 'recruiter' || employee?.role === 'talent_advisor') {
+      return '/api/recruiter/archived-candidates';
+    }
+
+    return '/api/admin/archived-candidates';
+  }, [employee?.role, isClientPortal]);
+
+  const fetchArchivedList = async (endpoint: string) => {
+    const response = await apiRequest('GET', endpoint);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  };
+
   // Fetch archived requirements from API
   const { data: allArchivedRequirements = [], isLoading: isLoadingRequirements } = useQuery({
     queryKey: [archivedRequirementsEndpoint],
-    queryFn: async () => {
-      try {
-        const response = isClientPortal
-          ? await apiRequest('GET', archivedRequirementsEndpoint)
-          : await fetch(archivedRequirementsEndpoint, { credentials: 'include' });
-        if (!response.ok) {
-          console.warn('Failed to fetch archived requirements:', response.status);
-          return [];
-        }
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error('Error fetching archived requirements:', error);
-        return [];
-      }
-    },
+    queryFn: () => fetchArchivedList(archivedRequirementsEndpoint),
     enabled: !!employee,
     retry: 1,
     staleTime: 0,
@@ -90,50 +97,13 @@ export default function Archives() {
 
   const archivedRequirements = allArchivedRequirements;
 
-  const archivedCandidatesQueryKey = isClientPortal
-    ? ['/api/client/archived-candidates']
-    : ['recruiter', 'archived-candidates'];
-
-  // Fetch archived candidates (applications with status Screened Out, Rejected, or Archived)
+  // Fetch archived candidates from role-scoped API
   const { data: archivedCandidates = [], isLoading: isLoadingCandidates } = useQuery({
-    queryKey: archivedCandidatesQueryKey,
-    queryFn: async () => {
-      try {
-        if (isClientPortal) {
-          const response = await apiRequest('GET', '/api/client/archived-candidates');
-          if (!response.ok) {
-            console.warn('Failed to fetch archived candidates:', response.status);
-            return [];
-          }
-          const data = await response.json();
-          return Array.isArray(data) ? data : [];
-        }
-
-        const response = await fetch('/api/recruiter/applications', {
-          credentials: 'include'
-        });
-        if (!response.ok) {
-          console.warn('Failed to fetch archived candidates:', response.status);
-          return [];
-        }
-        const allApplications = await response.json();
-        if (!Array.isArray(allApplications)) {
-          return [];
-        }
-        return allApplications.filter((app: any) => {
-          const status = app.status || app.currentStatus;
-          return status === 'Screened Out' || 
-                 status === 'Rejected' || 
-                 status === 'Archived';
-        });
-      } catch (error) {
-        console.error('Error fetching archived candidates:', error);
-        return [];
-      }
-    },
+    queryKey: [archivedCandidatesEndpoint],
+    queryFn: () => fetchArchivedList(archivedCandidatesEndpoint),
     enabled: !!employee,
     retry: 1,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 
   const handleViewMore = () => {

@@ -253,7 +253,8 @@ const jobApplicationColumnCandidates = [
   "id", "profile_id", "recruiter_job_id", "requirement_id", "owner_employee_id", "owner_role",
   "job_title", "company", "job_type", "status", "source", "applied_date", "candidate_name",
   "candidate_email", "candidate_phone", "description", "salary", "location", "work_mode",
-  "experience", "skills", "logo", "last_nudged_at", "is_candidate_confirmed",
+  "experience", "skills", "logo", "last_nudged_at", "withdraw_reason", "status_note",
+  "rejection_reason", "is_candidate_confirmed",
   "application_current_ctc", "application_expected_ctc",
   "salary_edited_by_employee_id", "salary_edited_by_name", "salary_edited_at",
 ];
@@ -950,7 +951,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .update(candidates)
       .set({ password: newPasswordHash })
-      .where(eq(candidates.email, email));
+      .where(sql`LOWER(${candidates.email}) = LOWER(${email})`);
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -1787,6 +1788,9 @@ export class DatabaseStorage implements IStorage {
 
   async updateJobApplicationStatus(id: string, status: string, reason?: string, statusNote?: string, rejectionReason?: string): Promise<JobApplication | undefined> {
     const availableColumns = await this.getAvailableColumns("job_applications");
+    const selectedColumns = jobApplicationColumnCandidates.filter((column) =>
+      availableColumns.includes(column),
+    );
     const assignments: ReturnType<typeof sql>[] = [sql`"status" = ${status}`];
 
     if (reason !== undefined && availableColumns.includes("withdraw_reason")) {
@@ -1799,14 +1803,15 @@ export class DatabaseStorage implements IStorage {
       assignments.push(sql`"rejection_reason" = ${rejectionReason}`);
     }
 
-    await db.execute(sql`
+    const result = await db.execute(sql`
       UPDATE "job_applications"
       SET ${sql.join(assignments, sql`, `)}
       WHERE "id" = ${id}
+      RETURNING ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
     `);
 
-    const [application] = await this.queryJobApplications(sql`"id" = ${id}`);
-    return application || undefined;
+    const row = result.rows?.[0];
+    return row ? normalizeJobApplication(row) : undefined;
   }
 
   async updateJobApplicationSalary(

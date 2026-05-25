@@ -95,8 +95,11 @@ import {
 import {
   ADMIN_PIPELINE_STAGE_ORDER,
   buildPipelineSessionList,
+  groupApplicantsByPipelineStage,
   mapAdminPipelineCandidate,
 } from "@/lib/pipeline-session-utils";
+import { AdminPipelineTab } from "@/components/dashboard/admin-pipeline-tab";
+import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { useEmployeeAuth } from "@/contexts/auth-context";
 import GaugeComponent from 'react-gauge-component';
 import PerformanceGauge from '@/components/dashboard/performance-gauge';
@@ -1275,45 +1278,10 @@ export default function AdminDashboard() {
   }, [pipelineApplicantData, pipelineDate, selectedPipelineTL, selectedPipelineTeamMember]);
 
   // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
-  const getPipelineCandidatesByStage = useMemo(() => {
-    const effectiveApplicants = filteredPipelineApplicants.filter((a: any) =>
-      a.currentStatus !== 'Archived' &&
-      a.currentStatus !== 'Screened Out'
-    );
-
-    const stageMapping: Record<string, string[]> = {
-      'Screening': ['Evaluating', 'Resume Review', 'Screening', 'Intro Call', 'Assignment'],
-      'Shortlisted': ['Shortlisted'],
-      'L1': ['L1'],
-      'L2': ['L2'],
-      'L3': ['L3'],
-      'Final Round': ['Final Round'],
-      'HR Round': ['HR Round'],
-      'Offer Stage': ['Offer Stage', 'Selected'],
-      'Closure': ['Closure', 'Joined'],
-      'Offer Drop': ['Offer Drop', 'Declined'],
-      'Rejected': ['Rejected']
-    };
-
-    const getCandidatesForStage = (stage: string) => {
-      const statusesToMatch = stageMapping[stage] || [];
-      return effectiveApplicants.filter((a: any) => statusesToMatch.includes(a.currentStatus));
-    };
-
-    return {
-      screening: getCandidatesForStage('Screening'),
-      shortlisted: getCandidatesForStage('Shortlisted'),
-      level1: getCandidatesForStage('L1'),
-      level2: getCandidatesForStage('L2'),
-      level3: getCandidatesForStage('L3'),
-      finalRound: getCandidatesForStage('Final Round'),
-      hrRound: getCandidatesForStage('HR Round'),
-      offerStage: getCandidatesForStage('Offer Stage'),
-      closure: getCandidatesForStage('Closure'),
-      offerDrop: getCandidatesForStage('Offer Drop'),
-      rejected: getCandidatesForStage('Rejected')
-    };
-  }, [filteredPipelineApplicants]);
+  const getPipelineCandidatesByStage = useMemo(
+    () => groupApplicantsByPipelineStage(filteredPipelineApplicants),
+    [filteredPipelineApplicants],
+  );
 
   const adminPipelineSessionList = useMemo(
     () =>
@@ -2309,7 +2277,11 @@ export default function AdminDashboard() {
   const renderClosureReportActions = (report: any) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-9 w-9 rounded-2xl border border-slate-200 bg-white p-0 text-slate-600 shadow-sm hover:bg-slate-50">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mx-auto h-8 w-8 rounded-full border border-gray-200 bg-white p-0 text-gray-600 hover:bg-gray-50"
+        >
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -5523,6 +5495,73 @@ export default function AdminDashboard() {
     </div>
   );
 
+  const renderAdminPipelineView = () => (
+    <AdminPipelineTab
+      isLoading={isLoadingPipeline}
+      isEmpty={!isLoadingPipeline && pipelineApplicantData.length === 0}
+      groupedByStage={getPipelineCandidatesByStage}
+      pipelineView={pipelineView}
+      candidateSession={
+        sessionApplicationId ? (
+          <CandidateCommentsSession
+            applicationId={sessionApplicationId}
+            fallbackApplicant={sessionApplicantSnapshot}
+            pipelineApplicants={adminPipelineSessionList}
+            onSelectApplicant={handleSelectSessionApplicant}
+            onBack={handleCloseCandidateSession}
+          />
+        ) : null
+      }
+      onCandidateClick={handlePipelineCandidateClick}
+      selectedPipelineTL={selectedPipelineTL}
+      selectedPipelineTeamMember={selectedPipelineTeamMember}
+      onFilterChange={(value) => {
+        if (value === 'all') {
+          setSelectedPipelineTL('all');
+          setSelectedPipelineTeamMember('all');
+        } else if (value.startsWith('tl-')) {
+          setSelectedPipelineTL(value.replace('tl-', ''));
+          setSelectedPipelineTeamMember('all');
+        } else if (value.startsWith('ta-')) {
+          setSelectedPipelineTL('all');
+          setSelectedPipelineTeamMember(value.replace('ta-', ''));
+        }
+      }}
+      pipelineDate={pipelineDate}
+      onPipelineDateChange={setPipelineDate}
+      teamLeads={teamLeads}
+      employees={employees}
+      closureReportsFooter={
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
+            {closureReportsData.length > 5 && (
+              <Button
+                variant="outline"
+                className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                style={{ borderRadius: 6 }}
+                onClick={() => setIsClosureReportsModalOpen(true)}
+              >
+                View More
+              </Button>
+            )}
+          </div>
+          <ClosureReportsCardList
+            reports={closureReportsData}
+            isLoading={isLoadingClosureReports}
+            emptyMessage="No closures yet."
+            maxRows={5}
+            showActions
+            renderActions={renderClosureReportActions}
+            getRowClassName={(report) =>
+              report.closureAction?.type ? "bg-rose-50/90" : undefined
+            }
+          />
+        </div>
+      }
+    />
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'team':
@@ -5835,395 +5874,12 @@ export default function AdminDashboard() {
             </div>
           </div>
         );
-      case 'pipeline': {
-        // Helper function to get initials from name
-        const getInitials = (name: string): string => {
-          if (!name) return '';
-          const parts = name.trim().split(' ');
-          if (parts.length >= 2) {
-            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-          }
-          return name.substring(0, 2).toUpperCase();
-        };
-
-        // Helper function to calculate days ago from a date
-        const calculateDaysAgo = (dateString: string | null | undefined): string => {
-          if (!dateString || dateString === 'N/A') return 'N/A';
-          try {
-            let date: Date;
-            if (dateString.includes('-')) {
-              const [day, month, year] = dateString.split('-');
-              date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-            } else {
-              date = new Date(dateString);
-            }
-
-            const now = new Date();
-            const diffTime = Math.abs(now.getTime() - date.getTime());
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 0) return '0 days ago';
-            if (diffDays === 1) return '01 day ago';
-            const paddedDays = diffDays < 10 ? `0${diffDays}` : diffDays.toString();
-            return `${paddedDays} days ago`;
-          } catch {
-            return 'N/A';
-          }
-        };
-
-        // Pipeline stages with display names
-        const pipelineStages = [
-          { key: 'shortlisted', display: 'Shortlisted' },
-          { key: 'screening', display: 'Screening' },
-          { key: 'level1', display: 'Level 1' },
-          { key: 'level2', display: 'Level 2' },
-          { key: 'level3', display: 'Level 3' },
-          { key: 'hrRound', display: 'HR Round' },
-          { key: 'finalRound', display: 'Final Round' },
-          { key: 'offerStage', display: 'Offer Stage' },
-          { key: 'closure', display: 'Closure' }
-        ];
-
+      case 'pipeline':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Pipeline Header */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white" data-testid="text-pipeline-header">Pipeline</h2>
-              <div className="flex items-center gap-3">
-                {/* Filter Dropdown - All, TL, or TA */}
-                <Select 
-                  value={selectedPipelineTL !== 'all' ? `tl-${selectedPipelineTL}` : selectedPipelineTeamMember !== 'all' ? `ta-${selectedPipelineTeamMember}` : 'all'} 
-                  onValueChange={(value) => {
-                    if (value === 'all') {
-                      setSelectedPipelineTL('all');
-                      setSelectedPipelineTeamMember('all');
-                    } else if (value.startsWith('tl-')) {
-                      const tlId = value.replace('tl-', '');
-                      setSelectedPipelineTL(tlId);
-                      setSelectedPipelineTeamMember('all');
-                    } else if (value.startsWith('ta-')) {
-                      const taId = value.replace('ta-', '');
-                      setSelectedPipelineTL('all');
-                      setSelectedPipelineTeamMember(taId);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-10 w-48 rounded">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {/* Team Leaders (TL) */}
-                    {teamLeads.map((tl: any) => (
-                      <SelectItem key={`tl-${tl.id}`} value={`tl-${tl.id}`}>
-                        {tl.name} (TL)
-                      </SelectItem>
-                    ))}
-                    {/* Talent Advisors (TA) */}
-                    {employees.filter((emp: any) => emp.role === 'recruiter').map((ta: any) => (
-                      <SelectItem key={`ta-${ta.id}`} value={`ta-${ta.id}`}>
-                        {ta.name} (TA)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <StandardDatePicker
-                  value={pipelineDate}
-                  onChange={(date) => date && setPipelineDate(date)}
-                  placeholder="Select date"
-                  className="h-10 w-40 rounded"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPipelineDate(new Date())}
-                  className="h-10"
-                  title="Reset to today"
-                >
-                  Today
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPipelineDate(null)}
-                  className="h-10"
-                  title="Show all dates"
-                >
-                  All
-                </Button>
-              </div>
-            </div>
-
-            {/* Loading State */}
-            {isLoadingPipeline && (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500">Loading pipeline data...</div>
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!isLoadingPipeline && pipelineApplicantData.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Users className="h-16 w-16 text-gray-300 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Pipeline Data</h3>
-                <p className="text-gray-500 text-center max-w-md">
-                  When recruiters tag candidates to requirements and update their statuses, they will appear here automatically.
-                </p>
-              </div>
-            )}
-
-            {/* Pipeline Data Display - Kanban Board Design */}
-            {!isLoadingPipeline && pipelineApplicantData.length > 0 && (
-              <div className="flex flex-col h-[calc(100vh-200px)]">
-                {/* Pipeline Stages - Kanban Board Layout */}
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6">
-                  <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
-                    <div className="flex gap-1.5 min-w-max h-full">
-                      {pipelineStages.map((stage) => {
-                        const candidates = getPipelineCandidatesByStage[stage.key as keyof typeof getPipelineCandidatesByStage] || [];
-                        const count = Array.isArray(candidates) ? candidates.length : 0;
-                        return (
-                          <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
-                            {/* Column Header - Fixed */}
-                            <div className="mb-1 flex-shrink-0">
-                              <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 rounded-t px-2 py-1 border-b border-gray-200 dark:border-gray-600">
-                                <h3 className="text-[10px] font-medium text-gray-700 dark:text-gray-300 truncate" data-testid={`header-pipeline-${stage.key}`}>{stage.display}</h3>
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                  <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Column Content - Scrollable Vertically */}
-                            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
-                              {count === 0 ? (
-                                <div className="flex items-center justify-center h-full min-h-[100px]">
-                                  <p className="text-[10px] text-gray-400 dark:text-gray-500">No candidates</p>
-                                </div>
-                              ) : (
-                                (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
-                                  const initials = getInitials(candidate.candidateName || '');
-                                  const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt || candidate.createdAt);
-                                  const roleApplied = candidate.roleApplied || candidate.jobTitle || 'N/A';
-                                  const company = candidate.company || 'N/A';
-
-                                  return (
-                                    <div
-                                      key={candidate.id || index}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                          e.preventDefault();
-                                          handlePipelineCandidateClick(candidate);
-                                        }
-                                      }}
-                                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
-                                      data-testid={`pipeline-${stage.key}-candidate-${index}`}
-                                    >
-                                      {/* Card Content */}
-                                      <div className="flex items-start gap-1.5">
-                                        {/* Avatar - Very Small */}
-                                        <div className="flex-shrink-0">
-                                          <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                            <span className="text-[9px] font-medium text-blue-700 dark:text-blue-300">
-                                              {initials}
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        {/* Candidate Info - Very Compact */}
-                                        <div className="flex-1 min-w-0">
-                                          <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] mb-0.5 truncate leading-tight">
-                                            {candidate.candidateName || 'N/A'}
-                                          </h4>
-                                          <p className="text-[9px] text-gray-600 dark:text-gray-400 mb-0.5 truncate leading-tight">
-                                            {roleApplied}
-                                          </p>
-                                          <p className="text-[9px] text-gray-600 dark:text-gray-400 truncate leading-tight">
-                                            {company}
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      {/* Timestamp in bottom right */}
-                                      <div className="absolute bottom-1 right-1.5">
-                                        <p className="text-[8px] text-gray-500 dark:text-gray-400">
-                                          {daysAgo}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Right Side - Statistics Panel */}
-            <div className="w-64">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    {/* REJECTED */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#FEE2E2' }}>
-                      <span className="font-semibold text-black">R</span>
-                      <span className="text-sm text-black">EJECTED</span>
-                      <span className="font-bold text-lg text-black" data-testid="count-rejected">{getPipelineCandidatesByStage.rejected.length}</span>
-                    </div>
-
-                    {/* SHORTLISTED */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#D9F0E1' }}>
-                      <span className="font-semibold text-black">S</span>
-                      <span className="text-sm text-black">HORTLISTED</span>
-                      <span className="font-bold text-lg text-black" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
-                    </div>
-
-                    {/* SCREENING */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#C2EED0' }}>
-                      <span className="font-semibold text-black">S</span>
-                      <span className="text-sm text-black">CREENING</span>
-                      <span className="font-bold text-lg text-black" data-testid="count-screening">{getPipelineCandidatesByStage.screening.length}</span>
-                    </div>
-
-                    {/* L1 */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#99D9AE' }}>
-                      <span className="font-semibold text-white">L1</span>
-                      <span className="text-sm text-white"></span>
-                      <span className="font-bold text-lg text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
-                    </div>
-
-                    {/* L2 */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#7CCBA0' }}>
-                      <span className="font-semibold text-white">L2</span>
-                      <span className="text-sm text-white"></span>
-                      <span className="font-bold text-lg text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
-                    </div>
-
-                    {/* L3 */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#6BB68C' }}>
-                      <span className="font-semibold text-white">L3</span>
-                      <span className="text-sm text-white"></span>
-                      <span className="font-bold text-lg text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
-                    </div>
-
-                    {/* FINAL ROUND */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#56A87D' }}>
-                      <span className="font-semibold text-white">F</span>
-                      <span className="text-sm text-white">INAL ROUND</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
-                    </div>
-
-                    {/* HR ROUND */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#479E72' }}>
-                      <span className="font-semibold text-white">H</span>
-                      <span className="text-sm text-white">R ROUND</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
-                    </div>
-
-                    {/* OFFER STAGE */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#3F8E66' }}>
-                      <span className="font-semibold text-white">O</span>
-                      <span className="text-sm text-white">FFER STAGE</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
-                    </div>
-
-                    {/* CLOSURE */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#2F6F52' }}>
-                      <span className="font-semibold text-white">C</span>
-                      <span className="text-sm text-white">LOSURE</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-closure">{getPipelineCandidatesByStage.closure.length}</span>
-                    </div>
-
-                    {/* OFFER DROP */}
-                    <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#C59445' }}>
-                      <span className="font-semibold text-white">O</span>
-                      <span className="text-sm text-white">FFER DROP</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-offerdrop">{getPipelineCandidatesByStage.offerDrop.length}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Closure Reports */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle
-                  className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors flex items-center gap-2"
-                  onClick={() => setIsPipelineModalOpen(true)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setIsPipelineModalOpen(true);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  data-testid="button-see-more-pipeline"
-                >
-                  Closure Reports
-                  <span className="text-sm font-normal text-cyan-600 dark:text-cyan-400">(See More)</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-gray-800">
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Location</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Experience</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Applied Date</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getPipelineCandidatesByStage.closure.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                            No closures yet. Candidates with 'Closure' or 'Joined' status will appear here automatically.
-                          </td>
-                        </tr>
-                      ) : (
-                        getPipelineCandidatesByStage.closure.slice(0, 5).map((candidate: any, index: number) => (
-                          <tr
-                            key={candidate.id || index}
-                            className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
-                            data-testid={`closure-row-${index}`}
-                          >
-                            <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{candidate.candidateName}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.roleApplied}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.company}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.location}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.experience}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.appliedOn}</td>
-                            <td className="py-3 px-3">
-                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                {candidate.currentStatus}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex h-full min-h-0 overflow-hidden">
+            {renderAdminPipelineView()}
           </div>
         );
-      }
       case 'metrics':
         return (
           <div className="flex items-center justify-center h-full min-h-[500px]">
@@ -7106,30 +6762,18 @@ export default function AdminDashboard() {
   }, [sidebarTab, activeTab, pipelineView]);
 
   const renderSidebarContent = () => {
-    if (
-      (sidebarTab === "pipeline" || (sidebarTab === "dashboard" && activeTab === "pipeline")) &&
-      pipelineView === "candidate-session" &&
-      sessionApplicationId
-    ) {
-      return (
-        <div className="h-full min-h-0 overflow-hidden bg-white">
-          <CandidateCommentsSession
-            applicationId={sessionApplicationId}
-            fallbackApplicant={sessionApplicantSnapshot}
-            pipelineApplicants={adminPipelineSessionList}
-            onSelectApplicant={handleSelectSessionApplicant}
-            onBack={handleCloseCandidateSession}
-          />
-        </div>
-      );
-    }
-
     switch (sidebarTab) {
       case 'dashboard':
         // Dashboard shows the Team section with tabs (team, requirements, pipeline, etc.)
         return (
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto admin-scrollbar">
+          <div className="flex h-full min-h-0 flex-col">
+            <div
+              className={
+                activeTab === 'pipeline'
+                  ? 'min-h-0 flex-1 overflow-hidden'
+                  : 'flex-1 overflow-y-auto admin-scrollbar'
+              }
+            >
               {renderTabContent()}
             </div>
           </div>
@@ -7634,316 +7278,8 @@ export default function AdminDashboard() {
         );
       case 'pipeline':
         return (
-          <div className="flex h-full">
-            {/* Main Pipeline Content */}
-            <div className="flex-1 overflow-auto admin-scrollbar">
-              <div className="p-6 space-y-6">
-                {/* Pipeline Header */}
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
-                  <div className="flex items-center gap-3">
-                    {/* Team/TA Filter Dropdown - Teams first, then TAs */}
-                    <Select
-                      value={selectedPipelineTL !== 'all' ? `tl-${selectedPipelineTL}` : selectedPipelineTeamMember !== 'all' ? `ta-${selectedPipelineTeamMember}` : 'all'}
-                      onValueChange={(value) => {
-                        if (value === 'all') {
-                          setSelectedPipelineTL('all');
-                          setSelectedPipelineTeamMember('all');
-                        } else if (value.startsWith('tl-')) {
-                          setSelectedPipelineTL(value.replace('tl-', ''));
-                          setSelectedPipelineTeamMember('all');
-                        } else if (value.startsWith('ta-')) {
-                          setSelectedPipelineTL('all');
-                          setSelectedPipelineTeamMember(value.replace('ta-', ''));
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-48 input-styled btn-rounded">
-                        <SelectValue placeholder="Select Team/TA" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {/* Team Leaders (Teams) - listed first */}
-                        {teamLeads.map((tl: any) => (
-                          <SelectItem key={`tl-${tl.id}`} value={`tl-${tl.id}`}>
-                            {tl.name} (team)
-                          </SelectItem>
-                        ))}
-                        {/* Talent Advisors (TAs) - listed after teams */}
-                        {employees.filter((emp: any) => emp.role === 'recruiter').map((ta: any) => (
-                          <SelectItem key={`ta-${ta.id}`} value={`ta-${ta.id}`}>
-                            {ta.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Date Picker */}
-                    <StandardDatePicker
-                      value={pipelineDate || undefined}
-                      onChange={(date) => setPipelineDate(date || null)}
-                      placeholder="Select date"
-                      className="h-10 w-40 rounded"
-                      data-testid="button-pipeline-date-picker"
-                    />
-                    
-                    {/* Today Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPipelineDate(new Date())}
-                      className="h-10"
-                      title="Reset to today"
-                    >
-                      Today
-                    </Button>
-                    
-                    {/* All Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPipelineDate(null)}
-                      className="h-10"
-                      title="Show all candidates (clear date filter)"
-                    >
-                      All
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Pipeline Stages - Kanban Board Layout */}
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6" style={{ height: 'calc(100vh - 200px)' }}>
-                  <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
-                    <div className="flex gap-1.5 w-full h-full">
-                      {[
-                        { key: 'level1', display: 'Level 1' },
-                        { key: 'level2', display: 'Level 2' },
-                        { key: 'level3', display: 'Level 3' },
-                        { key: 'hrRound', display: 'HR Round' },
-                        { key: 'finalRound', display: 'Final Round' },
-                        { key: 'offerStage', display: 'Offer Stage' },
-                        { key: 'closure', display: 'Closure' }
-                      ].map((stage) => {
-                        const candidates = getPipelineCandidatesByStage[stage.key as keyof typeof getPipelineCandidatesByStage] || [];
-                        const count = Array.isArray(candidates) ? candidates.length : 0;
-                        const getInitials = (name: string): string => {
-                          if (!name) return 'N/A';
-                          const parts = name.trim().split(' ');
-                          if (parts.length >= 2) {
-                            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-                          }
-                          return name.substring(0, 2).toUpperCase();
-                        };
-                        const calculateDaysAgo = (dateString: string | null | undefined): string => {
-                          if (!dateString) return 'N/A';
-                          try {
-                            const date = new Date(dateString);
-                            if (isNaN(date.getTime())) return 'N/A';
-                            const now = new Date();
-                            const diffTime = Math.abs(now.getTime() - date.getTime());
-                            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                            if (diffDays === 0) return '0 days ago';
-                            if (diffDays === 1) return '01 day ago';
-                            const paddedDays = diffDays < 10 ? `0${diffDays}` : diffDays.toString();
-                            return `${paddedDays} days ago`;
-                          } catch {
-                            return 'N/A';
-                          }
-                        };
-                        return (
-                          <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
-                            {/* Column Header - Fixed */}
-                            <div className="mb-1 flex-shrink-0">
-                              <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 rounded-t px-2 py-1 border-b border-gray-200 dark:border-gray-600">
-                                <h3 className="text-[10px] font-medium text-gray-700 dark:text-gray-300 truncate">{stage.display}</h3>
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                  <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Column Content - Scrollable Vertically */}
-                            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
-                              {count === 0 ? (
-                                <div className="flex items-center justify-center h-full min-h-[100px]">
-                                  <p className="text-[10px] text-gray-400 dark:text-gray-500">No candidates</p>
-                                </div>
-                              ) : (
-                                (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
-                                  const initials = getInitials(candidate.candidateName || '');
-                                  const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt || candidate.createdAt);
-                                  const roleApplied = candidate.roleApplied || candidate.jobTitle || 'N/A';
-                                  const company = candidate.company || 'N/A';
-                                  
-                                  return (
-                                    <div
-                                      key={candidate.id || index}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                          e.preventDefault();
-                                          handlePipelineCandidateClick(candidate);
-                                        }
-                                      }}
-                                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
-                                    >
-                                      {/* Card Content */}
-                                      <div className="flex items-start gap-1.5">
-                                        {/* Avatar - Very Small */}
-                                        <div className="flex-shrink-0">
-                                          <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                            <span className="text-[9px] font-medium text-blue-700 dark:text-blue-300">
-                                              {initials}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        
-                                        {/* Candidate Info - Very Compact */}
-                                        <div className="flex-1 min-w-0">
-                                          <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] mb-0.5 truncate leading-tight">
-                                            {candidate.candidateName || 'N/A'}
-                                          </h4>
-                                          <p className="text-[9px] text-gray-600 dark:text-gray-400 mb-0.5 truncate leading-tight">
-                                            {roleApplied}
-                                          </p>
-                                          <p className="text-[9px] text-gray-600 dark:text-gray-400 truncate leading-tight">
-                                            {company}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Timestamp in bottom right */}
-                                      <div className="absolute bottom-1 right-1.5">
-                                        <p className="text-[8px] text-gray-500 dark:text-gray-400">
-                                          {daysAgo}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Closure Reports Table - Static (not affected by pipeline filters) */}
-                <Card className="mt-6">
-                  <CardHeader className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
-                      {closureReportsData.length > 5 && (
-                        <Button
-                          variant="outline"
-                          className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-6 py-2 rounded text-sm font-medium"
-                          onClick={() => setIsClosureReportsModalOpen(true)}
-                          data-testid="button-view-more-closure-reports"
-                        >
-                          View More
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="overflow-x-auto admin-scrollbar">
-                      <table className="w-full border-separate border-spacing-y-2">
-                        <thead>
-                          <tr className="bg-[#f7f4f0] dark:bg-gray-800">
-                            <th className="rounded-l-2xl px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Positions</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">QTR</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Offered Date</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Joined Date</th>
-                            <th className="rounded-r-2xl px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {closureReportsData.length === 0 ? (
-                            <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                                No closures yet. Candidates with 'Closure' or 'Joined' status will appear here automatically.
-                              </td>
-                            </tr>
-                          ) : (
-                            closureReportsData.slice(0, 5).map((report: any, index: number) => (
-                              <tr
-                                key={report.id || index}
-                                className="bg-white shadow-[0_0_0_1px_rgba(226,232,240,0.8)] dark:bg-gray-900"
-                              >
-                                <td className="rounded-l-2xl px-4 py-3 text-sm text-gray-900 dark:text-white">{report.candidate}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.position}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.client}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.talentAdvisor || 'Unassigned'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{getClosureQuarterLabel(report)}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.offeredDate || '-'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.joinedDate || '-'}</td>
-                                <td className="rounded-r-2xl px-4 py-3">
-                                  {renderClosureReportActions(report)}
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Right Sidebar with Live Stats */}
-            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-y-auto admin-scrollbar">
-              <div className="p-4 space-y-1">
-                <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.shortlisted.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SCREENING</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.screening.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
-                  <span className="text-sm font-medium text-white">L1</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level1.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded">
-                  <span className="text-sm font-medium text-white">L2</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level2.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded">
-                  <span className="text-sm font-medium text-white">L3</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level3.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded">
-                  <span className="text-sm font-medium text-white">FINAL ROUND</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.finalRound.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded">
-                  <span className="text-sm font-medium text-white">HR ROUND</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.hrRound.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded">
-                  <span className="text-sm font-medium text-white">OFFER STAGE</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.offerStage.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded">
-                  <span className="text-sm font-medium text-white">CLOSURE</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.closure.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
-                  <span className="text-sm font-medium text-white">OFFER DROP</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.offerDrop.length}</span>
-                </div>
-              </div>
-            </div>
+          <div className="flex h-full min-h-0 overflow-hidden">
+            {renderAdminPipelineView()}
           </div>
         );
       case 'master-data':
@@ -11818,105 +11154,142 @@ export default function AdminDashboard() {
           setIsCashoutModalOpen(open);
         }}
       >
-        <DialogContent className="max-w-6xl max-h-[80vh]" style={{ pointerEvents: 'auto' }}>
-          <DialogHeader>
-            <div className="flex items-center justify-between gap-4">
-              <DialogTitle>All Cash Outflow Data</DialogTitle>
-              <SearchBar
-                value={cashoutSearch}
-                onChange={setCashoutSearch}
-                placeholder="Search cash outflow..."
-                testId="input-search-cash-outflow"
-              />
+        <DialogContent className="cash-outflow-modal !flex h-[90vh] max-h-[90vh] w-[95vw] max-w-6xl flex-col gap-0 overflow-hidden p-0 sm:rounded-lg">
+          <DialogHeader className="shrink-0 space-y-0 border-b border-gray-200 px-6 py-4 pr-14 dark:border-gray-700">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <DialogTitle className="text-left text-lg font-semibold">
+                All Cash Outflow Data
+              </DialogTitle>
+              <div className="w-full shrink-0 sm:w-72">
+                <SearchBar
+                  value={cashoutSearch}
+                  onChange={setCashoutSearch}
+                  placeholder="Search cash outflow..."
+                  testId="input-search-cash-outflow"
+                />
+              </div>
             </div>
           </DialogHeader>
-          <div className="overflow-y-auto">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-white dark:bg-gray-900">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Month</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Year</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employees Count</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Total Salary</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Incentives</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Tools Cost</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Rent</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Others Cost</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
+          <div className="cash-outflow-modal__body admin-scrollbar min-h-0 flex-1 overscroll-contain px-6 py-3">
+            <table className="w-full min-w-[880px] border-collapse text-sm">
+              <thead className="sticky top-0 z-[1] bg-gray-50 dark:bg-gray-900">
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
+                    Month
+                  </th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
+                    Year
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">
+                    Employees Count
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">
+                    Total Salary
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">
+                    Incentives
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">
+                    Tools Cost
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">
+                    Rent
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">
+                    Others Cost
+                  </th>
+                  <th className="w-[72px] px-3 py-2 text-center font-medium text-gray-600 dark:text-gray-300">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoadingCashout ? (
+                  <tr>
+                    <td colSpan={9} className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                      Loading cash outflow data...
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {isLoadingCashout ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                        Loading cash outflow data...
+                ) : filteredCashoutData.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                      {cashoutSearch ? 'No matching cash outflow data found' : 'No cash outflow data found'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCashoutData.map((row, index) => (
+                    <tr
+                      key={row.id || index}
+                      className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/80 dark:hover:bg-gray-800/40"
+                    >
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                        {row.month}
+                      </td>
+                      <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{row.year}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                        {row.employees}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                        ₹{row.salary.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                        ₹{row.incentive.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                        ₹{row.tools.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                        ₹{row.rent.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                        ₹{row.others.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => e.stopPropagation()}
+                              data-testid={`button-actions-cashout-all-${row.id}`}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditCashout(row);
+                                setIsCashoutModalOpen(false);
+                              }}
+                              className="cursor-pointer"
+                              data-testid={`button-edit-cashout-all-${row.id}`}
+                            >
+                              <EditIcon className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCashout(row.id, `${row.month} ${row.year}`);
+                                setIsCashoutModalOpen(false);
+                              }}
+                              className="cursor-pointer text-red-600 focus:text-red-600"
+                              data-testid={`button-delete-cashout-all-${row.id}`}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
-                  ) : filteredCashoutData.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                        {cashoutSearch ? 'No matching cash outflow data found' : 'No cash outflow data found'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCashoutData.map((row, index) => (
-                      <tr key={row.id || index} className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.month}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.year}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.employees}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString('en-IN')}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString('en-IN')}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString('en-IN')}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString('en-IN')}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString('en-IN')}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={(e) => e.stopPropagation()}
-                                data-testid={`button-actions-cashout-all-${row.id}`}
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditCashout(row);
-                                  setIsCashoutModalOpen(false);
-                                }}
-                                className="cursor-pointer"
-                                data-testid={`button-edit-cashout-all-${row.id}`}
-                              >
-                                <EditIcon className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteCashout(row.id, `${row.month} ${row.year}`);
-                                  setIsCashoutModalOpen(false);
-                                }}
-                                className="cursor-pointer text-red-600 focus:text-red-600"
-                                data-testid={`button-delete-cashout-all-${row.id}`}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </DialogContent>
       </Dialog>

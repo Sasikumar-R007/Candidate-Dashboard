@@ -44,8 +44,11 @@ import {
 import {
   TL_PIPELINE_STAGE_ORDER,
   buildPipelineSessionList,
+  groupCandidatesByPipelineStage,
   mapTeamLeaderPipelineCandidate,
 } from '@/lib/pipeline-session-utils';
+import { TlPipelineTab } from '@/components/dashboard/tl-pipeline-tab';
+import { ClosureReportsCardList } from '@/components/dashboard/closure-reports-card-list';
 
 // Helper function to format numbers in Indian currency format
 const formatIndianCurrency = (value: number): string => {
@@ -262,32 +265,6 @@ export default function TeamLeaderDashboard() {
     setActiveChatUser(null);
   };
 
-  // Handle pipeline stage clicks
-  const handlePipelineStageClick = (stage: string) => {
-    // For demo purposes, show an alert with the action options
-    // In a real application, this would open a modal with candidate list
-    const stageActions = {
-      'CLOSURE': 'View candidates ready for closure. You can close selected candidates.',
-      'OFFER_DROP': 'View candidates who dropped offers. You can mark them as rejected.',
-      'OFFER_STAGE': 'View candidates at offer stage. You can reject or move to closure.',
-      'HR_ROUND': 'View candidates in HR round. You can reject or move forward.',
-      'FINAL_ROUND': 'View candidates in final round. You can reject or move forward.',
-      'L3': 'View candidates in L3 interview. You can reject or move forward.',
-      'L2': 'View candidates in L2 interview. You can reject or move forward.',
-      'L1': 'View candidates in L1 interview. You can reject or move forward.',
-      'SCREENING': 'View candidates in screening (intro call + assignment). You can reject or move forward.',
-      'SHORTLISTED': 'View shortlisted candidates. You can reject or move forward.',
-      'EVALUATING': 'View candidates under evaluation before screening.'
-    };
-
-    const message = stageActions[stage as keyof typeof stageActions] || 'View candidates in this stage.';
-    
-    toast({
-      title: `${stage} Stage`,
-      description: message,
-    });
-  };
-
   // Get current chat messages
   const getCurrentChatMessages = () => {
     if (chatType === 'team') {
@@ -489,6 +466,21 @@ export default function TeamLeaderDashboard() {
     refetchOnWindowFocus: true,
   });
 
+  const tlClosureReportsForPipeline = useMemo(
+    () =>
+      (closureData as any[]).map((closure: any) => ({
+        id: closure.id,
+        candidate: closure.name || closure.candidate || "N/A",
+        position: closure.position || "N/A",
+        client: closure.company || closure.client || "N/A",
+        talentAdvisor: closure.talentAdvisor || "Unassigned",
+        quarter: closure.closureMonth || closure.quarter || "N/A",
+        offeredDate: closure.offeredDate || "—",
+        joinedDate: closure.joinedDate || "—",
+      })),
+    [closureData],
+  );
+
   const { data: sourcingJobCounts } = useQuery<{ total: number; active: number; closed: number; draft: number }>({
     queryKey: ['/api/team-leader/sourcing/jobs-counts', employee?.id],
     queryFn: async () => {
@@ -609,7 +601,7 @@ export default function TeamLeaderDashboard() {
       knowledgeOnly: skills.slice(10, 15),
       companyLogo: job.companyLogo || ''
     });
-
+    
     setIsPostJobModalOpen(true);
   };
 
@@ -951,37 +943,7 @@ export default function TeamLeaderDashboard() {
       });
     }
     
-    const stages: Record<string, any[]> = {
-      'L1': [],
-      'L2': [],
-      'L3': [],
-      'Final Round': [],
-      'HR Round': [],
-      'Offer Stage': [],
-      'Closure': []
-    };
-    
-    filteredData.forEach((candidate: any) => {
-      // Use currentStatus if available (from job_applications), otherwise use status
-      const status = (candidate.currentStatus || candidate.status || '').toLowerCase();
-      if (status === 'l1' || status.includes('l1')) {
-        stages['L1'].push(candidate);
-      } else if (status === 'l2' || status.includes('l2')) {
-        stages['L2'].push(candidate);
-      } else if (status === 'l3' || status.includes('l3')) {
-        stages['L3'].push(candidate);
-      } else if (status === 'final round' || status.includes('final')) {
-        stages['Final Round'].push(candidate);
-      } else if (status === 'hr round' || status.includes('hr')) {
-        stages['HR Round'].push(candidate);
-      } else if ((status === 'offer stage' || status === 'selected') && !status.includes('drop')) {
-        stages['Offer Stage'].push(candidate);
-      } else if (status === 'closure' || status === 'joined' || status.includes('clos')) {
-        stages['Closure'].push(candidate);
-      }
-    });
-    
-    return stages;
+    return groupCandidatesByPipelineStage(filteredData);
   }, [pipelineData, selectedPipelineRecruiter, pipelineDate]);
 
   const tlPipelineSessionList = useMemo(
@@ -1988,281 +1950,67 @@ export default function TeamLeaderDashboard() {
     }
   };
 
-  // Pipeline stages with display names
-  const pipelineStages = [
-    { key: 'L1', display: 'Level 1' },
-    { key: 'L2', display: 'Level 2' },
-    { key: 'L3', display: 'Level 3' },
-    { key: 'HR Round', display: 'HR Round' },
-    { key: 'Final Round', display: 'Final Round' },
-    { key: 'Offer Stage', display: 'Offer Stage' },
-    { key: 'Closure', display: 'Closure' }
-  ];
-
   const renderPipelineContent = () => {
-    if (pipelineView === "candidate-session" && sessionApplicationId) {
-      return (
-        <div className="flex h-full">
-          <div className="ml-16 flex min-h-0 flex-1 flex-col bg-white">
-            <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
-            <div className="h-[calc(100vh-64px)] min-h-0 overflow-hidden">
-              <CandidateCommentsSession
-                applicationId={sessionApplicationId}
-                fallbackApplicant={sessionApplicantSnapshot}
-                pipelineApplicants={tlPipelineSessionList}
-                onSelectApplicant={handleSelectSessionApplicant}
-                onBack={handleCloseCandidateSession}
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="flex min-h-screen">
-        <div className="flex-1 ml-16 flex min-h-screen flex-col bg-gray-50">
+        <div className="ml-16 flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
           <AdminTopHeader
             companyName="Delivery Workspace"
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              {/* Pipeline Header */}
-              <div className="flex shrink-0 justify-between items-center border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
-              <div className="flex items-center gap-3">
-                {/* Team member (TA) selector - shows all recruiters reporting to this TL */}
-                <select 
-                  value={selectedPipelineRecruiter}
-                  onChange={(e) => setSelectedPipelineRecruiter(e.target.value)}
-                  className="w-48 cursor-pointer px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm hover:border-blue-400"
-                  data-testid="select-pipeline-recruiter"
-                >
-                  <option value="all">All Team Members</option>
-                  {Array.isArray(teamMembers) && teamMembers.map((member: any) => (
-                    <option key={member.id} value={member.id}>{member.name}</option>
-                  ))}
-                </select>
-                <StandardDatePicker
-                  value={pipelineDate || undefined}
-                  onChange={(date) => setPipelineDate(date || null)}
-                  placeholder="Select date"
-                  className="h-10 w-40 rounded cursor-pointer"
-                  data-testid="button-pipeline-date-picker"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPipelineDate(new Date())}
-                  className="h-10 cursor-pointer"
-                  title="Reset to today"
-                >
-                  Today
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPipelineDate(null)}
-                  className="h-10 cursor-pointer"
-                  title="Show all candidates (clear date filter)"
-                >
-                  All
-                </Button>
-              </div>
-              </div>
-
-              {/* Pipeline Stages - Kanban Board Layout */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
-            {isLoadingPipeline ? (
-              <div className="flex flex-1 items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
-                <span className="ml-3 text-gray-600">Loading pipeline data...</span>
-              </div>
-            ) : isErrorPipeline ? (
-              <div className="flex flex-1 items-center justify-center text-red-500">
-                Failed to load pipeline data
-              </div>
-            ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <div className="flex gap-1.5 w-full h-full">
-                    {pipelineStages.map((stage) => {
-                      const candidates = groupedPipelineCandidates[stage.key] || [];
-                      const count = Array.isArray(candidates) ? candidates.length : 0;
-                      return (
-                        <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
-                          {/* Column Header - Fixed */}
-                          <div className="mb-1 flex-shrink-0">
-                            <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 rounded-t px-2 py-1 border-b border-gray-200 dark:border-gray-600">
-                              <h3 className="text-[10px] font-medium text-gray-700 dark:text-gray-300 truncate" data-testid={`header-pipeline-${stage.key}`}>{stage.display}</h3>
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Column Content - Scrollable Vertically */}
-                          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
-                            {count === 0 ? (
-                              <div className="flex items-center justify-center h-full min-h-[100px]">
-                                <p className="text-[10px] text-gray-400 dark:text-gray-500">No candidates</p>
-                              </div>
-                            ) : (
-                              (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
-                                const initials = getInitials(candidate.name || '');
-                                // Use appliedDate first (most accurate), then appliedOn, then createdAt/updatedAt
-                                const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.appliedOn || candidate.createdAt || candidate.updatedAt);
-                                const roleApplied = candidate.position || 'N/A';
-                                const company = candidate.company || 'N/A';
-                                
-                                return (
-                                  <div
-                                    key={candidate.id || index}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => handlePipelineCandidateClick(candidate)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        handlePipelineCandidateClick(candidate);
-                                      }
-                                    }}
-                                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
-                                    data-testid={`pipeline-${stage.key}-candidate-${index}`}
-                                  >
-                                    {/* Card Content */}
-                                    <div className="flex items-start gap-1.5">
-                                      {/* Avatar - Very Small */}
-                                      <div className="flex-shrink-0">
-                                        <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                          <span className="text-[9px] font-medium text-blue-700 dark:text-blue-300">
-                                            {initials}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Candidate Info - Very Compact */}
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] mb-0.5 truncate leading-tight">
-                                          {candidate.name || 'N/A'}
-                                        </h4>
-                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 mb-0.5 truncate leading-tight">
-                                          {roleApplied}
-                                        </p>
-                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 truncate leading-tight">
-                                          {company}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Timestamp in bottom right */}
-                                    <div className="absolute bottom-1 right-1.5">
-                                      <p className="text-[8px] text-gray-500 dark:text-gray-400">
-                                        {daysAgo}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+          <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col overflow-hidden">
+            <TlPipelineTab
+              isLoading={isLoadingPipeline}
+              isError={isErrorPipeline}
+              isEmpty={
+                !isLoadingPipeline &&
+                !isErrorPipeline &&
+                (!Array.isArray(pipelineData) || pipelineData.length === 0)
+              }
+              groupedByStage={groupedPipelineCandidates}
+              onCandidateClick={handlePipelineCandidateClick}
+              selectedRecruiter={selectedPipelineRecruiter}
+              onRecruiterChange={setSelectedPipelineRecruiter}
+              teamMembers={teamMembers}
+              pipelineDate={pipelineDate}
+              onPipelineDateChange={setPipelineDate}
+              pipelineView={pipelineView}
+              candidateSession={
+                sessionApplicationId ? (
+                  <CandidateCommentsSession
+                    applicationId={sessionApplicationId}
+                    fallbackApplicant={sessionApplicantSnapshot}
+                    pipelineApplicants={tlPipelineSessionList}
+                    onSelectApplicant={handleSelectSessionApplicant}
+                    onBack={handleCloseCandidateSession}
+                  />
+                ) : null
+              }
+              closureReportsFooter={
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
+                    {closureData.length > 5 && (
+                      <Button
+                        variant="outline"
+                        className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                        style={{ borderRadius: 6 }}
+                        onClick={() => setIsViewClosuresModalOpen(true)}
+                        data-testid="button-view-closures"
+                      >
+                        View More
+                      </Button>
+                    )}
                   </div>
+                  <ClosureReportsCardList
+                    reports={tlClosureReportsForPipeline}
+                    isLoading={isLoadingClosures}
+                    emptyMessage="No closures yet."
+                    maxRows={5}
+                  />
                 </div>
-              </div>
-            )}
-              </div>
-            </div>
-
-              {/* Right Sidebar with Stats - Fixed, Non-scrollable */}
-              <div className="w-64 shrink-0 overflow-hidden border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                <div className="p-4 space-y-1">
-            <button 
-              onClick={() => handlePipelineStageClick('SHORTLISTED')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded hover:bg-green-300 dark:hover:bg-green-700 transition-colors cursor-pointer"
-              data-testid="button-pipeline-shortlisted"
-            >
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{pipelineCounts.SHORTLISTED || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('SCREENING')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors cursor-pointer"
-              data-testid="button-pipeline-screening"
-            >
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SCREENING</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{(pipelineCounts.INTRO_CALL || 0) + (pipelineCounts.ASSIGNMENT || 0) + (pipelineCounts.SCREENING || 0)}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('L1')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded hover:bg-green-600 dark:hover:bg-green-500 transition-colors cursor-pointer"
-              data-testid="button-pipeline-l1"
-            >
-              <span className="text-sm font-medium text-white">LEVEL 1</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.L1 || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('L2')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded hover:bg-green-700 dark:hover:bg-green-400 transition-colors cursor-pointer"
-              data-testid="button-pipeline-l2"
-            >
-              <span className="text-sm font-medium text-white">LEVEL 2</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.L2 || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('L3')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded hover:bg-green-800 dark:hover:bg-green-400 transition-colors cursor-pointer"
-              data-testid="button-pipeline-l3"
-            >
-              <span className="text-sm font-medium text-white">LEVEL 3</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.L3 || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('FINAL_ROUND')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded hover:bg-green-900 dark:hover:bg-green-300 transition-colors cursor-pointer"
-              data-testid="button-pipeline-final-round"
-            >
-              <span className="text-sm font-medium text-white">FINAL ROUND</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.FINAL_ROUND || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('HR_ROUND')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded hover:bg-green-950 dark:hover:bg-green-300 transition-colors cursor-pointer"
-              data-testid="button-pipeline-hr-round"
-            >
-              <span className="text-sm font-medium text-white">HR ROUND</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.HR_ROUND || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('OFFER_STAGE')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded hover:bg-green-950 dark:hover:bg-green-200 transition-colors cursor-pointer"
-              data-testid="button-pipeline-offer-stage"
-            >
-              <span className="text-sm font-medium text-white">OFFER STAGE</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.OFFER_STAGE || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('CLOSURE')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded hover:bg-black dark:hover:bg-green-200 transition-colors cursor-pointer"
-              data-testid="button-pipeline-closure"
-            >
-              <span className="text-sm font-medium text-white">CLOSURE</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.CLOSURE || 0}</span>
-            </button>
-            <button 
-              onClick={() => handlePipelineStageClick('OFFER_DROP')}
-              className="w-full flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors cursor-pointer"
-              data-testid="button-pipeline-offer-drop"
-            >
-              <span className="text-sm font-medium text-white">OFFER DROP</span>
-              <span className="text-lg font-bold text-white">{pipelineCounts.OFFER_DROP || 0}</span>
-            </button>
-                </div>
-              </div>
+              }
+            />
           </div>
         </div>
       </div>

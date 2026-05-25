@@ -58,6 +58,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import EditCandidateModal from "@/components/dashboard/modals/edit-candidate-modal";
+import { ResumePreviewPanel } from "@/components/source-resume/resume-preview-panel";
 
 // Location data (same as Upload Resume)
 const locations = [
@@ -1428,6 +1429,7 @@ const SourceResume = () => {
   const [keywordInput, setKeywordInput] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDisplay | null>(null);
   const [savedCandidates, setSavedCandidates] = useState<Set<string>>(new Set());
+  const [taggedEmailOverrides, setTaggedEmailOverrides] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [resultsSearchQuery, setResultsSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
@@ -1601,19 +1603,26 @@ const SourceResume = () => {
 
   // Track tagged candidates (those already in applications)
   const taggedCandidates = useMemo(() => {
-    if (!allApplications || allApplications.length === 0) return new Set<string>();
-    
-    // Only consider applications that are active (not rejected/archived)
-    const activeApplications = allApplications.filter((app: any) => {
-      const status = app.status?.toLowerCase() || '';
-      return !status.includes('reject') && 
-             !status.includes('screened out') && 
-             !status.includes('archived') && 
-             !status.includes('withdraw');
-    });
-    
-    return new Set(activeApplications.map((app: any) => app.candidateEmail?.toLowerCase()).filter(Boolean));
-  }, [allApplications]);
+    const tagged = new Set<string>(taggedEmailOverrides);
+
+    if (allApplications && allApplications.length > 0) {
+      // Only consider applications that are active (not rejected/archived)
+      const activeApplications = allApplications.filter((app: any) => {
+        const status = app.status?.toLowerCase() || '';
+        return !status.includes('reject') &&
+               !status.includes('screened out') &&
+               !status.includes('archived') &&
+               !status.includes('withdraw');
+      });
+
+      activeApplications.forEach((app: any) => {
+        const email = app.candidateEmail?.toLowerCase();
+        if (email) tagged.add(email);
+      });
+    }
+
+    return tagged;
+  }, [allApplications, taggedEmailOverrides]);
 
   // Update current time every minute for reactive lastSeen calculation
   useEffect(() => {
@@ -2599,19 +2608,15 @@ const SourceResume = () => {
   const selectedCandidateRef = useRef<HTMLDivElement>(null);
 
   const handleCandidateClick = async (candidate: CandidateDisplay) => {
-    // Update last viewed timestamp
-    try {
-      await apiRequest('POST', `/api/recruiter/candidates/${candidate.id}/view`, {});
-      // Refresh ALL candidate data to get updated lastViewedAt
-      // Use refetch to immediately get fresh data
-      await queryClient.refetchQueries({ queryKey: ['/api/admin/candidates'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/source-resume/search'] });
-      // Also invalidate to ensure all related queries refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
-    } catch (error) {
-      console.error('Failed to update view timestamp:', error);
-    }
+    // Update last viewed timestamp (non-blocking; do not interrupt card selection)
+    void apiRequest('POST', `/api/recruiter/candidates/${candidate.id}/view`, {})
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
+      })
+      .catch(() => {
+        /* ignore — selection still works if view logging fails */
+      });
 
     if (selectedCandidate?.id === candidate.id) {
       setSelectedCandidate(null);
@@ -2660,7 +2665,15 @@ const SourceResume = () => {
 
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      const email = variables.candidate.email?.trim().toLowerCase();
+      if (email) {
+        setTaggedEmailOverrides((prev) => {
+          const next = new Set(prev);
+          next.add(email);
+          return next;
+        });
+      }
       toast({
         title: "Success",
         description: "Candidate tagged to requirement successfully",
@@ -2713,19 +2726,13 @@ const SourceResume = () => {
     e.stopPropagation();
     
     // Update last viewed timestamp before opening profile
-    try {
-      await apiRequest('POST', `/api/recruiter/candidates/${candidateId}/view`, {});
-      // Refresh ALL candidate data to get updated lastViewedAt
-      // Use refetch to immediately get fresh data
-      await queryClient.refetchQueries({ queryKey: ['/api/admin/candidates'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/source-resume/search'] });
-      // Also invalidate to ensure all related queries refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
-    } catch (error) {
-      console.error('Failed to update view timestamp:', error);
-    }
-    
+    void apiRequest('POST', `/api/recruiter/candidates/${candidateId}/view`, {})
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
+      })
+      .catch(() => undefined);
+
     window.open(`/candidate-profile/${candidateId}`, '_blank');
   };
 
@@ -3869,154 +3876,18 @@ const SourceResume = () => {
                           <h4 className="font-semibold text-gray-900 mb-3">Resume</h4>
                           <div className="border border-gray-200 rounded-lg bg-gray-100 dark:bg-gray-900 flex flex-col relative overflow-hidden" style={{ minHeight: '600px', height: '600px' }}>
                             {candidate.resumeFile ? (
-                              <>
-                                {(() => {
-                                  // Fix resume URL - ensure it's properly formatted
-                                  let resumeUrl = candidate.resumeFile;
-                                  
-                                  // Normalize the URL
-                                  if (resumeUrl) {
-                                    // If it's a full URL, extract the path
-                                    if (resumeUrl.startsWith('http://') || resumeUrl.startsWith('https://')) {
-                                      try {
-                                        const url = new URL(resumeUrl);
-                                        resumeUrl = url.pathname;
-                                      } catch (e) {
-                                        // If URL parsing fails, try to extract path manually
-                                        const match = resumeUrl.match(/\/uploads\/.*/);
-                                        if (match) {
-                                          resumeUrl = match[0];
-                                        }
-                                      }
-                                    }
-                                    
-                                    // Ensure it starts with /uploads
-                                    if (!resumeUrl.startsWith('/uploads')) {
-                                      if (resumeUrl.startsWith('uploads/')) {
-                                        resumeUrl = '/' + resumeUrl;
-                                      } else if (!resumeUrl.startsWith('/')) {
-                                        // If it's just a filename, assume it's in uploads/resumes
-                                        resumeUrl = '/uploads/resumes/' + resumeUrl;
-                                      }
-                                    }
-                                  }
-                                  
-                                  const lowerUrl = resumeUrl?.toLowerCase() || '';
-                                  const urlWithoutQuery = lowerUrl.split('?')[0];
-                                  const isPdf = urlWithoutQuery.endsWith('.pdf');
-                                  const isDocx = urlWithoutQuery.endsWith('.docx');
-                                  const isDoc = urlWithoutQuery.endsWith('.doc') && !isDocx;
-                                  const isImage = urlWithoutQuery.endsWith('.jpg') || urlWithoutQuery.endsWith('.jpeg') || urlWithoutQuery.endsWith('.png');
-                                  
-                                  if (isPdf) {
-                                    return (
-                                      <iframe
-                                        key={resumeUrl}
-                                        src={resumeUrl}
-                                        className="w-full h-full border-0"
-                                        title="Resume Preview"
-                                        onError={(e) => {
-                                          console.error('Resume iframe error:', e);
-                                          // Fallback to download button if iframe fails
-                                        }}
-                                      />
-                                    );
-                                  } else if (isImage) {
-                                    return (
-                                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                                        <img
-                                          src={resumeUrl}
-                                          alt="Resume"
-                                          className="max-w-full max-h-full object-contain"
-                                          onError={(e) => {
-                                            console.error('Resume image error:', e);
-                                            // Show download option on error
-                                          }}
-                                        />
-                                      </div>
-                                    );
-                                  } else if (isDocx || isDoc) {
-                                    return (
-                                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                                        <div className="text-center space-y-4 p-8 max-w-md">
-                                          <FileText className="h-16 w-16 mx-auto text-gray-400" />
-                                          <div>
-                                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                                              Word Document
-                                            </p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                                              Word documents cannot be previewed in the browser. Please download the file to view it.
-                                            </p>
-                                            <Button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                window.open(resumeUrl, '_blank');
-                                              }}
-                                              className="bg-blue-600 text-white hover:bg-blue-700"
-                                            >
-                                              <Download className="h-4 w-4 mr-2" />
-                                              Download Resume
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  } else {
-                                    return (
-                                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                                        <div className="text-center space-y-4 p-8 max-w-md">
-                                          <FileText className="h-16 w-16 mx-auto text-gray-400" />
-                                          <div>
-                                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                                              Resume File
-                                            </p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                                              This file type cannot be previewed. Please download to view.
-                                            </p>
-                                            <Button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                window.open(resumeUrl, '_blank');
-                                              }}
-                                              className="bg-blue-600 text-white hover:bg-blue-700"
-                                            >
-                                              <Download className="h-4 w-4 mr-2" />
-                                              Download Resume
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-                                })()}
-                                <div className="absolute top-4 right-4 z-10">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      // Fix URL before opening
-                                      let resumeUrl = candidate.resumeFile;
-                                      if (resumeUrl && !resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
-                                        resumeUrl = '/' + resumeUrl;
-                                      } else if (resumeUrl && resumeUrl.startsWith('uploads/')) {
-                                        resumeUrl = '/' + resumeUrl;
-                                      }
-                                      window.open(resumeUrl, '_blank');
-                                    }}
-                                    className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-md"
-                                    title="Download Resume"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </>
+                              <div className="h-full w-full" onClick={(e) => e.stopPropagation()}>
+                                <ResumePreviewPanel
+                                  resumeFile={candidate.resumeFile}
+                                  candidateName={candidate.name}
+                                />
+                              </div>
                             ) : (
-                              <div className="flex-1 flex items-center justify-center">
+                              <div className="flex flex-1 items-center justify-center">
                                 <div className="text-center">
-                                  <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                                  <FileText className="mx-auto mb-4 h-16 w-16 text-gray-400" />
                                   <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resume</p>
-                                  <p className="text-sm text-gray-400 mt-4">Resume Not Available</p>
+                                  <p className="mt-4 text-sm text-gray-400">Resume not available</p>
                                 </div>
                               </div>
                             )}

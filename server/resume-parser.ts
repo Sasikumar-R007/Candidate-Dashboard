@@ -1,4 +1,5 @@
 import { parseResumeWithAI, refineCandidateData } from './ai-resume-parser';
+import { normalizeParsedEducation, normalizeParsedSkills } from './parsed-field-format';
 import mammoth from 'mammoth';
 import fs from 'fs';
 
@@ -73,38 +74,69 @@ export async function extractTextFromFile(filePath: string, mimeType: string): P
   }
 }
 
-export async function parseResumeFile(filePath: string, mimeType: string): Promise<ParsedResume> {
+export type ParseResumeOptions = {
+  /** Bulk import skips the second OpenAI pass (~2x faster). */
+  skipRefine?: boolean;
+  aiTimeoutMs?: number;
+};
+
+function mapAiParsedToResume(aiParsed: any, rawText: string): ParsedResume {
+  const skills =
+    normalizeParsedSkills(aiParsed.skills) ??
+    normalizeParsedSkills(aiParsed.technical_skills);
+  const education =
+    normalizeParsedEducation(aiParsed.education) ??
+    normalizeParsedEducation(
+      aiParsed.college || aiParsed.course
+        ? [
+            {
+              degree: aiParsed.course || aiParsed.degree_level,
+              institution: aiParsed.college || aiParsed.university,
+              year: aiParsed.graduation_year,
+            },
+          ]
+        : null,
+    );
+
+  return {
+    fullName: aiParsed.full_name || aiParsed.fullName || null,
+    email: aiParsed.email || null,
+    phone: aiParsed.phone || null,
+    designation: aiParsed.current_role || aiParsed.designation || null,
+    experience: aiParsed.experience || null,
+    skills,
+    location: aiParsed.location || null,
+    company: aiParsed.company || null,
+    education,
+    highestQualification: aiParsed.degree_level || aiParsed.highestQualification || null,
+    collegeName: aiParsed.college || aiParsed.university || null,
+    course: aiParsed.course || null,
+    linkedinUrl: aiParsed.linkedin_url || aiParsed.linkedinUrl || null,
+    portfolioUrl: aiParsed.portfolio_url || aiParsed.portfolioUrl || null,
+    websiteUrl: aiParsed.website_url || aiParsed.websiteUrl || null,
+    currentRole: aiParsed.current_role || aiParsed.designation || null,
+    rawText,
+    aiParsed,
+  };
+}
+
+export async function parseResumeFile(
+  filePath: string,
+  mimeType: string,
+  options?: ParseResumeOptions,
+): Promise<ParsedResume> {
   const text = await extractTextFromFile(filePath, mimeType);
   const normalizedText = repairCompactedResumeText(normalizeResumeText(text));
+  const aiTimeoutMs = options?.aiTimeoutMs ?? 30000;
 
   // Try AI Parsing first
   try {
-    let aiParsed = await parseResumeWithAI(normalizedText);
+    let aiParsed = await parseResumeWithAI(normalizedText, aiTimeoutMs);
     if (aiParsed) {
-      // Stage 2: Refinement
-      aiParsed = await refineCandidateData(aiParsed);
-
-      // Map AI data to ParsedResume format
-      return {
-        fullName: aiParsed.full_name || aiParsed.fullName || null,
-        email: aiParsed.email || null,
-        phone: aiParsed.phone || null,
-        designation: aiParsed.current_role || aiParsed.designation || null,
-        experience: aiParsed.experience || null,
-        skills: aiParsed.skills || null,
-        location: aiParsed.location || null,
-        company: aiParsed.company || null,
-        education: aiParsed.education || null,
-        highestQualification: aiParsed.degree_level || aiParsed.highestQualification || null,
-        collegeName: aiParsed.college || aiParsed.university || null,
-        course: aiParsed.course || null,
-        linkedinUrl: aiParsed.linkedin_url || aiParsed.linkedinUrl || null,
-        portfolioUrl: aiParsed.portfolio_url || aiParsed.portfolioUrl || null,
-        websiteUrl: aiParsed.website_url || aiParsed.websiteUrl || null,
-        currentRole: aiParsed.current_role || aiParsed.designation || null,
-        rawText: text,
-        aiParsed: aiParsed
-      };
+      if (!options?.skipRefine) {
+        aiParsed = await refineCandidateData(aiParsed);
+      }
+      return mapAiParsedToResume(aiParsed, text);
     }
   } catch (aiError) {
     console.warn('AI parsing failed, falling back to regex:', aiError);
@@ -1490,25 +1522,61 @@ export interface BulkParseResult {
   error?: string;
 }
 
-export async function parseBulkResumes(files: Array<{ path: string; originalname: string; mimetype: string }>): Promise<BulkParseResult[]> {
-  const results: BulkParseResult[] = [];
+function resolveBulkParseConcurrency(): number {
+  const parsed = parseInt(process.env.BULK_PARSE_CONCURRENCY || "6", 10);
+  if (Number.isNaN(parsed)) return 6;
+  return Math.min(12, Math.max(2, parsed));
+}
 
-  for (const file of files) {
+const BULK_PARSE_AI_TIMEOUT_MS = 22000;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await mapper(items[current], current);
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+  );
+  return results;
+}
+
+export async function parseBulkResumes(
+  files: Array<{ path: string; originalname: string; mimetype: string }>,
+): Promise<BulkParseResult[]> {
+  const concurrency = resolveBulkParseConcurrency();
+  console.log(
+    `[Bulk Parse] ${files.length} file(s), concurrency=${concurrency}, skipRefine=true`,
+  );
+
+  return mapWithConcurrency(files, concurrency, async (file) => {
     try {
-      const parsed = await parseResumeFile(file.path, file.mimetype);
-      results.push({
+      const parsed = await parseResumeFile(file.path, file.mimetype, {
+        skipRefine: true,
+        aiTimeoutMs: BULK_PARSE_AI_TIMEOUT_MS,
+      });
+      return {
         success: true,
         fileName: file.originalname,
-        data: parsed
-      });
+        data: parsed,
+      };
     } catch (error) {
-      results.push({
+      return {
         success: false,
         fileName: file.originalname,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
-  }
-
-  return results;
+  });
 }

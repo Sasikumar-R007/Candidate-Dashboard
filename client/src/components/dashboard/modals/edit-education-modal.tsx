@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import type { Profile } from '@shared/schema';
 
 interface EditEducationModalProps {
@@ -29,12 +30,7 @@ export default function EditEducationModal({
 
   const updateEducationMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update education information');
+      const response = await apiRequest('PATCH', '/api/profile', data);
       return response.json();
     },
     onSuccess: () => {

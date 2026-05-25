@@ -37,7 +37,7 @@ const ADMIN_NAV: ClientPortalNavItem[] = [
 
 const MEMBER_NAV: ClientPortalNavItem[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "pipeline", label: "Pipeline", icon: GitBranch },
+  { id: "pipeline", label: "Pipeline & Closures", icon: GitBranch },
   { id: "req_jd", label: "Req / JD", icon: FileText },
   { id: "nudges", label: "Nudges", icon: Zap },
   { id: "settings", label: "Settings", icon: Settings },

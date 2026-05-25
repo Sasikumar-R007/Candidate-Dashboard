@@ -10,7 +10,7 @@ import { Upload, Check, ChevronsUpDown, RotateCcw, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiFileUpload, apiRequest } from '@/lib/queryClient';
 import { broadcastDashboardEvent } from '@/lib/dashboard-sync';
 import { cn } from '@/lib/utils';
 
@@ -364,20 +364,7 @@ export default function UploadResumeModal({
       const uploadFormData = new FormData();
       uploadFormData.append('resume', file);
 
-      const response = await fetch('/api/recruiter/parse-resume', {
-        method: 'POST',
-        body: uploadFormData,
-        credentials: 'include',
-        headers: {
-          // Don't set Content-Type header - let browser set it with boundary for FormData
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(errorData.message || `Failed to parse resume (${response.status})`);
-      }
-
+      const response = await apiFileUpload('/api/recruiter/parse-resume', uploadFormData);
       const result = await response.json();
       const parsedData = result.data;
 
@@ -484,14 +471,7 @@ export default function UploadResumeModal({
       if (resumeFile) {
         const formData = new FormData();
         formData.append('resume', resumeFile);
-        const uploadResponse = await fetch('/api/recruiter/upload/resume', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include'
-        });
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload resume file');
-        }
+        const uploadResponse = await apiFileUpload('/api/recruiter/upload/resume', formData);
         const uploadResult = await uploadResponse.json();
         resumeFilePath = uploadResult.filePath || uploadResult.url;
       }

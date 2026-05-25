@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { normalizeParsedEducation, normalizeParsedSkills } from './parsed-field-format';
 
 let openaiClient: OpenAI | null = null;
 
@@ -12,7 +13,10 @@ function getOpenAIClient() {
   return openaiClient;
 }
 
-export async function parseResumeWithAI(text: string): Promise<any> {
+export async function parseResumeWithAI(
+  text: string,
+  timeoutMs: number = 30000,
+): Promise<any> {
   const openai = getOpenAIClient();
   if (!openai) {
     console.warn("[AI Parser] OPENAI_API_KEY is not set. Skipping AI parsing.");
@@ -21,16 +25,15 @@ export async function parseResumeWithAI(text: string): Promise<any> {
 
   try {
     const resumeText = text || "";
-    console.log("Resume length:", resumeText.length);
-    
+
     // Trim to 10,000 characters to ensure fast processing
     const trimmedText = resumeText.length > 10000 ? resumeText.substring(0, 10000) : resumeText;
 
-    console.log("AI CALL START");
-    
-    // Add a 30-second timeout for more complex resumes
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("OpenAI request timed out after 30 seconds")), 30000)
+      setTimeout(
+        () => reject(new Error(`OpenAI request timed out after ${Math.round(timeoutMs / 1000)} seconds`)),
+        timeoutMs,
+      ),
     );
 
     const apiCallPromise = openai.chat.completions.create({
@@ -83,7 +86,8 @@ export async function parseResumeWithAI(text: string): Promise<any> {
           EXTRACTION GUIDELINES:
           * current_role → latest job title OR header title (Priority: Header Title)
           * total_experience → calculate from timeline (e.g., "4 years")
-          * skills → extract all technologies as a single comma-separated string
+          * skills → plain comma-separated text only (e.g. "JavaScript, React, SQL") — NOT JSON, NOT curly braces
+          * education → array of objects with degree, field_of_study, institution, year — NOT stringified JSON
           * degree_level → "Under Graduate" or "Post Graduate"`
         },
         {
@@ -94,7 +98,6 @@ export async function parseResumeWithAI(text: string): Promise<any> {
     });
 
     const response: any = await Promise.race([apiCallPromise, timeoutPromise]);
-    console.log("AI CALL END");
 
     const content = response.choices[0].message.content;
     if (!content) return null;
@@ -112,10 +115,8 @@ export async function parseResumeWithAI(text: string): Promise<any> {
       Object.assign(parsed, parsed.additional_info);
     }
     
-    // Skills cleanup
-    if (parsed.skills) {
-      parsed.skills = parsed.skills.toLowerCase();
-    }
+    parsed.skills = normalizeParsedSkills(parsed.skills);
+    parsed.education = normalizeParsedEducation(parsed.education);
 
     console.log("[AI Parser] Successfully parsed resume data with Nested Schema.");
     return parsed;
@@ -168,7 +169,10 @@ export async function refineCandidateData(rawData: any) {
     const refinedContent = response.choices[0].message.content;
     if (refinedContent) {
       console.log('[AI Refinement] Successfully refined candidate data.');
-      return JSON.parse(refinedContent);
+      const refined = JSON.parse(refinedContent);
+      refined.skills = normalizeParsedSkills(refined.skills);
+      refined.education = normalizeParsedEducation(refined.education);
+      return refined;
     }
     return rawData;
   } catch (error) {

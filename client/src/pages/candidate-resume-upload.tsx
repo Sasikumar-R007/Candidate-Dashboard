@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, apiFileUpload } from "@/lib/queryClient";
+import { api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { 
   Upload, 
@@ -34,42 +35,39 @@ export default function CandidateResumeUpload() {
   const { logout } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch profile via the smart polling hook
-  const { data: profile } = useProfile();
+  // Poll every 2s until AI onboarding finishes (stage becomes `completed`)
+  const { data: profile } = useProfile({ pollUntilOnboardingComplete: true });
 
-  // DEBUG: Let's see what the profile actually looks like in the browser
-  useEffect(() => {
-    if (profile) {
-      console.log("[DEBUG] Current Profile Status:", {
-        id: profile.id,
-        stage: profile.registrationStage,
-        allKeys: Object.keys(profile)
-      });
-    }
-  }, [profile]);
+  const advanceStepFromProfile = useCallback(
+    (p: typeof profile | undefined) => {
+      if (!p) return;
+      const stage = p.registrationStage;
+      if (stage !== "resume_uploaded" && stage !== "completed") return;
 
-  // SMART REDIRECTOR: Handle transition to dashboard automatically
-  useEffect(() => {
-    if (profile?.registrationStage === "completed") {
-      // If we were in SCANNING/PREVIEW, show the "Ready" toast
-      if (step !== "UPLOAD") {
-        toast({
-          title: "Setup Complete!",
-          description: "Your dashboard is ready 🚀",
-        });
+      const displayName =
+        (p.fullName && String(p.fullName).trim()) ||
+        [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
+      if (displayName) {
+        setEditableName((prev) => prev || displayName);
       }
-      
-      // Auto-redirect
-      setLocation("/candidate");
-    } else if (profile?.registrationStage === "resume_uploaded") {
-      // If we see it's uploaded, and we're not yet in PREVIEW or ROCKET, force move to PREVIEW
+
       if (step !== "PREVIEW" && step !== "ROCKET") {
-        console.log("[AUTO-RECOVERY] Status is 'resume_uploaded', forcing PREVIEW screen.");
-        setEditableName(profile.fullName || profile.firstName || "");
         setStep("PREVIEW");
       }
-    }
-  }, [profile?.registrationStage, profile?.resumeFile, step, setLocation, toast]);
+    },
+    [step],
+  );
+
+  useEffect(() => {
+    advanceStepFromProfile(profile);
+  }, [
+    profile?.registrationStage,
+    profile?.fullName,
+    profile?.firstName,
+    profile?.lastName,
+    profile?.resumeFile,
+    advanceStepFromProfile,
+  ]);
 
   const handleLogout = async () => {
     try {
@@ -92,14 +90,47 @@ export default function CandidateResumeUpload() {
       const formData = new FormData();
       formData.append("resume", resumeFile);
       const res = await apiFileUpload("/api/upload/resume", formData);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to upload resume");
+      }
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: async (payload: { url?: string; registrationStage?: string }) => {
       setStep("SCANNING");
       toast({
         title: "Resume Received!",
         description: "Our AI is scanning your documents now...",
       });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+      try {
+        const freshProfile = await queryClient.fetchQuery({
+          queryKey: ["/api/profile"],
+          queryFn: api.getProfile,
+        });
+        advanceStepFromProfile(freshProfile);
+        if (freshProfile?.registrationStage === "resume_uploaded" || freshProfile?.registrationStage === "completed") {
+          toast({
+            title: "Resume analyzed",
+            description: "Review your details and continue to the dashboard.",
+          });
+        }
+      } catch (err) {
+        console.error("[Resume upload] Profile refetch after upload failed:", err);
+      }
+
+      if (payload?.registrationStage === "resume_uploaded") {
+        queryClient.setQueryData(["/api/profile"], (prev: typeof profile) =>
+          prev
+            ? {
+                ...prev,
+                registrationStage: "resume_uploaded",
+                resumeFile: payload.url ?? prev.resumeFile,
+              }
+            : prev,
+        );
+      }
     },
     onError: (error: any) => {
       toast({

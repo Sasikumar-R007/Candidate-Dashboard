@@ -5,6 +5,7 @@ import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { ADMIN_FILTER_DATE_CLASS, ADMIN_FILTER_SELECT_CLASS } from "@/lib/revenue-mapping-utils";
 
 interface PerformanceChartModalProps {
@@ -67,18 +68,18 @@ export default function PerformanceChartModal({
         params.append('teamId', selectedTeam);
       }
       if (dateFrom) {
-        params.append('dateFrom', dateFrom.toISOString());
+        params.append('dateFrom', dateFrom.toISOString().split('T')[0]);
       }
       if (dateTo) {
-        params.append('dateTo', dateTo.toISOString());
+        params.append('dateTo', dateTo.toISOString().split('T')[0]);
       }
       if (period) {
         params.append('period', period);
       }
       const url = `/api/admin/performance-graph${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-      return await response.json();
+      const response = await apiRequest('GET', url);
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -94,8 +95,7 @@ export default function PerformanceChartModal({
         params.append('dateTo', defaultRateDateTo.toISOString());
       }
       const url = `/api/admin/default-rate/${encodeURIComponent(selectedDefaultRateMember)}${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      const response = await apiRequest('GET', url);
       return await response.json();
     },
     enabled: isOpen && !!selectedDefaultRateMember,
@@ -181,7 +181,10 @@ export default function PerformanceChartModal({
                 <div className="flex items-center justify-center h-full">
                   <p className="text-gray-500 dark:text-gray-400">Loading performance data...</p>
                 </div>
-              ) : filteredPerformanceData.length === 0 ? (
+              ) : filteredPerformanceData.length === 0 ||
+                filteredPerformanceData.every(
+                  (row) => (row.resumesA || 0) === 0 && (row.resumesB || 0) === 0,
+                ) ? (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-gray-500 dark:text-gray-400">No performance data available</p>
                 </div>

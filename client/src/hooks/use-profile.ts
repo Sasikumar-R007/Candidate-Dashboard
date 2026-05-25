@@ -2,17 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
-export function useProfile() {
+type UseProfileOptions = {
+  /** Poll until registrationStage is `completed` (resume upload onboarding page). */
+  pollUntilOnboardingComplete?: boolean;
+};
+
+export function useProfile(options?: UseProfileOptions) {
   return useQuery({
     queryKey: ['/api/profile'],
     queryFn: api.getProfile,
-    // Poll every 5 seconds only IF the AI is actively parsing (resume_uploaded)
-    // Stop polling once status is 'completed' or anything else to save server resources
     refetchInterval: (query) => {
+      if (query.state.status === 'error') return false;
       const stage = query.state.data?.registrationStage;
-      if (query.state.status === 'error') return false; 
-      // Only poll when AI is actively working in the background
-      return (stage === 'resume_uploaded') ? 5000 : false;
+      if (options?.pollUntilOnboardingComplete) {
+        return stage !== 'completed' ? 2000 : false;
+      }
+      // Legacy: poll while resume is on server but profile may still be cached as verified
+      if (stage === 'resume_uploaded') return 3000;
+      if (stage === 'verified' || stage === 'registered') {
+        return query.state.data?.resumeFile ? 3000 : false;
+      }
+      return false;
     },
     // Ensure we retry on temporary errors
     retry: true,

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import type { Profile } from '@shared/schema';
 
 interface EditJobDetailsModalProps {
@@ -35,12 +36,7 @@ export default function EditJobDetailsModal({
 
   const updateJobDetailsMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update job details');
+      const response = await apiRequest('PATCH', '/api/profile', data);
       return response.json();
     },
     onSuccess: () => {

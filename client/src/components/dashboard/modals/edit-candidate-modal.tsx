@@ -107,6 +107,7 @@ export default function EditCandidateModal({
       queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/candidates'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
       
       toast({
         title: "Profile Updated",
