@@ -446,6 +446,19 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async getJobApplicationsByCandidateEmail(email: string): Promise<JobApplication[]> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return [];
+    const applications = await this.queryJobApplications(
+      sql`LOWER("candidate_email") = ${normalized}`,
+    );
+    return applications.sort((a, b) => {
+      const aDate = a.appliedDate ? new Date(a.appliedDate as any).getTime() : 0;
+      const bDate = b.appliedDate ? new Date(b.appliedDate as any).getTime() : 0;
+      return bDate - aDate;
+    });
+  }
+
   async createJobApplication(insertApplication: InsertJobApplication): Promise<JobApplication> {
     const availableColumns = await this.getAvailableColumns("job_applications");
     const columns: string[] = [];

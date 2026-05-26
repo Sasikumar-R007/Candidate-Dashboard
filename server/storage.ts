@@ -76,6 +76,7 @@ export interface IStorage {
   createActivity(activity: InsertActivity): Promise<Activity>;
   
   getJobApplicationsByProfile(profileId: string): Promise<JobApplication[]>;
+  getJobApplicationsByCandidateEmail(email: string): Promise<JobApplication[]>;
   createJobApplication(application: InsertJobApplication): Promise<JobApplication>;
   
   getSavedJobsByProfile(profileId: string): Promise<SavedJob[]>;
@@ -960,6 +961,14 @@ export class MemStorage implements IStorage {
 
   async getJobApplicationsByProfile(profileId: string): Promise<JobApplication[]> {
     return Array.from(this.jobApplications.values()).filter(app => app.profileId === profileId);
+  }
+
+  async getJobApplicationsByCandidateEmail(email: string): Promise<JobApplication[]> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return [];
+    return Array.from(this.jobApplications.values()).filter(
+      (app) => app.candidateEmail?.trim().toLowerCase() === normalized,
+    );
   }
 
   async createJobApplication(insertApplication: InsertJobApplication): Promise<JobApplication> {

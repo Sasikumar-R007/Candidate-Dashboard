@@ -118,6 +118,12 @@ function calculateQuartersSince(joiningDate: string | Date | null | undefined): 
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { normalizeParsedEducation, normalizeParsedSkills } from "./parsed-field-format";
+import {
+  applicationBelongsToCandidate,
+  isStaffOsTaggedSource,
+  linkStaffOsTaggedApplicationsToCandidate,
+  mergeJobApplicationsById,
+} from "./candidate-job-application-utils";
 import { applyCorsHeaders } from "./cors-config";
 import { parseJDWithAI } from "./ai-jd-parser";
 import {
@@ -1890,6 +1896,19 @@ async function clientCanAccessJobApplication(
     application,
   );
   return { allowed, application: allowed ? application : undefined };
+}
+
+async function loadCandidateJobApplications(candidate: {
+  id: string;
+  email?: string | null;
+}) {
+  if (candidate.email) {
+    await linkStaffOsTaggedApplicationsToCandidate(candidate.id, candidate.email);
+  }
+  const byProfile = await storage.getJobApplicationsByProfile(candidate.id);
+  if (!candidate.email) return byProfile;
+  const byEmail = await storage.getJobApplicationsByCandidateEmail(candidate.email);
+  return mergeJobApplicationsById(byProfile, byEmail);
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -3970,22 +3989,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      // Get real job applications from database
-      let candidateJobApplications = await storage.getJobApplicationsByProfile(candidate.id);
+      let candidateJobApplications = await loadCandidateJobApplications(candidate);
 
-      // Legacy cleanup:
-      // If candidate has already confirmed at least one recruiter-tagged application,
-      // auto-confirm any older pending recruiter-tagged rows to avoid repeated consent prompts.
+      // If candidate has already confirmed at least one StaffOS-tagged application,
+      // auto-confirm other pending tagged rows to avoid repeated consent prompts.
       const hasRecruiterConsent = candidateJobApplications.some(
         (app: any) =>
-          String(app.source || "").toLowerCase() === "recruiter_tagged" &&
-          app.isCandidateConfirmed === true,
+          isStaffOsTaggedSource(app.source) && app.isCandidateConfirmed === true,
       );
       const pendingRecruiterTaggedIds = candidateJobApplications
         .filter(
           (app: any) =>
-            String(app.source || "").toLowerCase() === "recruiter_tagged" &&
-            app.isCandidateConfirmed === false,
+            isStaffOsTaggedSource(app.source) && app.isCandidateConfirmed === false,
         )
         .map((app: any) => app.id)
         .filter(Boolean);
@@ -3996,7 +4011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({ isCandidateConfirmed: true })
           .where(inArray(jobApplications.id, pendingRecruiterTaggedIds));
 
-        candidateJobApplications = await storage.getJobApplicationsByProfile(candidate.id);
+        candidateJobApplications = await loadCandidateJobApplications(candidate);
       }
 
       res.json(candidateJobApplications);
@@ -4226,7 +4241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
 
-      if (application.profileId !== candidate.id) {
+      if (!applicationBelongsToCandidate(application, candidate)) {
         return res.status(403).json({ message: "You can only update your own applications" });
       }
 
@@ -13248,7 +13263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             SELECT 1
             FROM job_applications
             WHERE LOWER(candidate_email) = LOWER(${candidateEmailStr})
-              AND LOWER(source) = 'recruiter_tagged'
+              AND LOWER(source) IN ('recruiter_tagged', 'tl_tagged')
               AND is_candidate_confirmed = true
             LIMIT 1
           `);
@@ -13278,6 +13293,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      let linkedCandidateId: string | null = null;
+      if (candidateEmailStr) {
+        const registeredCandidate = await storage.getCandidateByEmail(
+          candidateEmailStr.toLowerCase(),
+        );
+        if (registeredCandidate?.id) {
+          linkedCandidateId = registeredCandidate.id;
+        }
+      }
+
       let application;
       if (existingApplication) {
         const [updated] = await db.update(jobApplications)
@@ -13292,6 +13317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ownerEmployeeId: applicationOwnerId,
             ownerRole: applicationOwnerRole,
             source: applicationSource,
+            ...(linkedCandidateId ? { profileId: linkedCandidateId } : {}),
           })
           .where(eq(jobApplications.id, existingApplication.id as string))
           .returning();
@@ -13300,7 +13326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Create new application
       const applicationData = {
-        profileId: `recruiter-tagged-${Date.now()}`,
+        profileId: linkedCandidateId || `recruiter-tagged-${Date.now()}`,
         requirementId: requirementId || null,
         ownerEmployeeId: applicationOwnerId,
         ownerRole: applicationOwnerRole,
@@ -13595,13 +13621,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
 
-      // Candidate can only confirm their own application
-      if (application.profileId !== candidate.id) {
+      if (!applicationBelongsToCandidate(application, candidate)) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      if (String((application as any).source || "").toLowerCase() !== "recruiter_tagged") {
-        return res.status(400).json({ message: "Only recruiter-tagged applications can be confirmed here" });
+      if (!isStaffOsTaggedSource((application as any).source)) {
+        return res.status(400).json({
+          message: "Only StaffOS recruiter-tagged applications can be confirmed here",
+        });
+      }
+
+      if (application.profileId !== candidate.id) {
+        await db
+          .update(jobApplications)
+          .set({ profileId: candidate.id })
+          .where(eq(jobApplications.id, id));
       }
 
       // If already confirmed, return as success (idempotent)

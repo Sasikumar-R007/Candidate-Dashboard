@@ -17,6 +17,7 @@ import { useJobApplications, useApplyJob } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile, useJobPreferences } from "@/hooks/use-profile";
 import type { JobApplication } from '@shared/schema';
+import { isStaffOsTaggedApplication } from '@/lib/staffos-application';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -308,7 +309,7 @@ export default function MyJobsTab({
     () =>
       jobApplications.filter(
         (app) =>
-          String(app.source || "").toLowerCase() === "recruiter_tagged" &&
+          isStaffOsTaggedApplication(app.source) &&
           (app as any).isCandidateConfirmed === false,
       ),
     [jobApplications],
@@ -563,7 +564,7 @@ export default function MyJobsTab({
                   <div>
                     <h3 className="text-sm font-bold text-amber-900">Pending confirmations</h3>
                     <p className="text-[12px] text-amber-800">
-                      A recruiter tagged you to the following requirement(s). Please confirm to add them to your pipeline.
+                      A recruiter applied you to the following role(s) on StaffOS. Confirm to show them in your Applied Jobs pipeline.
                     </p>
                   </div>
                   <span className="text-[11px] font-bold bg-white/70 border border-amber-200 text-amber-900 px-2 py-1 rounded-full">
@@ -579,7 +580,12 @@ export default function MyJobsTab({
                       <div key={app.id} className="bg-white rounded-md border border-amber-100 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-[13px] font-bold text-gray-900 truncate">{app.jobTitle}</div>
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <div className="text-[13px] font-bold text-gray-900 truncate">{app.jobTitle}</div>
+                              <span className="inline-flex shrink-0 items-center rounded-full bg-violet-100 text-violet-800 border border-violet-200 px-2 py-0.5 text-[10px] font-bold">
+                                Applied by StaffOS
+                              </span>
+                            </div>
                             <div className="text-[12px] text-gray-600 truncate">{app.company}</div>
                             <div className="text-[11px] text-gray-500 mt-1">
                               Tagged on {formatDate(app.appliedDate)}
@@ -683,7 +689,14 @@ export default function MyJobsTab({
                                 </div>
                               )}
                               <div className="flex justify-between items-start mb-1">
-                                <h4 className="font-bold text-gray-800 text-[14px] leading-tight flex-1 mr-2">{job.jobTitle}</h4>
+                                <div className="flex-1 min-w-0 mr-2">
+                                  <h4 className="font-bold text-gray-800 text-[14px] leading-tight">{job.jobTitle}</h4>
+                                  {isStaffOsTaggedApplication(job.source) && (
+                                    <span className="mt-1 inline-flex items-center rounded-full bg-violet-100 text-violet-800 border border-violet-200 px-2 py-0.5 text-[9px] font-bold">
+                                      Applied by StaffOS
+                                    </span>
+                                  )}
+                                </div>
                                 {stage === 'Screened Out' && (
                                   <div className="flex-shrink-0">
                                     <div className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
