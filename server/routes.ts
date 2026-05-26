@@ -57,16 +57,36 @@ function resolveClientInviteBaseUrl(req: Request): string {
   return "http://localhost:5173";
 }
 
+const STAFFOS_PUBLIC_LOGIN_URL = "https://staffos.io";
+
+/** Login URL for welcome emails (employee, admin, candidate). Production default: staffos.io */
+function resolveWelcomeEmailLoginUrl(): string {
+  const fromEnv = (process.env.FRONTEND_URL || process.env.CLIENT_FRONTEND_URL || "")
+    .trim()
+    .replace(/\/$/, "");
+  const useEnv =
+    fromEnv &&
+    !fromEnv.includes("localhost") &&
+    !fromEnv.includes("staffosdemo.vercel.app");
+  if (useEnv) return fromEnv;
+  if (process.env.NODE_ENV === "production") return STAFFOS_PUBLIC_LOGIN_URL;
+  return fromEnv || "http://localhost:5173";
+}
+
 /** Client Admin / Client Member sign-in page (same portal as internal employees). */
 function resolveClientPortalLoginUrl(req?: Request): string {
   const fromEnv = (process.env.FRONTEND_URL || process.env.CLIENT_FRONTEND_URL || "")
     .trim()
     .replace(/\/$/, "");
-  if (fromEnv && !fromEnv.includes("localhost")) {
+  const useEnv =
+    fromEnv &&
+    !fromEnv.includes("localhost") &&
+    !fromEnv.includes("staffosdemo.vercel.app");
+  if (useEnv) {
     return `${fromEnv}/employer-login`;
   }
   if (process.env.NODE_ENV === "production") {
-    return "https://staffos.io/employer-login";
+    return `${STAFFOS_PUBLIC_LOGIN_URL}/employer-login`;
   }
   if (req) {
     const base = resolveClientInviteBaseUrl(req);
@@ -2717,12 +2737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store OTP with expiry (10 minutes)
       await storage.storeOTP(candidateData.email, otp);
 
-      // Send welcome email to new candidate
-      // Use FRONTEND_URL for production, fallback to localhost for development
-      const loginUrl = process.env.FRONTEND_URL
-        || (process.env.NODE_ENV === 'production'
-          ? 'https://staffosdemo.vercel.app'
-          : 'http://localhost:5000');
+      const loginUrl = resolveWelcomeEmailLoginUrl();
 
       await sendCandidateWelcomeEmail({
         fullName: newCandidate.fullName,
@@ -9907,12 +9922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Password will be hashed by storage layer
       const admin = await storage.createEmployee(employeeData);
 
-      // Send welcome email to new admin
-      // Prefer configured FRONTEND_URL; otherwise use public StaffOS URL
-      const envLoginUrlAdmin = process.env.FRONTEND_URL;
-      const loginUrl = envLoginUrlAdmin && !envLoginUrlAdmin.includes('localhost')
-        ? envLoginUrlAdmin
-        : 'https://staffos.io';
+      const loginUrl = resolveWelcomeEmailLoginUrl();
 
       try {
         await sendEmployeeWelcomeEmail({
@@ -10256,10 +10266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Send welcome email for (new or updated) login
           if (finalEmployee.email) {
-            const envLoginUrl = process.env.FRONTEND_URL;
-            const loginUrl = envLoginUrl && !envLoginUrl.includes('localhost')
-              ? envLoginUrl
-              : 'https://staffos.io';
+            const loginUrl = resolveWelcomeEmailLoginUrl();
 
             await sendEmployeeWelcomeEmail({
               name: finalEmployee.name,
@@ -10284,11 +10291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send welcome email to new employee
       if (employee.email && rawPassword) {
-        // Prefer configured FRONTEND_URL; otherwise use public StaffOS URL
-        const envLoginUrl = process.env.FRONTEND_URL;
-        const loginUrl = envLoginUrl && !envLoginUrl.includes('localhost')
-          ? envLoginUrl
-          : 'https://staffos.io';
+        const loginUrl = resolveWelcomeEmailLoginUrl();
 
         await sendEmployeeWelcomeEmail({
           name: employee.name,
@@ -13413,10 +13416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const candidate = await storage.getCandidateByEmail(candidateEmail);
-      const loginUrl = process.env.FRONTEND_URL
-        || (process.env.NODE_ENV === 'production'
-          ? 'https://staffosdemo.vercel.app'
-          : 'http://localhost:5000');
+      const loginUrl = resolveWelcomeEmailLoginUrl();
 
       const emailSent = await sendCandidateWelcomeEmail({
         fullName: application.candidateName || candidate?.fullName || "Candidate",
