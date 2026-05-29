@@ -235,6 +235,37 @@ function normalizeJobApplication(application: any): JobApplication {
   } as JobApplication;
 }
 
+function normalizeRecruiterJob(job: any): RecruiterJob {
+  if (!job) return job;
+  return {
+    ...job,
+    recruiterId: job.recruiter_id ?? job.recruiterId,
+    ownerEmployeeId: job.owner_employee_id ?? job.ownerEmployeeId,
+    ownerRole: job.owner_role ?? job.ownerRole,
+    companyName: job.company_name ?? job.companyName,
+    companyTagline: job.company_tagline ?? job.companyTagline,
+    companyType: job.company_type ?? job.companyType,
+    companyLogo: job.company_logo ?? job.companyLogo,
+    noOfPositions: job.no_of_positions ?? job.noOfPositions,
+    workMode: job.work_mode ?? job.workMode,
+    employmentType: job.employment_type ?? job.employmentType,
+    salaryPackage: job.salary_package ?? job.salaryPackage,
+    aboutCompany: job.about_company ?? job.aboutCompany,
+    roleDefinitions: job.role_definitions ?? job.roleDefinitions,
+    keyResponsibility: job.key_responsibility ?? job.keyResponsibility,
+    primarySkills: job.primary_skills ?? job.primarySkills,
+    secondarySkills: job.secondary_skills ?? job.secondarySkills,
+    knowledgeOnly: job.knowledge_only ?? job.knowledgeOnly,
+    assignedTaId: job.assigned_ta_id ?? job.assignedTaId,
+    assignedTaName: job.assigned_ta_name ?? job.assignedTaName,
+    requirementId: job.requirement_id ?? job.requirementId,
+    applicationCount: job.application_count ?? job.applicationCount,
+    postedDate: job.posted_date ?? job.postedDate,
+    closedDate: job.closed_date ?? job.closedDate,
+    createdAt: job.created_at ?? job.createdAt,
+  } as RecruiterJob;
+}
+
 const candidateColumnCandidates = [
   "id", "candidate_id", "full_name", "email", "password", "google_id", "phone", "company",
   "designation", "age", "gender", "location", "experience", "skills", "profile_picture",
@@ -260,6 +291,19 @@ const jobApplicationColumnCandidates = [
   "rejection_reason", "is_candidate_confirmed",
   "application_current_ctc", "application_expected_ctc",
   "salary_edited_by_employee_id", "salary_edited_by_name", "salary_edited_at",
+];
+
+const recruiterJobColumnCandidates = [
+  "id", "recruiter_id", "owner_employee_id", "owner_role", "company_name", "company_tagline",
+  "company_type", "company_logo", "market", "field", "no_of_positions", "role", "experience",
+  "location", "work_mode", "employment_type", "salary_package", "about_company",
+  "role_definitions", "key_responsibility", "primary_skills", "secondary_skills", "knowledge_only",
+  "status", "assigned_ta_id", "assigned_ta_name", "requirement_id", "application_count",
+  "posted_date", "closed_date", "created_at",
+];
+
+const profileEnrichmentColumnCandidates = [
+  "id", "first_name", "last_name", "email", "phone", "mobile", "profile_picture", "resume_file",
 ];
 
 const EMPLOYEE_BY_ID_CACHE_TTL_MS = 60_000;
@@ -350,6 +394,86 @@ export class DatabaseStorage implements IStorage {
     `);
 
     return result.rows.map(normalizeJobApplication);
+  }
+
+  private async queryRecruiterJobs(
+    whereClause?: ReturnType<typeof sql>,
+    orderClause?: ReturnType<typeof sql>,
+  ): Promise<RecruiterJob[]> {
+    const availableColumns = await this.getAvailableColumns("recruiter_jobs");
+    const selectedColumns = recruiterJobColumnCandidates.filter((column) =>
+      availableColumns.includes(column),
+    );
+    if (selectedColumns.length === 0) {
+      return [];
+    }
+
+    const result = await db.execute(sql`
+      SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
+      FROM ${sql.raw(`"recruiter_jobs"`)}
+      ${whereClause ? sql`WHERE ${whereClause}` : sql``}
+      ${orderClause ? orderClause : sql``}
+    `);
+
+    return result.rows.map(normalizeRecruiterJob);
+  }
+
+  private async queryProfilesByIds(ids: string[]): Promise<Map<string, any>> {
+    const map = new Map<string, any>();
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (uniqueIds.length === 0) return map;
+
+    const availableColumns = await this.getAvailableColumns("profiles");
+    const selectedColumns = profileEnrichmentColumnCandidates.filter((column) =>
+      availableColumns.includes(column),
+    );
+    if (selectedColumns.length === 0) return map;
+
+    const chunkSize = 100;
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+      const chunk = uniqueIds.slice(i, i + chunkSize);
+      const result = await db.execute(sql`
+        SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
+        FROM ${sql.raw(`"profiles"`)}
+        WHERE ${sql.raw(`"id"`)} IN (${sql.join(chunk.map((id) => sql`${id}`), sql`, `)})
+      `);
+      for (const row of result.rows as any[]) {
+        const id = row.id as string;
+        map.set(id, {
+          id,
+          firstName: row.first_name ?? row.firstName,
+          lastName: row.last_name ?? row.lastName,
+          email: row.email,
+          phone: row.phone,
+          mobile: row.mobile,
+          profilePicture: row.profile_picture ?? row.profilePicture,
+          resumeFile: row.resume_file ?? row.resumeFile,
+        });
+      }
+    }
+    return map;
+  }
+
+  async getCandidatesByIds(ids: string[]): Promise<Map<string, Candidate>> {
+    const map = new Map<string, Candidate>();
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (uniqueIds.length === 0) return map;
+
+    const chunkSize = 100;
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+      const chunk = uniqueIds.slice(i, i + chunkSize);
+      const rows = await this.queryCandidates(
+        sql`${sql.raw(`"id"`)} IN (${sql.join(chunk.map((id) => sql`${id}`), sql`, `)})`,
+      );
+      for (const row of rows) {
+        map.set(row.id, row);
+      }
+    }
+    return map;
+  }
+
+  async getProfileEnrichmentByIds(ids: string[]): Promise<Map<string, any>> {
+    return this.queryProfilesByIds(ids);
   }
 
   // User methods
@@ -1699,17 +1823,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllRecruiterJobs(): Promise<RecruiterJob[]> {
-    return await db.select().from(recruiterJobs).orderBy(desc(recruiterJobs.postedDate));
+    return await this.queryRecruiterJobs(undefined, sql`ORDER BY posted_date DESC`);
   }
 
   async getRecruiterJobsByRecruiterId(recruiterId: string): Promise<RecruiterJob[]> {
-    return await db.select().from(recruiterJobs)
-      .where(eq(recruiterJobs.recruiterId, recruiterId))
-      .orderBy(desc(recruiterJobs.postedDate));
+    return await this.queryRecruiterJobs(
+      sql`${sql.raw(`"recruiter_id"`)} = ${recruiterId}`,
+      sql`ORDER BY posted_date DESC`,
+    );
   }
 
   async getRecruiterJobById(id: string): Promise<RecruiterJob | undefined> {
-    const [job] = await db.select().from(recruiterJobs).where(eq(recruiterJobs.id, id));
+    const [job] = await this.queryRecruiterJobs(sql`${sql.raw(`"id"`)} = ${id}`);
     return job || undefined;
   }
 
@@ -1728,7 +1853,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecruiterJobCounts(): Promise<{total: number, active: number, closed: number, draft: number}> {
-    const allJobs = await db.select().from(recruiterJobs);
+    const allJobs = await this.getAllRecruiterJobs();
     const total = allJobs.length;
     const active = allJobs.filter(j => j.status === 'Active').length;
     const closed = allJobs.filter(j => j.status === 'Closed').length;

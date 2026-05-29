@@ -7,6 +7,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import {
+  ensureCriticalPipelineColumns,
   ensureDeploymentSchema,
   ensureRequirementManagementColumns,
   pool,
@@ -206,6 +207,13 @@ async function registerSessionMiddleware() {
 (async () => {
   await registerSessionMiddleware();
   registerRequestLogging();
+  try {
+    await ensureCriticalPipelineColumns();
+    log("Critical pipeline columns verified.", "db");
+  } catch (error) {
+    console.error("Failed to ensure critical pipeline columns:", error);
+  }
+
   try {
     await ensureDeploymentSchema();
     log("Deployment schema sync completed.", "db");

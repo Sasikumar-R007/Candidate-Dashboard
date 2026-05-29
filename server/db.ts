@@ -201,6 +201,17 @@ export async function verifyPoolConnection(maxAttempts = 5): Promise<boolean> {
   return false;
 }
 
+async function publicTableExists(tableName: string): Promise<boolean> {
+  const result = await pool.query(
+    `SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = $1
+    ) AS exists`,
+    [tableName],
+  );
+  return Boolean((result.rows[0] as { exists?: boolean })?.exists);
+}
+
 export async function ensureRequirementManagementColumns() {
   await pool.query(`
     ALTER TABLE requirements
@@ -213,17 +224,19 @@ export async function ensureRequirementManagementColumns() {
     ADD COLUMN IF NOT EXISTS "managed_at" text
   `);
 
-  await pool.query(`
-    ALTER TABLE archived_requirements
-    ADD COLUMN IF NOT EXISTS "no_of_positions" integer NOT NULL DEFAULT 1,
-    ADD COLUMN IF NOT EXISTS "split_requirement" boolean NOT NULL DEFAULT false,
-    ADD COLUMN IF NOT EXISTS "source_type" text,
-    ADD COLUMN IF NOT EXISTS "source_details" text,
-    ADD COLUMN IF NOT EXISTS "status" text NOT NULL DEFAULT 'closed',
-    ADD COLUMN IF NOT EXISTS "management_status" text NOT NULL DEFAULT 'closed',
-    ADD COLUMN IF NOT EXISTS "management_reason" text,
-    ADD COLUMN IF NOT EXISTS "managed_at" text
-  `);
+  if (await publicTableExists("archived_requirements")) {
+    await pool.query(`
+      ALTER TABLE archived_requirements
+      ADD COLUMN IF NOT EXISTS "no_of_positions" integer NOT NULL DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS "split_requirement" boolean NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS "source_type" text,
+      ADD COLUMN IF NOT EXISTS "source_details" text,
+      ADD COLUMN IF NOT EXISTS "status" text NOT NULL DEFAULT 'closed',
+      ADD COLUMN IF NOT EXISTS "management_status" text NOT NULL DEFAULT 'closed',
+      ADD COLUMN IF NOT EXISTS "management_reason" text,
+      ADD COLUMN IF NOT EXISTS "managed_at" text
+    `);
+  }
   
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_activities (
@@ -380,9 +393,72 @@ export async function ensureRequirementManagementColumns() {
   `);
 }
 
+/** Columns required before Drizzle can SELECT job_applications / recruiter_jobs (Render demo DB). */
+export async function ensureCriticalPipelineColumns() {
+  await pool.query(`
+    ALTER TABLE job_applications
+    ADD COLUMN IF NOT EXISTS requirement_id varchar(255),
+    ADD COLUMN IF NOT EXISTS owner_employee_id varchar(255),
+    ADD COLUMN IF NOT EXISTS owner_role text,
+    ADD COLUMN IF NOT EXISTS source text DEFAULT 'job_board',
+    ADD COLUMN IF NOT EXISTS last_nudged_at timestamp,
+    ADD COLUMN IF NOT EXISTS status_note text,
+    ADD COLUMN IF NOT EXISTS withdraw_reason text,
+    ADD COLUMN IF NOT EXISTS rejection_reason text,
+    ADD COLUMN IF NOT EXISTS is_candidate_confirmed boolean DEFAULT true,
+    ADD COLUMN IF NOT EXISTS application_current_ctc text DEFAULT '0',
+    ADD COLUMN IF NOT EXISTS application_expected_ctc text DEFAULT '0',
+    ADD COLUMN IF NOT EXISTS salary_edited_by_employee_id varchar(255),
+    ADD COLUMN IF NOT EXISTS salary_edited_by_name text,
+    ADD COLUMN IF NOT EXISTS salary_edited_at timestamp
+  `);
+
+  await pool.query(`
+    UPDATE job_applications SET source = 'job_board' WHERE source IS NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE recruiter_jobs
+    ADD COLUMN IF NOT EXISTS owner_employee_id varchar(255),
+    ADD COLUMN IF NOT EXISTS owner_role text,
+    ADD COLUMN IF NOT EXISTS assigned_ta_id varchar(255),
+    ADD COLUMN IF NOT EXISTS assigned_ta_name text,
+    ADD COLUMN IF NOT EXISTS requirement_id varchar(255),
+    ADD COLUMN IF NOT EXISTS no_of_positions integer DEFAULT 1
+  `);
+}
+
 /** Full idempotent schema sync for production DBs that lag behind localhost (drizzle push). */
 export async function ensureDeploymentSchema() {
   const sqlPath = join(__dirname, "migrations", "sync_deployment_schema.sql");
-  const sql = readFileSync(sqlPath, "utf8");
-  await pool.query(sql);
+  const fullSql = readFileSync(sqlPath, "utf8");
+  const statements = fullSql
+    .split(/;\s*(?=\n|$)/)
+    .map((statement) => statement.replace(/^--.*$/gm, "").trim())
+    .filter((statement) => statement.length > 0);
+
+  const archivedRequirementsExists = await publicTableExists("archived_requirements");
+
+  for (const statement of statements) {
+    if (
+      statement.includes("archived_requirements") &&
+      !archivedRequirementsExists &&
+      !statement.trimStart().startsWith("DO $$")
+    ) {
+      continue;
+    }
+    try {
+      await pool.query(`${statement};`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[db] Deployment schema statement failed:", message);
+      if (
+        statement.includes("job_applications") ||
+        statement.includes("recruiter_jobs") ||
+        statement.includes("candidate_application_comments")
+      ) {
+        throw error;
+      }
+    }
+  }
 }

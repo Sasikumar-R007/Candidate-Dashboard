@@ -109,16 +109,6 @@ ALTER TABLE requirements
   ADD COLUMN IF NOT EXISTS jd_text text,
   ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false;
 
-ALTER TABLE archived_requirements
-  ADD COLUMN IF NOT EXISTS no_of_positions integer NOT NULL DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS split_requirement boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS source_type text,
-  ADD COLUMN IF NOT EXISTS source_details text,
-  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'closed',
-  ADD COLUMN IF NOT EXISTS management_status text NOT NULL DEFAULT 'closed',
-  ADD COLUMN IF NOT EXISTS management_reason text,
-  ADD COLUMN IF NOT EXISTS managed_at text;
-
 -- ========== job_applications ==========
 ALTER TABLE job_applications
   ADD COLUMN IF NOT EXISTS requirement_id varchar(255),
@@ -227,3 +217,22 @@ ALTER TABLE job_applications
   ADD COLUMN IF NOT EXISTS salary_edited_by_employee_id varchar(255),
   ADD COLUMN IF NOT EXISTS salary_edited_by_name text,
   ADD COLUMN IF NOT EXISTS salary_edited_at timestamp;
+
+-- archived_requirements (optional table — run last so earlier alters are not blocked)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'archived_requirements'
+  ) THEN
+    ALTER TABLE archived_requirements
+      ADD COLUMN IF NOT EXISTS no_of_positions integer NOT NULL DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS split_requirement boolean NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS source_type text,
+      ADD COLUMN IF NOT EXISTS source_details text,
+      ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'closed',
+      ADD COLUMN IF NOT EXISTS management_status text NOT NULL DEFAULT 'closed',
+      ADD COLUMN IF NOT EXISTS management_reason text,
+      ADD COLUMN IF NOT EXISTS managed_at text;
+  END IF;
+END $$;

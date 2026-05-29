@@ -1492,6 +1492,30 @@ function buildJobOwnershipFilter(employee: { id: string; role: string }) {
   return or(ownedByActor, assignedToActor);
 }
 
+function recruiterJobMatchesOwnership(
+  job: {
+    ownerEmployeeId?: string | null;
+    ownerRole?: string | null;
+    recruiterId?: string | null;
+    assignedTaId?: string | null;
+  },
+  employee: { id: string; role: string },
+): boolean {
+  const ownerRole = normalizeSourcingRole(employee.role);
+  if (!ownerRole) return false;
+
+  if (job.ownerEmployeeId === employee.id && job.ownerRole === ownerRole) {
+    return true;
+  }
+  if (job.assignedTaId === employee.id) {
+    return true;
+  }
+  if (ownerRole === "recruiter" && !job.ownerEmployeeId && job.recruiterId === employee.id) {
+    return true;
+  }
+  return false;
+}
+
 function buildApplicationOwnershipFilter(employee: { id: string; role: string }) {
   const ownerRole = normalizeSourcingRole(employee.role);
   if (!ownerRole) {
@@ -5646,8 +5670,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamRecruiterIdsArray = teamRecruiters.map(r => r.id);
 
       // Get team data similarly to the main pipeline endpoint
-      const allApplications = await db.select().from(jobApplications);
-      const recruiterJobsList = await db.select().from(recruiterJobs);
+      const allApplications = await storage.getAllJobApplications();
+      const recruiterJobsList = await storage.getAllRecruiterJobs();
       const teamRecruiterJobIds = new Set(
         recruiterJobsList
           .filter(job => job.recruiterId && teamRecruiterIdsArray.includes(job.recruiterId))
@@ -12794,14 +12818,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Employee not found" });
         }
 
-        const ownershipFilter = buildJobOwnershipFilter(employee);
-        if (!ownershipFilter) {
+        if (!buildJobOwnershipFilter(employee)) {
           return res.status(403).json({ message: "Only recruiters and team leaders can access jobs" });
         }
 
-        jobs = await db.select().from(recruiterJobs)
-          .where(ownershipFilter)
-          .orderBy(desc(recruiterJobs.postedDate));
+        jobs = (await storage.getAllRecruiterJobs()).filter((job) =>
+          recruiterJobMatchesOwnership(job, employee),
+        );
       } else {
         // Fallback to all jobs for unauthenticated requests (job board view)
         jobs = await storage.getAllRecruiterJobs();
@@ -12822,14 +12845,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const ownershipFilter = buildJobOwnershipFilter(employee);
-      if (!ownershipFilter) {
+      if (!buildJobOwnershipFilter(employee)) {
         return res.status(403).json({ message: "Only recruiters and team leaders can access job counts" });
       }
 
-      const jobs = await db.select().from(recruiterJobs)
-        .where(ownershipFilter)
-        .orderBy(desc(recruiterJobs.postedDate));
+      const jobs = (await storage.getAllRecruiterJobs()).filter((job) =>
+        recruiterJobMatchesOwnership(job, employee),
+      );
       const counts = {
         total: jobs.length,
         active: jobs.filter(j => j.status === "Active").length,
@@ -13313,15 +13335,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { jobId, dateFrom, dateTo, status } = req.query;
 
-      const ownershipFilter = buildJobOwnershipFilter(employee);
-      if (!ownershipFilter) {
+      if (!buildJobOwnershipFilter(employee)) {
         return res.status(403).json({ message: "Only recruiters and team leaders can access applications" });
       }
 
-      // Get this actor's jobs
-      const jobs = await db.select().from(recruiterJobs)
-        .where(ownershipFilter)
-        .orderBy(desc(recruiterJobs.postedDate));
+      // Get this actor's jobs (schema-safe query — works when prod DB lags migrations)
+      const jobs = (await storage.getAllRecruiterJobs()).filter((job) =>
+        recruiterJobMatchesOwnership(job, employee),
+      );
       const jobIds = jobs.map(j => j.id);
       console.log('[RECRUITER APPLICATIONS] Found jobs for', employee.name, ':', jobIds.length);
 
@@ -13384,24 +13405,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Enrich applications with candidate profile data and StaffOS usage status
       const profileIds = [...new Set(recruiterApplications.map(app => app.profileId).filter(Boolean))] as string[];
-      const { profiles, candidates } = await import("@shared/schema");
-      
-      const candidatesMap = new Map();
-      const profilesMap = new Map();
-      
+      let candidatesMap = new Map<string, any>();
+      let profilesMap = new Map<string, any>();
       if (profileIds.length > 0) {
         try {
-          const chunkSize = 100;
-          for (let i = 0; i < profileIds.length; i += chunkSize) {
-            const chunk = profileIds.slice(i, i + chunkSize);
-            const candidateRows = await db.select().from(candidates).where(inArray(candidates.id, chunk));
-            candidateRows.forEach(c => candidatesMap.set(c.id, c));
-            
-            const profileRows = await db.select().from(profiles).where(inArray(profiles.id, chunk));
-            profileRows.forEach(p => profilesMap.set(p.id, p));
-          }
+          [candidatesMap, profilesMap] = await Promise.all([
+            storage.getCandidatesByIds(profileIds),
+            storage.getProfileEnrichmentByIds(profileIds),
+          ]);
         } catch (error) {
-          console.error('Error fetching bulk profile data:', error);
+          console.error("Error fetching bulk profile data:", error);
         }
       }
 
@@ -13418,15 +13431,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (!app.candidateName || app.candidateName === 'Unknown Candidate') {
             if (profile) {
-              app.candidateName = `${profile.firstName} ${profile.lastName}`.trim();
+              app.candidateName = `${profile.firstName || ""} ${profile.lastName || ""}`.trim();
               app.candidateEmail = app.candidateEmail || profile.email || null;
               app.candidatePhone = app.candidatePhone || profile.phone || profile.mobile || null;
-              if (!app.resumeFile && profile.resumeFile) app.resumeFile = profile.resumeFile;
+              if (!(app as any).resumeFile && profile.resumeFile) {
+                (app as any).resumeFile = profile.resumeFile;
+              }
             } else if (candidate) {
               app.candidateName = candidate.fullName || app.candidateName;
               app.candidateEmail = app.candidateEmail || candidate.email || null;
               app.candidatePhone = app.candidatePhone || candidate.phone || null;
-              if (!app.resumeFile && candidate.resumeFile) app.resumeFile = candidate.resumeFile;
+              if (!(app as any).resumeFile && candidate.resumeFile) {
+                (app as any).resumeFile = candidate.resumeFile;
+              }
             }
           }
           (app as any).profilePicture =
@@ -13472,8 +13489,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(filteredApplications);
     } catch (error) {
-      console.error("Get applications error:", error);
-      res.status(500).json({ message: "Failed to get applications" });
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Get applications error:", message, error);
+      res.status(500).json({
+        message: "Failed to get applications",
+        ...(process.env.NODE_ENV !== "production" ? { detail: message } : {}),
+      });
     }
   });
 
