@@ -618,10 +618,11 @@ function matchesEmployeeRef(
 
 function getTeamLeaderRecruiters(teamLeader: { id: string; employeeId?: string | null; name?: string | null }, allEmployees: Array<{ id: string; employeeId?: string | null; name?: string | null; role?: string | null; reportingTo?: string | null }>) {
   const tlName = (teamLeader.name || "").toLowerCase();
+  const tlEmployeeId = teamLeader.employeeId || teamLeader.id;
   return allEmployees.filter(
     (emp) =>
-      emp.role === "recruiter" &&
-      (emp.reportingTo === teamLeader.employeeId ||
+      normalizeSourcingRole(emp.role) === "recruiter" &&
+      (emp.reportingTo === tlEmployeeId ||
         emp.reportingTo === teamLeader.id ||
         (emp.reportingTo || "").toLowerCase() === tlName),
   );
@@ -1032,12 +1033,16 @@ async function buildEmployeeNotificationsFeed(employee: any) {
     );
 
     const nudges = allNudges
-      .filter(
-        (n) =>
-          !n.isResponded &&
+      .filter((n) => {
+        if (n.isResponded) return false;
+        if (isClientAdminRole(role)) {
+          return clientNudgeInScope(n, companyName, null, applicationById);
+        }
+        return (
           n.escalationLevel === "client" &&
-          clientNudgeInScope(n, companyName, memberRequirementIds, applicationById),
-      )
+          clientNudgeInScope(n, companyName, memberRequirementIds, applicationById)
+        );
+      })
       .map((n) => ({
         id: n.id,
         line: notificationFeedLine([n.candidateName || "Candidate", n.jobTitle || "Role"]),
@@ -1547,8 +1552,66 @@ function formatCommentAuthorRole(role: string | null | undefined): string {
   return role || "Staff";
 }
 
+async function collectTalentAdvisorRequirementIds(
+  employee: { id: string; name?: string | null },
+): Promise<Set<string>> {
+  const ids = new Set<string>();
+  let requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+  if (!requirements.length && employee.name) {
+    requirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+  }
+  requirements.forEach((req) => ids.add(req.id));
+  return ids;
+}
+
+async function collectTeamLeaderRequirementIds(
+  employee: { id: string; employeeId?: string | null; name?: string | null },
+  allEmployees?: Awaited<ReturnType<typeof storage.getAllEmployees>>,
+): Promise<Set<string>> {
+  const employees = allEmployees ?? (await storage.getAllEmployees());
+  const teamRecruiters = getTeamLeaderRecruiters(employee, employees);
+  const teamRequirementIds = new Set<string>();
+
+  for (const recruiter of teamRecruiters) {
+    const byId = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
+    const reqs =
+      byId.length > 0 ? byId : await storage.getRequirementsByTalentAdvisor(recruiter.name);
+    reqs.forEach((req) => teamRequirementIds.add(req.id));
+  }
+
+  const allReqs = await storage.getRequirements();
+  allReqs
+    .filter(
+      (req) => req.teamLead === employee.name && !req.talentAdvisorId && !req.isArchived,
+    )
+    .forEach((req) => teamRequirementIds.add(req.id));
+
+  return teamRequirementIds;
+}
+
+function teamRecruiterIdSet(
+  employee: { id: string; employeeId?: string | null },
+  allEmployees: Awaited<ReturnType<typeof storage.getAllEmployees>>,
+): Set<string> {
+  const teamRecruiters = getTeamLeaderRecruiters(employee, allEmployees);
+  const ids = new Set<string>();
+  for (const rec of teamRecruiters) {
+    ids.add(rec.id);
+    if (rec.employeeId) ids.add(rec.employeeId);
+  }
+  return ids;
+}
+
+function refInTeamRecruiterSet(
+  ref: string | null | undefined,
+  teamIds: Set<string>,
+): boolean {
+  return !!ref && teamIds.has(ref);
+}
+
+/** Must match GET /api/recruiter/applications visibility (pipeline + comments session). */
 async function employeeCanAccessRecruiterApplication(
-  employee: { id: string; role: string; employeeId?: string | null },
+  employee: { id: string; role: string; employeeId?: string | null; name?: string | null },
   application: {
     ownerEmployeeId?: string | null;
     ownerRole?: string | null;
@@ -1570,32 +1633,41 @@ async function employeeCanAccessRecruiterApplication(
 
   if (ownerRole === "team_leader") {
     const allEmployees = await storage.getAllEmployees();
-    const tlEmployeeId = employee.employeeId || employee.id;
-    const teamRecruiterIds = new Set(
-      allEmployees
-        .filter(
-          (emp) =>
-            normalizeSourcingRole(emp.role) === "recruiter" &&
-            (emp.reportingTo === tlEmployeeId || emp.reportingTo === employee.id),
-        )
-        .map((emp) => emp.id),
-    );
+    const teamIds = teamRecruiterIdSet(employee, allEmployees);
 
-    if (application.ownerEmployeeId && teamRecruiterIds.has(application.ownerEmployeeId)) {
+    if (
+      matchesEmployeeRef(employee, application.ownerEmployeeId) ||
+      refInTeamRecruiterSet(application.ownerEmployeeId, teamIds)
+    ) {
       return true;
+    }
+
+    if (application.requirementId) {
+      const teamRequirementIds = await collectTeamLeaderRequirementIds(employee, allEmployees);
+      if (teamRequirementIds.has(application.requirementId)) {
+        return true;
+      }
     }
 
     if (application.recruiterJobId) {
       const job = await storage.getRecruiterJobById(application.recruiterJobId);
-      if (job?.recruiterId && teamRecruiterIds.has(job.recruiterId)) {
-        return true;
+      if (job) {
+        if (
+          refInTeamRecruiterSet(job.recruiterId, teamIds) ||
+          refInTeamRecruiterSet(job.ownerEmployeeId, teamIds) ||
+          refInTeamRecruiterSet(job.assignedTaId, teamIds) ||
+          recruiterJobMatchesOwnership(job, employee)
+        ) {
+          return true;
+        }
       }
-      if (job?.ownerEmployeeId && teamRecruiterIds.has(job.ownerEmployeeId)) {
-        return true;
-      }
-      if ((job as any)?.assignedTaId && teamRecruiterIds.has((job as any).assignedTaId)) {
-        return true;
-      }
+    }
+
+    if (
+      application.ownerEmployeeId === employee.id &&
+      (!application.ownerRole || application.ownerRole === ownerRole)
+    ) {
+      return true;
     }
   }
 
@@ -1603,21 +1675,43 @@ async function employeeCanAccessRecruiterApplication(
     return false;
   }
 
-  let hasAccess =
-    application.ownerEmployeeId === employee.id &&
-    application.ownerRole === ownerRole;
+  if (matchesEmployeeRef(employee, application.ownerEmployeeId)) {
+    return true;
+  }
 
-  if (!hasAccess && application.recruiterJobId) {
-    const job = await storage.getRecruiterJobById(application.recruiterJobId);
-    if (job) {
-      hasAccess =
-        (job.ownerEmployeeId === employee.id && job.ownerRole === ownerRole) ||
-        job.recruiterId === employee.id ||
-        (job as any).assignedTaId === employee.id;
+  if (
+    application.ownerEmployeeId === employee.id &&
+    (!application.ownerRole ||
+      application.ownerRole === ownerRole ||
+      normalizeSourcingRole(application.ownerRole) === ownerRole)
+  ) {
+    return true;
+  }
+
+  if (application.requirementId && ownerRole === "recruiter") {
+    const taRequirementIds = await collectTalentAdvisorRequirementIds(employee);
+    if (taRequirementIds.has(application.requirementId)) {
+      return true;
     }
   }
 
-  return hasAccess;
+  if (application.recruiterJobId) {
+    const job = await storage.getRecruiterJobById(application.recruiterJobId);
+    if (job && recruiterJobMatchesOwnership(job, employee)) {
+      return true;
+    }
+
+    const ownedJobIds = new Set(
+      (await storage.getAllRecruiterJobs())
+        .filter((j) => recruiterJobMatchesOwnership(j, employee))
+        .map((j) => j.id),
+    );
+    if (ownedJobIds.has(application.recruiterJobId)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function employeeHasSourcingAccess(employee: { role: string }): boolean {
@@ -2459,12 +2553,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         const allApps = await storage.getAllJobApplications();
         const applicationById = new Map(allApps.map((a: any) => [a.id, a]));
-        activeNudges = updatedNudges.filter(
-          (n) =>
-            !n.isResponded &&
-            n.escalationLevel === "client" &&
-            clientNudgeInScope(n, companyName, memberRequirementIds, applicationById),
-        );
+
+        if (isClientAdminRole(role)) {
+          // Final escalation owner — all open nudges for the company (any escalation stage).
+          activeNudges = updatedNudges.filter(
+            (n) =>
+              !n.isResponded &&
+              clientNudgeInScope(n, companyName, null, applicationById),
+          );
+        } else {
+          activeNudges = updatedNudges.filter(
+            (n) =>
+              !n.isResponded &&
+              n.escalationLevel === "client" &&
+              clientNudgeInScope(n, companyName, memberRequirementIds, applicationById),
+          );
+        }
       } else if (role === 'team_leader') {
         const allEmployees = await storage.getAllEmployees();
         const teamMemberKeys = new Set<string>();
