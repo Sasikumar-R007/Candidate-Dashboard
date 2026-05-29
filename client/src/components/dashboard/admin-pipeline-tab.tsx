@@ -185,12 +185,14 @@ export function AdminPipelineTab({
           <PipelineKanbanBoard
             embedded
             naturalScroll
+            cardVariant="classic"
             className="h-full min-h-0 overflow-hidden"
             groupedByStage={groupedByStage}
             onCandidateClick={onCandidateClick}
             getCandidateName={(c) => c.candidateName || "N/A"}
             getRoleApplied={(c) => c.roleApplied || c.jobTitle || "N/A"}
             getCompany={(c) => c.company || "N/A"}
+            getProfilePicture={(c) => c.profilePicture || c.profile_picture || null}
             getAppliedTimestamp={(c) =>
               formatPipelineDaysAgo(
                 c.appliedDate || c.updatedAt || c.createdAt || c.appliedOn,

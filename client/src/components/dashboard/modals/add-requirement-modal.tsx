@@ -153,6 +153,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         sourceDetails: data.sourceDetails || null,
         specialInstructions: data.specialInstructions?.trim() || null,
         additionalTeamLeads: data.additionalTeamLeads || [],
+        preservedRoleId: jdIdToDelete || undefined,
         createdAt: new Date().toISOString(),
       });
       return response.json();

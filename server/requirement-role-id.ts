@@ -1,4 +1,31 @@
 import type { IStorage } from "./storage";
+import { extractStreqId } from "@shared/requirement-jd-extras";
+
+/** Generate next TL requirement display id: STREQ1, STREQ2, … */
+export async function generateNextStreqId(storage: IStorage): Promise<string> {
+  const allRequirements = await storage.getRequirements();
+  let maxNumber = 0;
+
+  for (const req of allRequirements) {
+    const explicit = extractStreqId(req);
+    if (explicit) {
+      const num = parseInt(explicit.replace(/^STREQ/i, ""), 10);
+      if (!Number.isNaN(num)) maxNumber = Math.max(maxNumber, num);
+    }
+  }
+
+  let attempts = 0;
+  while (attempts < 50) {
+    const candidate = `STREQ${maxNumber + 1 + attempts}`;
+    const exists = allRequirements.some(
+      (r) => extractStreqId(r)?.toUpperCase() === candidate,
+    );
+    if (!exists) return candidate;
+    attempts++;
+  }
+
+  throw new Error("Failed to generate unique STREQ id");
+}
 
 /** Generate next Role ID in format STR + YY + 3-digit sequence (e.g. STR25001). */
 export async function generateNextRequirementRoleId(

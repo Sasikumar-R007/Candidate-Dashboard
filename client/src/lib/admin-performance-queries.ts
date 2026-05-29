@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { invalidateOperationalQueries } from "@/lib/query-config";
 
 /** Refresh admin dashboards after revenue / target data changes. */
 export function invalidateAdminPerformanceQueries(queryClient: QueryClient) {
@@ -37,4 +38,5 @@ export function invalidateRevenueMappingQueries(queryClient: QueryClient) {
 
   queryClient.invalidateQueries({ queryKey: ["/api/client/closures"] });
   queryClient.invalidateQueries({ queryKey: ["/api/client/speed-metrics"] });
+  void invalidateOperationalQueries(queryClient, { refetchType: "active" });
 }

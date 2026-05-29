@@ -649,34 +649,24 @@ export default function UploadResumeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
-        <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-          <DialogHeader className="relative pr-48">
-            <DialogTitle>Upload Resume</DialogTitle>
-            <DialogDescription className="text-sm text-gray-500 mt-1">
-              Upload resume for easy parsing and auto-fill
-            </DialogDescription>
-            <div className="absolute top-0 right-0 flex items-center gap-2">
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting || createCandidateMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium disabled:opacity-50"
-                data-testid="button-submit-resume"
-              >
-                {isSubmitting || createCandidateMutation.isPending ? 'Submitting...' : 'Submit Resume'}
-              </Button>
-              <button
-                onClick={handleReset}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                title="Reset all fields"
-                type="button"
-              >
-                <RotateCcw className="h-4 w-4 text-gray-600" />
-              </button>
-            </div>
-          </DialogHeader>
-          
-          <div className="space-y-4 pt-4">
+      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col overflow-hidden p-0 gap-0">
+        <DialogHeader className="relative shrink-0 px-6 pt-6 pr-14">
+          <DialogTitle>Upload Resume</DialogTitle>
+          <DialogDescription className="text-sm text-gray-500 mt-1">
+            Upload resume for easy parsing and auto-fill
+          </DialogDescription>
+          <button
+            onClick={handleReset}
+            className="absolute top-4 right-12 p-2 hover:bg-gray-100 rounded-full transition-colors"
+            title="Reset all fields"
+            type="button"
+          >
+            <RotateCcw className="h-4 w-4 text-gray-600" />
+          </button>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-6 pb-4">
+          <div className="space-y-4 pt-2">
             {/* Error message */}
             {formError && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
@@ -1239,6 +1229,25 @@ export default function UploadResumeModal({
             </div>
 
           </div>
+        </div>
+
+        <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting || createCandidateMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || createCandidateMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 font-medium disabled:opacity-50"
+            data-testid="button-submit-resume"
+          >
+            {isSubmitting || createCandidateMutation.isPending ? 'Submitting...' : 'Submit Resume'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

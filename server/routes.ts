@@ -9,7 +9,10 @@ import { storage } from "./storage";
 import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets, nudges, consentLogs, profiles, candidateApplicationComments } from "@shared/schema";
 import {
   buildClientJdSourceDetails,
+  buildStreqDisplayMap,
   enrichRequirementWithJdExtras,
+  extractStreqId,
+  mergeDisplayRequirementIdInSourceDetails,
   parseRequirementJdExtras,
 } from "@shared/requirement-jd-extras";
 import { normalizePipelineDisplayStatus } from "@shared/pipeline-stages";
@@ -588,6 +591,20 @@ function isRecentNotification(dateInput: string | Date | null | undefined, hours
   return Date.now() - d.getTime() <= hours * 60 * 60 * 1000;
 }
 
+/** Client-submitted JD awaiting admin (STR role id, not yet assigned). */
+function isClientSubmittedJd(req: {
+  id?: string | null;
+  isArchived?: boolean | null;
+  sourceType?: string | null;
+  teamLead?: string | null;
+  talentAdvisor?: string | null;
+}): boolean {
+  if (req.isArchived) return false;
+  if (!req.id || !/^STR\d{5}$/.test(req.id)) return false;
+  if (req.sourceType === "client_jd") return true;
+  return !req.teamLead && !req.talentAdvisor;
+}
+
 /** Match nudge / feed rows where recruiterId may be employees.id or employees.employeeId */
 function matchesEmployeeRef(
   employee: { id: string; employeeId?: string | null },
@@ -866,17 +883,33 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         };
       });
 
+    const clientJdSubmissions = allRequirements
+      .filter((r) => isClientSubmittedJd(r))
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 100)
+      .map((r) => {
+        const createdAt = toIso(r.createdAt);
+        return {
+          id: r.id,
+          line: notificationFeedLine([r.company, r.position, r.id, "New JD from Client"]),
+          createdAt,
+          isUnread: isRecentNotification(createdAt, 72),
+        };
+      });
+
     return {
       role: "admin",
       closures,
       nudges: adminNudges,
       escalatedNudges: clientEscalations,
+      clientJdSubmissions,
       newRequirements: [],
       newCandidateApplied: [],
       unreadCount:
         adminNudges.filter((i) => i.isUnread).length +
         clientEscalations.filter((i) => i.isUnread).length +
-        closures.filter((i) => i.isUnread).length,
+        closures.filter((i) => i.isUnread).length +
+        clientJdSubmissions.filter((i) => i.isUnread).length,
     };
   }
 
@@ -1926,9 +1959,91 @@ async function loadCandidateJobApplications(candidate: {
     await linkStaffOsTaggedApplicationsToCandidate(candidate.id, candidate.email);
   }
   const byProfile = await storage.getJobApplicationsByProfile(candidate.id);
-  if (!candidate.email) return byProfile;
-  const byEmail = await storage.getJobApplicationsByCandidateEmail(candidate.email);
-  return mergeJobApplicationsById(byProfile, byEmail);
+  const merged = !candidate.email
+    ? byProfile
+    : mergeJobApplicationsById(
+        byProfile,
+        await storage.getJobApplicationsByCandidateEmail(candidate.email),
+      );
+  return enrichCandidateApplicationsWithJd(merged);
+}
+
+async function enrichCandidateApplicationsWithJd<T extends { requirementId?: string | null }>(
+  applications: T[],
+): Promise<(T & {
+  jdFile?: string | null;
+  jdText?: string | null;
+  primarySkills?: string | null;
+  secondarySkills?: string | null;
+  knowledgeOnly?: string | null;
+  specialInstructions?: string | null;
+})[]> {
+  const requirementIds = [
+    ...new Set(
+      applications
+        .map((a) => a.requirementId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (requirementIds.length === 0) {
+    return applications.map((app) => ({ ...app }));
+  }
+
+  const requirementRows = await Promise.all(
+    requirementIds.map((id) => storage.getRequirementById(id)),
+  );
+  const byId = new Map(
+    requirementRows
+      .filter((r): r is NonNullable<typeof r> => Boolean(r))
+      .map((r) => [r.id, r]),
+  );
+
+  return applications.map((app) => {
+    const req = app.requirementId ? byId.get(app.requirementId) : undefined;
+    if (!req) return { ...app };
+    const jd = enrichRequirementWithJdExtras(req);
+    return {
+      ...app,
+      jdFile: jd.jdFile ?? req.jdFile ?? null,
+      jdText: jd.jdText ?? req.jdText ?? null,
+      primarySkills: jd.primarySkills ?? null,
+      secondarySkills: jd.secondarySkills ?? null,
+      knowledgeOnly: jd.knowledgeOnly ?? null,
+      specialInstructions: jd.specialInstructions ?? null,
+    };
+  });
+}
+
+/** Bulk-resolve profile pictures for pipeline cards (candidates + profiles by profileId). */
+async function buildProfilePictureLookup(
+  profileIds: Array<string | null | undefined>,
+): Promise<Map<string, string | null>> {
+  const lookup = new Map<string, string | null>();
+  const uniqueIds = [...new Set(profileIds.filter(Boolean))] as string[];
+  if (uniqueIds.length === 0) return lookup;
+
+  const candidatesMap = new Map<string, (typeof candidates.$inferSelect)>();
+  const profilesMap = new Map<string, (typeof profiles.$inferSelect)>();
+
+  try {
+    const chunkSize = 100;
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+      const chunk = uniqueIds.slice(i, i + chunkSize);
+      const candidateRows = await db.select().from(candidates).where(inArray(candidates.id, chunk));
+      candidateRows.forEach((c) => candidatesMap.set(c.id, c));
+      const profileRows = await db.select().from(profiles).where(inArray(profiles.id, chunk));
+      profileRows.forEach((p) => profilesMap.set(p.id, p));
+    }
+  } catch (error) {
+    console.error("Error fetching bulk profile pictures:", error);
+  }
+
+  for (const id of uniqueIds) {
+    const candidate = candidatesMap.get(id);
+    const profile = profilesMap.get(id);
+    lookup.set(id, candidate?.profilePicture || profile?.profilePicture || null);
+  }
+  return lookup;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -3696,6 +3811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileUpdates.noticePeriod = req.body.noticePeriod;
       }
       if (req.body.secondaryEmail !== undefined) profileUpdates.secondaryEmail = req.body.secondaryEmail;
+      if (req.body.primaryEmail !== undefined) profileUpdates.primaryEmail = req.body.primaryEmail;
       if (req.body.gender !== undefined) {
         candidateUpdates.gender = req.body.gender;
         profileUpdates.gender = req.body.gender;
@@ -3736,7 +3852,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingProfile) {
         await storage.updateProfile(candidate.id, profileUpdates);
       } else {
-        await storage.createProfile({ ...profileUpdates, userId: candidate.id });
+        const nameParts = (candidate.fullName || "").trim().split(/\s+/);
+        await storage.createProfile({
+          userId: candidate.id,
+          candidateId: candidate.candidateId,
+          firstName: profileUpdates.firstName ?? nameParts[0] ?? "Candidate",
+          lastName: profileUpdates.lastName ?? nameParts.slice(1).join(" ") ?? "",
+          email: candidate.email,
+          phone: profileUpdates.phone ?? candidate.phone ?? "",
+          title: profileUpdates.title ?? candidate.designation ?? candidate.currentRole ?? "",
+          location: profileUpdates.location ?? candidate.location ?? "",
+          ...profileUpdates,
+        });
       }
 
       // Fetch fresh merged data for response
@@ -3819,14 +3946,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const jobPreferences = await storage.getJobPreferences(profile.id);
-      res.json(jobPreferences || {
-        profileId: profile.id,
-        jobTitles: '',
-        workMode: 'Remote',
-        employmentType: 'Full-time',
-        locations: '',
-        startDate: 'Immediate',
-      });
+      res.json(
+        jobPreferences || {
+          profileId: profile.id,
+          jobTitles: '',
+          workMode: 'Remote',
+          employmentType: 'Full-time',
+          locations: '',
+          startDate: 'Immediate',
+          instructions: null,
+          salaryRange: null,
+        },
+      );
     } catch (error) {
       console.error('Get job preferences error:', error);
       res.status(500).json({ message: "Internal server error" });
@@ -3868,8 +3999,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Profile not found" });
       }
 
-      const updatedPreferences = await storage.updateJobPreferences(profile.id, req.body);
-      res.json(updatedPreferences);
+      const existingPrefs = await storage.getJobPreferences(profile.id);
+      let savedPreferences;
+      if (existingPrefs) {
+        savedPreferences = await storage.updateJobPreferences(profile.id, req.body);
+      } else {
+        savedPreferences = await storage.createJobPreferences({
+          profileId: profile.id,
+          jobTitles: req.body.jobTitles ?? "",
+          workMode: req.body.workMode ?? "Remote",
+          employmentType: req.body.employmentType ?? "Full-time",
+          locations: req.body.locations ?? "",
+          startDate: req.body.startDate ?? "Immediate",
+          instructions: req.body.instructions ?? null,
+          salaryRange: req.body.salaryRange ?? null,
+        });
+      }
+
+      if (!savedPreferences) {
+        return res.status(500).json({ message: "Failed to save job preferences" });
+      }
+
+      res.json(savedPreferences);
     } catch (error) {
       console.error('Update job preferences error:', error);
       res.status(500).json({ message: "Internal server error" });
@@ -4044,6 +4195,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
+      }
+
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      const byProfile = await storage.getJobApplicationsByProfile(candidate.id);
+      const byEmail = candidate.email
+        ? await storage.getJobApplicationsByCandidateEmail(candidate.email)
+        : [];
+      const ownedApplications = mergeJobApplicationsById(byProfile, byEmail);
+      if (!ownedApplications.some((app) => app.id === id)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (application.lastNudgedAt) {
+        const { candidateNudgeCooldownHours } = await import("@shared/nudge-timing");
+        const cooldownHours = candidateNudgeCooldownHours(application.status);
+        if (cooldownHours != null) {
+          const elapsedMs = Date.now() - new Date(application.lastNudgedAt as Date).getTime();
+          const cooldownMs = cooldownHours * 60 * 60 * 1000;
+          if (elapsedMs < cooldownMs) {
+            const remainingMs = cooldownMs - elapsedMs;
+            const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+            const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+            return res.status(429).json({
+              message: `Please wait ${hours}h ${minutes}m before nudging again.`,
+              cooldownHours,
+              remainingMs,
+            });
+          }
+        }
       }
 
       const [requirement, job] = await Promise.all([
@@ -5425,7 +5609,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: app.appliedDate || new Date().toISOString(),
           updatedAt: app.appliedDate || new Date().toISOString(),
           profileId: app.profileId || null,
-          requirementId: app.requirementId || null
+          requirementId: app.requirementId || null,
+          profilePicture: app.profileId
+            ? profilePictureLookup.get(app.profileId) ?? null
+            : null,
         };
       });
 
@@ -5638,18 +5825,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const padResumeCount = (delivered: number, target: number) =>
         `${String(Math.max(0, delivered)).padStart(2, "0")}/${String(Math.max(0, target)).padStart(2, "0")}`;
 
+      const streqDisplayMap = buildStreqDisplayMap(allReqs);
+
+      await Promise.all(
+        allReqs
+          .filter((req) => {
+            const streqId = streqDisplayMap.get(req.id);
+            return streqId && !extractStreqId(req);
+          })
+          .map((req) => {
+            const streqId = streqDisplayMap.get(req.id)!;
+            return storage
+              .updateRequirement(req.id, {
+                sourceDetails: mergeDisplayRequirementIdInSourceDetails(
+                  req.sourceDetails,
+                  streqId,
+                ),
+              })
+              .catch((persistErr) => {
+                console.warn(
+                  `[TL REQUIREMENTS] Failed to persist STREQ for ${req.id}:`,
+                  persistErr,
+                );
+              });
+          }),
+      );
+
       const enrichedRequirements = allRequirementsForResume.map((req: any) => {
         const lookupId = req.isRecentlyClosed ? req.id.replace(/^recent-closed-/, "") : req.id;
         const target = getTarget(req.criticality, req.toughness);
         const delivered =
           allSubmissionsForResume.filter((s: any) => s.requirementId === lookupId).length +
           allTaggedForResume.filter((app: any) => app.requirementId === lookupId).length;
-        return {
+        return enrichRequirementWithJdExtras({
           ...req,
+          displayRequirementId: streqDisplayMap.get(lookupId) ?? null,
           resumeCount: padResumeCount(delivered, target),
           resumeDelivered: delivered,
           resumeTarget: target,
-        };
+        });
       });
 
       res.json(enrichedRequirements);
@@ -6392,8 +6606,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         closures: feed.closures,
         adminNudges: feed.nudges,
         clientEscalations: feed.escalatedNudges,
+        clientJdSubmissions: (feed as { clientJdSubmissions?: unknown[] }).clientJdSubmissions ?? [],
         unreadAdminNudges: feed.nudges.filter((i: any) => i.isUnread).length,
         unreadClientEscalations: feed.escalatedNudges.filter((i: any) => i.isUnread).length,
+        unreadClientJdSubmissions:
+          ((feed as { clientJdSubmissions?: { isUnread?: boolean }[] }).clientJdSubmissions ?? []).filter(
+            (i) => i.isUnread,
+          ).length,
       });
     } catch (error) {
       console.error("Admin notifications feed error:", error);
@@ -6401,8 +6620,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         closures: [],
         adminNudges: [],
         clientEscalations: [],
+        clientJdSubmissions: [],
         unreadAdminNudges: 0,
         unreadClientEscalations: 0,
+        unreadClientJdSubmissions: 0,
       });
     }
   });
@@ -7921,6 +8142,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
+      const allReqsForStreq = await storage.getRequirements();
+      const streqDisplayMap = buildStreqDisplayMap(allReqsForStreq);
+      const withStreqId = (req: any) => {
+        const lookupId = String(req.id || "").startsWith("recent-closed-")
+          ? String(req.id).replace(/^recent-closed-/, "")
+          : req.id;
+        return {
+          ...enrichRequirementWithJdExtras(req),
+          displayRequirementId: streqDisplayMap.get(lookupId) ?? null,
+        };
+      };
+
       const recentClosedArchivedRequirements = (await storage.getArchivedRequirements())
         .filter((req: any) => {
           if (req.managementStatus !== "closed" || !req.managedAt) return false;
@@ -7928,15 +8161,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (Number.isNaN(closedAt) || Date.now() - closedAt > 24 * 60 * 60 * 1000) return false;
           return req.talentAdvisor === employee.name;
         })
-        .map((req: any) => ({
-          ...req,
-          id: `recent-closed-${req.id}`,
-          isRecentlyClosed: true,
-          deliveredCount: 0,
-          assignmentStatus: "archived",
-        }));
+        .map((req: any) =>
+          withStreqId({
+            ...req,
+            id: `recent-closed-${req.id}`,
+            isRecentlyClosed: true,
+            deliveredCount: 0,
+            assignmentStatus: "archived",
+          }),
+        );
 
-      res.json([...recentClosedArchivedRequirements, ...requirementsWithCounts]);
+      res.json([
+        ...recentClosedArchivedRequirements,
+        ...requirementsWithCounts.map((req) => withStreqId(req)),
+      ]);
     } catch (error) {
       console.error('Get recruiter requirements error:', error);
       res.status(500).json({ message: "Failed to fetch requirements" });
@@ -8234,6 +8472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: req.id, // Role ID (STR format)
           clientId: clientId, // Client code (e.g., STCL001)
           company: clientRecord?.brandName || req.company || 'N/A', // Company name (brandName)
+          companyLogo: clientRecord?.logo || null,
           spocName: spocName,
           role: req.position,
           sharedDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
@@ -8265,7 +8504,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return !req.id || !/^STR\d{5}$/.test(req.id);
       });
       const enriched = await enrichRequirementsWithResumeCount(adminRequirements);
-      res.json(enriched);
+      const allClients = await storage.getAllClients();
+      const logoByCompany = new Map(
+        allClients
+          .filter((c: { brandName?: string; logo?: string | null }) => c.brandName && c.logo)
+          .map((c: { brandName: string; logo: string | null }) => [c.brandName, c.logo] as const),
+      );
+      res.json(
+        enriched.map((req: { company?: string }) => ({
+          ...req,
+          companyLogo: req.company ? logoByCompany.get(req.company) ?? null : null,
+        })),
+      );
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -8276,13 +8526,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         additionalTeamLeads: additionalTeamLeadsRaw,
         specialInstructions: specialInstructionsRaw,
+        preservedRoleId: preservedRoleIdRaw,
         ...requirementBody
       } = req.body as Record<string, unknown>;
 
       const validatedData = insertRequirementSchema.parse(requirementBody);
-      const { mergeRequirementInstructionsInSourceDetails } = await import(
-        "@shared/requirement-jd-extras"
-      );
+      const {
+        mergeRequirementInstructionsInSourceDetails,
+        mergeDisplayRoleIdInSourceDetails,
+      } = await import("@shared/requirement-jd-extras");
       const sourceDetailsWithInstructions = mergeRequirementInstructionsInSourceDetails(
         validatedData.sourceDetails ?? null,
         typeof specialInstructionsRaw === "string"
@@ -8337,13 +8589,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? await generateNextRequirementRoleId(storage)
         : null;
 
+      const preservedRoleId =
+        typeof preservedRoleIdRaw === "string" &&
+        /^STR\d{5}$/.test(preservedRoleIdRaw.trim())
+          ? preservedRoleIdRaw.trim()
+          : null;
+
+      const singleDisplayRoleId = !isSplitCreate
+        ? preservedRoleId || (await generateNextRequirementRoleId(storage))
+        : null;
+
       for (let index = 0; index < teamLeadsToCreate.length; index++) {
         const teamLeadName = teamLeadsToCreate[index];
-        const requirementId = isSplitCreate
-          ? index === 0
-            ? sharedRoleId!
-            : await generateNextRequirementRoleId(storage)
-          : undefined;
 
         const sourceDetails = isSplitCreate
           ? buildSplitRequirementSourceDetails(
@@ -8353,11 +8610,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               teamLeadName,
               sourceDetailsWithInstructions,
             )
-          : sourceDetailsWithInstructions;
+          : mergeDisplayRoleIdInSourceDetails(
+              sourceDetailsWithInstructions,
+              singleDisplayRoleId,
+            );
 
+        // Split rows use auto-generated UUID ids so they appear in Requirements, not
+        // the client-JD list (STR* ids are reserved for unassigned client submissions).
         const requirement = await storage.createRequirement({
           ...validatedData,
-          id: requirementId,
           teamLead: teamLeadName,
           splitRequirement: isSplitCreate ? true : validatedData.splitRequirement ?? false,
           sourceDetails,
@@ -12395,7 +12656,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         employmentType,
         openings,
         status,
-        companyLogo
+        companyLogo,
+        requirementId: linkedRequirementId,
       } = req.body;
 
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -12409,6 +12671,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const recruiterId = employee.id;
+
+      let assignedTaId: string | null = null;
+      let assignedTaName: string | null = null;
+      let resolvedRequirementId: string | null = linkedRequirementId || null;
+
+      if (linkedRequirementId) {
+        const linkedRequirement = await storage.getRequirementById(linkedRequirementId);
+        if (!linkedRequirement) {
+          return res.status(404).json({ message: "Linked requirement not found" });
+        }
+
+        if (employee.role === "team_leader") {
+          const allEmployees = await storage.getAllEmployees();
+          const teamRecruiters = allEmployees.filter(
+            (emp) => emp.role === "recruiter" && emp.reportingTo === employee.employeeId,
+          );
+          const teamRecruiterIds = new Set(teamRecruiters.map((rec) => rec.id));
+          const belongsToTeam =
+            linkedRequirement.teamLead === employee.name ||
+            (linkedRequirement.talentAdvisorId &&
+              teamRecruiterIds.has(linkedRequirement.talentAdvisorId));
+
+          if (!belongsToTeam) {
+            return res.status(403).json({ message: "This requirement is not assigned to your team" });
+          }
+        }
+
+        if (!linkedRequirement.talentAdvisorId && !linkedRequirement.talentAdvisor) {
+          return res.status(400).json({
+            message: "Assign a Talent Advisor to this requirement before posting a job",
+          });
+        }
+
+        assignedTaId = linkedRequirement.talentAdvisorId || null;
+        assignedTaName = linkedRequirement.talentAdvisor || null;
+
+        if (assignedTaId && !assignedTaName) {
+          const taEmployee = await storage.getEmployeeById(assignedTaId);
+          if (taEmployee) assignedTaName = taEmployee.name;
+        }
+        if (!assignedTaId && assignedTaName) {
+          const allEmployees = await storage.getAllEmployees();
+          const taEmployee = allEmployees.find(
+            (emp) => emp.role === "recruiter" && emp.name === assignedTaName,
+          );
+          if (taEmployee) assignedTaId = taEmployee.id;
+        }
+      }
 
       // Format experience as text (e.g., "2-5 years")
       let experienceText = '';
@@ -12457,7 +12767,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         knowledgeOnly: Array.isArray(knowledgeOnly) ? JSON.stringify(knowledgeOnly) : '[]',
         status: status || 'Active',
         applicationCount: 0,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        requirementId: resolvedRequirementId,
+        assignedTaId,
+        assignedTaName,
       };
 
       const job = await storage.createRecruiterJob(jobData);
@@ -14060,6 +14373,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return status !== "archived" && status !== "";
       });
 
+      const profilePictureLookup = await buildProfilePictureLookup(
+        pipelineSourceApps.map((app: any) => app.profileId),
+      );
+
       // Format pipeline data (allEmployees, allRequirements, allRecruiterJobs already fetched above)
 
       const pipelineData = pipelineSourceApps.map((app: any) => {
@@ -14156,7 +14473,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           appliedDate: app.appliedDate || null,
           appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
           profileId: app.profileId || null,
-          requirementId: app.requirementId || null
+          requirementId: app.requirementId || null,
+          profilePicture: app.profileId
+            ? profilePictureLookup.get(app.profileId) ?? null
+            : null,
         };
       });
 
@@ -16757,6 +17077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientAgreementAccepted,
         // Basic company info - get from linked company
         company: client?.brandName || employee.name || 'Company',
+        companyLogo: client?.logo || null,
         // Extended client details (only if profile is linked)
         clientDetails: profileLinked ? {
           clientCode: client.clientCode,

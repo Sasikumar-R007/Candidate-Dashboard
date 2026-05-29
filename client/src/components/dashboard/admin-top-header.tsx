@@ -15,6 +15,7 @@ import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordMod
 import type { UserActivity } from "@shared/schema";
 import { formatEmployeeRoleDisplay } from "@/lib/employee-display";
 import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
+import { useNotificationSound } from "@/hooks/use-notification-sound";
 
 interface AdminTopHeaderProps {
   companyName?: string;
@@ -44,6 +45,7 @@ type EmployeeNotificationItem = {
 type EmployeeNotificationFeed = {
   role: string;
   newRequirements: EmployeeNotificationItem[];
+  clientJdSubmissions?: EmployeeNotificationItem[];
   nudges: EmployeeNotificationItem[];
   escalatedNudges: EmployeeNotificationItem[];
   closures: EmployeeNotificationItem[];
@@ -107,6 +109,7 @@ export default function AdminTopHeader({
   const [dismissedNotificationKeys, setDismissedNotificationKeys] = useState<Set<string>>(() =>
     readDismissedNotificationKeys(dismissedStorageKey),
   );
+  const [profileImgError, setProfileImgError] = useState(false);
 
   const userRole = employee?.role || "admin";
   const normalizedRole = (userRole || "").toLowerCase().replace(/[\s-]+/g, "_");
@@ -195,7 +198,6 @@ export default function AdminTopHeader({
     () => resolveProfilePictureUrl(profileData?.profilePicture),
     [profileData?.profilePicture],
   );
-  const [profileImgError, setProfileImgError] = useState(false);
   useEffect(() => {
     setProfileImgError(false);
   }, [profilePictureSrc]);
@@ -226,24 +228,29 @@ export default function AdminTopHeader({
             closures?: EmployeeNotificationItem[];
             adminNudges?: EmployeeNotificationItem[];
             clientEscalations?: EmployeeNotificationItem[];
+            clientJdSubmissions?: EmployeeNotificationItem[];
             nudges?: EmployeeNotificationItem[];
             escalatedNudges?: EmployeeNotificationItem[];
             unreadAdminNudges?: number;
             unreadClientEscalations?: number;
+            unreadClientJdSubmissions?: number;
           };
           const nudges = adminData.adminNudges ?? adminData.nudges ?? [];
           const escalated = adminData.clientEscalations ?? adminData.escalatedNudges ?? [];
           const closures = adminData.closures ?? [];
+          const clientJds = adminData.clientJdSubmissions ?? [];
           return {
             role: "admin",
             closures,
             nudges,
             escalatedNudges: escalated,
+            clientJdSubmissions: clientJds,
             newRequirements: [],
             newCandidateApplied: [],
             unreadCount:
               (adminData.unreadAdminNudges ?? 0) +
               (adminData.unreadClientEscalations ?? 0) +
+              (adminData.unreadClientJdSubmissions ?? 0) +
               closures.filter((c) => c.isUnread).length,
           };
         }
@@ -287,10 +294,48 @@ export default function AdminTopHeader({
     },
   });
 
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/auth/employee-logout', {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out.",
+      });
+      window.location.href = '/';
+    },
+    onError: () => {
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
+      });
+      window.location.href = '/';
+    },
+  });
+
+  const dismissNotificationMutation = useMutation({
+    mutationFn: async ({ kind, id }: { kind: string; id: string }) => {
+      const res = await apiRequest("PATCH", "/api/employee/notifications/dismiss", { kind, id });
+      return res.json();
+    },
+    onSuccess: () => {
+      void refetchNotificationFeed();
+    },
+  });
+
   const notificationTabs = useMemo(() => {
     if (isAdmin) {
       return [
         { id: "all", label: "All" },
+        { id: "clientJds", label: "Client JDs" },
         { id: "closures", label: "Candidate Closures" },
         { id: "nudges", label: "Nudges" },
         { id: "escalations", label: "Nudges Escalations" },
@@ -317,6 +362,14 @@ export default function AdminTopHeader({
   const notificationSections = useMemo((): NotificationSectionConfig[] => {
     if (isAdmin) {
       return [
+        {
+          id: "clientJds",
+          heading: "New JD from Client",
+          headingClassName: "text-cyan-700",
+          kinds: ["clientJd"],
+          tabId: "clientJds",
+          navigateTo: "requirements",
+        },
         {
           id: "closures",
           heading: "Candidate moved to closure",
@@ -438,16 +491,6 @@ export default function AdminTopHeader({
 
   type FeedRow = NotificationPanelRow & { sort: number };
 
-  const dismissNotificationMutation = useMutation({
-    mutationFn: async ({ kind, id }: { kind: string; id: string }) => {
-      const res = await apiRequest("PATCH", "/api/employee/notifications/dismiss", { kind, id });
-      return res.json();
-    },
-    onSuccess: () => {
-      void refetchNotificationFeed();
-    },
-  });
-
   const dismissNotification = (row: NotificationPanelRow) => {
     setDismissedNotificationKeys((prev) => {
       const next = new Set(prev);
@@ -483,6 +526,7 @@ export default function AdminTopHeader({
     };
 
     if (isAdmin) {
+      pushRows("clientJd", employeeFeed.clientJdSubmissions ?? []);
       pushRows("closure", employeeFeed.closures);
       pushRows("nudge", employeeFeed.nudges, true);
       pushRows("escalation", employeeFeed.escalatedNudges);
@@ -513,6 +557,8 @@ export default function AdminTopHeader({
     const fromFeed = employeeFeed?.unreadCount ?? 0;
     return Math.max(fromFeed, fromRows);
   }, [visibleRows, employeeFeed]);
+
+  useNotificationSound(headerUnreadCount, isAdmin || isTL || isTA);
 
   const navigateForSection = (section: NotificationNavigateSection) => {
     const storageKey = isTL
@@ -566,37 +612,6 @@ export default function AdminTopHeader({
     }
     navigateForSection("nudges");
   };
-  
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/auth/employee-logout', {});
-      return await res.json();
-    },
-    onSuccess: () => {
-      logout();
-      // Clear any stored session data
-      localStorage.clear();
-      sessionStorage.clear();
-      toast({
-        title: "Logged out successfully",
-        description: "You have been signed out.",
-      });
-      // Navigate to home page and prevent back navigation
-      window.location.href = '/';
-    },
-    onError: (error: any) => {
-      logout();
-      // Clear any stored session data
-      localStorage.clear();
-      sessionStorage.clear();
-      toast({
-        title: "Logged out",
-        description: "You have been signed out (session cleared locally).",
-      });
-      // Navigate to home page and prevent back navigation
-      window.location.href = '/';
-    }
-  });
 
   const handleLogout = () => {
     setShowUserDropdown(false);

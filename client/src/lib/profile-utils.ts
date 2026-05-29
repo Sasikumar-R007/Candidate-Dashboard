@@ -1,5 +1,32 @@
 import type { Profile } from "@shared/schema";
 
+function hasFilledText(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some((item) => hasFilledText(item));
+  return false;
+}
+
+/** Job preferences are stored as text fields (not arrays). */
+export function isJobPreferencesComplete(jobPreferences?: {
+  jobTitles?: string | null;
+  locations?: string | null;
+  workMode?: string | null;
+  employmentType?: string | null;
+  startDate?: string | null;
+  salaryRange?: string | null;
+} | null): boolean {
+  if (!jobPreferences) return false;
+
+  return (
+    hasFilledText(jobPreferences.jobTitles) &&
+    hasFilledText(jobPreferences.locations) &&
+    hasFilledText(jobPreferences.workMode) &&
+    hasFilledText(jobPreferences.employmentType) &&
+    hasFilledText(jobPreferences.startDate)
+  );
+}
+
 export interface CompletionSection {
   id: string;
   label: string;
@@ -80,12 +107,7 @@ export function calculateProfileCompletion(profile: Profile | null | undefined, 
       id: 'preferences',
       label: 'Job Preferences',
       weight: 10,
-      isDone: !!(
-        jobPreferences && 
-        jobPreferences.jobTitles?.length > 0 && 
-        jobPreferences.locations?.length > 0 && 
-        jobPreferences.salaryRange
-      ),
+      isDone: isJobPreferencesComplete(jobPreferences),
     }
   ];
 

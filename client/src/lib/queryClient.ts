@@ -1,4 +1,10 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryFunction,
+  MutationCache,
+  keepPreviousData,
+} from "@tanstack/react-query";
+import { scheduleOperationalInvalidation } from "./query-config";
 
 // API base URL - uses environment variable in production, localhost in development
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -74,13 +80,19 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-export const queryClient = new QueryClient({
+let queryClient!: QueryClient;
+
+queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
+      staleTime: 30_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      refetchIntervalInBackground: false,
+      placeholderData: keepPreviousData,
       retry: 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     },
@@ -88,4 +100,19 @@ export const queryClient = new QueryClient({
       retry: false,
     },
   },
+  mutationCache: new MutationCache({
+    onSuccess: (_data, _variables, _context, mutation) => {
+      if (
+        (mutation.meta as { skipOperationalInvalidation?: boolean } | undefined)
+          ?.skipOperationalInvalidation
+      ) {
+        return;
+      }
+      queueMicrotask(() => {
+        scheduleOperationalInvalidation(queryClient, { refetchType: "active" });
+      });
+    },
+  }),
 });
+
+export { queryClient };

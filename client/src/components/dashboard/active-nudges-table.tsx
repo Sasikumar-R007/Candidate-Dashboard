@@ -21,7 +21,12 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { queryPresets } from "@/lib/query-config";
 import { useEmployeeAuth } from "@/contexts/auth-context";
+import {
+  escalationTargetWorkingHours,
+  isOfferStageStatus,
+} from "@shared/nudge-timing";
 
 interface Nudge {
   id: string;
@@ -105,9 +110,8 @@ export default function ActiveNudgesTable() {
   }, []);
 
   const { data: nudges = [], isLoading: isLoadingNudges } = useQuery<Nudge[]>({
+    ...queryPresets.live,
     queryKey: ['/api/nudges'],
-    staleTime: 0,
-    refetchInterval: 15_000,
   });
 
   const respondMutation = useMutation({
@@ -156,12 +160,8 @@ export default function ActiveNudgesTable() {
   const processedNudges = nudges.map(nudge => {
     const isResponded = !!(nudge.isResponded || localUpdatedNudges.has(nudge.id));
     const elapsedHours = getElapsedWorkingHours(nudge.createdAt);
-    
-    let totalTarget = 6;
-    if (nudge.escalationLevel === 'team_leader') totalTarget = 12;
-    if (nudge.escalationLevel === 'admin') totalTarget = 18;
-    if (nudge.escalationLevel === 'client') totalTarget = 24;
-
+    const isOffer = isOfferStageStatus(nudge.currentStatus);
+    const totalTarget = escalationTargetWorkingHours(nudge.escalationLevel, isOffer);
     const isEscalated = !isResponded && elapsedHours >= totalTarget;
     
     // Disable update if escalated beyond current user's level
@@ -347,11 +347,11 @@ export default function ActiveNudgesTable() {
             
             <div className="flex gap-3 pt-2">
               <Button
-                variant="outline"
+                variant="close"
                 onClick={() => setUpdateModalNudge(null)}
-                className="flex-1 rounded-xl h-12 font-bold border-gray-200 hover:bg-gray-50 text-gray-600"
+                className="flex-1 h-12 font-semibold"
               >
-                Cancel
+                Close
               </Button>
               <Button
                 onClick={handleUpdateNudgeConfirm}

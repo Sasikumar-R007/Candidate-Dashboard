@@ -14,7 +14,7 @@ import {
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useApplyJob, useJobApplications } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
-import { useProfile } from "@/hooks/use-profile";
+import { useProfile, useJobPreferences } from "@/hooks/use-profile";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -157,9 +157,10 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   const applyJobMutation = useApplyJob();
   const { data: jobApplicationsData = [] } = useJobApplications();
   const { data: profile } = useProfile();
+  const { data: jobPreferences } = useJobPreferences();
   const { toast } = useToast();
 
-  const { percentage } = calculateProfileCompletion(profile);
+  const { percentage } = calculateProfileCompletion(profile, jobPreferences);
 
   const savedJobs = new Set(savedJobsData.map(job => `${job.jobTitle}-${job.company}`));
   
@@ -289,7 +290,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
           {!isSidebarCollapsed && (
             <>
               <div className="mb-0">
-                <ProfileStrength profile={profile!} onEdit={onNavigateToProfile} editIconOnly={true} />
+                <ProfileStrength profile={profile!} jobPreferences={jobPreferences} onEdit={onNavigateToProfile} editIconOnly={true} />
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-10">

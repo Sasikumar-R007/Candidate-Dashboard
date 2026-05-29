@@ -139,6 +139,7 @@ ALTER TABLE recruiter_jobs
   ADD COLUMN IF NOT EXISTS owner_role text,
   ADD COLUMN IF NOT EXISTS assigned_ta_id varchar(255),
   ADD COLUMN IF NOT EXISTS assigned_ta_name text,
+  ADD COLUMN IF NOT EXISTS requirement_id varchar(255),
   ADD COLUMN IF NOT EXISTS no_of_positions integer DEFAULT 1;
 
 -- ========== candidates ==========

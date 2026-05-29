@@ -129,7 +129,7 @@ export function ChatDock({ open, onClose, userName = "User", userRole = "User" }
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Describe your issue, bug, or query..."
-                  className="min-h-[120px] resize-none"
+                  className="min-h-[120px] resize-none border-gray-300 bg-gray-50 text-gray-900 placeholder:text-gray-500 focus-visible:ring-purple-500/30"
                   disabled={isSubmitting}
                 />
                 

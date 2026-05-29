@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { LogOut, User } from "lucide-react";
+import { modalSignOutButtonClass } from "@/lib/modal-button-styles";
 
 interface SignOutDialogProps {
   open: boolean;
@@ -27,7 +28,7 @@ export function SignOutDialog({
 }: SignOutDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-md rounded-[6px]">
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
@@ -54,12 +55,12 @@ export function SignOutDialog({
             disabled={isLoading}
             data-testid="button-cancel-sign-out"
           >
-            Cancel
+            Close
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isLoading}
-            className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+            className={modalSignOutButtonClass}
             data-testid="button-confirm-sign-out"
           >
             {isLoading ? (

@@ -14,7 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw, UserCheck, Archive } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw, UserCheck, Archive, Loader2 } from "lucide-react";
+import { CompanyBrandAvatar } from "@/components/client-brand-avatar";
+import { resolveDisplayRoleId } from "@shared/requirement-jd-extras";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +44,7 @@ import {
 } from '@/lib/pipeline-session-utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
+import { queryPresets } from '@/lib/query-config';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
 import ClientAgreementFirstLoginModal from '@/components/client-dashboard/client-agreement-first-login-modal';
 import { ClientSharedProfilesModal } from '@/components/dashboard/modals/client-shared-profiles-modal';
@@ -121,6 +124,7 @@ export default function ClientDashboard() {
   const [secondarySkills, setSecondarySkills] = useState('');
   const [knowledgeOnly, setKnowledgeOnly] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [isParsingJd, setIsParsingJd] = useState(false);
   const [isJdPreviewModalOpen, setIsJdPreviewModalOpen] = useState(false);
   const [jdPosition, setJdPosition] = useState('');
   const [jdNoOfPositions, setJdNoOfPositions] = useState(1);
@@ -178,16 +182,6 @@ export default function ClientDashboard() {
     } catch {
       return 'N/A';
     }
-  };
-
-  // Helper function to format Role ID shortly
-  const formatRoleId = (id: string) => {
-    if (!id) return 'N/A';
-    if (id.includes('-')) {
-      // Format UUID as ROL-XXXXXX
-      return `ROL-${id.split('-')[0].substring(0, 6).toUpperCase()}`;
-    }
-    return id;
   };
 
   const [selectedRoleForView, setSelectedRoleForView] = useState<any>(null);
@@ -287,6 +281,7 @@ export default function ClientDashboard() {
 
   // Fetch dashboard stats from API
   const { data: dashboardStats } = useQuery({
+    ...queryPresets.standard,
     queryKey: ['/api/client/dashboard-stats'],
     placeholderData: {
       rolesAssigned: 0,
@@ -300,14 +295,14 @@ export default function ClientDashboard() {
 
   // Fetch roles/requirements from API
   const { data: allRolesData, isLoading: isLoadingRoles } = useQuery({
+    ...queryPresets.standard,
     queryKey: ['/api/client/requirements'],
     placeholderData: [],
-    staleTime: 0,
-    refetchOnMount: 'always'
   });
 
   // Fetch pipeline data from API with filters
   const { data: pipelineData, isLoading: isLoadingPipeline } = useQuery({
+    ...queryPresets.live,
     queryKey: ['/api/client/pipeline', selectedRequirement],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -329,6 +324,7 @@ export default function ClientDashboard() {
 
   // Fetch closure reports from API
   const { data: allClosureReports = [], isLoading: isLoadingClosures } = useQuery<ClosureReportRow[]>({
+    ...queryPresets.live,
     queryKey: ['/api/client/closures'],
     placeholderData: [],
   });
@@ -366,6 +362,7 @@ export default function ClientDashboard() {
     (clientProfile as { isClientAdmin?: boolean } | undefined)?.isClientAdmin === true;
 
   const { data: activeNudges = [] } = useQuery({
+    ...queryPresets.live,
     queryKey: ['/api/nudges'],
     enabled: isClientAdmin,
     placeholderData: [],
@@ -413,6 +410,7 @@ export default function ClientDashboard() {
       companyName:
         (clientProfile as { company?: string })?.company ||
         (isLoadingProfile ? "Loading..." : "Company"),
+      companyLogo: (clientProfile as { companyLogo?: string | null })?.companyLogo ?? null,
       clientName: (clientProfile as { name?: string })?.name || employee?.name || undefined,
       clientEmail: (clientProfile as { email?: string })?.email || employee?.email || undefined,
       displayEmployeeId:
@@ -484,7 +482,49 @@ export default function ClientDashboard() {
   });
 
   // Filter pipeline data by period and selected roles
+  const parseJdFromFile = async (file: File) => {
+    setUploadedFile(file);
+    const fileUrl = URL.createObjectURL(file);
+    setJdFilePreviewUrl(fileUrl);
+    setIsParsingJd(true);
+    try {
+      const formData = new FormData();
+      formData.append("jdFile", file);
+      const response = await apiFileUpload("/api/client/parse-jd", formData);
+      const parsed = await response.json();
+      if (parsed.data) {
+        if (parsed.data.position) {
+          setJdPosition((prev) => prev || parsed.data.position);
+        }
+        if (parsed.data.primarySkills) {
+          setPrimarySkills((prev) => prev || parsed.data.primarySkills);
+        }
+        if (parsed.data.secondarySkills) {
+          setSecondarySkills((prev) => prev || parsed.data.secondarySkills);
+        }
+        if (parsed.data.knowledgeOnly) {
+          setKnowledgeOnly((prev) => prev || parsed.data.knowledgeOnly);
+        }
+        if (parsed.data.specialInstructions) {
+          setSpecialInstructions((prev) => prev || parsed.data.specialInstructions);
+        }
+        if (parsed.data.jdText) {
+          setJdText((prev) => prev || parsed.data.jdText);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to parse JD:", error);
+      toast({
+        title: "Parse notice",
+        description: "Could not auto-fill fields from this file. You can still complete the form manually.",
+      });
+    } finally {
+      setIsParsingJd(false);
+    }
+  };
+
   const resetJdUploadForm = () => {
+    setIsParsingJd(false);
     setJdText('');
     setUploadedFile(null);
     if (jdFilePreviewUrl) {
@@ -810,45 +850,15 @@ export default function ClientDashboard() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            setUploadedFile(file);
-                            const fileUrl = URL.createObjectURL(file);
-                            setJdFilePreviewUrl(fileUrl);
-                            
-                            // Parse JD file to auto-fill fields
-                            try {
-                              const formData = new FormData();
-                              formData.append('jdFile', file);
-                              const response = await apiFileUpload('/api/client/parse-jd', formData);
-                              const parsed = await response.json();
-                              if (parsed.data) {
-                                if (parsed.data.position && !jdPosition) {
-                                  setJdPosition(parsed.data.position);
-                                }
-                                if (parsed.data.primarySkills && !primarySkills) {
-                                  setPrimarySkills(parsed.data.primarySkills);
-                                }
-                                if (parsed.data.secondarySkills && !secondarySkills) {
-                                  setSecondarySkills(parsed.data.secondarySkills);
-                                }
-                                if (parsed.data.knowledgeOnly && !knowledgeOnly) {
-                                  setKnowledgeOnly(parsed.data.knowledgeOnly);
-                                }
-                                if (parsed.data.specialInstructions && !specialInstructions) {
-                                  setSpecialInstructions(parsed.data.specialInstructions);
-                                }
-                                if (parsed.data.jdText && !jdText) {
-                                  setJdText(parsed.data.jdText);
-                                }
-                              }
-                            } catch (error) {
-                              console.error('Failed to parse JD:', error);
-                            }
+                            await parseJdFromFile(file);
                           }
                         }}
                         className="hidden"
                       />
                       <div
-                        onClick={() => jdFileInputRef.current?.click()}
+                        onClick={() => {
+                          if (!isParsingJd) jdFileInputRef.current?.click();
+                        }}
                         onDragOver={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -858,18 +868,25 @@ export default function ClientDashboard() {
                           e.stopPropagation();
                           const file = e.dataTransfer.files?.[0];
                           if (file) {
-                            setUploadedFile(file);
-                            const fileUrl = URL.createObjectURL(file);
-                            setJdFilePreviewUrl(fileUrl);
+                            await parseJdFromFile(file);
                           }
                         }}
-                        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors h-full min-h-[200px] flex flex-col items-center justify-center"
+                        className="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors h-full min-h-[200px] flex flex-col items-center justify-center"
                       >
+                        {isParsingJd && (
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 backdrop-blur-[2px]">
+                            <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-3" />
+                            <p className="text-sm font-semibold text-blue-700">Parsing job description…</p>
+                            <p className="text-xs text-gray-500 mt-1">Extracting role, skills, and instructions</p>
+                          </div>
+                        )}
                         {uploadedFile ? (
                           <>
                             <FileText className="h-10 w-10 text-blue-500 mb-3" />
                             <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
-                            <p className="text-xs text-gray-500 mt-1">Click to change file</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {isParsingJd ? "Parsing…" : "Click to change file"}
+                            </p>
                           </>
                         ) : (
                           <>
@@ -1053,7 +1070,7 @@ export default function ClientDashboard() {
 
                           return (
                             <tr key={role.roleId || index} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{formatRoleId(role.roleId)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{resolveDisplayRoleId(role.roleId)}</td>
                               <td className="px-6 py-4 text-sm text-gray-700">
                                 <RequirementRoleCell
                                   title={role.role}
@@ -1941,7 +1958,7 @@ export default function ClientDashboard() {
                 ) : (
                   (Array.isArray(allRolesData) ? allRolesData : []).map((role, index) => (
                     <tr key={role.roleId || index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{formatRoleId(role.roleId)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{resolveDisplayRoleId(role.roleId)}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         <RequirementRoleCell
                           title={role.role}
@@ -2116,11 +2133,11 @@ export default function ClientDashboard() {
             <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
               {/* Company Header */}
               <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md">
-                  {(clientProfile as any)?.company && (clientProfile as any).company !== 'Loading...'
-                    ? (clientProfile as any).company.charAt(0).toUpperCase()
-                    : 'C'}
-                </div>
+                <CompanyBrandAvatar
+                  logoUrl={(clientProfile as { companyLogo?: string | null })?.companyLogo}
+                  companyName={(clientProfile as { company?: string })?.company}
+                  size="lg"
+                />
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
                     {(clientProfile as any)?.company || 'Company Name'}
@@ -2220,7 +2237,7 @@ export default function ClientDashboard() {
                 {specialInstructions && (
                   <div>
                     <h4 className="text-sm font-semibold text-gray-700 mb-2">Special Instructions</h4>
-                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
+                    <div className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-4 rounded border border-gray-200">
                       {specialInstructions}
                     </div>
                   </div>
@@ -2282,6 +2299,9 @@ export default function ClientDashboard() {
                     resetJdUploadForm();
                     // Refresh requirements list
                     queryClient.invalidateQueries({ queryKey: ['/api/client/requirements'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/admin/client-jds'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/admin/notifications-feed'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/employee/notifications-feed'] });
                   } else {
                     throw new Error('Failed to submit JD');
                   }

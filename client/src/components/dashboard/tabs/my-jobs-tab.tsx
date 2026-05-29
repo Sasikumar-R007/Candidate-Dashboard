@@ -1,4 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import JobDescriptionDetailsModal, {
+  type JobDescriptionDetailsData,
+} from '@/components/dashboard/modals/job-description-details-modal';
+import { candidateNudgeCooldownHours } from '@shared/nudge-timing';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,20 +108,10 @@ function calculateTimeRemaining(lastNudgedAt: Date | string | null, status: stri
   const lastNudge = new Date(lastNudgedAt);
   const now = new Date();
   const diff = now.getTime() - lastNudge.getTime();
-  
-  let cooldownHours = 48; // Default
-  const statusStr = status.toLowerCase();
-  
-  if (statusStr.includes('screened out') || statusStr.includes('rejected')) {
-    return null; // Don't show cooldown if screened out
-  } else if (statusStr.includes('offer')) {
-    cooldownHours = 3;
-  } else if (statusStr.includes('interview') || statusStr.includes('hr round')) {
-    cooldownHours = 24;
-  } else if (statusStr.includes('applied') || statusStr.includes('review') || statusStr.includes('in process')) {
-    cooldownHours = 48;
-  }
-  
+
+  const cooldownHours = candidateNudgeCooldownHours(status);
+  if (cooldownHours == null) return null;
+
   const cooldown = cooldownHours * 60 * 60 * 1000;
   
   if (diff >= cooldown) return null;
@@ -395,6 +389,30 @@ export default function MyJobsTab({
     setSelectedApplication(job);
     setShowApplicationModal(true);
   };
+
+  type ApplicationWithJd = JobApplication & {
+    jdFile?: string | null;
+    jdText?: string | null;
+    primarySkills?: string | null;
+    secondarySkills?: string | null;
+    knowledgeOnly?: string | null;
+    specialInstructions?: string | null;
+  };
+
+  const applicationJdData = useMemo((): JobDescriptionDetailsData | null => {
+    if (!selectedApplication) return null;
+    const app = selectedApplication as ApplicationWithJd;
+    return {
+      position: app.jobTitle,
+      company: app.company,
+      jdFile: app.jdFile ?? null,
+      jdText: app.jdText ?? app.description ?? null,
+      primarySkills: app.primarySkills ?? null,
+      secondarySkills: app.secondarySkills ?? null,
+      knowledgeOnly: app.knowledgeOnly ?? null,
+      specialInstructions: app.specialInstructions ?? null,
+    };
+  }, [selectedApplication]);
 
   const handleArchiveJob = (job: JobApplication) => {
     archiveMutation.mutate(job.id);
@@ -775,9 +793,16 @@ export default function MyJobsTab({
                                         </div>
 
                                         <div className="bg-gray-50 rounded-[5px] p-3 border-l-4 border-red-500 mb-4">
-                                          <h6 className="text-[12px] font-bold text-gray-900 mb-1">{job.rejectionReason || 'Screened Out'}</h6>
+                                          <h6 className="text-[12px] font-bold text-gray-900 mb-1">
+                                            {job.rejectionReason?.trim() || 'Screened Out'}
+                                          </h6>
                                           <p className="text-[11px] text-gray-600 leading-relaxed">
-                                            {job.statusNote || 'Thank you for your interest. We will not be moving forward at this stage.'}
+                                            {job.statusNote?.trim() &&
+                                            job.statusNote.trim() !== (job.rejectionReason?.trim() || '')
+                                              ? job.statusNote.trim()
+                                              : job.rejectionReason?.trim()
+                                                ? ''
+                                                : 'Thank you for your interest. We will not be moving forward at this stage.'}
                                           </p>
                                         </div>
 
@@ -1271,125 +1296,20 @@ export default function MyJobsTab({
         onConfirm={confirmApplyAfterConsent}
       />
 
-      {/* View Applied Job Details Modal */}
-      {showApplicationModal && selectedApplication && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
-              {/* Job Card Header */}
-              <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="flex">
-                  {/* Company Logo Section */}
-                  <div className="w-32 flex items-center justify-center">
-                    <div className="bg-gray-100 rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]">
-                      <div className="text-lg font-bold text-gray-700 dark:text-gray-300">{selectedApplication.company}</div>
-                    </div>
-                  </div>
-
-                  {/* Job Details */}
-                  <div className="flex-1 pl-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedApplication.company}</h3>
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                          {selectedApplication.jobTitle}
-                        </h4>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedApplication.description || 'No description available'}</p>
-                      </div>
-                      <button
-                        onClick={() => setShowApplicationModal(false)}
-                        className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded flex items-center justify-center ml-2 transition-colors"
-                        data-testid="button-close-application-modal"
-                      >
-                        <i className="fas fa-times text-white text-xs"></i>
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
-                      {selectedApplication.experience && (
-                        <span className="flex items-center gap-1">
-                          <i className="fas fa-briefcase"></i>
-                          {selectedApplication.experience}
-                        </span>
-                      )}
-                      {selectedApplication.salary && (
-                        <span className="flex items-center gap-1">
-                          <i className="fas fa-rupee-sign"></i>
-                          {selectedApplication.salary}
-                        </span>
-                      )}
-                      {selectedApplication.location && (
-                        <span className="flex items-center gap-1">
-                          <i className="fas fa-map-marker-alt"></i>
-                          {selectedApplication.location}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs">
-                      {selectedApplication.jobType && (
-                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-2 py-1">
-                          {selectedApplication.jobType}
-                        </Badge>
-                      )}
-                      {selectedApplication.workMode && (
-                        <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
-                          {selectedApplication.workMode}
-                        </Badge>
-                      )}
-                      {selectedApplication.status && (
-                        <Badge className={`${getStatusBadge(selectedApplication.status)} border text-xs px-2 py-1`}>
-                          ● {selectedApplication.status}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Skills */}
-                {parseSkills(selectedApplication.skills).length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Skills Required</h5>
-                    <div className="flex flex-wrap gap-2">
-                      {parseSkills(selectedApplication.skills).map((skill: string, index: number) => (
-                        <Badge key={index} className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Application Info */}
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400">Applied On:</span>
-                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{formatDate(selectedApplication.appliedDate)}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400">Applied Since:</span>
-                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{calculateDaysAgo(selectedApplication.appliedDate)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 flex justify-center gap-3 border-t border-gray-200">
-              <Button 
-                onClick={() => setShowApplicationModal(false)}
-                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded font-medium border-0 text-sm"
-                data-testid="button-close-application"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <JobDescriptionDetailsModal
+        open={showApplicationModal && Boolean(selectedApplication)}
+        onOpenChange={(open) => {
+          setShowApplicationModal(open);
+          if (!open) setSelectedApplication(null);
+        }}
+        data={applicationJdData}
+        subtitle={
+          selectedApplication
+            ? `Applied ${formatDate(selectedApplication.appliedDate)} (${calculateDaysAgo(selectedApplication.appliedDate)} ago) · Status: ${selectedApplication.status || 'In Process'}`
+            : undefined
+        }
+        variant="delivery"
+      />
       {/* Full Nudge Logs Dialog */}
       <Dialog open={showAllNudgesDialog} onOpenChange={setShowAllNudgesDialog}>
         <DialogContent className="max-w-[1000px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-xl">

@@ -186,8 +186,9 @@ export default function EditJobDetailsModal({
                 <SelectValue placeholder="Select product/service type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Product-Based">Product-Based</SelectItem>
-                <SelectItem value="Service-Based">Service-Based</SelectItem>
+                <SelectItem value="Service">Service Based</SelectItem>
+                <SelectItem value="Product Based">Product Based</SelectItem>
+                <SelectItem value="Service & Product Based">Service & Product Based</SelectItem>
               </SelectContent>
             </Select>
           </div>

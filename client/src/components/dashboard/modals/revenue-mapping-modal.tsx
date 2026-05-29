@@ -43,6 +43,14 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
   const [incentivePaidMonth, setIncentivePaidMonth] = useState<string>("");
   const [selectedClosureId, setSelectedClosureId] = useState<string>("");
 
+  const getClientDefaultPercentage = (clientId: string): string => {
+    const selected = (clients || []).find((c: any) => c.id === clientId);
+    if (!selected) return "0";
+    const raw = selected.percentage;
+    if (raw === null || raw === undefined || String(raw).trim() === "") return "0";
+    return String(raw);
+  };
+
   // Fetch employees for TA and TL dropdowns
   const { data: employees } = useQuery<any[]>({
     queryKey: ['/api/admin/employees'],
@@ -209,6 +217,12 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
     if (closureId) {
       applyClosurePrefill(closureId);
     }
+  };
+
+  const handleClientChange = (clientId: string) => {
+    setClient(clientId);
+    const defaultPercentage = getClientDefaultPercentage(clientId);
+    setPercentage(defaultPercentage);
   };
 
   // Create/Update revenue mapping mutation
@@ -465,7 +479,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
             </div>
             <div>
               <RequiredLabel text="Client" />
-              <Select value={client} onValueChange={setClient}>
+              <Select value={client} onValueChange={handleClientChange}>
                 <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700" data-testid="select-client">
                   <SelectValue placeholder="Select Client" />
                 </SelectTrigger>

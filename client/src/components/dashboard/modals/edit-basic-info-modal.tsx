@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +66,24 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
 
   const updateProfile = useUpdateProfile();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!open) return;
+    setFormData({
+      firstName: profile.firstName || '',
+      lastName: profile.lastName || '',
+      title: profile.title || '',
+      location: profile.location || '',
+      phone: profile.phone || '',
+      whatsapp: profile.whatsapp || '',
+      email: profile.email || '',
+      secondaryEmail: profile.secondaryEmail || '',
+      gender: profile.gender || '',
+      currentLocation: profile.currentLocation || '',
+      preferredLocation: profile.preferredLocation || '',
+      dateOfBirth: profile.dateOfBirth || '',
+    });
+  }, [open, profile]);
 
   const hasChanges = useMemo(() => {
     return (
@@ -257,4 +275,4 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
       </DialogContent>
     </Dialog>
   );
-}
+}

@@ -229,6 +229,9 @@ function normalizeJobApplication(application: any): JobApplication {
     salaryEditedByName:
       application.salary_edited_by_name ?? application.salaryEditedByName ?? null,
     salaryEditedAt: application.salary_edited_at ?? application.salaryEditedAt ?? null,
+    rejectionReason: application.rejection_reason ?? application.rejectionReason ?? null,
+    statusNote: application.status_note ?? application.statusNote ?? null,
+    withdrawReason: application.withdraw_reason ?? application.withdrawReason ?? null,
   } as JobApplication;
 }
 

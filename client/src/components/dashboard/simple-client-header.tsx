@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { Badge } from "@/components/ui/badge";
+import { CompanyBrandAvatar } from "@/components/client-brand-avatar";
+import { useNotificationSound } from "@/hooks/use-notification-sound";
 
 type PortalNudge = {
   id: string;
@@ -22,6 +24,7 @@ type PortalNudge = {
 
 interface SimpleClientHeaderProps {
   companyName?: string;
+  companyLogo?: string | null;
   clientName?: string;
   clientEmail?: string;
   displayEmployeeId?: string | null;
@@ -80,6 +83,7 @@ type NotificationRow = {
 
 export default function SimpleClientHeader({ 
   companyName = "Loading...",
+  companyLogo = null,
   clientName,
   clientEmail,
   displayEmployeeId,
@@ -119,8 +123,8 @@ export default function SimpleClientHeader({
       const res = await apiRequest("GET", "/api/employee/notifications-feed");
       return await res.json();
     },
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 15_000,
+    refetchInterval: 20_000,
     refetchOnWindowFocus: true,
     retry: 2,
   });
@@ -262,7 +266,9 @@ export default function SimpleClientHeader({
     }
     return fromRows;
   }, [visibleNotificationRows, employeeFeed, feedError]);
-  
+
+  useNotificationSound(headerUnreadCount, true);
+
   // Logout mutation for client (employee)
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -371,10 +377,12 @@ export default function SimpleClientHeader({
               className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 transition-all duration-200 hover:bg-gray-100 rounded-lg"
               data-testid="button-client-user-dropdown"
             >
-              {/* Company Initial Avatar */}
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                {companyName && companyName !== 'Loading...' ? companyName.charAt(0).toUpperCase() : 'C'}
-              </div>
+              <CompanyBrandAvatar
+                logoUrl={companyLogo}
+                companyName={companyName}
+                size="sm"
+                className="shadow-sm"
+              />
               <span className="text-sm font-medium">{userName}</span>
               <ChevronDown 
                 size={16} 
@@ -388,10 +396,12 @@ export default function SimpleClientHeader({
                 {/* Profile Section */}
                 <div className="px-4 pb-4 border-b border-gray-200">
                   <div className="flex items-center space-x-4">
-                    {/* Company Initial Avatar */}
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0">
-                      {companyName && companyName !== 'Loading...' ? companyName.charAt(0).toUpperCase() : 'C'}
-                    </div>
+                    <CompanyBrandAvatar
+                      logoUrl={companyLogo}
+                      companyName={companyName}
+                      size="lg"
+                      className="flex-shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="text-lg font-semibold text-gray-900 truncate">
                         {userName}

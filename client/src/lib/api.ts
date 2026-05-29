@@ -12,7 +12,14 @@ export const api = {
   
   // Job Preferences APIs
   getJobPreferences: () => fetch(createApiUrl('/api/job-preferences'), { credentials: 'include' }).then(res => res.json()),
-  updateJobPreferences: (data: any) => apiRequest('PATCH', '/api/job-preferences', data),
+  updateJobPreferences: async (data: any) => {
+    const res = await apiRequest('PATCH', '/api/job-preferences', data);
+    const body = await res.json();
+    if (!body || !body.profileId) {
+      throw new Error('Failed to save job preferences');
+    }
+    return body;
+  },
   
   // Skills APIs
   getSkills: () => fetch(createApiUrl('/api/skills'), { credentials: 'include' }).then(res => res.json()),

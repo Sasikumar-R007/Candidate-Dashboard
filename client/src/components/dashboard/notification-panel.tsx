@@ -93,7 +93,8 @@ function getBoldIndices(parts: string[], kind: string): Set<number> {
   const bold = new Set<number>();
   if (parts.length === 0) return bold;
 
-  if (kind === "newRequirement") {
+  if (kind === "newRequirement" || kind === "clientJd") {
+    if (parts.length >= 1) bold.add(0);
     if (parts.length >= 2) bold.add(1);
     return bold;
   }
@@ -166,7 +167,10 @@ function NotificationCard({
   const timeLabel = formatTimeLabel(row.createdAt);
   const remaining =
     section.showTimeRemaining && row.createdAt
-      ? formatNudgeRemaining(row.createdAt, row.kind === "escalation" || row.kind === "escalatedNudge" ? 24 : 12)
+      ? formatNudgeRemaining(
+          row.createdAt,
+          row.kind === "escalation" || row.kind === "escalatedNudge" ? 18 : 6,
+        )
       : null;
 
   return (

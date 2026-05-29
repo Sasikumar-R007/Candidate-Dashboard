@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -26,6 +26,9 @@ interface EditViewProfileProps {
   profile: Profile;
   onNavigateToJobBoard?: () => void;
 }
+
+const PROFILE_EDIT_BTN_CLASS =
+  "bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:hover:text-white rounded-xl px-5 py-5 border-none shadow-lg transition-all transform hover:scale-105";
 
 export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditViewProfileProps) {
   const [showProTip, setShowProTip] = useState(true);
@@ -69,9 +72,8 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
           <p className="text-gray-500 text-sm mt-1">Manage your basic information and contact details.</p>
         </div>
         <Button 
-          variant="outline" 
           size="sm" 
-          className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl px-5 py-5 border-none shadow-lg transition-all transform hover:scale-105"
+          className={PROFILE_EDIT_BTN_CLASS}
           data-testid="button-edit-basic"
           onClick={() => setShowBasicInfoModal(true)}
         >
@@ -104,9 +106,8 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
           <p className="text-gray-500 text-sm mt-1">Links to your professional profiles and work.</p>
         </div>
         <Button 
-          variant="outline" 
           size="sm" 
-          className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl px-5 py-5 border-none shadow-lg transition-all transform hover:scale-105"
+          className={PROFILE_EDIT_BTN_CLASS}
           data-testid="button-edit-online-presence"
           onClick={() => setShowOnlinePresenceModal(true)}
         >
@@ -149,9 +150,8 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
           <p className="text-gray-500 text-sm mt-1">Details about your current role and company.</p>
         </div>
         <Button 
-          variant="outline" 
           size="sm" 
-          className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl px-5 py-5 border-none shadow-lg transition-all transform hover:scale-105"
+          className={PROFILE_EDIT_BTN_CLASS}
           data-testid="button-edit-journey"
           onClick={() => setShowJourneyModal(true)}
         >
@@ -184,9 +184,8 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
             <p className="text-gray-500 text-sm mt-1">Your education, skills, and qualifications.</p>
           </div>
           <Button 
-            variant="outline" 
             size="sm" 
-            className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl px-5 py-5 border-none shadow-lg transition-all transform hover:scale-105"
+            className={PROFILE_EDIT_BTN_CLASS}
             data-testid="button-edit-strengths"
             onClick={() => setShowStrengthsModal(true)}
           >
@@ -263,9 +262,8 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Upload your resume in PDF or Word format.</p>
             <div className="flex gap-2">
               <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl px-4 py-4 border-none transition-all flex-1"
+                size="sm"
+                className="bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:hover:text-white rounded-xl px-4 py-4 border-none transition-all flex-1"
                 onClick={() => setShowResumeUploadModal(true)}
               >
                 <Upload className="w-4 h-4 mr-2" />
@@ -296,9 +294,8 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Write Resume</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Create or paste your resume text manually.</p>
             <Button 
-              variant="outline" 
-              size="sm" 
-              className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 rounded-xl px-4 py-4 border-none transition-all w-full"
+              size="sm"
+              className="bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:hover:text-white rounded-xl px-4 py-4 border-none transition-all w-full"
               onClick={() => setShowResumeTextModal(true)}
             >
             {profile.resumeText ? 'Edit Content' : 'Start Writing'}
@@ -330,9 +327,8 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
             <p className="text-gray-500 text-sm mt-1">Specify your ideal role and working conditions.</p>
           </div>
           <Button 
-            variant="outline" 
             size="sm" 
-            className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl px-5 py-5 border-none shadow-lg transition-all transform hover:scale-105"
+            className={PROFILE_EDIT_BTN_CLASS}
             data-testid="button-edit-preferences"
             onClick={() => setShowJobPreferencesModal(true)}
           >
@@ -1121,13 +1117,25 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    jobTitles: jobPreferences?.jobTitles || '',
-    workMode: jobPreferences?.workMode || '',
-    employmentType: jobPreferences?.employmentType || '',
-    locations: jobPreferences?.locations || '',
-    startDate: jobPreferences?.startDate || '',
-    instructions: jobPreferences?.instructions || '',
+    jobTitles: '',
+    workMode: '',
+    employmentType: '',
+    locations: '',
+    startDate: '',
+    instructions: '',
   });
+
+  useEffect(() => {
+    if (!open) return;
+    setFormData({
+      jobTitles: jobPreferences?.jobTitles || '',
+      workMode: jobPreferences?.workMode || '',
+      employmentType: jobPreferences?.employmentType || '',
+      locations: jobPreferences?.locations || '',
+      startDate: jobPreferences?.startDate || '',
+      instructions: jobPreferences?.instructions || '',
+    });
+  }, [open, jobPreferences]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

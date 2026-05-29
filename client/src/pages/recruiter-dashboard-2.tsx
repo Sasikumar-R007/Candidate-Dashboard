@@ -23,6 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchBar } from '@/components/ui/search-bar';
 import { RequirementRoleCell } from '@/components/dashboard/requirement-role-cell';
+import {
+  buildStreqDisplayMap,
+  getRequirementLookupId,
+  resolveRequirementDisplayId,
+} from '@shared/requirement-jd-extras';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight, Clock, Zap, AlertTriangle, Send } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -1362,6 +1367,52 @@ export default function RecruiterDashboard2() {
 
   const requirementsTableData = recruiterRequirements;
 
+  const streqDisplayMap = useMemo(() => {
+    const byRealId = new Map<string, { id: string; createdAt?: string; sourceDetails?: string | null }>();
+    for (const req of recruiterRequirements) {
+      const realId = getRequirementLookupId(req);
+      if (!realId || byRealId.has(realId)) continue;
+      byRealId.set(realId, {
+        id: realId,
+        createdAt: req.createdAt,
+        sourceDetails: req.sourceDetails,
+      });
+    }
+    return buildStreqDisplayMap(Array.from(byRealId.values()));
+  }, [recruiterRequirements]);
+
+  const getRequirementDisplayId = (req: any) => {
+    const fromApi = req.displayRequirementId?.trim();
+    if (fromApi && /^STREQ\d+$/i.test(fromApi)) return fromApi.toUpperCase();
+    return resolveRequirementDisplayId(
+      req,
+      streqDisplayMap.get(getRequirementLookupId(req)),
+    );
+  };
+
+  const renderRequirementCriticality = (req: any) => (
+    <span
+      className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
+        req.criticality?.toUpperCase() === 'HIGH'
+          ? 'bg-red-100 text-red-800'
+          : req.criticality?.toUpperCase() === 'MEDIUM' || req.criticality?.toUpperCase() === 'MED'
+            ? 'bg-blue-100 text-blue-800'
+            : 'bg-gray-100 text-gray-800'
+      }`}
+    >
+      <span
+        className={`w-2 h-2 rounded-full mr-1 ${
+          req.criticality?.toUpperCase() === 'HIGH'
+            ? 'bg-red-500'
+            : req.criticality?.toUpperCase() === 'MEDIUM' || req.criticality?.toUpperCase() === 'MED'
+              ? 'bg-blue-500'
+              : 'bg-gray-500'
+        }`}
+      />
+      {req.criticality?.toUpperCase()}-{req.toughness || 'Medium'}
+    </span>
+  );
+
   // Fetch closure reports (revenue mappings) for this recruiter from backend
   const { data: closureReports = [], isLoading: isLoadingClosureReports } = useQuery<any[]>({
     queryKey: ['/api/recruiter/closure-reports'],
@@ -2150,11 +2201,10 @@ export default function RecruiterDashboard2() {
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gray-50 border-b border-gray-200">
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm w-[88px]">ID</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm w-[200px] max-w-[200px]">Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Resume Count</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Actions</th>
@@ -2163,7 +2213,7 @@ export default function RecruiterDashboard2() {
                         <tbody>
                           {isLoadingRequirements ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500">
+                              <td colSpan={7} className="py-8 text-center text-gray-500">
                                 <div className="flex items-center justify-center gap-2">
                                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
                                   <span>Loading requirements...</span>
@@ -2172,13 +2222,12 @@ export default function RecruiterDashboard2() {
                             </tr>
                           ) : filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500">
+                              <td colSpan={7} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet. Requirements will appear here once your Team Lead assigns them.'}
                               </td>
                             </tr>
                           ) : (
                             filteredRequirements.slice(0, 10).map((req: any, index: number) => {
-                              const criticalityColor = req.criticality === 'HIGH' ? 'text-red-600' : req.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
                               const delivered = req.deliveredCount || 0;
                               const expected = getExpectedCount(req.criticality, req.toughness);
                               const isComplete = delivered >= expected && expected > 0;
@@ -2191,10 +2240,14 @@ export default function RecruiterDashboard2() {
                                   className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : 'hover:bg-gray-50'} ${index % 2 === 0 && !isReassigned && !isOnHold && !isRecentlyClosed ? 'bg-white' : isReassigned ? 'bg-gray-100' : isRecentlyClosed ? 'bg-red-100' : isOnHold ? 'bg-yellow-100/80' : 'bg-gray-50'}`}
                                   title={isReassigned ? "Reassigned to another TA" : isRecentlyClosed ? "Requirement was closed and will leave this list after 24 hours" : isOnHold ? "Requirement is on Hold" : undefined}
                                 >
-                                  <td className="py-3 px-4 text-sm">
+                                  <td className="py-3 px-4 w-[88px] text-xs font-semibold text-slate-600 whitespace-nowrap">
+                                    {getRequirementDisplayId(req)}
+                                  </td>
+                                  <td className="py-3 px-4 w-[200px] max-w-[200px] text-sm">
                                     <RequirementRoleCell
                                       title={req.position}
                                       noOfPositions={req.noOfPositions}
+                                      titleClassName="text-sm font-semibold text-gray-900 block truncate"
                                       badges={
                                         <>
                                           {isRecentlyClosed && (
@@ -2213,21 +2266,8 @@ export default function RecruiterDashboard2() {
                                   </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
-                                  <td className="py-3 px-4 text-gray-600 text-sm">
-                                    {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
-                                      <span className="text-cyan-500">Unassigned</span>
-                                    ) : (
-                                      req.talentAdvisor
-                                    )}
-                                  </td>
-                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.teamLead || 'N/A'}</td>
                                   <td className="py-3 px-4">
-                                    <div className="flex items-center gap-2">
-                                      <span className={`w-2 h-2 rounded-full ${req.criticality === 'HIGH' ? 'bg-red-600' : req.criticality === 'MEDIUM' ? 'bg-blue-600' : 'bg-gray-600'}`}></span>
-                                      <span className={`text-sm font-medium ${criticalityColor}`}>
-                                        {req.criticality}
-                                      </span>
-                                    </div>
+                                    {renderRequirementCriticality(req)}
                                   </td>
                                   <td className="py-3 px-4">
                                     <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
@@ -2284,11 +2324,10 @@ export default function RecruiterDashboard2() {
                       <table className="w-full border-collapse">
                         <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
                           <tr>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm w-[88px]">ID</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm w-[200px] max-w-[200px]">Positions</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Resume Count</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">JD</th>
@@ -2297,13 +2336,12 @@ export default function RecruiterDashboard2() {
                         <tbody>
                           {filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500">
+                              <td colSpan={7} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet.'}
                               </td>
                             </tr>
                           ) : (
                             filteredRequirements.map((req: any, index: number) => {
-                              const criticalityColor = req.criticality === 'HIGH' ? 'text-red-600' : req.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
                               const delivered = req.deliveredCount || 0;
                               const expected = getExpectedCount(req.criticality, req.toughness);
                               const isComplete = delivered >= expected && expected > 0;
@@ -2315,10 +2353,14 @@ export default function RecruiterDashboard2() {
                                   className={`border-b border-gray-100 ${isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : `hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}`}
                                   title={isRecentlyClosed ? 'Requirement was closed and will leave this list after 24 hours' : isOnHold ? 'Requirement is on Hold' : undefined}
                                 >
-                                  <td className="py-3 px-4 text-sm">
+                                  <td className="py-3 px-4 w-[88px] text-xs font-semibold text-slate-600 whitespace-nowrap">
+                                    {getRequirementDisplayId(req)}
+                                  </td>
+                                  <td className="py-3 px-4 w-[200px] max-w-[200px] text-sm">
                                     <RequirementRoleCell
                                       title={req.position}
                                       noOfPositions={req.noOfPositions}
+                                      titleClassName="text-sm font-semibold text-gray-900 block truncate"
                                       badges={
                                         <>
                                           {isRecentlyClosed && (
@@ -2337,21 +2379,8 @@ export default function RecruiterDashboard2() {
                                   </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
-                                  <td className="py-3 px-4 text-gray-600 text-sm">
-                                    {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
-                                      <span className="text-cyan-500">Unassigned</span>
-                                    ) : (
-                                      req.talentAdvisor
-                                    )}
-                                  </td>
-                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.teamLead || 'N/A'}</td>
                                   <td className="py-3 px-4">
-                                    <div className="flex items-center gap-2">
-                                      <span className={`w-2 h-2 rounded-full ${req.criticality === 'HIGH' ? 'bg-red-600' : req.criticality === 'MEDIUM' ? 'bg-blue-600' : 'bg-gray-600'}`}></span>
-                                      <span className={`text-sm font-medium ${criticalityColor}`}>
-                                        {req.criticality}
-                                      </span>
-                                    </div>
+                                    {renderRequirementCriticality(req)}
                                   </td>
                                   <td className="py-3 px-4">
                                     <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-red-600'}`}>

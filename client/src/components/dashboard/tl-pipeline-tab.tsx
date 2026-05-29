@@ -178,12 +178,14 @@ export function TlPipelineTab({
           <PipelineKanbanBoard
             embedded
             naturalScroll
+            cardVariant="classic"
             className="h-full min-h-0"
             groupedByStage={groupedByStage}
             onCandidateClick={onCandidateClick}
             getCandidateName={(c) => c.name || c.candidateName || "N/A"}
             getRoleApplied={(c) => c.position || c.roleApplied || "N/A"}
             getCompany={(c) => c.company || "N/A"}
+            getProfilePicture={(c) => c.profilePicture || c.profile_picture || null}
             getAppliedTimestamp={(c) =>
               formatPipelineDaysAgo(
                 c.appliedDate || c.appliedOn || c.createdAt || c.updatedAt,

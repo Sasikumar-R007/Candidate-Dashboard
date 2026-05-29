@@ -8,10 +8,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  formatRoleIdShort,
   parseRequirementJdExtras,
+  resolveDisplayRoleId,
   type RequirementJdExtras,
 } from "@shared/requirement-jd-extras";
+import { CompanyBrandAvatar } from "@/components/client-brand-avatar";
 
 export type JobDescriptionDetailsData = {
   id?: string;
@@ -275,7 +276,7 @@ export default function JobDescriptionDetailsModal({
       jdExtras.knowledgeOnly?.trim() ||
       jdExtras.specialInstructions?.trim(),
   );
-  const shortRoleId = formatRoleIdShort(data.id);
+  const displayRoleId = resolveDisplayRoleId(data);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -292,9 +293,11 @@ export default function JobDescriptionDetailsModal({
             <div className="space-y-4">
               <div className="rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5 shadow-sm dark:border-cyan-900 dark:from-cyan-950/30 dark:to-blue-950/30">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white shadow-lg">
-                    {data.company?.charAt(0).toUpperCase() || "C"}
-                  </div>
+                  <CompanyBrandAvatar
+                    logoUrl={data.companyLogo}
+                    companyName={data.company}
+                    size="lg"
+                  />
                   <div className="flex-1">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                       {data.company || "Company Name"}
@@ -319,7 +322,7 @@ export default function JobDescriptionDetailsModal({
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     {variant === "admin" ? "Role ID" : "Requirement ID"}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{shortRoleId}</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{displayRoleId}</p>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

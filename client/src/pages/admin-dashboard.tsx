@@ -80,6 +80,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
+  buildStreqDisplayMap,
+  getRequirementLookupId,
+  resolveRequirementDisplayId,
+} from "@shared/requirement-jd-extras";
+import {
   REPORT_MONTHS,
   REPORT_QUARTERS,
   cashOutflowMatchesPeriod,
@@ -941,6 +946,22 @@ function ImpactMetricsEditor() {
     </>
   );
 }
+
+function formatEmployeeStatusLabel(role?: string | null): string {
+  const normalized = (role || "").trim().toLowerCase();
+  if (!normalized) return "N/A";
+  const map: Record<string, string> = {
+    client_member: "Client Member",
+    client_admin: "Client Admin",
+    team_leader: "Team Leader",
+    talent_advisor: "Talent Advisor",
+  };
+  if (map[normalized]) return map[normalized];
+  return normalized
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const employee = useEmployeeAuth();
@@ -1214,6 +1235,8 @@ export default function AdminDashboard() {
           rating: 4.0,
           recruiter: app.recruiter || 'Unknown',
           teamLeader: app.teamLeader || null,
+          profilePicture: app.profilePicture || app.profile_picture || null,
+          profileId: app.profileId || null,
         };
       });
     }
@@ -1884,6 +1907,29 @@ export default function AdminDashboard() {
       req.teamLead?.toLowerCase().includes(search)
     );
   }, [requirements, requirementsSearch]);
+
+  const streqDisplayMap = useMemo(() => {
+    const byRealId = new Map<string, { id: string; createdAt?: string; sourceDetails?: string | null }>();
+    for (const req of requirements as any[]) {
+      const realId = getRequirementLookupId(req);
+      if (!realId || byRealId.has(realId)) continue;
+      byRealId.set(realId, {
+        id: realId,
+        createdAt: req.createdAt,
+        sourceDetails: req.sourceDetails,
+      });
+    }
+    return buildStreqDisplayMap(Array.from(byRealId.values()));
+  }, [requirements]);
+
+  const getRequirementDisplayId = (requirement: any) => {
+    const fromApi = requirement.displayRequirementId?.trim();
+    if (fromApi && /^STREQ\d+$/i.test(fromApi)) return fromApi.toUpperCase();
+    return resolveRequirementDisplayId(
+      requirement,
+      streqDisplayMap.get(getRequirementLookupId(requirement)),
+    );
+  };
 
   // Fetch daily metrics from API with date filter
   const { data: dailyMetricsData = {
@@ -5601,7 +5647,8 @@ export default function AdminDashboard() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm w-[88px]">Req ID</th>
+                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm w-[200px] max-w-[200px]">Positions</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Company</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
@@ -5614,7 +5661,12 @@ export default function AdminDashboard() {
                       <tbody>
                         {filteredRequirements.map((requirement: Requirement, index: number) => (
                           <tr key={requirement.id} className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 ${index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                            <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
+                            <td className="py-3 px-3 w-[88px] text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                              {getRequirementDisplayId(requirement)}
+                            </td>
+                            <td className="py-3 px-3 w-[200px] max-w-[200px] text-gray-900 dark:text-white font-medium text-sm">
+                              <span className="block truncate" title={requirement.position}>{requirement.position}</span>
+                            </td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
@@ -6887,7 +6939,12 @@ export default function AdminDashboard() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      setSelectedJD({ ...jd.requirement, clientId: jd.clientId, spocName: jd.spocName });
+                                      setSelectedJD({
+                                        ...jd.requirement,
+                                        clientId: jd.clientId,
+                                        spocName: jd.spocName,
+                                        companyLogo: jd.companyLogo ?? null,
+                                      });
                                       setIsJDPreviewModalOpen(true);
                                     }}
                                     className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
@@ -6956,7 +7013,8 @@ export default function AdminDashboard() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm w-[88px]">Req ID</th>
+                          <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm w-[200px] max-w-[200px]">Positions</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Company</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
                           <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
@@ -6975,9 +7033,12 @@ export default function AdminDashboard() {
                               title={getRequirementRowTitle(requirement)}
                               className={`border-b border-gray-100 dark:border-gray-800 ${getRequirementRowClassName(requirement, index)}`}
                             >
-                              <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">
-                                <div className="flex items-center gap-2">
-                                  <span>{requirement.position}</span>
+                              <td className="py-3 px-3 w-[88px] text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                {getRequirementDisplayId(requirement)}
+                              </td>
+                              <td className="py-3 px-3 w-[200px] max-w-[200px] text-gray-900 dark:text-white font-medium text-sm">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="truncate" title={requirement.position}>{requirement.position}</span>
                                   {getRequirementStateBadge(requirement)}
                                 </div>
                                 <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
@@ -7002,15 +7063,7 @@ export default function AdminDashboard() {
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
-                                {requirement.talentAdvisor === "Unassigned" || !requirement.talentAdvisor ? (
-                                  <span className="text-cyan-500 dark:text-cyan-400">Unassigned</span>
-                                ) : requirementNeedsTalentAdvisorReassignment(requirement) ? (
-                                  <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                                    {requirement.talentAdvisor}
-                                  </span>
-                                ) : (
-                                  requirement.talentAdvisor
-                                )}
+                                {requirement.talentAdvisor || 'Unassigned'}
                               </td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
                                 {requirement.teamLead || 'N/A'}
@@ -10892,7 +10945,8 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse">
                 <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800 z-10">
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm w-[88px]">Req ID</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm w-[200px] max-w-[200px]">Positions</th>
                     <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Company</th>
                     <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
                     <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
@@ -10925,12 +10979,15 @@ export default function AdminDashboard() {
                           title={getRequirementRowTitle(requirement)}
                           className={`border-b border-gray-100 dark:border-gray-800 ${getRequirementRowClassName(requirement, index)}`}
                         >
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">
-                            <div className="flex items-center gap-2">
-                              <span>{requirement.position}</span>
+                          <td className="py-3 px-3 w-[88px] text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                            {getRequirementDisplayId(requirement)}
+                          </td>
+                          <td className="py-3 px-3 w-[200px] max-w-[200px] text-gray-900 dark:text-white font-medium text-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="truncate" title={requirement.position}>{requirement.position}</span>
                               {getRequirementStateBadge(requirement)}
                             </div>
-                            <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                            <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate">
                               {(() => {
                                 const splitMeta = getRequirementSplitMeta(requirement);
                                 return (
@@ -10952,15 +11009,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
-                            {requirement.talentAdvisor === "Unassigned" || !requirement.talentAdvisor ? (
-                              <span className="text-cyan-500 dark:text-cyan-400">Unassigned</span>
-                            ) : requirementNeedsTalentAdvisorReassignment(requirement) ? (
-                              <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                                {requirement.talentAdvisor}
-                              </span>
-                            ) : (
-                              requirement.talentAdvisor
-                            )}
+                            {requirement.talentAdvisor || 'Unassigned'}
                           </td>
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
                             {requirement.teamLead || 'N/A'}
@@ -13216,7 +13265,12 @@ export default function AdminDashboard() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setSelectedJD({ ...jd.requirement, clientId: jd.clientId, spocName: jd.spocName });
+                              setSelectedJD({
+                                ...jd.requirement,
+                                clientId: jd.clientId,
+                                spocName: jd.spocName,
+                                companyLogo: jd.companyLogo ?? null,
+                              });
                               setIsViewMoreJDModalOpen(false);
                               setIsJDPreviewModalOpen(true);
                             }}

@@ -24,6 +24,27 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  buildStreqDisplayMap,
+  getRequirementLookupId,
+  resolveRequirementDisplayId,
+} from "@shared/requirement-jd-extras";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, ExternalLink, Eye, Search, ArrowUp, Flag, Trophy } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -174,6 +195,7 @@ export default function TeamLeaderDashboard() {
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
   const [assignments, setAssignments] = useState<{[key: string]: string}>({'mobile-app-dev': 'Arun'});
   const [isReallocating, setIsReallocating] = useState(false);
+  const [isAssignmentConfirmOpen, setIsAssignmentConfirmOpen] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   const [jdText, setJdText] = useState<string>('');
   const [selectedJD, setSelectedJD] = useState<Requirement | null>(null);
@@ -447,6 +469,31 @@ export default function TeamLeaderDashboard() {
 
   const visibleRequirementsData = requirementsData as any[];
 
+  const streqDisplayMap = useMemo(() => {
+    const byRealId = new Map<string, { id: string; createdAt?: string; sourceDetails?: string | null }>();
+    for (const req of visibleRequirementsData) {
+      const realId = getRequirementLookupId(req);
+      if (!realId || byRealId.has(realId)) continue;
+      byRealId.set(realId, {
+        id: realId,
+        createdAt: req.createdAt,
+        sourceDetails: req.sourceDetails,
+      });
+    }
+    return buildStreqDisplayMap(Array.from(byRealId.values()));
+  }, [visibleRequirementsData]);
+
+  const getRequirementDisplayId = (requirement: any) => {
+    const fromApi = requirement.displayRequirementId?.trim();
+    if (fromApi && /^STREQ\d+$/i.test(fromApi)) {
+      return fromApi.toUpperCase();
+    }
+    return resolveRequirementDisplayId(
+      requirement,
+      streqDisplayMap.get(getRequirementLookupId(requirement)),
+    );
+  };
+
   // Fetch team performance data from API
   const { data: teamPerformanceData = [] } = useQuery<any[]>({
     queryKey: ['/api/team-leader/team-performance'],
@@ -581,6 +628,7 @@ export default function TeamLeaderDashboard() {
     
     setJobFormData({
       id: job.id,
+      requirementId: job.requirementId || '',
       companyName: job.companyName || '',
       companyTagline: job.companyTagline || '',
       companyType: job.companyType || '',
@@ -652,18 +700,18 @@ export default function TeamLeaderDashboard() {
                 <p className="mt-1 font-medium text-slate-800">{formatSourcingDate(job.postedDate || job.createdAt)}</p>
               </div>
             </div>
-            <div className="mt-4 rounded-xl bg-blue-50 px-3 py-3 text-sm text-slate-700">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-blue-500">Package</p>
-              <p className="mt-1 font-medium text-slate-900">{job.salaryPackage || `${job.salaryMin ? job.salaryMin/100000 + 'L - ' : ''}${job.salaryMax ? job.salaryMax/100000 + 'L' : ''}`}</p>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Status</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-blue-50 px-3 py-3 text-sm text-slate-700">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-blue-500">Package</p>
+                <p className="mt-1 font-medium text-slate-900">{job.salaryPackage || `${job.salaryMin ? job.salaryMin/100000 + 'L - ' : ''}${job.salaryMax ? job.salaryMax/100000 + 'L' : ''}`}</p>
+              </div>
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-700">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</p>
                 <Select
                   value={String(job.status || 'Active')}
                   onValueChange={(value) => updateRecruiterJobMutation.mutate({ id: job.id, data: { status: value } })}
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="mt-1 h-8 w-full text-xs border-slate-200 bg-slate-50">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -673,41 +721,15 @@ export default function TeamLeaderDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Assign TA</p>
-                <Select
-                  value={job.assignedTaId || 'unassigned'}
-                  onValueChange={(value) => {
-                    if (value === 'unassigned') {
-                      updateRecruiterJobMutation.mutate({ id: job.id, data: { assignedTaId: null, assignedTaName: null } });
-                    } else {
-                      const member = (teamMembers || []).find((m: any) => String(m.id) === value);
-                      if (member) {
-                        updateRecruiterJobMutation.mutate({ id: job.id, data: { assignedTaId: value, assignedTaName: member.name } });
-                      }
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Assign TA" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {chatTeamMembers.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <div className="mt-4 flex justify-between items-center">
-              <span className="text-[11px] text-slate-400 italic">
-                {job.assignedTaName ? `Assigned to: ${job.assignedTaName}` : 'No TA assigned'}
+              <span className="text-[11px] text-slate-500 font-medium">
+                {job.assignedTaName ? `Assigned to ${job.assignedTaName}` : 'Assigned to —'}
               </span>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                className="flex items-center gap-1 rounded-[4px] text-blue-600 border-blue-200 hover:bg-blue-50"
                 onClick={() => handleEditJob(job)}
               >
                 <EditIcon className="w-4 h-4" /> Edit
@@ -748,6 +770,7 @@ export default function TeamLeaderDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-leader/requirements'] });
       setIsAssignmentModalOpen(false);
+      setIsAssignmentConfirmOpen(false);
       setSelectedRequirement(null);
       setSelectedAssignee('');
       setJdText('');
@@ -756,9 +779,6 @@ export default function TeamLeaderDashboard() {
         description: "Talent Advisor assigned successfully!",
         className: "bg-green-50 border-green-200 text-green-800",
       });
-      setIsAssignmentModalOpen(false);
-      setSelectedRequirement(null);
-      setSelectedAssignee('');
     },
     onError: (error: Error) => {
       toast({
@@ -796,7 +816,8 @@ export default function TeamLeaderDashboard() {
   const handleAssign = (requirement: Requirement) => {
     setSelectedRequirement(requirement);
     setIsReallocating(false);
-    setSelectedAssignee('');
+    setSelectedAssignee(requirement.talentAdvisor || '');
+    setJdText(requirement.jdText || '');
     setIsAssignmentModalOpen(true);
   };
 
@@ -804,17 +825,30 @@ export default function TeamLeaderDashboard() {
     setSelectedRequirement(requirement);
     setIsReallocating(true);
     setSelectedAssignee(requirement.talentAdvisor || '');
+    setJdText(requirement.jdText || '');
     setIsAssignmentModalOpen(true);
   };
 
+  const isTaReassignment = Boolean(
+    selectedRequirement?.talentAdvisor &&
+      selectedAssignee &&
+      selectedAssignee !== selectedRequirement.talentAdvisor,
+  );
+
+  const handleRequestAssignmentConfirm = () => {
+    if (!selectedRequirement || !selectedAssignee) return;
+    setIsAssignmentConfirmOpen(true);
+  };
+
   const handleConfirmAssignment = () => {
-    if (selectedRequirement && selectedAssignee) {
-      assignTalentAdvisorMutation.mutate({
-        id: selectedRequirement.id,
-        talentAdvisor: selectedAssignee,
-        jdText: jdText.trim() || undefined
-      });
-    }
+    if (!selectedRequirement || !selectedAssignee) return;
+    const lookupId = getRequirementLookupId(selectedRequirement);
+    assignTalentAdvisorMutation.mutate({
+      id: lookupId,
+      talentAdvisor: selectedAssignee,
+      jdText: jdText.trim() || undefined,
+    });
+    setIsAssignmentConfirmOpen(false);
   };
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
@@ -828,6 +862,7 @@ export default function TeamLeaderDashboard() {
   const [resumeFormError, setResumeFormError] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobFormData, setJobFormData] = useState({
+    requirementId: '',
     companyName: '',
     companyTagline: '',
     companyType: '',
@@ -1159,7 +1194,32 @@ export default function TeamLeaderDashboard() {
 
                       <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:max-w-[560px]">
                         <button
-                          onClick={() => setIsPostJobModalOpen(true)}
+                          onClick={() => {
+                            setJobFormError('');
+                            setJobFormData({
+                              requirementId: '',
+                              companyName: '',
+                              companyTagline: '',
+                              companyType: '',
+                              market: '',
+                              field: '',
+                              noOfPositions: '',
+                              role: '',
+                              experience: '',
+                              location: '',
+                              workMode: '',
+                              employmentType: '',
+                              salaryPackage: '',
+                              aboutCompany: '',
+                              roleDefinitions: '',
+                              keyResponsibility: '',
+                              primarySkills: [],
+                              secondarySkills: [],
+                              knowledgeOnly: [],
+                              companyLogo: '',
+                            });
+                            setIsPostJobModalOpen(true);
+                          }}
                           className="whitespace-nowrap rounded border border-blue-600 bg-white px-3 py-2 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
                           data-testid="button-tl-post-job"
                         >
@@ -1568,14 +1628,14 @@ export default function TeamLeaderDashboard() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 bg-gray-50">
-                          <th className="text-left p-3 font-semibold text-gray-700">Positions</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-[88px]">ID</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-[200px] max-w-[200px]">Positions</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Resume Count</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Criticality</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Company</th>
                           <th className="text-left p-3 font-semibold text-gray-700">SPOC</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
-                          <th className="text-left p-3 font-semibold text-gray-700">JD</th>
-                          <th className="text-left p-3 font-semibold text-gray-700">Actions</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-[72px]">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1603,11 +1663,16 @@ export default function TeamLeaderDashboard() {
                               className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : ''}`}
                               title={isReassigned ? "Reassigned to another TA" : isRecentlyClosed ? "Requirement was closed and will leave this list after 24 hours" : isOnHold ? "Requirement is on Hold" : undefined}
                             >
-                              <td className="p-3 text-gray-900">
-                                <div className="flex items-center gap-2">
-                                  <div>
-                                    <span className="font-medium text-gray-900">{requirement.position}</span>
-                                    <p className="text-xs text-gray-500 mt-0.5">
+                              <td className="p-3 w-[88px] text-xs font-semibold text-slate-600 whitespace-nowrap">
+                                {getRequirementDisplayId(requirement)}
+                              </td>
+                              <td className="p-3 w-[200px] max-w-[200px] text-gray-900">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="min-w-0">
+                                    <span className="font-medium text-gray-900 block truncate" title={requirement.position}>
+                                      {requirement.position}
+                                    </span>
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">
                                       {positionCount} position{positionCount !== 1 ? 's' : ''}
                                     </p>
                                   </div>
@@ -1653,37 +1718,46 @@ export default function TeamLeaderDashboard() {
                                   requirement.talentAdvisor || 'not-assigned'
                                 )}
                               </td>
-                              <td className="p-3">
-                                {requirement.jdFile || requirement.jdText ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedJD(requirement);
-                                      setIsJDPreviewModalOpen(true);
-                                    }}
-                                    className="p-1 h-8 w-8"
-                                    title="View JD"
-                                  >
-                                    <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
-                                  </Button>
-                                ) : (
-                                  <span className="text-gray-400 text-xs">-</span>
-                                )}
-                              </td>
-                              <td className="p-3">
+                              <td className="p-3 w-[72px]">
                                 {isRecentlyClosed ? (
                                   <span className="text-xs text-red-700 font-medium">Archived</span>
+                                ) : isReassigned ? (
+                                  <span className="text-xs text-gray-400">—</span>
                                 ) : (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="p-1"
-                                    onClick={() => handleAssign(requirement)}
-                                    data-testid={`button-assign-ta-${requirement.id}`}
-                                  >
-                                    <UserRound className="w-4 h-4" />
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        data-testid={`button-requirement-actions-${requirement.id}`}
+                                      >
+                                        <MoreVertical className="h-4 w-4 text-gray-600" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-40">
+                                      {(requirement.jdFile || requirement.jdText) && (
+                                        <DropdownMenuItem
+                                          className="cursor-pointer"
+                                          onClick={() => {
+                                            setSelectedJD(requirement);
+                                            setIsJDPreviewModalOpen(true);
+                                          }}
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          View JD
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        className="cursor-pointer"
+                                        onClick={() => handleAssign(requirement)}
+                                        data-testid={`button-assign-ta-${requirement.id}`}
+                                      >
+                                        <UserRound className="mr-2 h-4 w-4" />
+                                        Assign TA
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 )}
                               </td>
                             </tr>
@@ -1818,12 +1892,12 @@ export default function TeamLeaderDashboard() {
                   </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="talent-advisor" className="text-sm font-medium text-gray-700">
+                <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4">
+                  <Label htmlFor="talent-advisor" className="text-sm font-medium text-gray-800">
                     Assign to Talent Advisor:
                   </Label>
                   <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                    <SelectTrigger className="mt-2" data-testid="select-talent-advisor">
+                    <SelectTrigger className="mt-2 bg-white border-blue-200" data-testid="select-talent-advisor">
                       <SelectValue placeholder="Select a Talent Advisor" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1832,10 +1906,15 @@ export default function TeamLeaderDashboard() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedRequirement.talentAdvisor && (
+                    <p className="mt-2 text-xs text-blue-800/80">
+                      Currently assigned: <span className="font-semibold">{selectedRequirement.talentAdvisor}</span>
+                    </p>
+                  )}
                 </div>
                 
-                <div>
-                  <Label htmlFor="jd-text" className="text-sm font-medium text-gray-700">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <Label htmlFor="jd-text" className="text-sm font-medium text-gray-800">
                     JD Text (Optional):
                   </Label>
                   <Textarea
@@ -1843,9 +1922,9 @@ export default function TeamLeaderDashboard() {
                     value={jdText}
                     onChange={(e) => setJdText(e.target.value)}
                     placeholder="Enter JD text to share with Talent Advisor..."
-                    className="mt-2 min-h-[100px]"
+                    className="mt-2 min-h-[100px] bg-white border-slate-200"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Note: JD file will not be shared to Talent Advisor, only text.</p>
+                  <p className="text-xs text-slate-500 mt-1">Note: JD file will not be shared to Talent Advisor, only text.</p>
                 </div>
                 
                 <div className="flex justify-end gap-3 pt-4">
@@ -1854,6 +1933,7 @@ export default function TeamLeaderDashboard() {
                     variant="outline"
                     onClick={() => {
                       setIsAssignmentModalOpen(false);
+                      setIsAssignmentConfirmOpen(false);
                       setSelectedRequirement(null);
                       setSelectedAssignee('');
                       setJdText('');
@@ -1865,17 +1945,51 @@ export default function TeamLeaderDashboard() {
                   </Button>
                   <Button
                     className="bg-gray-800 hover:bg-gray-900 text-white font-medium px-6 py-2 rounded"
-                    onClick={handleConfirmAssignment}
+                    onClick={handleRequestAssignmentConfirm}
                     disabled={!selectedAssignee || assignTalentAdvisorMutation.isPending}
                     data-testid="button-confirm-assignment"
                   >
-                    {assignTalentAdvisorMutation.isPending ? 'Assigning...' : 'Confirm Assignment'}
+                    {assignTalentAdvisorMutation.isPending ? 'Assigning...' : isReallocating || isTaReassignment ? 'Review & Confirm' : 'Confirm Assignment'}
                   </Button>
                 </div>
               </div>
             </DialogContent>
           </Dialog>
         )}
+
+        <AlertDialog open={isAssignmentConfirmOpen} onOpenChange={setIsAssignmentConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {isReallocating || isTaReassignment ? 'Confirm TA reassignment' : 'Confirm TA assignment'}
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm text-gray-600">
+                  <p>
+                    Assign <span className="font-semibold text-gray-900">{selectedAssignee}</span> to{' '}
+                    <span className="font-semibold text-gray-900">{selectedRequirement?.position}</span> at{' '}
+                    <span className="font-semibold text-gray-900">{selectedRequirement?.company}</span>?
+                  </p>
+                  {(isReallocating || isTaReassignment) && (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                      Changing the Talent Advisor will reset all metrics and records linked to this requirement for the
+                      previous TA. The new TA will start fresh for this role.
+                    </p>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmAssignment}
+                className="bg-gray-800 hover:bg-gray-900"
+              >
+                {isReallocating || isTaReassignment ? 'Confirm reassignment' : 'Confirm assignment'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <JobDescriptionDetailsModal
           open={isJDPreviewModalOpen}
@@ -3303,6 +3417,7 @@ export default function TeamLeaderDashboard() {
       <PostJobModal
         isOpen={isPostJobModalOpen}
         onClose={() => setIsPostJobModalOpen(false)}
+        linkableRequirements={visibleRequirementsData as any[]}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['/api/team-leader/sourcing/jobs-counts', employee?.id] });
           queryClient.invalidateQueries({ queryKey: ['/api/team-leader/sourcing/jobs', employee?.id] });
@@ -3477,7 +3592,8 @@ export default function TeamLeaderDashboard() {
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Positions</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300 w-[88px]">ID</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300 w-[200px] max-w-[200px]">Positions</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Resume Count</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Criticality</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Company</th>
@@ -3491,9 +3607,12 @@ export default function TeamLeaderDashboard() {
                     const positionCount = requirement.noOfPositions ?? 1;
                     return (
                     <tr key={requirement.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                      <td className="p-3 text-gray-900 border border-gray-300">
-                        <div className="font-medium">{requirement.position}</div>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                      <td className="p-3 w-[88px] text-xs font-semibold text-slate-600 border border-gray-300 whitespace-nowrap">
+                        {getRequirementDisplayId(requirement)}
+                      </td>
+                      <td className="p-3 w-[200px] max-w-[200px] text-gray-900 border border-gray-300">
+                        <div className="font-medium truncate" title={requirement.position}>{requirement.position}</div>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">
                           {positionCount} position{positionCount !== 1 ? 's' : ''}
                         </p>
                       </td>

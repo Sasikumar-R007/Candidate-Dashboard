@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { User, Briefcase, Settings, LogOut, UserCircle, MessageCircle } from "lucide-react";
+import { Briefcase, Settings, LogOut, UserCircle, LayoutGrid } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,7 +29,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const hasUnreadNudges = candidateNudges.some(n => (n.isResponded || n.message) && !n.isRead);
 
   const menuItems = [
-    { id: 'my-jobs', label: 'My Jobs', icon: Briefcase },
+    { id: 'my-jobs', label: 'My Jobs', icon: LayoutGrid },
     { id: 'edit-view', label: 'Profile', icon: UserCircle },
     { id: 'job-board', label: 'Job Board', icon: Briefcase },
     { id: 'settings', label: 'Settings', icon: Settings },

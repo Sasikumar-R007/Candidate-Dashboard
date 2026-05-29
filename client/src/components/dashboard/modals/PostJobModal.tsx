@@ -3,14 +3,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, Loader2, Plus, Image, Search, RefreshCw } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, Loader2, Plus, Image, Search, RefreshCw, ClipboardList } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { mapRequirementToJobForm } from '@shared/requirement-to-job-form';
+import { resolveRequirementDisplayId } from '@shared/requirement-jd-extras';
 
 interface JobFormData {
   id?: string | number;
+  requirementId?: string;
   companyName: string;
   companyTagline: string;
   companyType: string;
@@ -32,6 +36,21 @@ interface JobFormData {
   companyLogo: string;
 }
 
+export type PostJobRequirementOption = {
+  id: string;
+  displayRequirementId?: string | null;
+  position?: string;
+  company?: string;
+  talentAdvisor?: string | null;
+  talentAdvisorId?: string | null;
+  managementStatus?: string;
+  isRecentlyClosed?: boolean;
+  jdText?: string | null;
+  sourceDetails?: string | null;
+  noOfPositions?: number;
+  [key: string]: unknown;
+};
+
 interface PostJobModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -40,6 +59,8 @@ interface PostJobModalProps {
   setFormData: (data: JobFormData) => void;
   formError: string;
   setFormError: (error: string) => void;
+  /** When set, TL must pick a requirement; fields auto-fill and TA is mapped on post. */
+  linkableRequirements?: PostJobRequirementOption[];
 }
 
 export default function PostJobModal({
@@ -49,7 +70,8 @@ export default function PostJobModal({
   formData,
   setFormData,
   formError,
-  setFormError
+  setFormError,
+  linkableRequirements,
 }: PostJobModalProps) {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -134,8 +156,34 @@ export default function PostJobModal({
     }
   });
 
+  const postableRequirements = useMemo(() => {
+    if (!linkableRequirements?.length) return [];
+    return linkableRequirements.filter(
+      (req) =>
+        !req.isRecentlyClosed &&
+        req.managementStatus !== "closed" &&
+        (req.talentAdvisorId || req.talentAdvisor),
+    );
+  }, [linkableRequirements]);
+
+  const requiresRequirementLink = Boolean(linkableRequirements?.length) && !formData.id;
+
+  const handleRequirementSelect = (requirementId: string) => {
+    const requirement = postableRequirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const mapped = mapRequirementToJobForm(requirement);
+    setFormData({
+      ...formData,
+      ...mapped,
+      id: undefined,
+      requirementId,
+    });
+    setFormError("");
+  };
+
   const resetForm = () => {
     setFormData({
+      requirementId: '',
       companyName: '',
       companyTagline: '',
       companyType: '',
@@ -255,6 +303,11 @@ const deriveLocationType = (workMode: string): string => {
   };
 
   const handlePostJob = () => {
+    if (requiresRequirementLink && !formData.requirementId?.trim()) {
+      setFormError("Please select a requirement to link this job posting.");
+      return;
+    }
+
     if (!isFormValid) {
       setFormError(
         "Please fill out all required fields, including at least one primary and one secondary skill.",
@@ -288,7 +341,8 @@ const deriveLocationType = (workMode: string): string => {
       knowledgeOnly: formData.knowledgeOnly,
       employmentType: formData.employmentType,
       status: 'Active',
-      companyLogo: formData.companyLogo || null
+      companyLogo: formData.companyLogo || null,
+      requirementId: formData.requirementId?.trim() || undefined,
     };
 
     postJobMutation.mutate(jobData);
@@ -397,6 +451,44 @@ const deriveLocationType = (workMode: string): string => {
               {formError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
                   {formError}
+                </div>
+              )}
+
+              {requiresRequirementLink && (
+                <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Link to requirement *
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Select a requirement with an assigned TA. Job details will auto-fill; the mapped TA receives applicants.
+                  </p>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">
+                      <ClipboardList size={16} />
+                    </div>
+                    <Select
+                      value={formData.requirementId || ""}
+                      onValueChange={handleRequirementSelect}
+                    >
+                      <SelectTrigger className="pl-10 bg-white" data-testid="select-linked-requirement">
+                        <SelectValue placeholder="Select requirement" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {postableRequirements.length === 0 ? (
+                          <SelectItem value="__none" disabled>
+                            No requirements with TA assigned
+                          </SelectItem>
+                        ) : (
+                          postableRequirements.map((req) => (
+                            <SelectItem key={req.id} value={req.id}>
+                              {resolveRequirementDisplayId(req, req.displayRequirementId ?? undefined)} — {req.position} @ {req.company}
+                              {req.talentAdvisor ? ` (TA: ${req.talentAdvisor})` : ""}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
               

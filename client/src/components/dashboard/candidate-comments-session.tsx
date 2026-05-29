@@ -235,6 +235,7 @@ function formatSalaryDisplay(value?: string | null): string {
 function formatApplicationSourceLabel(source: string): string {
   const s = source.toLowerCase().trim();
   if (s === "recruiter_tagged") return "Sourced";
+  if (s === "tl_tagged") return "TL Tagged";
   if (s === "job_board" || s === "inbound" || s === "applied" || s === "direct") return "Applied";
   return source.replace(/_/g, " ");
 }

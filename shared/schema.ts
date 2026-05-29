@@ -896,6 +896,7 @@ export const recruiterJobs = pgTable("recruiter_jobs", {
   status: text("status").notNull().default("Active"), // Active, Closed, Hold, Draft
   assignedTaId: varchar("assigned_ta_id"), // The Talent Advisor assigned to this job
   assignedTaName: text("assigned_ta_name"), // Display name of the assigned TA
+  requirementId: varchar("requirement_id"), // Links to requirements.id when posted from a TL requirement
   applicationCount: integer("application_count").default(0),
   postedDate: timestamp("posted_date").notNull().defaultNow(),
   closedDate: timestamp("closed_date"),
