@@ -25,6 +25,7 @@ import ProfileStrength from '@/components/dashboard/profile-strength';
 import { useQuery } from '@tanstack/react-query';
 import type { RecruiterJob } from "@shared/schema";
 import { calculateProfileCompletion } from '@/lib/profile-utils';
+import { getArchiveStatusLabel, getArchiveTerminalMeta } from '@/lib/candidate-pipeline-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CandidateApplicationConsentModal from "@/components/candidate-dashboard/candidate-application-consent-modal";
 import { logConsent } from "@/lib/consent-log";
@@ -69,13 +70,33 @@ const backgroundColors = [
   'bg-blue-50', 'bg-emerald-50', 'bg-amber-50', 'bg-rose-50', 'bg-indigo-50', 'bg-teal-50'
 ];
 
+/** Slight curve for job board cards/inputs (8px). */
+const JB_RADIUS = "rounded-[8px]";
+
+function sanitizeSkillList(items: unknown[]): string[] {
+  const out: string[] = [];
+  for (const item of items) {
+    if (item == null) continue;
+    const s = String(item).trim().replace(/^["']|["']$/g, "");
+    if (!s || s === '""' || s === "''" || s.toLowerCase() === "null") continue;
+    if (!out.includes(s)) out.push(s);
+  }
+  return out;
+}
+
 function parseSkills(skillsString: string | null): string[] {
   if (!skillsString) return [];
+  const trimmed = skillsString.trim();
+  if (!trimmed) return [];
   try {
-    const parsed = JSON.parse(skillsString);
-    return Array.isArray(parsed) ? parsed : [parsed];
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) return sanitizeSkillList(parsed);
+    if (parsed && typeof parsed === "object") {
+      return sanitizeSkillList(Object.values(parsed as Record<string, unknown>));
+    }
+    return sanitizeSkillList([parsed]);
   } catch {
-    return skillsString.split(',').map(s => s.trim()).filter(Boolean);
+    return sanitizeSkillList(trimmed.split(/[,;|]/));
   }
 }
 
@@ -107,7 +128,7 @@ function transformRecruiterJobToJobListing(job: RecruiterJob, index: number): Jo
     location: job.location || 'Not specified',
     type: 'Full Time',
     workType: job.workMode || 'On-site',
-    skills: [...primary, ...secondary].slice(0, 5),
+    skills: sanitizeSkillList([...primary, ...secondary]).slice(0, 5),
     primarySkills: primary,
     secondarySkills: secondary,
     knowledgeOnly: knowledge,
@@ -130,6 +151,19 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   const [showApplicationConsent, setShowApplicationConsent] = useState(false);
   const [jobToApply, setJobToApply] = useState<JobListing | null>(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [loadingJobDetailId, setLoadingJobDetailId] = useState<string | null>(null);
+  const [detailsPanelPulse, setDetailsPanelPulse] = useState(false);
+
+  const openJobDetails = (job: JobListing) => {
+    setLoadingJobDetailId(job.id);
+    setSelectedJob(null);
+    window.setTimeout(() => {
+      setSelectedJob(job);
+      setLoadingJobDetailId(null);
+      setDetailsPanelPulse(true);
+      window.setTimeout(() => setDetailsPanelPulse(false), 700);
+    }, 400);
+  };
   
   // Filter States
   const [roleFilter, setRoleFilter] = useState('');
@@ -273,7 +307,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
   return (
     <>
-    <div className="flex bg-white dark:bg-gray-900 h-screen overflow-hidden font-inter">
+    <div className="flex bg-gray-50 dark:bg-gray-900 h-full min-h-0 overflow-hidden font-inter text-gray-900">
       {/* Left Session: Sidebar with Filters */}
       <div 
         className={`relative flex flex-col border-r border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-500 ease-in-out scrollbar-hide shrink-0 z-50 ${isSidebarCollapsed ? 'w-[72px]' : 'w-[320px]'}`}
@@ -297,14 +331,14 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                 <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100/50 dark:border-blue-900/20 transition-all hover:bg-blue-50">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                    <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em]">Applied</p>
+                    <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">Applied</p>
                   </div>
                   <p className="text-2xl font-black text-blue-700 dark:text-blue-300 tabular-nums">{jobApplicationsData.length}</p>
                 </div>
                 <div className="bg-purple-50/50 dark:bg-purple-900/10 p-4 rounded-2xl border border-purple-100/50 dark:border-purple-900/20 transition-all hover:bg-purple-50">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
-                    <p className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-[0.15em]">Saved</p>
+                    <p className="text-xs font-semibold text-purple-800 dark:text-purple-300">Saved</p>
                   </div>
                   <p className="text-2xl font-black text-purple-700 dark:text-purple-300 tabular-nums">{savedJobsData.length}</p>
                 </div>
@@ -338,34 +372,34 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                 <Accordion type="multiple" className="w-full space-y-4" defaultValue={['personalization']}>
                   <AccordionItem value="personalization" className="border-none">
                     <AccordionTrigger className="hover:no-underline py-0 mb-4">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Quick Finder</span>
+                      <span className="text-sm font-semibold text-gray-700">Quick finder</span>
                     </AccordionTrigger>
-                    <AccordionContent className="space-y-4">
+                    <AccordionContent className="space-y-4 px-0.5 overflow-visible">
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase">Role</Label>
+                        <Label className="text-sm font-medium text-gray-700">Role</Label>
                         <Input 
                           placeholder="e.g. Frontend Developer" 
                           value={roleFilter}
                           onChange={(e) => setRoleFilter(e.target.value)}
-                          className="h-9 rounded-xl text-xs bg-gray-50/50 border-gray-100 focus:bg-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                          className={`h-10 w-full box-border ${JB_RADIUS} text-sm bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus-visible:outline-none`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase">Skills</Label>
+                        <Label className="text-sm font-medium text-gray-700">Skills</Label>
                         <Input 
                           placeholder="e.g. React, Node.js" 
                           value={skillsFilter}
                           onChange={(e) => setSkillsFilter(e.target.value)}
-                          className="h-9 rounded-xl text-xs bg-gray-50/50 border-gray-100 focus:bg-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                          className={`h-10 w-full box-border ${JB_RADIUS} text-sm bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus-visible:outline-none`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase">Location</Label>
+                        <Label className="text-sm font-medium text-gray-700">Location</Label>
                         <Input 
                           placeholder="e.g. Bangalore, Remote" 
                           value={locationFilter}
                           onChange={(e) => setLocationFilter(e.target.value)}
-                          className="h-9 rounded-xl text-xs bg-gray-50/50 border-gray-100 focus:bg-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                          className={`h-10 w-full box-border ${JB_RADIUS} text-sm bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus-visible:outline-none`}
                         />
                       </div>
                     </AccordionContent>
@@ -373,25 +407,25 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   <AccordionItem value="company" className="border-none">
                     <AccordionTrigger className="hover:no-underline py-0 mb-4">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Company Info</span>
+                      <span className="text-sm font-semibold text-gray-700">Company info</span>
                     </AccordionTrigger>
                     <AccordionContent className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase">Company Name</Label>
+                        <Label className="text-sm font-medium text-gray-700">Company name</Label>
                         <Input 
                           placeholder="e.g. Google, StaffOS" 
                           value={companyFilter}
                           onChange={(e) => setCompanyFilter(e.target.value)}
-                          className="h-9 rounded-xl text-xs bg-gray-50/50 border-gray-100 focus:bg-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                          className={`h-10 w-full box-border ${JB_RADIUS} text-sm bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus-visible:outline-none`}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase">Product / Service</Label>
+                        <Label className="text-sm font-medium text-gray-700">Product / service</Label>
                         <Input 
                           placeholder="e.g. SaaS, Fintech" 
                           value={productFilter}
                           onChange={(e) => setProductFilter(e.target.value)}
-                          className="h-9 rounded-xl text-xs bg-gray-50/50 border-gray-100 focus:bg-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                          className={`h-10 w-full box-border ${JB_RADIUS} text-sm bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus-visible:outline-none`}
                         />
                       </div>
                     </AccordionContent>
@@ -399,7 +433,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   <AccordionItem value="work-mode" className="border-none">
                     <AccordionTrigger className="hover:no-underline py-0 mb-4">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Work Mode</span>
+                      <span className="text-sm font-semibold text-gray-700">Work mode</span>
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="grid gap-3">
@@ -408,7 +442,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                               prev.includes(mode) ? prev.filter(m => m !== mode) : [...prev, mode]
                           )}>
                             <Checkbox checked={selectedWorkModes.includes(mode)} className="w-4 h-4 rounded border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600" />
-                            <Label className="text-xs font-bold text-gray-600 group-hover:text-blue-600 transition-colors cursor-pointer">{mode}</Label>
+                            <Label className="text-sm font-medium text-gray-700 group-hover:text-blue-700 transition-colors cursor-pointer">{mode}</Label>
                           </div>
                         ))}
                       </div>
@@ -417,7 +451,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   <AccordionItem value="type" className="border-none">
                      <AccordionTrigger className="hover:no-underline py-0 mb-4">
-                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Job Type</span>
+                       <span className="text-sm font-semibold text-gray-700">Job type</span>
                      </AccordionTrigger>
                      <AccordionContent>
                        <div className="grid gap-3">
@@ -426,7 +460,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                                prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
                            )}>
                              <Checkbox checked={selectedEmploymentTypes.includes(type)} className="w-4 h-4 rounded border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600" />
-                             <Label className="text-xs font-bold text-gray-600 group-hover:text-blue-600 transition-colors cursor-pointer">{type}</Label>
+                             <Label className="text-sm font-medium text-gray-700 group-hover:text-blue-700 transition-colors cursor-pointer">{type}</Label>
                            </div>
                          ))}
                        </div>
@@ -435,7 +469,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   <AccordionItem value="exp" className="border-none">
                     <AccordionTrigger className="hover:no-underline py-0 mb-4">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Experience</span>
+                      <span className="text-sm font-semibold text-gray-700">Experience</span>
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="grid gap-3">
@@ -444,7 +478,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                               prev.includes(exp) ? prev.filter(e => e !== exp) : [...prev, exp]
                           )}>
                             <Checkbox checked={selectedExperience.includes(exp)} className="w-4 h-4 rounded border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600" />
-                            <Label className="text-xs font-bold text-gray-600 group-hover:text-blue-600 transition-colors cursor-pointer">{exp}</Label>
+                            <Label className="text-sm font-medium text-gray-700 group-hover:text-blue-700 transition-colors cursor-pointer">{exp}</Label>
                           </div>
                         ))}
                       </div>
@@ -453,7 +487,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   <AccordionItem value="salary" className="border-none">
                      <AccordionTrigger className="hover:no-underline py-0 mb-4">
-                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Package (LPA)</span>
+                       <span className="text-sm font-semibold text-gray-700">Package (LPA)</span>
                      </AccordionTrigger>
                      <AccordionContent>
                        <div className="px-2 pt-2">
@@ -502,25 +536,25 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full bg-gray-50/30 dark:bg-gray-900/10">
+      <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 min-w-0">
         {/* Top Header Bar */}
-        <div className="h-20 shrink-0 border-b border-gray-100 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md flex items-center px-10 relative z-40">
-           <div className="max-w-[500px] w-full relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={18} />
+        <div className="min-h-[4.5rem] shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-wrap items-center gap-3 px-4 sm:px-6 lg:px-8 py-3 relative z-40">
+           <div className="flex-1 min-w-[200px] max-w-xl relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-blue-600 transition-colors" size={18} />
               <input 
                 type="text" 
                 placeholder="Search jobs, companies, or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-50/50 dark:bg-gray-700/50 border border-transparent focus:border-blue-100 focus:bg-white transition-all h-12 rounded-2xl pl-12 pr-6 text-sm font-medium outline-none shadow-sm"
+                className="w-full box-border bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all h-11 sm:h-12 rounded-xl pl-11 pr-4 text-sm font-medium text-gray-900 dark:text-white placeholder:text-gray-500 outline-none"
               />
            </div>
            
-            <div className="ml-auto flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 ml-auto">
                <div className="flex items-center bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl gap-1">
                   <button 
                     onClick={() => setJobFilter('all')}
-                    className={`flex items-center gap-2.5 px-4 py-2 rounded-xl transition-all duration-300 relative ${jobFilter === 'all' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                    className={`flex items-center gap-2.5 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 relative text-sm font-semibold ${jobFilter === 'all' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-700' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   >
                     <LayoutGrid size={16} />
                     <AnimatePresence mode="wait">
@@ -539,7 +573,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   <button 
                     onClick={() => setJobFilter('hot')}
-                    className={`flex items-center gap-2.5 px-4 py-2 rounded-xl transition-all duration-300 relative ${jobFilter === 'hot' ? 'bg-white dark:bg-gray-700 shadow-sm text-orange-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                    className={`flex items-center gap-2.5 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 relative text-sm font-semibold ${jobFilter === 'hot' ? 'bg-white dark:bg-gray-700 shadow-sm text-orange-700' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   >
                     <Flame size={16} />
                     <AnimatePresence mode="wait">
@@ -558,7 +592,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   <button 
                     onClick={() => setJobFilter('saved')}
-                    className={`flex items-center gap-2.5 px-4 py-2 rounded-xl transition-all duration-300 relative ${jobFilter === 'saved' ? 'bg-white dark:bg-gray-700 shadow-sm text-purple-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                    className={`flex items-center gap-2.5 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 relative text-sm font-semibold ${jobFilter === 'saved' ? 'bg-white dark:bg-gray-700 shadow-sm text-purple-700' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   >
                     <Bookmark size={16} />
                     <AnimatePresence mode="wait">
@@ -579,7 +613,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
                
                <div className="flex flex-col items-end">
-                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{filteredJobs.length} Jobs Found</span>
+                 <span className="text-sm font-semibold text-gray-700">{filteredJobs.length} jobs found</span>
                 </div>
 
                 <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
@@ -599,7 +633,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
         {/* Split Content View */}
         <div className="flex-1 flex overflow-hidden">
           {/* Job List (42%) */}
-          <div className="w-[42%] flex flex-col border-r border-gray-100 dark:border-gray-700 bg-gray-50/10 overflow-y-auto px-6 py-8 gap-6 scrollbar-hide">
+          <div className="w-[42%] min-w-[280px] flex flex-col border-r border-gray-200 dark:border-gray-700 bg-gray-50 overflow-y-auto px-3 py-3 gap-2.5 scrollbar-hide">
             {isLoadingJobs ? (
               <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
                         ) : filteredJobs.map((job) => {
@@ -608,10 +642,10 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
               return (
               <div 
                 key={job.id}
-                onClick={() => setSelectedJob(job)}
-                className={`relative cursor-pointer transition-all duration-300 rounded-[1.5rem] border ${selectedJob?.id === job.id ? 'bg-white border-blue-200 shadow-xl shadow-blue-50/30' : 'bg-white border-gray-100 hover:border-blue-100/50 hover:shadow-md'}`}
+                onClick={() => openJobDetails(job)}
+                className={`relative cursor-pointer transition-all duration-300 ${JB_RADIUS} border ${selectedJob?.id === job.id ? 'bg-white border-blue-400 shadow-md ring-1 ring-blue-100' : 'bg-white border-gray-200 hover:border-blue-200 hover:shadow-sm'}`}
               >
-                <div className="p-5">
+                <div className="p-3.5">
                   <div className="flex gap-4 mb-4">
                     <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 shadow-sm shrink-0 overflow-hidden">
                       <Avatar className="w-8 h-8">
@@ -623,7 +657,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                     </div>
                     <div className="flex-1 pt-0.5">
                       <h4 className="font-bold text-gray-900 dark:text-white text-[15px] leading-tight mb-0.5">{job.title}</h4>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{job.company}</p>
+                      <p className="text-xs font-semibold text-gray-600">{job.company}</p>
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); toggleSaveJob(job); }}
@@ -634,32 +668,35 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                   </div>
 
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {job.skills.slice(0, 3).map(skill => (
-                      <Badge key={skill} variant="secondary" className="bg-gray-50 text-gray-500 border-none rounded-md font-bold text-[9px] px-2 py-0.5 uppercase tracking-wider">{skill}</Badge>
+                    {sanitizeSkillList(job.skills).slice(0, 3).map((skill, i) => (
+                      <Badge key={`${skill}-${i}`} variant="secondary" className={`bg-gray-100 text-gray-700 border-none ${JB_RADIUS} font-medium text-[10px] px-2 py-0.5`}>{skill}</Badge>
                     ))}
                     {isApplied && (
                       <Badge className="bg-emerald-50 text-emerald-600 border-none rounded-md font-bold text-[9px] px-2 py-0.5 uppercase tracking-wider">Applied</Badge>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 mb-5">
-                    <div className="bg-gray-50/50 rounded-lg p-2 flex flex-col items-center">
-                      <Briefcase size={10} className="text-gray-300 mb-1" />
-                      <span className="text-[10px] font-black text-gray-500 uppercase">{job.experience}</span>
+                  <div className="grid grid-cols-3 gap-1.5 mb-3">
+                    <div className={`bg-gray-100 ${JB_RADIUS} p-1.5 flex flex-col items-center`}>
+                      <Briefcase size={12} className="text-gray-700 mb-0.5" />
+                      <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">{job.experience}</span>
                     </div>
-                    <div className="bg-gray-50/50 rounded-lg p-2 flex flex-col items-center">
-                      <DollarSign size={10} className="text-gray-300 mb-1" />
-                      <span className="text-[10px] font-black text-gray-500 uppercase truncate w-full text-center">{job.salary}</span>
+                    <div className={`bg-gray-100 ${JB_RADIUS} p-1.5 flex flex-col items-center`}>
+                      <DollarSign size={12} className="text-gray-700 mb-0.5" />
+                      <span className="text-[10px] font-semibold text-gray-800 truncate w-full text-center">{job.salary}</span>
                     </div>
-                    <div className="bg-gray-50/50 rounded-lg p-2 flex flex-col items-center">
-                      <MapPin size={10} className="text-gray-300 mb-1" />
-                      <span className="text-[10px] font-black text-gray-500 uppercase truncate w-full text-center">{job.location}</span>
+                    <div className={`bg-gray-100 ${JB_RADIUS} p-1.5 flex flex-col items-center`}>
+                      <MapPin size={12} className="text-gray-700 mb-0.5" />
+                      <span className="text-[10px] font-semibold text-gray-800 truncate w-full text-center">{job.location}</span>
                     </div>
                   </div>
 
                   <Button 
-                    className="w-full rounded-xl h-10 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-none"
-                    onClick={() => setSelectedJob(job)}
+                    className={`w-full ${JB_RADIUS} h-9 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openJobDetails(job);
+                    }}
                   >
                     View more
                   </Button>
@@ -669,12 +706,20 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
           </div>
 
 
-          {/* Job Detail Preview (58%) - 'View Model' Parity */}
-          <div className="flex-1 bg-gray-50/30 dark:bg-gray-800 overflow-hidden flex flex-col border-l border-gray-100">
-            {selectedJob ? (
+          {/* Job Detail Preview (58%) */}
+          <div className={`flex-1 min-w-0 bg-white dark:bg-gray-800 overflow-hidden flex flex-col border-l border-gray-200 transition-shadow duration-500 ${detailsPanelPulse ? 'ring-2 ring-inset ring-blue-200 shadow-inner' : ''}`}>
+            {loadingJobDetailId ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+                <div>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">Opening job details</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Loading role information…</p>
+                </div>
+              </div>
+            ) : selectedJob ? (
               <>
-                <div className="flex-1 overflow-y-auto px-10 py-10 scrollbar-hide">
-                  <div className="max-w-[700px] mx-auto transition-none">
+                <div className="flex-1 min-h-0 overflow-y-auto px-6 sm:px-8 py-6 pb-8 scrollbar-hide">
+                  <div className="max-w-[700px] mx-auto">
                       {/* Header */}
                       <div className="flex gap-6 mb-8">
                          <div className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-700 flex items-center justify-center border border-gray-100 dark:border-gray-600 shadow-sm shrink-0 overflow-hidden">
@@ -687,13 +732,13 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                          </div>
                          <div className="flex-1 pt-0.5">
                             <div className="flex items-center gap-3 mb-1.5">
-                               <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight leading-tight">{selectedJob.title}</h2>
+                               <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{selectedJob.title}</h2>
                                {selectedJob.isHot && <Badge className="bg-orange-500 text-white border-none rounded-lg px-2 h-5 text-[8px] font-black uppercase tracking-widest inline-flex items-center gap-1"><Flame size={10} /> Hot</Badge>}
                             </div>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-400">
                                <div className="flex items-center gap-1.5 hover:text-blue-600 cursor-pointer transition-colors">
                                   <Building2 size={12} />
-                                  <span className="text-[10px] font-bold uppercase tracking-widest">{selectedJob.company}</span>
+                                  <span className="text-sm font-semibold text-gray-700">{selectedJob.company}</span>
                                   {selectedJob.companyTagline && (
                                     <span className="text-[9px] font-medium lowercase italic ml-1">({selectedJob.companyTagline})</span>
                                   )}
@@ -738,22 +783,17 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                          {selectedJob.field && <Badge variant="secondary" className="bg-indigo-50 text-indigo-600 border-none rounded-lg px-3 py-1 text-[9px] font-bold uppercase tracking-widest">{selectedJob.field}</Badge>}
                          {selectedJob.companyType && <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none rounded-lg px-3 py-1 text-[9px] font-bold uppercase tracking-widest">{selectedJob.companyType}</Badge>}
                          {selectedJob.noOfPositions && <Badge variant="secondary" className="bg-orange-50 text-orange-600 border-none rounded-lg px-3 py-1 text-[9px] font-bold uppercase tracking-widest">Open Positions: {selectedJob.noOfPositions}</Badge>}
-                         {selectedJob.recruiterJobId && (
-                           <div className="ml-auto text-[9px] font-bold text-blue-500/50 uppercase tracking-[0.2em] self-center">
-                             ID: {selectedJob.recruiterJobId.slice(0, 8)}
-                           </div>
-                         )}
                       </div>
 
                       {/* Content Sections */}
                       <div className="space-y-12 pb-10">
                          {selectedJob.description && (
                            <section>
-                              <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-4">
-                                About Company
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-4">
+                                About company
                                 <div className="flex-1 h-[1px] bg-gray-100 dark:bg-gray-800"></div>
                               </h4>
-                              <p className="text-[13px] font-medium leading-relaxed text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                              <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
                                  {selectedJob.description}
                               </p>
                            </section>
@@ -761,11 +801,11 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                          {selectedJob.roleDefinitions && (
                            <section>
-                              <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-4">
-                                Role Definition
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-4">
+                                Role definition
                                 <div className="flex-1 h-[1px] bg-gray-100 dark:bg-gray-800"></div>
                               </h4>
-                              <div className="text-[13px] font-medium leading-relaxed text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                              <div className="text-sm leading-relaxed text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
                                  {selectedJob.roleDefinitions}
                               </div>
                            </section>
@@ -773,105 +813,143 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                          {selectedJob.keyResponsibility && (
                            <section>
-                              <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-4">
-                                Key Responsibilities
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-4">
+                                Key responsibilities
                                 <div className="flex-1 h-[1px] bg-gray-100 dark:bg-gray-800"></div>
                               </h4>
-                              <div className="text-[13px] font-medium leading-relaxed text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                              <div className="text-sm leading-relaxed text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
                                  {selectedJob.keyResponsibility}
                               </div>
                            </section>
                          )}
 
                          <section>
-                             <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
-                                Skills & Expertise
+                             <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-4">
+                                Skills & expertise
                                 <div className="flex-1 h-[1px] bg-gray-100 dark:bg-gray-800"></div>
                              </h4>
                              <div className="space-y-6">
-                               {selectedJob.primarySkills?.length > 0 && (
+                               {(() => {
+                                 const primary = sanitizeSkillList(selectedJob.primarySkills ?? []);
+                                 const secondary = sanitizeSkillList(selectedJob.secondarySkills ?? []);
+                                 const knowledge = sanitizeSkillList(selectedJob.knowledgeOnly ?? []);
+                                 return (
+                                   <>
+                               {primary.length > 0 && (
                                  <div>
-                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <div className="text-xs font-semibold text-gray-600 mb-3 flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                                      Primary Skills
+                                      Primary skills
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                       {selectedJob.primarySkills.map(skill => (
-                                          <Badge key={skill} className="bg-blue-600 text-white border-none px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-transform hover:scale-105 cursor-default">{skill}</Badge>
+                                       {primary.map((skill, i) => (
+                                          <Badge key={`${skill}-${i}`} className={`bg-blue-600 text-white border-none px-3 py-1.5 ${JB_RADIUS} text-xs font-medium`}>{skill}</Badge>
                                        ))}
                                     </div>
                                  </div>
                                )}
-                               {selectedJob.secondarySkills?.length > 0 && (
+                               {secondary.length > 0 && (
                                  <div>
-                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <div className="text-xs font-semibold text-gray-600 mb-3 flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-                                      Secondary Skills
+                                      Secondary skills
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                       {selectedJob.secondarySkills.map(skill => (
-                                          <Badge key={skill} className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-transform hover:scale-105 cursor-default">{skill}</Badge>
+                                       {secondary.map((skill, i) => (
+                                          <Badge key={`${skill}-${i}`} className={`bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 px-3 py-1.5 ${JB_RADIUS} text-xs font-medium`}>{skill}</Badge>
                                        ))}
                                     </div>
                                  </div>
                                )}
-                               {selectedJob.knowledgeOnly?.length > 0 && (
+                               {knowledge.length > 0 && (
                                  <div>
-                                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-                                      Knowledge Only
+                                    <div className="text-xs font-semibold text-gray-600 mb-3 flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                                      Knowledge only
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                       {selectedJob.knowledgeOnly.map(skill => (
-                                          <Badge key={skill} variant="outline" className="text-gray-500 border-gray-200 dark:border-gray-700 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-transform hover:scale-105 cursor-default">{skill}</Badge>
+                                       {knowledge.map((skill, i) => (
+                                          <Badge key={`${skill}-${i}`} variant="outline" className={`text-gray-700 border-gray-300 dark:border-gray-600 px-3 py-1.5 ${JB_RADIUS} text-xs font-medium`}>{skill}</Badge>
                                        ))}
                                     </div>
                                  </div>
                                )}
+                               {primary.length === 0 && secondary.length === 0 && knowledge.length === 0 && (
+                                 <p className="text-sm text-gray-500">No skills listed for this role.</p>
+                               )}
+                                   </>
+                                 );
+                               })()}
                              </div>
                          </section>
                       </div>
                   </div>
                 </div>
 
-                {/* Sticky Action Bar */}
-                <div className="h-20 px-10 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between shrink-0">
-                   <div className="flex items-center gap-4 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-                      <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1 rounded-lg">
-                        <Users size={12} /> {selectedJob.applicationCount || 0} candidates applied
+                {/* Fixed action bar — details scroll above; bar stays full width */}
+                <div className="shrink-0 z-20 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+                  <div className="px-5 sm:px-8 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-3 min-h-[2.5rem]">
+                      <div className={`flex items-center gap-2 bg-blue-50 text-blue-800 px-3.5 py-2 ${JB_RADIUS} border border-blue-100 text-sm font-medium whitespace-nowrap`}>
+                        <Users size={16} className="text-blue-700 shrink-0" />
+                        <span>{selectedJob.applicationCount || 0} candidates applied</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={12} /> {selectedJob.postedDays}
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-600 whitespace-nowrap">
+                        <Clock size={16} className="text-gray-500 shrink-0" />
+                        <span>Posted {selectedJob.postedDays}</span>
                       </div>
-                   </div>
-                    <div className="flex items-center gap-3">
-                      <Button 
-                        variant="ghost"
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 sm:ml-auto">
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => toggleSaveJob(selectedJob)}
-                        className={`rounded-xl h-10 px-4 font-bold text-[11px] flex items-center gap-2 transition-none ${savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+                        className={`${JB_RADIUS} h-11 min-w-[7rem] px-5 font-semibold text-sm flex items-center justify-center gap-2 border-gray-200 ${
+                          savedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
+                            ? 'text-blue-700 border-blue-200 bg-blue-50'
+                            : 'text-gray-700 hover:text-blue-700 hover:border-blue-200'
+                        }`}
                       >
-                         <Bookmark size={14} className={savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'fill-current' : ''} />
-                         {savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Saved' : 'Save'}
+                        <Bookmark
+                          size={16}
+                          className={savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'fill-current' : ''}
+                        />
+                        {savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Saved' : 'Save'}
                       </Button>
                       {(() => {
-                        const isApplied = jobApplicationsData.some(app => app.recruiterJobId === selectedJob.id || (app.jobTitle === selectedJob.title && app.company === selectedJob.company));
+                        const isApplied = jobApplicationsData.some(
+                          (app) =>
+                            app.recruiterJobId === selectedJob.id ||
+                            (app.jobTitle === selectedJob.title && app.company === selectedJob.company),
+                        );
                         return (
-                          <Button 
+                          <Button
+                            type="button"
                             onClick={() => {
                               if (isApplied) return;
                               setJobToApply(selectedJob);
                               setShowApplicationConsent(true);
                             }}
                             disabled={applyJobMutation.isPending || isApplied}
-                            className={`rounded-xl px-8 h-10 font-bold text-[12px] transition-none flex items-center gap-2 shadow-sm ${isApplied ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-none' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                            className={`${JB_RADIUS} h-11 min-w-[8.5rem] px-6 font-semibold text-sm flex items-center justify-center gap-2 shadow-sm ${
+                              isApplied
+                                ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-none'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}
                           >
-                             {applyJobMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : (isApplied ? <CheckCircle2 size={14} /> : <MousePointer2 size={14} />)}
-                             {isApplied ? 'Applied' : 'Apply now'}
+                            {applyJobMutation.isPending ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : isApplied ? (
+                              <CheckCircle2 size={16} />
+                            ) : (
+                              <MousePointer2 size={16} />
+                            )}
+                            {isApplied ? 'Applied' : 'Apply now'}
                           </Button>
                         );
                       })()}
-                   </div>
-
+                    </div>
+                  </div>
                 </div>
               </>
             ) : (
@@ -902,7 +980,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
     
     {/* Archive Modal */}
     <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>
-      <DialogContent className="max-w-[1000px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
+      <DialogContent className="max-w-[1200px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
         <DialogHeader className="p-6 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3">
@@ -915,18 +993,19 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <table className="w-full text-sm text-left border-collapse">
-              <thead className="bg-gray-50/50 text-gray-500 border-b border-gray-100">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse min-w-[900px]">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Role</th>
-                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Company</th>
-                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Applied on</th>
-                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Status</th>
-                  <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Last update</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Role</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Company</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Applied on</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Status</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Rejected / Withdrawn on</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Rejected / Withdrawn at</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {(() => {
                   const mapStatusToStage = (status: string | null): string => {
                     if (!status) return 'Applied';
@@ -942,12 +1021,13 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                   const archivedApplications = jobApplicationsData.filter(
                     (app) => app.status === 'Withdrawn' || mapStatusToStage(app.status) === 'Screened Out' || app.status === 'Archived'
+                      || (app.statusNote || '').includes('[[TERMINAL:WITHDRAW]]')
                   );
 
                   if (archivedApplications.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={5} className="py-20 text-center">
+                        <td colSpan={6} className="py-20 text-center">
                           <div className="flex flex-col items-center gap-4">
                             <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
                               <Archive size={32} />
@@ -959,41 +1039,34 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                     );
                   }
 
-                  return archivedApplications.map((app) => (
-                    <tr key={app.id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-red-50/50 flex items-center justify-center text-red-500 border border-red-100/50">
-                            <Briefcase size={14} />
-                          </div>
+                  return archivedApplications.map((app) => {
+                    const statusDisplay = getArchiveStatusLabel(app.status, app.statusNote);
+                    const terminalMeta = getArchiveTerminalMeta(app.status, app.statusNote);
+                    return (
+                      <tr key={app.id} className="hover:bg-gray-50/50 transition-colors group">
+                        <td className="px-5 py-4">
                           <span className="font-semibold text-gray-900">{app.jobTitle}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 text-gray-500 font-medium">
-                          <Building2 size={14} className="text-gray-300" />
+                        </td>
+                        <td className="px-5 py-4 text-gray-700 font-medium">
                           {app.company}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 text-gray-400 font-medium text-[12px] tracking-tight">
-                          <LucideCalendar size={12} />
+                        </td>
+                        <td className="px-5 py-4 text-gray-500">
                           {new Date(app.appliedDate).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <Badge className={`${app.status === 'Withdrawn' ? 'bg-amber-50 text-amber-600 border-amber-100' : app.status === 'Archived' ? 'bg-gray-50 text-gray-600 border-gray-100' : 'bg-red-50 text-red-600 border-red-100'} border-none rounded-lg px-3 py-1 text-[10px] font-semibold tracking-tight`}>
-                          {app.status === 'Withdrawn' ? 'Withdrawn' : app.status === 'Archived' ? 'Archived' : 'Rejected'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 text-gray-400 font-medium text-[12px] tracking-tight">
-                          <Clock size={12} />
-                          {new Date(app.appliedDate).toLocaleDateString()}
-                        </div>
-                      </td>
-                    </tr>
-                  ));
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`font-semibold ${statusDisplay.isRed ? 'text-red-600' : 'text-gray-600'}`}>
+                            {statusDisplay.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-gray-700">
+                          {terminalMeta.date}
+                        </td>
+                        <td className="px-5 py-4 text-gray-700">
+                          {terminalMeta.stage}
+                        </td>
+                      </tr>
+                    );
+                  });
                 })()}
               </tbody>
             </table>

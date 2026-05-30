@@ -94,7 +94,7 @@ import {
 } from "@shared/schema";
 import { getResumeTarget } from "@shared/constants";
 import { db } from "./db";
-import { eq, and, desc, sql, count, inArray } from "drizzle-orm";
+import { eq, and, or, isNull, lt, desc, sql, count, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
 import {
@@ -2705,6 +2705,27 @@ export class DatabaseStorage implements IStorage {
       .update(jobApplications)
       .set({ lastNudgedAt })
       .where(eq(jobApplications.id, id))
+      .returning();
+    return application || undefined;
+  }
+
+  /** Atomically sets lastNudgedAt only if cooldown has elapsed (prevents duplicate nudges). */
+  async claimJobApplicationNudgeSlot(
+    id: string,
+    cooldownThreshold: Date,
+  ): Promise<JobApplication | undefined> {
+    const [application] = await db
+      .update(jobApplications)
+      .set({ lastNudgedAt: new Date() })
+      .where(
+        and(
+          eq(jobApplications.id, id),
+          or(
+            isNull(jobApplications.lastNudgedAt),
+            lt(jobApplications.lastNudgedAt, cooldownThreshold),
+          ),
+        ),
+      )
       .returning();
     return application || undefined;
   }

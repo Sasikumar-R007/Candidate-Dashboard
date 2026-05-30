@@ -192,12 +192,12 @@ export default function Dashboard() {
         );
       case 'job-board':
         return (
-          <div className="flex flex-col flex-1 h-full">
+          <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
             <DashboardHeader 
               title="Job Board" 
               actions={headerActions}
             />
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-hidden">
               <JobBoardTab 
                 onNavigateToSettings={() => setSidebarTab('settings')}
                 onNavigateToProfile={() => setSidebarTab('edit-view')}

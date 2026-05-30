@@ -9,13 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, MapPin, Flame, Eye, Archive, Zap, Clock, ChevronDown, ChevronUp, Ban, Send, MessageCircle, AlertCircle, CheckCircle2, Info, Briefcase, Building2 } from 'lucide-react';
+import { MoreHorizontal, MapPin, Flame, Eye, Archive, Zap, Clock, ChevronDown, ChevronUp, Ban, Send, MessageCircle, AlertCircle, CheckCircle2, Info, Briefcase, Building2, Search } from 'lucide-react';
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useJobApplications, useApplyJob } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
@@ -32,27 +33,14 @@ import {
 } from "@/components/ui/select";
 import CandidateMetrics from '@/components/dashboard/candidate-metrics';
 import ProfileStrength from '@/components/dashboard/profile-strength';
-import SuggestionJobCard from '@/components/dashboard/suggestion-job-card';
 import ProfileCompletionSession from '@/components/dashboard/profile-completion-session';
+import { formatJobAppliedDate, PIPELINE_COLUMN_STYLES, getArchiveStatusLabel, getArchiveTerminalMeta, mapCandidateApplicationStage, getApplicationNudgeDisplayState } from '@/lib/candidate-pipeline-utils';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import { useAuth } from '@/hooks/use-auth';
 import { motion, AnimatePresence } from 'framer-motion';
-import { NudgeIcon } from '@/components/ui/nudge-icon';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import CandidateApplicationConsentModal from "@/components/candidate-dashboard/candidate-application-consent-modal";
 import { logConsent } from "@/lib/consent-log";
-
-// Helper function to calculate days ago from a date
-function calculateDaysAgo(date: Date | string): string {
-  const now = new Date();
-  const appliedDate = new Date(date);
-  const diffTime = Math.abs(now.getTime() - appliedDate.getTime());
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) return '0 days';
-  if (diffDays === 1) return '1 day';
-  return `${diffDays} days`;
-}
 
 // Helper function to format date
 function formatDate(date: Date | string): string {
@@ -172,9 +160,45 @@ export default function MyJobsTab({
   const { data: jobApplications = [], isLoading } = useJobApplications();
   const { data: candidateNudges = [] } = useQuery<any[]>({
     queryKey: ['/api/candidate/nudges'],
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
   });
   const [showAllNudgesDialog, setShowAllNudgesDialog] = useState(false);
+  const [nudgeLogSearch, setNudgeLogSearch] = useState('');
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [nudgingApplicationIds, setNudgingApplicationIds] = useState<Set<string>>(new Set());
+
+  const nudgeMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      const res = await apiRequest('POST', `/api/applications/${applicationId}/nudge`, {});
+      return res.json();
+    },
+    onSuccess: (_data, applicationId) => {
+      toast({
+        title: "Nudge sent",
+        description: "Your recruiter has been notified. You can nudge again after the cooldown.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/job-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/candidate/nudges'] });
+      setNudgingApplicationIds((prev) => {
+        const next = new Set(prev);
+        next.delete(applicationId);
+        return next;
+      });
+    },
+    onError: (error: Error, applicationId) => {
+      toast({
+        title: error.message.includes('wait') ? "Nudge on cooldown" : "Could not send nudge",
+        description: error.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+      setNudgingApplicationIds((prev) => {
+        const next = new Set(prev);
+        next.delete(applicationId);
+        return next;
+      });
+    },
+  });
 
   const withdrawMutation = useMutation({
     mutationFn: async ({ id, reason, note }: { id: string; reason: string; note?: string }) => {
@@ -321,10 +345,33 @@ export default function MyJobsTab({
         (app) =>
           app.status === "Withdrawn" ||
           app.status === "Archived" ||
-          mapStatusToStage(app.status) === "Screened Out",
+          mapStatusToStage(app.status) === "Screened Out" ||
+          (app.statusNote || "").includes("[[TERMINAL:WITHDRAW]]"),
       ),
     [jobApplications],
   );
+
+  const filteredNudgeLogs = useMemo(() => {
+    const sorted = [...candidateNudges].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    const q = nudgeLogSearch.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((nudge: any) => {
+      const stage = mapCandidateApplicationStage(nudge.currentStatus);
+      const haystack = [
+        nudge.jobTitle,
+        nudge.company,
+        nudge.message,
+        stage,
+        nudge.currentStatus,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [candidateNudges, nudgeLogSearch]);
 
   // Create a Set of applied jobs for fast lookup
   const appliedJobs = new Set(
@@ -373,7 +420,7 @@ export default function MyJobsTab({
         background: backgroundColors[index % backgroundColors.length],
         isHot: true,
         applicationCount: job.applicationCount || 0,
-        postedDate: calculateDaysAgo(job.postedDate)
+        postedDate: formatJobAppliedDate(job.postedDate)
       };
     });
 
@@ -543,24 +590,12 @@ export default function MyJobsTab({
     setShowApplicationConsent(true);
   };
 
-  const handleNudge = async (application: JobApplication) => {
-    try {
-      await apiRequest('POST', `/api/applications/${application.id}/nudge`, {});
-      
-      toast({
-        title: "Nudge Sent!",
-        description: `We've sent a pinch to the recruiter for ${application.jobTitle}.`,
-      });
-      
-      // Refresh applications to update lastNudgedAt
-      queryClient.invalidateQueries({ queryKey: ['/api/job-applications'] });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to send nudge",
-        variant: "destructive",
-      });
-    }
+  const handleNudge = (application: JobApplication) => {
+    if (nudgingApplicationIds.has(application.id) || nudgeMutation.isPending) return;
+    if (timeRemainingMap[application.id]) return;
+
+    setNudgingApplicationIds((prev) => new Set(prev).add(application.id));
+    nudgeMutation.mutate(application.id);
   };
 
   const handleWithdraw = (application: any) => {
@@ -583,7 +618,7 @@ export default function MyJobsTab({
       <div className="flex-1 min-w-0 bg-gray-50 font-poppins">
         <div className="p-4 space-y-4 max-w-full">
           {/* Applied Jobs Section - Pipeline Layout */}
-          <div className="bg-white rounded-md p-4 shadow-sm relative border border-gray-100">
+          <div className="bg-white rounded-[8px] p-4 shadow-sm relative border border-gray-100">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-800">Applied Jobs</h2>
               <Button
@@ -663,32 +698,42 @@ export default function MyJobsTab({
               </div>
             )}
             
-            <div className="flex gap-4 overflow-x-auto pb-6 min-h-[400px] custom-scrollbar">
+            <div className="flex gap-3 overflow-x-auto pb-4 min-h-[400px] custom-scrollbar">
               {PIPELINE_STAGES.map((stage) => {
                 const stageApplications = confirmedApplications.filter(app => mapStatusToStage(app.status) === stage);
+                const columnStyle = PIPELINE_COLUMN_STYLES[stage] ?? PIPELINE_COLUMN_STYLES.Applied;
                 
                 return (
-                  <div key={stage} className="flex-shrink-0 w-[250px]">
-                    <div className="flex items-center justify-between mb-4 px-2">
-                      <h3 className="font-bold text-gray-700 text-[12px] flex items-center gap-2">
+                  <div
+                    key={stage}
+                    className={`flex-shrink-0 w-[248px] rounded-[8px] overflow-hidden ${columnStyle.topBorder} ${columnStyle.columnBg}`}
+                  >
+                    <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200/80">
+                      <h3 className="font-bold text-gray-800 text-[13px]">
                         {stage}
-                        <span className="bg-green-100 text-green-700 px-1.5 py-0 rounded-full text-[9px]">
-                          {stageApplications.length}
-                        </span>
                       </h3>
+                      <span className={`min-w-[22px] text-center px-2 py-0.5 rounded-[8px] text-[11px] font-semibold ${columnStyle.countBadge}`}>
+                        {stageApplications.length}
+                      </span>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-2 p-2 min-h-[360px]">
                       {stageApplications.map((job) => {
                         const isExpanded = expandedJobId === job.id;
                         const timeRemaining = timeRemainingMap[job.id];
-                        const isNudgeDisabled = !!timeRemaining;
+                        const isNudgeDisabled =
+                          !!timeRemaining ||
+                          nudgingApplicationIds.has(job.id) ||
+                          (nudgeMutation.isPending && nudgeMutation.variables === job.id);
                         const jobNudgeUpdates = candidateNudges.filter(
                           (n) => n.applicationId === job.id && (n.isResponded || n.message),
                         );
-                        const hasNudgeUpdate = jobNudgeUpdates.length > 0;
                         const hasUnreadNudgeUpdate = jobNudgeUpdates.some((n) => !n.isRead);
-                        const showNudgeCooldownIcon = !!timeRemaining;
+                        const nudgeDisplay = getApplicationNudgeDisplayState(
+                          job.id,
+                          !!timeRemaining,
+                          candidateNudges,
+                        );
 
                         return (
                           <div 
@@ -713,16 +758,9 @@ export default function MyJobsTab({
                                 boxShadow: isExpanded ? '0 25px 50px -12px rgb(0 0 0 / 0.15)' : '0 1px 3px 0 rgb(0 0 0 / 0.1)'
                               }}
                               transition={{ duration: 0.15, ease: "easeOut" }}
-                              className={`border cursor-pointer transition-all duration-200 ${
-                                isExpanded ? 'border-indigo-400 ring-2 ring-indigo-100 z-10' : 'border-gray-200 hover:border-indigo-200'
-                              } ${
-                                stage === 'Applied' ? 'bg-blue-50/50' :
-                                stage === 'In-Review' ? 'bg-amber-50/50' :
-                                stage === 'Interview Stage' ? 'bg-purple-50/50' :
-                                stage === 'HR Round' ? 'bg-indigo-50/50' :
-                                stage === 'Offer' ? 'bg-green-50/50' :
-                                'bg-gray-50/50'
-                              } rounded-[8px] p-3.5`}
+                              className={`bg-white border cursor-pointer transition-all duration-200 ${
+                                isExpanded ? 'border-indigo-400 ring-2 ring-indigo-100 z-10' : 'border-gray-200 hover:border-gray-300'
+                              } rounded-[8px] p-3 shadow-sm`}
                               onClick={() => handleToggleExpand(job.id)}
                             >
                               {/* Unread recruiter response badge */}
@@ -750,22 +788,27 @@ export default function MyJobsTab({
                                     </div>
                                   </div>
                                 )}
-                                {stage !== 'Screened Out' && (
-                                  <div className="flex-shrink-0">
-                                    {showNudgeCooldownIcon && (
-                                      <div className="relative flex items-center justify-center mr-1" title={hasNudgeUpdate ? "Nudge on cooldown — update received" : "Nudge on cooldown"}>
-                                        {!hasNudgeUpdate && (
-                                          <div className="absolute w-4 h-4 bg-red-400 rounded-full animate-ping opacity-75" />
-                                        )}
-                                        <Zap className={`w-4 h-4 text-blue-500 fill-blue-500 relative z-10 ${hasNudgeUpdate ? "" : "animate-pulse"}`} />
-                                      </div>
+                                {stage !== 'Screened Out' && nudgeDisplay.showIcon && (
+                                  <div
+                                    className="relative flex items-center justify-center shrink-0"
+                                    title={
+                                      nudgeDisplay.shouldPulse
+                                        ? 'Awaiting recruiter response'
+                                        : 'Nudge update received — cooldown active'
+                                    }
+                                  >
+                                    {nudgeDisplay.shouldPulse && (
+                                      <div className="absolute w-4 h-4 bg-blue-400 rounded-full animate-ping opacity-75" />
                                     )}
+                                    <Zap
+                                      className={`w-4 h-4 text-blue-500 fill-blue-500 relative z-10 ${nudgeDisplay.shouldPulse ? 'animate-pulse' : ''}`}
+                                    />
                                   </div>
                                 )}
                               </div>
                               <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1.5">
                                 <span className="font-semibold text-gray-600">{job.company}</span>
-                                <span>{calculateDaysAgo(job.appliedDate)} ago</span>
+                                <span>{formatJobAppliedDate(job.appliedDate)}</span>
                               </div>
 
                               <AnimatePresence>
@@ -886,7 +929,12 @@ export default function MyJobsTab({
                                             }}
                                           >
                                             {isNudgeDisabled ? (
-                                              <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {timeRemaining}</span>
+                                              <span className="flex items-center gap-1.5">
+                                                <Clock className="w-3 h-3" />
+                                                {nudgingApplicationIds.has(job.id) || nudgeMutation.variables === job.id
+                                                  ? 'Sending…'
+                                                  : timeRemaining}
+                                              </span>
                                             ) : (
                                               <><Zap className="w-3.5 h-3.5" /> Nudge</>
                                             )}
@@ -999,64 +1047,13 @@ export default function MyJobsTab({
             </div>
           )}
 
-          {/* Job Suggestions Section */}
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
-            </div>
-
-            {/* Horizontal Scrollable Cards */}
-            <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {jobSuggestions.length > 0 ? (
-                <>
-                  {jobSuggestions.slice(0, 5).map((job) => {
-                    const jobKey = `${job.title}-${job.company}`;
-                    return (
-                      <SuggestionJobCard 
-                        key={job.id} 
-                        job={job}
-                        isApplied={appliedJobs.has(jobKey)}
-                        isSaved={savedJobs.has(jobKey)}
-                        onApply={handleApplyJob}
-                        onSave={toggleSaveJob}
-                      />
-                    );
-                  })}
-                  
-                  <div 
-                    onClick={handleSeeAllJobs}
-                    className="min-w-[120px] max-w-[120px] bg-gray-50 rounded-[24px] border border-gray-100 flex flex-col items-center justify-center min-h-[420px] h-full hover:bg-gray-100 transition-all cursor-pointer group shrink-0"
-                  >
-                    <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <i className="fas fa-arrow-right text-blue-600"></i>
-                    </div>
-                    <span className="text-blue-600 font-bold text-xs">View All</span>
-                  </div>
-                </>
-              ) : (
-                <div className="w-full py-12 flex flex-col items-center justify-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-                    <MapPin className="w-8 h-8 text-blue-400 opacity-50" />
-                  </div>
-                  <p className="text-gray-500 font-medium mb-4 text-center">No jobs match your current skills yet.</p>
-                  <Button 
-                    onClick={handleSeeAllJobs}
-                    className="bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    View All Jobs
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {profile && (
-              <ProfileCompletionSession 
-                profile={profile} 
-                jobPreferences={jobPreferences}
-                onNavigateToProfile={onNavigateToProfile} 
-              />
-            )}
-          </div>
+          {profile && (
+            <ProfileCompletionSession
+              profile={profile}
+              jobPreferences={jobPreferences}
+              onNavigateToProfile={onNavigateToProfile}
+            />
+          )}
         </div>
       </div>
 
@@ -1335,82 +1332,108 @@ export default function MyJobsTab({
         data={applicationJdData}
         subtitle={
           selectedApplication
-            ? `Applied ${formatDate(selectedApplication.appliedDate)} (${calculateDaysAgo(selectedApplication.appliedDate)} ago) · Status: ${selectedApplication.status || 'In Process'}`
+            ? `Applied ${formatJobAppliedDate(selectedApplication.appliedDate)} · Status: ${selectedApplication.status || 'In Process'}`
             : undefined
         }
         variant="delivery"
       />
       {/* Full Nudge Logs Dialog */}
-      <Dialog open={showAllNudgesDialog} onOpenChange={setShowAllNudgesDialog}>
-        <DialogContent className="max-w-[1000px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-xl">
-          <DialogHeader className="p-6 border-b">
+      <Dialog
+        open={showAllNudgesDialog}
+        onOpenChange={(open) => {
+          setShowAllNudgesDialog(open);
+          if (!open) setNudgeLogSearch('');
+        }}
+      >
+        <DialogContent className="max-w-[1280px] w-[96vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-xl">
+          <DialogHeader className="p-6 border-b shrink-0 space-y-4">
             <DialogTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-blue-500 fill-blue-500" /> All Nudge Logs
             </DialogTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                value={nudgeLogSearch}
+                onChange={(e) => setNudgeLogSearch(e.target.value)}
+                placeholder="Search by job, company, status, or response…"
+                className="pl-9 h-10 rounded-lg border-gray-200"
+              />
+            </div>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-6">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-700 border-b sticky top-0">
+          <div className="flex-1 min-h-0 overflow-auto">
+            <table className="w-full table-fixed text-sm text-left border-collapse">
+              <colgroup>
+                <col className="w-[150px]" />
+                <col className="w-[220px]" />
+                <col className="w-[180px]" />
+                <col className="w-[140px]" />
+                <col className="w-[150px]" />
+                <col />
+              </colgroup>
+              <thead className="bg-gray-50 text-gray-900 border-b border-gray-200 sticky top-0 z-10 shadow-[0_1px_0_0_rgb(229,231,235)]">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Nudged On</th>
-                  <th className="px-4 py-2 font-medium">Job Title</th>
-                  <th className="px-4 py-2 font-medium">Company</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Responded on</th>
-                  <th className="px-4 py-2 font-medium">Recruiter Response</th>
-                  <th className="px-4 py-2 font-medium text-right">Action</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900 bg-gray-50">Nudged On</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900 bg-gray-50">Job Title</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900 bg-gray-50">Company</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900 bg-gray-50">Status</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900 bg-gray-50">Responded on</th>
+                  <th className="px-5 py-3.5 font-semibold text-sm text-gray-900 bg-gray-50">Recruiter Response</th>
                 </tr>
               </thead>
-              <tbody>
-                {candidateNudges
-                  .filter(n => n.isResponded || n.message)
-                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .map((nudge: any) => (
-                  <tr 
-                    key={nudge.id} 
-                    className={`border-b last:border-0 hover:bg-gray-50/50 transition-colors ${!nudge.isRead ? 'bg-blue-50/30' : ''}`}
-                  >
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{new Date(nudge.createdAt).toLocaleString()}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900 flex items-center gap-2">
-                      {!nudge.isRead && (
-                        <div className="w-2 h-2 bg-red-500 rounded-full shrink-0" />
-                      )}
-                      {nudge.jobTitle}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{nudge.company}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold">
-                        {nudge.currentStatus}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {nudge.respondedAt ? new Date(nudge.respondedAt).toLocaleString() : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {nudge.message ? (
-                        <span className="block text-xs text-gray-700">
-                          {nudge.message}
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded border border-green-200">
-                          Responded
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {!nudge.isRead && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => markAsReadMutation.mutate(nudge.id)}
-                          className="h-7 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2"
-                        >
-                          Mark as read
-                        </Button>
-                      )}
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {filteredNudgeLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-16 text-center text-gray-400 text-sm">
+                      {nudgeLogSearch.trim() ? 'No nudge logs match your search' : 'No nudge logs yet'}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredNudgeLogs.map((nudge: any) => {
+                      const pipelineStage = mapCandidateApplicationStage(nudge.currentStatus);
+                      return (
+                        <tr
+                          key={nudge.id}
+                          className={`hover:bg-gray-50/80 transition-colors ${!nudge.isRead && (nudge.isResponded || nudge.message) ? 'bg-blue-50/40' : ''}`}
+                        >
+                          <td className="px-5 py-3.5 text-gray-500 whitespace-nowrap align-top">
+                            {new Date(nudge.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                          </td>
+                          <td className="px-5 py-3.5 font-medium text-gray-900 align-top">
+                            <div className="flex items-start gap-2">
+                              {!nudge.isRead && (nudge.isResponded || nudge.message) && (
+                                <div className="w-2 h-2 bg-red-500 rounded-full shrink-0 mt-1.5" />
+                              )}
+                              <span className="break-words">{nudge.jobTitle}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 text-gray-600 align-top break-words">{nudge.company}</td>
+                          <td className="px-5 py-3.5 align-top">
+                            <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-800 rounded-md text-xs font-semibold whitespace-nowrap">
+                              {pipelineStage}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-gray-500 whitespace-nowrap align-top">
+                            {nudge.respondedAt
+                              ? new Date(nudge.respondedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                              : '—'}
+                          </td>
+                          <td className="px-5 py-3.5 align-top">
+                            {nudge.message ? (
+                              <span className="block text-sm text-gray-700 break-words leading-relaxed">
+                                {nudge.message}
+                              </span>
+                            ) : nudge.isResponded ? (
+                              <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded-md border border-green-200 font-medium">
+                                Responded
+                              </span>
+                            ) : (
+                              <span className="text-xs text-amber-600 font-medium">Awaiting response</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
               </tbody>
             </table>
           </div>
@@ -1539,7 +1562,7 @@ export default function MyJobsTab({
       </Dialog>
 
       <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>
-        <DialogContent className="max-w-[1000px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
+        <DialogContent className="max-w-[1200px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
           <DialogHeader className="p-6 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
             <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
@@ -1550,20 +1573,22 @@ export default function MyJobsTab({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead className="bg-gray-50/50 text-gray-500 border-b border-gray-100">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
+              <table className="w-full text-sm text-left border-collapse min-w-[900px]">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Role</th>
-                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Company</th>
-                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Applied on</th>
-                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Status</th>
+                    <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Role</th>
+                    <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Company</th>
+                    <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Applied on</th>
+                    <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Status</th>
+                    <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Rejected / Withdrawn on</th>
+                    <th className="px-5 py-3.5 font-semibold text-sm text-gray-900">Rejected / Withdrawn at</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-100">
                   {archivedApplications.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-20 text-center">
+                      <td colSpan={6} className="py-20 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
                             <Archive size={32} />
@@ -1575,44 +1600,34 @@ export default function MyJobsTab({
                       </td>
                     </tr>
                   ) : (
-                    archivedApplications.map((app) => (
-                      <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-red-50/50 flex items-center justify-center text-red-500 border border-red-100/50">
-                              <Briefcase size={14} />
-                            </div>
+                    archivedApplications.map((app) => {
+                      const statusDisplay = getArchiveStatusLabel(app.status, app.statusNote);
+                      const terminalMeta = getArchiveTerminalMeta(app.status, app.statusNote);
+                      return (
+                        <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-5 py-4">
                             <span className="font-semibold text-gray-900">{app.jobTitle}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-2 text-gray-500 font-medium">
-                            <Building2 size={14} className="text-gray-300" />
+                          </td>
+                          <td className="px-5 py-4 text-gray-700 font-medium">
                             {app.company}
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-gray-400 text-[12px]">
-                          {formatDate(app.appliedDate)}
-                        </td>
-                        <td className="px-6 py-5">
-                          <Badge
-                            className={`${
-                              app.status === "Withdrawn"
-                                ? "bg-amber-50 text-amber-600 border-amber-100"
-                                : app.status === "Archived"
-                                  ? "bg-gray-50 text-gray-600 border-gray-100"
-                                  : "bg-red-50 text-red-600 border-red-100"
-                            } border-none rounded-lg px-3 py-1 text-[10px] font-semibold`}
-                          >
-                            {app.status === "Withdrawn"
-                              ? "Withdrawn"
-                              : app.status === "Archived"
-                                ? "Archived"
-                                : "Rejected"}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td className="px-5 py-4 text-gray-500">
+                            {formatDate(app.appliedDate)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className={`font-semibold ${statusDisplay.isRed ? 'text-red-600' : 'text-gray-600'}`}>
+                              {statusDisplay.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-gray-700">
+                            {terminalMeta.date}
+                          </td>
+                          <td className="px-5 py-4 text-gray-700">
+                            {terminalMeta.stage}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

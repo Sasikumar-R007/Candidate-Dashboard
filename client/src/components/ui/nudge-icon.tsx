@@ -12,21 +12,26 @@ export const NudgeIcon: React.FC<NudgeIconProps> = ({
   color = "text-blue-500" 
 }) => {
   return (
-    <div className={`relative inline-block ${className}`}>
+    <div className={`relative inline-flex items-center justify-center ${className}`}>
+      {pulsing && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="absolute h-[85%] w-[85%] rounded-full bg-blue-400/40 animate-ping" />
+        </span>
+      )}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes nudge-pulse-fast {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.9); }
+          50% { opacity: 0.5; transform: scale(0.92); }
         }
         .animate-nudge-fast {
-          animation: nudge-pulse-fast 0.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: nudge-pulse-fast 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
       `}} />
       <svg
         viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={`w-full h-full ${pulsing ? 'animate-nudge-fast' : ''}`}
+        className={`relative z-10 w-full h-full text-blue-500 ${pulsing ? 'animate-nudge-fast' : ''}`}
       >
         {/* Speed lines on the left - reduced for cleaner look */}
         <line x1="10" y1="48" x2="25" y2="48" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" />

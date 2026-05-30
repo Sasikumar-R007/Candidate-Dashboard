@@ -2981,16 +2981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store OTP with expiry (10 minutes)
       await storage.storeOTP(candidateData.email, otp);
 
-      const loginUrl = resolveWelcomeEmailLoginUrl();
-
-      await sendCandidateWelcomeEmail({
-        fullName: newCandidate.fullName,
-        email: newCandidate.email,
-        candidateId: newCandidate.candidateId,
-        loginUrl
-      });
-
-      // Send OTP via email
+      // Send OTP first so users receive the code sooner (welcome email can follow)
       const otpEmailSent = await sendOTPEmail({
         fullName: newCandidate.fullName,
         email: newCandidate.email,
@@ -3001,6 +2992,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!otpEmailSent) {
         console.error(`[Registration] Failed to send OTP email to ${newCandidate.email}`);
       }
+
+      const loginUrl = resolveWelcomeEmailLoginUrl();
+      void sendCandidateWelcomeEmail({
+        fullName: newCandidate.fullName,
+        email: newCandidate.email,
+        candidateId: newCandidate.candidateId,
+        loginUrl
+      }).catch((err) => {
+        console.error(`[Registration] Welcome email failed for ${newCandidate.email}:`, err);
+      });
 
       res.json({
         success: true,
@@ -4340,23 +4341,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      if (application.lastNudgedAt) {
-        const { candidateNudgeCooldownHours } = await import("@shared/nudge-timing");
-        const cooldownHours = candidateNudgeCooldownHours(application.status);
-        if (cooldownHours != null) {
-          const elapsedMs = Date.now() - new Date(application.lastNudgedAt as Date).getTime();
-          const cooldownMs = cooldownHours * 60 * 60 * 1000;
-          if (elapsedMs < cooldownMs) {
-            const remainingMs = cooldownMs - elapsedMs;
-            const hours = Math.floor(remainingMs / (60 * 60 * 1000));
-            const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
-            return res.status(429).json({
-              message: `Please wait ${hours}h ${minutes}m before nudging again.`,
-              cooldownHours,
-              remainingMs,
-            });
-          }
-        }
+      const { candidateNudgeCooldownHours } = await import("@shared/nudge-timing");
+      const cooldownHours = candidateNudgeCooldownHours(application.status) ?? 48;
+      const cooldownMs = cooldownHours * 60 * 60 * 1000;
+      const cooldownThreshold = new Date(Date.now() - cooldownMs);
+
+      const claimed = await storage.claimJobApplicationNudgeSlot(application.id, cooldownThreshold);
+      if (!claimed) {
+        const lastNudged = application.lastNudgedAt
+          ? new Date(application.lastNudgedAt as Date).getTime()
+          : Date.now();
+        const remainingMs = Math.max(0, cooldownMs - (Date.now() - lastNudged));
+        const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+        const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+        return res.status(429).json({
+          message:
+            remainingMs > 0
+              ? `Please wait ${hours}h ${minutes}m before nudging again.`
+              : "A nudge was already sent recently. Please wait for the cooldown.",
+          cooldownHours,
+          remainingMs,
+        });
       }
 
       const [requirement, job] = await Promise.all([
@@ -4405,10 +4410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const nudge = await storage.createNudge(nudgeData as any);
-
-      
-      // Update the application's last nudged time
-      await storage.updateJobApplicationNudgeTime(application.id, new Date());
 
       res.status(201).json(nudge);
     } catch (error) {
@@ -8161,8 +8162,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const role = (employee.role || '').toLowerCase();
-      if (role === 'team_leader' || role === 'tl') {
+      const roleLower = (employee.role || "").toLowerCase();
+      if (roleLower === "admin" || roleLower.includes("admin")) {
+        const allRequirements = await storage.getRequirements();
+        const activeRequirements = allRequirements.filter(
+          (req: { isArchived?: boolean | null; id?: string }) =>
+            !req.isArchived && (!req.id || !/^STR\d{5}$/.test(req.id)),
+        );
+        return res.json(activeRequirements);
+      }
+
+      const sourcingRole = normalizeSourcingRole(employee.role);
+      if (sourcingRole === "team_leader") {
         const allEmployees = await storage.getAllEmployees();
         const teamRecruiters = allEmployees.filter(
           emp => (emp.role === 'recruiter' || emp.role === 'talent_advisor' || emp.role === 'ta') && 
@@ -8251,7 +8262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([...recentClosedArchivedRequirements, ...requirementsWithStatus]);
       }
 
-      const isTA = role === 'recruiter' || role === 'talent_advisor' || role === 'ta';
+      const isTA = sourcingRole === "recruiter";
       if (!isTA) {
         return res.status(403).json({ message: "Access denied. Recruiter or Talent Advisor role required." });
       }
@@ -13493,8 +13504,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      const roleLower = (employee.role || "").toLowerCase();
+      const isAdminViewer =
+        roleLower === "admin" ||
+        roleLower === "manager" ||
+        roleLower.includes("admin") ||
+        roleLower.includes("manager");
       const ownerRole = normalizeSourcingRole(employee.role);
-      if (!ownerRole) {
+      if (!isAdminViewer && !ownerRole) {
         return res.status(403).json({ message: "Only recruiters and team leaders can access applications" });
       }
 
@@ -13503,19 +13520,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { jobId, dateFrom, dateTo, status } = req.query;
 
-      if (!buildJobOwnershipFilter(employee)) {
+      if (!isAdminViewer && !buildJobOwnershipFilter(employee)) {
         return res.status(403).json({ message: "Only recruiters and team leaders can access applications" });
       }
 
+      const allApplications = await storage.getAllJobApplications();
+      let recruiterApplications: typeof allApplications = [];
+
+      if (isAdminViewer) {
+        recruiterApplications = allApplications;
+      } else {
       // Get this actor's jobs (schema-safe query — works when prod DB lags migrations)
       const jobs = (await storage.getAllRecruiterJobs()).filter((job) =>
         recruiterJobMatchesOwnership(job, employee),
       );
       const jobIds = jobs.map(j => j.id);
       console.log('[RECRUITER APPLICATIONS] Found jobs for', employee.name, ':', jobIds.length);
-
-      const allApplications = await storage.getAllJobApplications();
-      let recruiterApplications: typeof allApplications = [];
 
       if (ownerRole === "recruiter") {
         let taRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
@@ -13569,6 +13589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             (app.ownerEmployeeId != null && teamRecruiterIds.has(app.ownerEmployeeId)) ||
             (app.requirementId != null && teamRequirementIds.has(app.requirementId)),
         );
+      }
       }
 
       // Enrich applications with candidate profile data and StaffOS usage status

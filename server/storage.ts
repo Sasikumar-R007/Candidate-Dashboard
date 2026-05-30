@@ -321,6 +321,7 @@ export interface IStorage {
   getNudgesByRecruiter(recruiterId: string): Promise<Nudge[]>;
   getNudgesByCandidate(candidateId: string): Promise<Nudge[]>;
   updateJobApplicationNudgeTime(id: string, lastNudgedAt: Date): Promise<JobApplication | undefined>;
+  claimJobApplicationNudgeSlot(id: string, cooldownThreshold: Date): Promise<JobApplication | undefined>;
   updateNudgeEscalation(id: string, escalationLevel: string, lastEscalatedAt: Date): Promise<Nudge | undefined>;
   markNudgeAsResponded(id: string, message?: string, escalationLevel?: string): Promise<Nudge | undefined>;
   getActiveNudges(): Promise<Nudge[]>;
@@ -1953,6 +1954,17 @@ export class MemStorage implements IStorage {
       return updated;
     }
     return undefined;
+  }
+
+  async claimJobApplicationNudgeSlot(
+    id: string,
+    cooldownThreshold: Date,
+  ): Promise<JobApplication | undefined> {
+    const app = this.jobApplications.get(id);
+    if (!app) return undefined;
+    const last = app.lastNudgedAt ? new Date(app.lastNudgedAt as Date) : null;
+    if (last && last >= cooldownThreshold) return undefined;
+    return this.updateJobApplicationNudgeTime(id, new Date());
   }
 
   async updateNudgeEscalation(id: string, escalationLevel: string, lastEscalatedAt: Date): Promise<Nudge | undefined> {

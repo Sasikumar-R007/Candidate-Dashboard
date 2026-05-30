@@ -6,6 +6,7 @@ import NotificationPanel, {
 } from "@/components/dashboard/notification-panel";
 import { useJobApplications } from "@/hooks/use-job-applications";
 import { apiRequest } from "@/lib/queryClient";
+import { useNotificationSound } from "@/hooks/use-notification-sound";
 import {
   buildCandidateNotificationRows,
   CANDIDATE_NOTIFICATION_SECTIONS,
@@ -31,6 +32,8 @@ export function CandidateNotificationBell({ onNavigateToMyJobs }: CandidateNotif
   const { data: jobApplications = [], isLoading: appsLoading } = useJobApplications();
   const { data: candidateNudges = [], isLoading: nudgesLoading } = useQuery<CandidateNudgeRow[]>({
     queryKey: ["/api/candidate/nudges"],
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
   });
 
   const rows = useMemo(
@@ -42,6 +45,8 @@ export function CandidateNotificationBell({ onNavigateToMyJobs }: CandidateNotif
     () => rows.filter((r) => r.isUnread).length,
     [rows],
   );
+
+  useNotificationSound(unreadCount, true);
 
   const markNudgeReadMutation = useMutation({
     mutationFn: async (nudgeId: string) => {
@@ -87,9 +92,17 @@ export function CandidateNotificationBell({ onNavigateToMyJobs }: CandidateNotif
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
+          <>
+            <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+            </span>
+            {unreadCount > 1 && (
+              <span className="absolute -bottom-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white ring-2 ring-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </>
         )}
       </button>
 

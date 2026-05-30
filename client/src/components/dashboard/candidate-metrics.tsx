@@ -72,7 +72,7 @@ export default function CandidateMetrics() {
     },
     {
       label: "JOBS",
-      sublabel: "applied totally",
+      sublabel: "Applied Totally",
       value: appliedCount,
       bgColor: "bg-[#EFF8FF]",
       textColor: "text-[#175CD3]",
