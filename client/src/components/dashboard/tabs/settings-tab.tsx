@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -371,12 +372,11 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
              </div>
              <div className="space-y-2">
                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">New Password</Label>
-               <Input 
-                  type="password"
+               <PasswordInput 
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••" 
-                  className="h-14 rounded-2xl bg-gray-50 border-none px-6 font-bold"
+                  className="h-14 rounded-2xl bg-gray-50 border-none px-6 font-bold pr-12"
                />
              </div>
           </div>
@@ -422,10 +422,11 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
                     <AlertDialogTitle className="text-2xl font-bold text-center mb-2">Step 2: Security Check</AlertDialogTitle>
                     <AlertDialogDescription className="text-center mb-6">Please enter your current password to confirm this action.</AlertDialogDescription>
                   </AlertDialogHeader>
-                  <Input 
-                    type="password" value={currentPasswordConfirm} onChange={(e) => setCurrentPasswordConfirm(e.target.value)}
+                  <PasswordInput 
+                    value={currentPasswordConfirm}
+                    onChange={(e) => setCurrentPasswordConfirm(e.target.value)}
                     placeholder="Enter current password"
-                    className="h-14 rounded-2xl bg-gray-50 border-none px-6 font-bold mb-6"
+                    className="h-14 rounded-2xl bg-gray-50 border-none px-6 font-bold pr-12 mb-6"
                   />
                   <div className="flex flex-col gap-3">
                     <Button 

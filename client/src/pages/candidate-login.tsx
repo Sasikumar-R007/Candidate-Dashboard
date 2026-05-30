@@ -100,6 +100,7 @@ export default function CandidateLogin() {
           description: response.message || "Please check your email for the verification code",
         });
       } else if (response.success && response.candidate) {
+        sessionStorage.removeItem("staffos.candidate.helpFabHidden");
         setUser({
           type: 'candidate',
           data: response.candidate
@@ -177,6 +178,7 @@ export default function CandidateLogin() {
     },
     onSuccess: (response) => {
       if (response.success && response.candidate) {
+        sessionStorage.removeItem("staffos.candidate.helpFabHidden");
         setUser({
           type: 'candidate',
           data: response.candidate

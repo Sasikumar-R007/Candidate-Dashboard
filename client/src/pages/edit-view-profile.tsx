@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { api, type ResumeMergeFieldChange } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -9,9 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   MapPin, Phone, Mail, MessageCircle, Edit, Upload, FileText, 
   Link as LinkIcon, Camera, X, File, GraduationCap, Briefcase, 
-  Calendar, UserCircle, Star, Sparkles, ShieldCheck, Layout 
+  Calendar, UserCircle, Star, Sparkles, ShieldCheck, Layout,
+  Loader2, CheckCircle2, ArrowRight
 } from 'lucide-react';
-import { useProfile, useUpdateProfile, useUploadProfile, useUploadResume } from '@/hooks/use-profile';
+import { useProfile, useUpdateProfile, useUploadProfile } from '@/hooks/use-profile';
 import { useJobPreferences, useUpdateJobPreferences } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@shared/schema';
@@ -21,6 +24,7 @@ import EditJobDetailsModal from '@/components/dashboard/modals/edit-job-details-
 import EditStrengthsModal from '@/components/dashboard/modals/edit-strengths-modal';
 import ProfileCompletionWidget from '@/components/dashboard/profile-completion-widget';
 import { calculateProfileCompletion } from '@/lib/profile-utils';
+import { resolveUploadAssetUrl } from '@/lib/resolve-upload-url';
 
 interface EditViewProfileProps {
   profile: Profile;
@@ -237,74 +241,136 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
 
   };
 
-  const renderResume = () => (
+  const renderResume = () => {
+    const resumeUrl = resolveUploadAssetUrl(profile.resumeFile, "uploads/resumes");
+    const resumeFileName = profile.resumeFile?.split("/").pop() || "Resume";
+    const isPdf =
+      resumeUrl?.toLowerCase().includes(".pdf") ||
+      profile.resumeFile?.toLowerCase().endsWith(".pdf");
+
+    return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm transition-all hover:shadow-md">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Resume</h2>
-          <p className="text-gray-500 text-sm mt-1">Upload or manage your professional resume.</p>
+          <p className="text-gray-500 text-sm mt-1">Preview your resume and upload or edit it anytime.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Uploaded File */}
-        <div className="bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-6 flex flex-col justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-all">
-          <div className="flex items-start justify-between mb-6">
-            <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-              <FileText className="w-7 h-7" />
-            </div>
-            {profile.resumeFile && (
-              <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full">Uploaded</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left — live resume preview */}
+        <div className="flex flex-col min-h-[520px]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 tracking-widest">
+              Current Resume
+            </h3>
+            {resumeUrl && (
+              <Button variant="outline" size="sm" className="rounded-xl h-8 text-xs" asChild>
+                <a href={resumeUrl} target="_blank" rel="noopener noreferrer">
+                  <LinkIcon className="w-3.5 h-3.5 mr-1.5" />
+                  Open
+                </a>
+              </Button>
             )}
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Resume File</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Upload your resume in PDF or Word format.</p>
-            <div className="flex gap-2">
-              <Button 
-                size="sm"
-                className="bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:hover:text-white rounded-xl px-4 py-4 border-none transition-all flex-1"
-                onClick={() => setShowResumeUploadModal(true)}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload New
-              </Button>
-              {profile.resumeFile && (
-                <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 dark:border-gray-700" asChild>
-                  <a href={profile.resumeFile} target="_blank" rel="noopener noreferrer">
-                    <LinkIcon className="w-4 h-4" />
+          <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 overflow-hidden min-h-[480px]">
+            {resumeUrl && isPdf ? (
+              <iframe
+                src={resumeUrl}
+                title="Resume preview"
+                className="w-full h-full min-h-[480px] border-0 bg-white"
+              />
+            ) : resumeUrl ? (
+              <div className="flex flex-col items-center justify-center h-full min-h-[480px] p-8 text-center">
+                <FileText className="w-12 h-12 text-blue-500 mb-4" />
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 truncate max-w-full">
+                  {resumeFileName}
+                </p>
+                <p className="text-xs text-gray-500 mb-4">Preview not available for this file type.</p>
+                <Button size="sm" className="rounded-xl" asChild>
+                  <a href={resumeUrl} target="_blank" rel="noopener noreferrer">
+                    Open Resume
                   </a>
                 </Button>
-              )}
-            </div>
+              </div>
+            ) : profile.resumeText ? (
+              <div className="h-full min-h-[480px] overflow-y-auto p-6">
+                <pre className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-sans leading-relaxed">
+                  {profile.resumeText}
+                </pre>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full min-h-[480px] p-8 text-center text-gray-400">
+                <FileText className="w-12 h-12 mb-3 opacity-40" />
+                <p className="text-sm font-medium">No resume uploaded yet</p>
+                <p className="text-xs mt-1">Upload a file or write your resume on the right.</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Written Resume */}
-        <div className="bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-6 flex flex-col justify-between group hover:border-indigo-200 dark:hover:border-indigo-800 transition-all">
-          <div className="flex items-start justify-between mb-6">
-            <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-              <Edit className="w-7 h-7" />
+        {/* Right — upload & write */}
+        <div className="flex flex-col gap-6">
+          {/* Uploaded File */}
+          <div className="bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-6 flex flex-col justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-all flex-1">
+            <div className="flex items-start justify-between mb-6">
+              <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                <FileText className="w-7 h-7" />
+              </div>
+              {profile.resumeFile && (
+                <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full">Uploaded</span>
+              )}
             </div>
-            {profile.resumeText && (
-              <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full">Completed</span>
-            )}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Resume Upload</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Upload your resume in PDF or Word format.</p>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm"
+                  className="bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:hover:text-white rounded-xl px-4 py-4 border-none transition-all flex-1"
+                  onClick={() => setShowResumeUploadModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload New
+                </Button>
+                {resumeUrl && (
+                  <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 border-gray-200 dark:border-gray-700" asChild>
+                    <a href={resumeUrl} target="_blank" rel="noopener noreferrer">
+                      <LinkIcon className="w-4 h-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Write Resume</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Create or paste your resume text manually.</p>
-            <Button 
-              size="sm"
-              className="bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:hover:text-white rounded-xl px-4 py-4 border-none transition-all w-full"
-              onClick={() => setShowResumeTextModal(true)}
-            >
-            {profile.resumeText ? 'Edit Content' : 'Start Writing'}
-            </Button>
+
+          {/* Written Resume */}
+          <div className="bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-6 flex flex-col justify-between group hover:border-indigo-200 dark:hover:border-indigo-800 transition-all flex-1">
+            <div className="flex items-start justify-between mb-6">
+              <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                <Edit className="w-7 h-7" />
+              </div>
+              {profile.resumeText && (
+                <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full">Completed</span>
+              )}
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Write Resume</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Create or paste your resume text manually.</p>
+              <Button 
+                size="sm"
+                className="bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 dark:hover:text-white rounded-xl px-4 py-4 border-none transition-all w-full"
+                onClick={() => setShowResumeTextModal(true)}
+              >
+              {profile.resumeText ? 'Edit Content' : 'Start Writing'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderJobPreferences = () => {
     if (!jobPreferences) return (
@@ -824,19 +890,76 @@ function GenderModal({ open, onOpenChange, profile }: { open: boolean; onOpenCha
   );
 }
 
+function ResumeMergeFieldList({
+  title,
+  subtitle,
+  items,
+  variant,
+}: {
+  title: string;
+  subtitle: string;
+  items: ResumeMergeFieldChange[];
+  variant: 'from_resume' | 'retained';
+}) {
+  if (items.length === 0) return null;
+
+  const isFromResume = variant === 'from_resume';
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h4 className={`text-sm font-bold ${isFromResume ? 'text-emerald-800 dark:text-emerald-300' : 'text-blue-800 dark:text-blue-300'}`}>
+          {title}
+        </h4>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>
+      </div>
+      <ul className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+        {items.map((item) => (
+          <li
+            key={item.key}
+            className={`rounded-xl border px-3 py-2.5 text-sm ${
+              isFromResume
+                ? 'border-emerald-100 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+                : 'border-blue-100 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/20'
+            }`}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{item.label}</p>
+            {isFromResume && item.currentValue && item.currentValue !== item.newValue ? (
+              <p className="text-xs text-gray-400 line-through mb-0.5">{item.currentValue}</p>
+            ) : null}
+            <p className={`font-semibold ${isFromResume ? 'text-emerald-900 dark:text-emerald-100' : 'text-blue-900 dark:text-blue-100'}`}>
+              {item.newValue || item.currentValue || '—'}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+type ResumeUploadStep = 'select' | 'analyzing' | 'preview' | 'applying';
+
 // Resume Upload Modal Component
-function ResumeUploadModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
+function ResumeUploadModal({ open, onOpenChange, profile: _profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadResume = useUploadResume();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [step, setStep] = useState<ResumeUploadStep>('select');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [previewData, setPreviewData] = useState<{
+    fileName: string;
+    fromResume: ResumeMergeFieldChange[];
+    retained: ResumeMergeFieldChange[];
+  } | null>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const resetModal = () => {
+    setStep('select');
+    setSelectedFile(null);
+    setPreviewData(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
+  const validateFile = (file: File): boolean => {
     const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     if (!validTypes.includes(file.type)) {
       toast({
@@ -844,107 +967,144 @@ function ResumeUploadModal({ open, onOpenChange, profile }: { open: boolean; onO
         description: "Please select a PDF or image file.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
-
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "File Too Large",
         description: "File size should be less than 5MB.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !validateFile(file)) return;
 
     setSelectedFile(file);
-    setIsConfirming(true);
-  };
+    setStep('analyzing');
 
-  const handleConfirmedUpload = async () => {
-    if (!selectedFile) return;
-    
-    setIsProcessing(true);
     try {
-      await uploadResume.mutateAsync(selectedFile);
-      toast({
-        title: "AI Analysis Complete",
-        description: "Your profile has been automatically updated according to your new resume.",
+      const preview = await api.previewResumeMerge(file);
+      setPreviewData({
+        fileName: preview.fileName || file.name,
+        fromResume: preview.fromResume || [],
+        retained: preview.retained || [],
       });
-      
-      // Delay slightly and then refresh to show new data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-      
+      setStep('preview');
     } catch (error) {
       toast({
-        title: "Upload Failed",
-        description: "Failed to upload and parse resume. Please try again.",
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "Could not read this resume. Please try again.",
         variant: "destructive",
       });
-      setIsProcessing(false);
-      setIsConfirming(false);
+      resetModal();
     }
   };
+
+  const handleApply = async () => {
+    setStep('applying');
+    try {
+      await api.applyResumeMerge();
+      await queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/skills'] });
+      toast({
+        title: "Profile Updated",
+        description: "Your resume was saved. New details were merged without removing your existing entries.",
+      });
+      onOpenChange(false);
+      resetModal();
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to apply resume updates.",
+        variant: "destructive",
+      });
+      setStep('preview');
+    }
+  };
+
+  const busy = step === 'analyzing' || step === 'applying';
 
   return (
     <Dialog open={open} onOpenChange={(val) => {
-      if (!isProcessing) {
+      if (!busy) {
         onOpenChange(val);
-        if (!val) {
-          setIsConfirming(false);
-          setSelectedFile(null);
-        }
+        if (!val) resetModal();
       }
     }}>
-      <DialogContent className="max-w-md rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden">
-        {isProcessing ? (
+      <DialogContent className={`${step === 'preview' ? 'max-w-2xl' : 'max-w-md'} rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden max-h-[90vh] flex flex-col`}>
+        {step === 'analyzing' || step === 'applying' ? (
           <div className="p-12 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in duration-300">
-             <div className="relative">
-               <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
-                 <Sparkles className="w-10 h-10 animate-pulse" />
-               </div>
-               <div className="absolute top-0 left-0 w-full h-full border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-             </div>
-             <div>
-               <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">AI is analyzing...</h3>
-               <p className="text-sm text-gray-500 dark:text-gray-400">Extracting new details and updating your profile. This will take just a few moments.</p>
-             </div>
+            <div className="relative">
+              <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
+                {step === 'applying' ? <Loader2 className="w-10 h-10 animate-spin" /> : <Sparkles className="w-10 h-10 animate-pulse" />}
+              </div>
+              {step === 'analyzing' && (
+                <div className="absolute top-0 left-0 w-full h-full border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+                {step === 'applying' ? 'Updating your profile…' : 'AI is analyzing…'}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {step === 'applying'
+                  ? 'Saving your resume and merging only the fields you confirmed.'
+                  : 'Reading your resume and comparing it with your current profile.'}
+              </p>
+            </div>
           </div>
-        ) : isConfirming ? (
+        ) : step === 'preview' && previewData ? (
           <>
-            <div className="bg-amber-50/50 dark:bg-amber-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
+            <div className="bg-emerald-50/50 dark:bg-emerald-900/10 px-8 py-6 border-b border-gray-100 dark:border-gray-700 shrink-0">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                  <ShieldCheck className="w-6 h-6 text-amber-500" />
-                  Confirm Reset
+                <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                  Review profile changes
                 </DialogTitle>
-                <DialogDescription className="text-amber-700 dark:text-amber-400 font-medium text-sm mt-1">
-                  Automatic AI Profile Update
+                <DialogDescription className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                  From <span className="font-semibold text-gray-900 dark:text-white">{previewData.fileName}</span> — confirm to update. Fields not found in the resume stay as they are.
                 </DialogDescription>
               </DialogHeader>
             </div>
-            <div className="p-8 space-y-6 bg-white dark:bg-gray-800">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-                You are about to upload <span className="font-bold text-gray-900 dark:text-white">"{selectedFile?.name}"</span>. 
-                <br/><br/>
-                Our AI will automatically update your <span className="font-bold text-blue-600">Basic Info</span>, <span className="font-bold text-blue-600">Education</span>, and <span className="font-bold text-blue-600">Skills</span> based on this new resume. 
-                <br/><br/>
-                <span className="text-amber-600 font-bold uppercase tracking-tighter text-xs underline">Warning:</span> This will overwrite your existing profile entries.
-              </div>
-              <div className="flex gap-3 mt-4">
-                <Button 
-                  variant="outline" 
+            <div className="p-6 space-y-6 bg-white dark:bg-gray-800 overflow-y-auto flex-1">
+              <ResumeMergeFieldList
+                title="From your new resume"
+                subtitle="These values will be added or updated on your profile."
+                items={previewData.fromResume.filter((i) => i.newValue || i.currentValue)}
+                variant="from_resume"
+              />
+              <ResumeMergeFieldList
+                title="Kept from your profile"
+                subtitle="Not found in the resume — your existing entries will remain unchanged."
+                items={previewData.retained.filter((i) => i.newValue || i.currentValue)}
+                variant="retained"
+              />
+              {previewData.fromResume.length === 0 && previewData.retained.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No profile field changes detected. Your resume file will still be updated.
+                </p>
+              )}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
                   className="flex-1 rounded-xl h-12"
-                  onClick={() => setIsConfirming(false)}
+                  onClick={() => {
+                    resetModal();
+                  }}
                 >
-                  Cancel
+                  Choose another file
                 </Button>
-                <Button 
-                  className="flex-1 bg-gray-900 text-white hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl h-12 font-bold"
-                  onClick={handleConfirmedUpload}
+                <Button
+                  className="flex-1 bg-gray-900 text-white hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl h-12 font-bold gap-2"
+                  onClick={handleApply}
                 >
-                  Confirm & Update
+                  Confirm & update
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -955,7 +1115,7 @@ function ResumeUploadModal({ open, onOpenChange, profile }: { open: boolean; onO
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold">Update Resume</DialogTitle>
                 <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                  Upload a fresh resume to automatically sync your profile.
+                  Upload a resume to preview AI-extracted details before anything on your profile changes.
                 </DialogDescription>
               </DialogHeader>
             </div>

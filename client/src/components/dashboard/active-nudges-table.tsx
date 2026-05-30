@@ -27,6 +27,12 @@ import {
   escalationTargetWorkingHours,
   isOfferStageStatus,
 } from "@shared/nudge-timing";
+import { canUserUpdateNudge } from "@shared/nudge-escalation-access";
+import {
+  STATUS_UPDATED_PIPELINE_MESSAGE,
+  buildNudgeUpdateMessage,
+  isStandaloneNudgeMessage,
+} from "@/lib/nudge-update-messages";
 
 interface Nudge {
   id: string;
@@ -43,12 +49,6 @@ interface Nudge {
   respondedAt?: string;
 }
 
-const ROLE_HIERARCHY: Record<string, number> = {
-  'recruiter': 0,
-  'team_leader': 1,
-  'admin': 2,
-  'client': 3
-};
 
 const getElapsedWorkingHours = (createdAt: string) => {
   const start = new Date(createdAt);
@@ -137,15 +137,29 @@ export default function ActiveNudgesTable() {
     }
   });
 
+  const isStandaloneTemplate = isStandaloneNudgeMessage(updateDropdown1);
+  const previewMessage =
+    updateDropdown1 &&
+    (isStandaloneTemplate || updateDropdown2)
+      ? buildNudgeUpdateMessage(updateDropdown1, updateDropdown2)
+      : "";
+  const canSendUpdate = Boolean(updateDropdown1 && (isStandaloneTemplate || updateDropdown2));
+
+  const handleTemplateChange = (value: string) => {
+    setUpdateDropdown1(value);
+    if (isStandaloneNudgeMessage(value)) {
+      setUpdateDropdown2("");
+    }
+  };
+
   const handleUpdateNudgeConfirm = async () => {
-    if (!updateModalNudge) return;
-    const combinedMessage = `${updateDropdown1} ${updateDropdown2}`;
-    
-    await respondMutation.mutateAsync({ 
-      id: updateModalNudge.id, 
-      message: combinedMessage 
+    if (!updateModalNudge || !canSendUpdate || !previewMessage) return;
+
+    await respondMutation.mutateAsync({
+      id: updateModalNudge.id,
+      message: previewMessage,
     });
-    
+
     setUpdateModalNudge(null);
     setUpdateDropdown1("");
     setUpdateDropdown2("");
@@ -154,7 +168,6 @@ export default function ActiveNudgesTable() {
   if (isLoadingNudges) return null;
 
   const currentRole = employee?.role?.toLowerCase() || 'recruiter';
-  const currentUserLevel = ROLE_HIERARCHY[currentRole] ?? 0;
 
   // Process nudges
   const processedNudges = nudges.map(nudge => {
@@ -163,10 +176,11 @@ export default function ActiveNudgesTable() {
     const isOffer = isOfferStageStatus(nudge.currentStatus);
     const totalTarget = escalationTargetWorkingHours(nudge.escalationLevel, isOffer);
     const isEscalated = !isResponded && elapsedHours >= totalTarget;
-    
-    // Disable update if escalated beyond current user's level
-    const nudgeLevel = ROLE_HIERARCHY[nudge.escalationLevel.toLowerCase()] ?? 0;
-    const isUpdateDisabled = isResponded || (nudgeLevel > currentUserLevel);
+    const isUpdateDisabled = !canUserUpdateNudge(
+      currentRole,
+      nudge.escalationLevel,
+      isResponded,
+    );
 
     return { ...nudge, isResponded, elapsedHours, isEscalated, totalTarget, isUpdateDisabled };
   });
@@ -301,26 +315,36 @@ export default function ActiveNudgesTable() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-gray-700 font-bold text-xs uppercase tracking-wider">Message Template</Label>
-                <Select value={updateDropdown1} onValueChange={setUpdateDropdown1}>
-                  <SelectTrigger className="w-full border-gray-200 focus:ring-2 focus:ring-blue-500/20 rounded-xl h-12 text-sm bg-gray-50/50 cursor-pointer transition-all hover:bg-gray-50 border shadow-sm">
+                <Select value={updateDropdown1} onValueChange={handleTemplateChange}>
+                  <SelectTrigger className="w-full border-gray-200 focus:ring-2 focus:ring-blue-500/20 rounded-xl min-h-12 h-auto text-sm bg-gray-50/50 cursor-pointer transition-all hover:bg-gray-50 border shadow-sm [&>span]:line-clamp-none [&>span]:whitespace-normal [&>span]:text-left py-2">
                     <SelectValue placeholder="Select a message..." />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl shadow-2xl border-gray-100 p-1">
-                    <SelectItem value="Awaiting feedback. I'll update you within" className="rounded-lg py-3 cursor-pointer">Awaiting feedback. I'll update you within</SelectItem>
-                    <SelectItem value="Hello! Internal review is in progress. I'll update you within" className="rounded-lg py-3 cursor-pointer">Hello! Internal review is in progress. I'll update you within</SelectItem>
-                    <SelectItem value="Hi There! Scheduling is in progress. I'll update you within" className="rounded-lg py-3 cursor-pointer">Hi There! Scheduling is in progress. I'll update you within</SelectItem>
-                    <SelectItem value="Sorry. Unexpected internal delay. Expect an update within" className="rounded-lg py-3 cursor-pointer">Sorry. Unexpected internal delay. Expect an update within</SelectItem>
-                    <SelectItem value="I have news. I'll connect with you within" className="rounded-lg py-3 cursor-pointer">I have news. I'll connect with you within</SelectItem>
-                    <SelectItem value="Sorry. Position Seems to be Paused for now. Expect an update within" className="rounded-lg py-3 cursor-pointer">Sorry. Position Seems to be Paused for now. Expect an update within</SelectItem>
+                  <SelectContent className="rounded-xl shadow-2xl border-gray-100 p-1 max-w-[var(--radix-select-trigger-width)]">
+                    <SelectItem value="Awaiting feedback. I'll update you within" className="rounded-lg py-3 cursor-pointer whitespace-normal">Awaiting feedback. I'll update you within</SelectItem>
+                    <SelectItem value="Hello! Internal review is in progress. I'll update you within" className="rounded-lg py-3 cursor-pointer whitespace-normal">Hello! Internal review is in progress. I'll update you within</SelectItem>
+                    <SelectItem value="Hi There! Scheduling is in progress. I'll update you within" className="rounded-lg py-3 cursor-pointer whitespace-normal">Hi There! Scheduling is in progress. I'll update you within</SelectItem>
+                    <SelectItem value="Sorry. Unexpected internal delay. Expect an update within" className="rounded-lg py-3 cursor-pointer whitespace-normal">Sorry. Unexpected internal delay. Expect an update within</SelectItem>
+                    <SelectItem value="I have news. I'll connect with you within" className="rounded-lg py-3 cursor-pointer whitespace-normal">I have news. I'll connect with you within</SelectItem>
+                    <SelectItem value="Sorry. Position Seems to be Paused for now. Expect an update within" className="rounded-lg py-3 cursor-pointer whitespace-normal">Sorry. Position Seems to be Paused for now. Expect an update within</SelectItem>
+                    <SelectItem value={STATUS_UPDATED_PIPELINE_MESSAGE} className="rounded-lg py-3 cursor-pointer whitespace-normal">
+                      {STATUS_UPDATED_PIPELINE_MESSAGE}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-gray-700 font-bold text-xs uppercase tracking-wider">Timeframe</Label>
-                <Select value={updateDropdown2} onValueChange={setUpdateDropdown2}>
-                  <SelectTrigger className="w-full border-gray-200 focus:ring-2 focus:ring-blue-500/20 rounded-xl h-12 text-sm bg-gray-50/50 cursor-pointer transition-all hover:bg-gray-50 border shadow-sm">
-                    <SelectValue placeholder="Select a timeframe..." />
+                <Select
+                  value={updateDropdown2}
+                  onValueChange={setUpdateDropdown2}
+                  disabled={isStandaloneTemplate}
+                >
+                  <SelectTrigger
+                    className="w-full border-gray-200 focus:ring-2 focus:ring-blue-500/20 rounded-xl h-12 text-sm bg-gray-50/50 cursor-pointer transition-all hover:bg-gray-50 border shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={isStandaloneTemplate}
+                  >
+                    <SelectValue placeholder={isStandaloneTemplate ? "Not required" : "Select a timeframe..."} />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl shadow-2xl border-gray-100 p-1">
                     <SelectItem value="2 Hours" className="rounded-lg py-3 cursor-pointer">2 Hours</SelectItem>
@@ -335,13 +359,15 @@ export default function ActiveNudgesTable() {
               </div>
             </div>
             
-            {updateDropdown1 && updateDropdown2 && (
+            {previewMessage && (
               <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
                 <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
                   Message Preview
                 </p>
-                <p className="text-sm text-gray-900 font-bold leading-relaxed italic">"{updateDropdown1} {updateDropdown2}"</p>
+                <p className="text-sm text-gray-900 font-bold leading-relaxed italic whitespace-normal break-words">
+                  &quot;{previewMessage}&quot;
+                </p>
               </div>
             )}
             
@@ -356,7 +382,7 @@ export default function ActiveNudgesTable() {
               <Button
                 onClick={handleUpdateNudgeConfirm}
                 className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
-                disabled={!updateDropdown1 || !updateDropdown2 || respondMutation.isPending}
+                disabled={!canSendUpdate || respondMutation.isPending}
               >
                 {respondMutation.isPending ? "Sending..." : "Send Update"}
               </Button>

@@ -61,4 +61,47 @@ export const api = {
       credentials: 'include',
     }).then(res => res.json());
   },
+
+  previewResumeMerge: async (file: File) => {
+    const formData = new FormData();
+    formData.append('resume', file);
+    const res = await fetch(createApiUrl('/api/candidate/resume/preview'), {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to analyze resume');
+    }
+    return data as {
+      fileUrl: string;
+      fileName: string;
+      fromResume: ResumeMergeFieldChange[];
+      retained: ResumeMergeFieldChange[];
+      changes: ResumeMergeFieldChange[];
+    };
+  },
+
+  applyResumeMerge: async () => {
+    const res = await fetch(createApiUrl('/api/candidate/resume/apply'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to apply resume updates');
+    }
+    return data;
+  },
+};
+
+export type ResumeMergeFieldChange = {
+  key: string;
+  label: string;
+  category: string;
+  currentValue: string | null;
+  newValue: string | null;
+  source: 'from_resume' | 'retained';
 };

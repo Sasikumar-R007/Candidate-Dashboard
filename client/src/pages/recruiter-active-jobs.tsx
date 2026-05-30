@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from "wouter";
+import { navigateBackToRecruiterDashboard } from "@/lib/recruiter-navigation";
 import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, CheckCircle, AlertCircle, Loader2, Building, XCircle, X, Plus, Image } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -29,9 +30,12 @@ export default function RecruiterActiveJobs() {
   const { toast } = useToast();
   const jobsPerPage = 6;
 
-  const { data: jobs = [], isLoading, error } = useQuery<RecruiterJob[]>({
+  const { data: jobs = [], isPending, error } = useQuery<RecruiterJob[]>({
     queryKey: ['/api/recruiter/jobs'],
+    staleTime: 30_000,
   });
+
+  const showInitialLoader = isPending && jobs.length === 0;
 
   const updateJobMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<RecruiterJob> }) => {
@@ -276,7 +280,7 @@ export default function RecruiterActiveJobs() {
     });
   };
 
-  if (isLoading) {
+  if (showInitialLoader) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -302,9 +306,7 @@ export default function RecruiterActiveJobs() {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center gap-4 mb-4">
           <Button
-            onClick={() => {
-              setLocation('/recruiter');
-            }}
+            onClick={() => navigateBackToRecruiterDashboard(setLocation)}
             variant="outline"
             size="sm"
             className="flex items-center gap-2"

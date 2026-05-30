@@ -1,7 +1,16 @@
 import React, { useMemo } from 'react';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, Info } from 'lucide-react';
 import type { Profile } from '@shared/schema';
 import { calculateProfileCompletion } from '@/lib/profile-utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+const PROFILE_COMPLETION_INFO =
+  'Your completion percentage increases only when you fully complete each profile tab (e.g. Personal Info, Education, Resume)—not from partial or single-field updates.';
 
 interface ProfileCompletionWidgetProps {
   profile: Profile;
@@ -14,10 +23,27 @@ export default function ProfileCompletionWidget({ profile, jobPreferences }: Pro
   }, [profile, jobPreferences]);
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 w-full max-w-sm sticky top-8">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center mb-6">
-        Complete your profile
-      </h3>
+      <div className="flex items-center justify-center gap-1.5 mb-6">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center">
+          Complete your profile
+        </h3>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors"
+              aria-label="How profile completion works"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-[260px] text-xs leading-relaxed">
+            {PROFILE_COMPLETION_INFO}
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       <div className="relative flex items-center justify-center mb-8">
         {/* Simple SVG Circular Progress */}
@@ -73,5 +99,6 @@ export default function ProfileCompletionWidget({ profile, jobPreferences }: Pro
         ))}
       </div>
     </div>
+    </TooltipProvider>
   );
 }

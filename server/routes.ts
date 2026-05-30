@@ -141,6 +141,7 @@ function calculateQuartersSince(joiningDate: string | Date | null | undefined): 
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { normalizeParsedEducation, normalizeParsedSkills } from "./parsed-field-format";
+import { buildResumeMergePreview } from "./resume-profile-merge";
 import {
   applicationBelongsToCandidate,
   isStaffOsTaggedSource,
@@ -4688,6 +4689,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const RESUME_PREVIEW_TTL_MS = 15 * 60 * 1000;
+
+  async function applyResumeMergeForCandidate(
+    candidate: Awaited<ReturnType<typeof storage.getCandidateByCandidateId>>,
+    preview: ReturnType<typeof buildResumeMergePreview>,
+    options?: { completeRegistration?: boolean },
+  ) {
+    if (!candidate) return;
+
+    await storage.updateCandidate(candidate.id, preview.mergedCandidate as any);
+
+    const existingProfile = await storage.getProfile(candidate.id);
+    const savedProfile = existingProfile
+      ? await storage.updateProfile(candidate.id, preview.mergedProfile as any)
+      : await storage.createProfile({ ...preview.mergedProfile, userId: candidate.id } as any);
+
+    if (savedProfile && preview.skillList.length > 0) {
+      const skillInsertions = preview.skillList.map((skill: string, index: number) => ({
+        profileId: savedProfile.id,
+        name: skill.charAt(0).toUpperCase() + skill.slice(1),
+        category: index < 3 ? "primary" : "secondary",
+      }));
+      await storage.updateSkillsByProfile(savedProfile.id, skillInsertions);
+    }
+
+    if (options?.completeRegistration) {
+      await storage.updateCandidate(candidate.id, { registrationStage: "completed" });
+    }
+  }
+
+  app.post("/api/candidate/resume/preview", requireCandidateAuth, upload.single("resume"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const baseUrl =
+        process.env.NODE_ENV === "production"
+          ? process.env.BACKEND_URL || `https://${req.get("host")}`
+          : `http://${req.get("host")}`;
+      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      const filePath = path.join(process.cwd(), "uploads", req.file.filename);
+
+      const parsedData = await parseResumeFile(filePath, req.file.mimetype);
+      if (!parsedData?.aiParsed) {
+        return res.status(422).json({
+          message: "Could not extract details from this resume. Try a clearer PDF or image.",
+        });
+      }
+
+      const existingProfile = await storage.getProfile(candidate.id);
+      const preview = buildResumeMergePreview(
+        candidate,
+        existingProfile,
+        parsedData.aiParsed,
+        fileUrl,
+        parsedData.rawText || null,
+      );
+
+      req.session.resumeMergePreview = {
+        candidateUuid: candidate.id,
+        fileUrl,
+        mergedProfile: preview.mergedProfile,
+        mergedCandidate: preview.mergedCandidate,
+        skillList: preview.skillList,
+        changes: preview.changes,
+        fromResume: preview.fromResume,
+        retained: preview.retained,
+        createdAt: Date.now(),
+      };
+
+      res.json({
+        fileUrl,
+        fileName: req.file.originalname,
+        fromResume: preview.fromResume,
+        retained: preview.retained,
+        changes: preview.changes,
+      });
+    } catch (error) {
+      console.error("Resume preview error:", error);
+      res.status(500).json({
+        message: "Failed to analyze resume",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  app.post("/api/candidate/resume/apply", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const sessionPreview = req.session.resumeMergePreview;
+      if (
+        !sessionPreview ||
+        sessionPreview.candidateUuid !== candidate.id ||
+        Date.now() - sessionPreview.createdAt > RESUME_PREVIEW_TTL_MS
+      ) {
+        return res.status(400).json({
+          message: "Resume preview expired. Please upload your resume again.",
+        });
+      }
+
+      const preview = {
+        mergedProfile: sessionPreview.mergedProfile,
+        mergedCandidate: sessionPreview.mergedCandidate,
+        skillList: sessionPreview.skillList,
+        changes: sessionPreview.changes,
+        fromResume: sessionPreview.fromResume,
+        retained: sessionPreview.retained,
+      };
+
+      await applyResumeMergeForCandidate(candidate, preview as ReturnType<typeof buildResumeMergePreview>, {
+        completeRegistration: candidate.registrationStage !== "completed",
+      });
+
+      delete req.session.resumeMergePreview;
+
+      res.json({ success: true, message: "Profile updated from resume" });
+    } catch (error) {
+      console.error("Resume apply error:", error);
+      res.status(500).json({
+        message: "Failed to apply resume updates",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   app.post("/api/upload/resume", requireCandidateAuth, upload.single('resume'), async (req, res) => {
     try {
       if (!req.file) {
@@ -4737,96 +4875,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const parsedData = await parseResumeFile(filePath, req.file!.mimetype);
           
           if (parsedData && parsedData.aiParsed) {
-            const ai = parsedData.aiParsed;
-            const normalizedSkillCsv = normalizeParsedSkills(ai.skills);
-            const normalizedEducation = normalizeParsedEducation(ai.education);
-
-            // 1. Update Candidate Master Record
-            await storage.updateCandidate(candidate.id, {
-              fullName: ai.full_name || candidate.fullName,
-              phone: ai.phone || candidate.phone,
-              company: ai.company || candidate.company,
-              designation: ai.designation || null,
-              experience: ai.experience || null,
-              location: ai.location || null,
-              skills: normalizedSkillCsv ?? null,
-              education: normalizedEducation ?? null,
-              currentRole: ai.current_role || null,
-              portfolioUrl: ai.portfolio_url || null,
-              website_url: ai.website_url || null,
-              linkedin_url: ai.linkedin_url || null,
-              ctc: ai.ctc || null,
-              ectc: ai.ectc || null,
-              noticePeriod: ai.notice_period || null,
-              position: ai.position || null,
-              employmentType: ai.employment_type || null,
-              productService: ai.product_service || null,
-              productCategory: ai.product_category || null,
-              productDomain: ai.product_domain || null,
-            });
-
-            // 2. Create/Update Profile Table
             const existingProfile = await storage.getProfile(candidate.id);
-            const nameParts = (ai.full_name || candidate.fullName).split(' ');
-            
-            // Priority Mapping: AI directly provides Degree Level and Title now
-            const highestQualification = ai.degree_level || 'Under Graduate';
-            const professionalTitle = ai.current_role || ai.designation || 'Candidate';
+            const preview = buildResumeMergePreview(
+              candidate,
+              existingProfile,
+              parsedData.aiParsed,
+              fileUrl,
+              parsedData.rawText || null,
+            );
 
-            const profileData = {
-              candidateId: candidate.candidateId,
-              firstName: nameParts[0] || 'Unknown',
-              lastName: nameParts.slice(1).join(' ') || 'Unknown',
-              email: ai.email || candidate.email,
-              phone: ai.phone || candidate.phone || 'Unknown',
-              title: professionalTitle,
-              location: ai.location || 'Unknown',
-              mobile: ai.phone || null,
-              whatsapp: ai.phone || null,
-              primaryEmail: ai.email || null,
-              secondaryEmail: ai.secondary_email || null,
-              currentLocation: ai.location || null,
-              preferredLocation: null,
-              dateOfBirth: ai.age || null,
-              portfolioUrl: ai.portfolio_url || null,
-              websiteUrl: ai.website_url || null,
-              linkedinUrl: ai.linkedin_url || null,
-              resumeFile: fileUrl,
-              resumeText: parsedData.rawText || null,
-              highestQualification: highestQualification,
-              collegeName: ai.college || ai.university || null,
-              course: ai.course || null,
-              graduationYear: ai.graduation_year || null,
-              skills: normalizedSkillCsv || null,
-              currentCompany: ai.company || null,
-              currentRole: ai.current_role || null,
-              noticePeriod: ai.notice_period || null,
-              currentDomain: ai.product_domain || null,
-            };
-
-            const savedProfile = existingProfile 
-              ? await storage.updateProfile(candidate.id, profileData)
-              : await storage.createProfile({ ...profileData, userId: candidate.id } as any);
-
-            // 3. Sync Skills Table (Convert CSV to separate rows)
-            if (savedProfile && normalizedSkillCsv) {
-              const skillList = normalizedSkillCsv.split(',').map((s: string) => s.trim()).filter(Boolean);
-              const skillInsertions = skillList.map((skill: string, index: number) => ({
-                profileId: savedProfile.id,
-                name: skill.charAt(0).toUpperCase() + skill.slice(1),
-                category: index < 3 ? 'primary' : 'secondary' 
-              }));
-              
-              await storage.updateSkillsByProfile(savedProfile.id, skillInsertions);
-              console.log(`[AI Parser] Synced ${skillInsertions.length} skills to profile ${savedProfile.id}`);
-            }
-
-            // 3. Final Step: Mark registration as COMPLETED
-            const updatedCandidate = await storage.updateCandidate(candidate.id, {
-              registrationStage: 'completed'
+            await applyResumeMergeForCandidate(candidate, preview, {
+              completeRegistration: true,
             });
-            
-            console.log(`[Background AI] Successfully parsed and refined. Stage set to: ${updatedCandidate?.registrationStage}`);
+
+            console.log(
+              `[Background AI] Merged resume into profile for ${candidate.candidateId} (${preview.fromResume.length} from resume, ${preview.retained.length} retained)`,
+            );
           }
         } catch (error) {
           console.error(`[Resume Background Parsing] Failed for candidate ${candidateId}:`, error);

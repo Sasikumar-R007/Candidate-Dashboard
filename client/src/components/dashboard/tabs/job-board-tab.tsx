@@ -588,9 +588,9 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                    variant="outline" 
                    size="sm" 
                    onClick={() => setShowArchiveModal(true)}
-                   className="bg-red-50 hover:bg-red-100 text-red-600 border-red-100 rounded-xl h-10 px-4 flex items-center gap-2 font-semibold text-[11px] tracking-wide"
+                   className="bg-red-50 hover:bg-red-100 text-red-600 border-red-100 rounded-xl h-11 px-5 flex items-center gap-2 font-semibold text-sm tracking-wide"
                  >
-                   <Archive size={16} className="text-red-500" />
+                   <Archive size={18} className="text-red-500" />
                    Archive
                  </Button>
             </div>

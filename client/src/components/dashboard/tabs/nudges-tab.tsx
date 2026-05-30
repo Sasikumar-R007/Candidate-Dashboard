@@ -179,8 +179,8 @@ export default function NudgeLogsTab() {
                       </td>
                       <td className="py-3 px-6">
                         {nudge.message ? (
-                          <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded" title={nudge.message}>
-                            {nudge.message.length > 20 ? nudge.message.substring(0, 20) + '...' : nudge.message}
+                          <span className="block max-w-md text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded whitespace-normal break-words">
+                            {nudge.message}
                           </span>
                         ) : nudge.isResponded ? (
                           <span className="text-xs text-green-700 font-medium" title={nudge.message || "Responded"}>Responded</span>

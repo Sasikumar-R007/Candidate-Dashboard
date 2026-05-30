@@ -20,13 +20,35 @@ const protectedPrefixes = [
   "/chat",
 ];
 
+/** Child/detail routes where browser back should return to the parent screen. */
+const ROUTES_WITH_NATURAL_BACK = new Set([
+  "/recruiter-active-jobs",
+  "/recruiter-new-applications",
+  "/recruiter-all-candidates",
+  "/recruiter-applicants",
+  "/source-resume",
+  "/archives",
+  "/master-database",
+  "/admin/consent-logs",
+]);
+
+function allowsNaturalBackNavigation(location: string): boolean {
+  return (
+    ROUTES_WITH_NATURAL_BACK.has(location) ||
+    location.startsWith("/candidate-profile/")
+  );
+}
+
 export default function AuthenticatedNavigationGuard() {
   const { user, isLoading, isVerified } = useAuth();
   const [location] = useLocation();
 
   useEffect(() => {
     const isProtectedRoute = protectedPrefixes.some((prefix) => location.startsWith(prefix));
-    if (!user || isLoading || !isVerified || !isProtectedRoute) {
+    const shouldTrapBrowserBack =
+      isProtectedRoute && !allowsNaturalBackNavigation(location);
+
+    if (!user || isLoading || !isVerified || !shouldTrapBrowserBack) {
       return;
     }
 

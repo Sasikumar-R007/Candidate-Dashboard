@@ -51,6 +51,7 @@ import { TaPipelineTab } from "@/components/dashboard/ta-pipeline-tab";
 import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import { navigateToRecruiterSatellitePage } from "@/lib/recruiter-navigation";
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ChatDock } from '@/components/chat/chat-dock';
@@ -2048,7 +2049,7 @@ export default function RecruiterDashboard2() {
                 {/* Total Jobs - Clickable Link with External Icon */}
                 <div
                   className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors"
-                  onClick={() => navigate('/recruiter-active-jobs')}
+                  onClick={() => navigateToRecruiterSatellitePage(navigate, '/recruiter-active-jobs', sidebarTab)}
                   data-testid="link-total-jobs"
                 >
                   <div className="flex items-center gap-2">

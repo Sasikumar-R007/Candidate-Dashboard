@@ -18,8 +18,12 @@ import { ChatDock } from '@/components/chat/chat-dock';
 import DashboardHeader from '@/components/dashboard/dashboard-header';
 import CandidatePlatformWelcomeModal from '@/components/candidate-dashboard/candidate-platform-welcome-modal';
 import RecruiterTaggedJobConsentModal from '@/components/candidate-dashboard/recruiter-tagged-job-consent-modal';
+import { CandidateNotificationBell } from '@/components/dashboard/candidate-notification-bell';
 import { logConsent } from '@/lib/consent-log';
 import { useToast } from '@/hooks/use-toast';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import { CANDIDATE_HELP_FAB_SESSION_KEY } from '@/lib/candidate-ui-preferences';
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -32,6 +36,27 @@ export default function Dashboard() {
     enabled: !!profile,
   });
   const [chatOpen, setChatOpen] = useState(false);
+  const [helpFabVisible, setHelpFabVisible] = useState(
+    () => sessionStorage.getItem(CANDIDATE_HELP_FAB_SESSION_KEY) !== '1',
+  );
+
+  const dismissHelpFab = () => {
+    sessionStorage.setItem(CANDIDATE_HELP_FAB_SESSION_KEY, '1');
+    setHelpFabVisible(false);
+  };
+
+  const headerActions = (
+    <div className="flex items-center gap-3">
+      <CandidateNotificationBell onNavigateToMyJobs={() => setSidebarTab('my-jobs')} />
+      <ProfileMenu
+        name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
+        candidateId={profile?.candidateId || ''}
+        profilePicture={profile?.profilePicture}
+        onNavigateToSettings={() => setSidebarTab('settings')}
+        onOpenSupport={() => setChatOpen(true)}
+      />
+    </div>
+  );
 
   const pendingTaggedApplications = useMemo(
     () =>
@@ -126,26 +151,17 @@ export default function Dashboard() {
     switch (sidebarTab) {
       case 'my-jobs':
         return (
-          <div className="flex flex-col flex-1 h-full">
+          <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
             <DashboardHeader 
               title="My Jobs" 
-              actions={
-                <ProfileMenu 
-                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
-                  candidateId={profile?.candidateId || ''}
-                  profilePicture={profile?.profilePicture}
-                  onNavigateToSettings={() => setSidebarTab('settings')}
-                  onOpenSupport={() => setChatOpen(true)}
-                />
-              }
+              actions={headerActions}
             />
-            <div className="flex-1 overflow-hidden flex">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">
               <MyJobsTab 
                 onNavigateToJobBoard={() => setSidebarTab('job-board')} 
                 onNavigateToProfile={() => setSidebarTab('edit-view')}
                 onNavigateToSettings={() => setSidebarTab('settings')}
                 onOpenSupport={() => setChatOpen(true)}
-                className="flex-1" 
               />
             </div>
           </div>
@@ -155,15 +171,7 @@ export default function Dashboard() {
           <div className="flex flex-col flex-1 h-full">
             <DashboardHeader 
               title="Settings" 
-              actions={
-                <ProfileMenu 
-                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
-                  candidateId={profile?.candidateId || ''}
-                  profilePicture={profile?.profilePicture}
-                  onNavigateToSettings={() => setSidebarTab('settings')}
-                  onOpenSupport={() => setChatOpen(true)}
-                />
-              }
+              actions={headerActions}
             />
             <div className="flex-1 overflow-y-auto mt-4 px-8 pb-8">
               <SettingsTab onOpenSupport={() => setChatOpen(true)} />
@@ -175,15 +183,7 @@ export default function Dashboard() {
           <div className="flex flex-col flex-1 h-full font-poppins">
             <DashboardHeader 
               title="Profile" 
-              actions={
-                <ProfileMenu 
-                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
-                  candidateId={profile?.candidateId || ''}
-                  profilePicture={profile?.profilePicture}
-                  onNavigateToSettings={() => setSidebarTab('settings')}
-                  onOpenSupport={() => setChatOpen(true)}
-                />
-              }
+              actions={headerActions}
             />
             <div className="flex-1 overflow-y-auto">
               <EditViewProfile profile={profile!} onNavigateToJobBoard={() => setSidebarTab('job-board')} />
@@ -195,15 +195,7 @@ export default function Dashboard() {
           <div className="flex flex-col flex-1 h-full">
             <DashboardHeader 
               title="Job Board" 
-              actions={
-                <ProfileMenu 
-                  name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
-                  candidateId={profile?.candidateId || ''}
-                  profilePicture={profile?.profilePicture}
-                  onNavigateToSettings={() => setSidebarTab('settings')}
-                  onOpenSupport={() => setChatOpen(true)}
-                />
-              }
+              actions={headerActions}
             />
             <div className="flex-1 overflow-y-auto">
               <JobBoardTab 
@@ -275,20 +267,45 @@ export default function Dashboard() {
         aria-hidden={anyConsentBlocking}
       >
         <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-        <div className="flex-1 flex flex-col overflow-hidden ml-16 bg-gray-50">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden ml-16 bg-gray-50">
           {renderSidebarContent()}
         </div>
         
         {/* Floating Chat Button */}
-        <button
-          onClick={() => setChatOpen(true)}
-          disabled={anyConsentBlocking}
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg transition-all duration-200 hover:scale-110 hover:bg-purple-700 disabled:pointer-events-none disabled:opacity-0"
-          data-testid="button-floating-chat"
-          aria-label="Open Chat"
-        >
-          <MessageCircle size={24} />
-        </button>
+        <AnimatePresence>
+          {helpFabVisible && !anyConsentBlocking && (
+            <motion.div
+              key="candidate-help-fab"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="fixed bottom-6 right-6 z-40"
+            >
+              <button
+                type="button"
+                onClick={() => setChatOpen(true)}
+                className="relative flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg transition-all duration-200 hover:scale-110 hover:bg-purple-700"
+                data-testid="button-floating-chat"
+                aria-label="Open Chat"
+              >
+                <MessageCircle size={24} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dismissHelpFab();
+                }}
+                className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-md transition hover:bg-gray-50 hover:text-gray-800"
+                aria-label="Close help button"
+                data-testid="button-dismiss-help-fab"
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Chat Dock Component */}

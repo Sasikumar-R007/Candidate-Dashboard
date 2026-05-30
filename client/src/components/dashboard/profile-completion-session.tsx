@@ -1,7 +1,16 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Lock, ArrowRight, Upload } from 'lucide-react';
+import { CheckCircle2, Lock, ArrowRight, Upload, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+const PROFILE_COMPLETION_INFO =
+  'Your completion percentage increases only when you fully complete each profile tab (e.g. Personal Info, Education, Resume)—not from partial or single-field updates.';
 import type { Profile } from '@shared/schema';
 
 interface ProfileCompletionSessionProps {
@@ -20,13 +29,30 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
   const doneCount = sections.length - missing.length;
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-[2rem] p-8 mt-12 mb-10 border border-blue-100 dark:border-blue-800 shadow-sm overflow-hidden relative group">
       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-blue-300/30 transition-colors"></div>
       
       <div className="relative z-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-8">
           <div className="flex-1 text-center md:text-left">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Profile Strength</h2>
+            <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Profile Strength</h2>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:text-blue-600 hover:bg-white/80 dark:hover:bg-gray-800 transition-colors"
+                    aria-label="How profile completion works"
+                  >
+                    <Info className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+                  {PROFILE_COMPLETION_INFO}
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <p className="text-gray-600 dark:text-gray-400 font-medium">
               Complete your profile to unlock all job opportunities and let recruiters find you.
             </p>
@@ -98,5 +124,6 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

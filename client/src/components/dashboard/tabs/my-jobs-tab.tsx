@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, MapPin, Flame, Eye, Archive, Zap, Clock, ChevronDown, ChevronUp, Ban, Send, MessageCircle, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { MoreHorizontal, MapPin, Flame, Eye, Archive, Zap, Clock, ChevronDown, ChevronUp, Ban, Send, MessageCircle, AlertCircle, CheckCircle2, Info, Briefcase, Building2 } from 'lucide-react';
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useJobApplications, useApplyJob } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
@@ -174,6 +174,7 @@ export default function MyJobsTab({
     queryKey: ['/api/candidate/nudges'],
   });
   const [showAllNudgesDialog, setShowAllNudgesDialog] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const withdrawMutation = useMutation({
     mutationFn: async ({ id, reason, note }: { id: string; reason: string; note?: string }) => {
@@ -312,6 +313,17 @@ export default function MyJobsTab({
   const confirmedApplications = useMemo(
     () => jobApplications.filter(app => (app as any).isCandidateConfirmed !== false),
     [jobApplications]
+  );
+
+  const archivedApplications = useMemo(
+    () =>
+      jobApplications.filter(
+        (app) =>
+          app.status === "Withdrawn" ||
+          app.status === "Archived" ||
+          mapStatusToStage(app.status) === "Screened Out",
+      ),
+    [jobApplications],
   );
 
   // Create a Set of applied jobs for fast lookup
@@ -566,14 +578,24 @@ export default function MyJobsTab({
 
   return (
     <>
-    <div className={`flex h-full overflow-hidden ${className || ''}`}>
-      {/* Main Content Area - Applied Jobs and Job Suggestions (Scrollable) */}
-      <div className="flex-1 min-w-0 overflow-y-auto bg-gray-50 font-poppins">
+    <div className={`flex w-full items-start ${className || ''}`}>
+      {/* Main Content Area - Applied Jobs and Job Suggestions */}
+      <div className="flex-1 min-w-0 bg-gray-50 font-poppins">
         <div className="p-4 space-y-4 max-w-full">
           {/* Applied Jobs Section - Pipeline Layout */}
           <div className="bg-white rounded-md p-4 shadow-sm relative border border-gray-100">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-800">Applied Jobs</h2>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowArchiveModal(true)}
+                className="h-9 gap-2 rounded-[6px] border-red-200 bg-red-50 px-3.5 text-sm font-semibold text-red-600 hover:bg-red-100 hover:text-red-700"
+                data-testid="button-applied-jobs-archive"
+              >
+                <Archive className="h-4 w-4" />
+                Archive
+              </Button>
             </div>
 
             {pendingConfirmations.length > 0 && (
@@ -661,6 +683,12 @@ export default function MyJobsTab({
                         const isExpanded = expandedJobId === job.id;
                         const timeRemaining = timeRemainingMap[job.id];
                         const isNudgeDisabled = !!timeRemaining;
+                        const jobNudgeUpdates = candidateNudges.filter(
+                          (n) => n.applicationId === job.id && (n.isResponded || n.message),
+                        );
+                        const hasNudgeUpdate = jobNudgeUpdates.length > 0;
+                        const hasUnreadNudgeUpdate = jobNudgeUpdates.some((n) => !n.isRead);
+                        const showNudgeCooldownIcon = !!timeRemaining;
 
                         return (
                           <div 
@@ -697,8 +725,8 @@ export default function MyJobsTab({
                               } rounded-[8px] p-3.5`}
                               onClick={() => handleToggleExpand(job.id)}
                             >
-                              {/* New Message Badge */}
-                              {candidateNudges.some(n => n.applicationId === job.id && (n.isResponded || n.message) && !n.isRead) && (
+                              {/* Unread recruiter response badge */}
+                              {hasUnreadNudgeUpdate && (
                                 <div className="absolute -top-1 -right-1 z-20">
                                   <span className="relative flex h-3 w-3">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -724,10 +752,12 @@ export default function MyJobsTab({
                                 )}
                                 {stage !== 'Screened Out' && (
                                   <div className="flex-shrink-0">
-                                    {timeRemaining && (
-                                      <div className="relative flex items-center justify-center mr-1">
-                                        <div className="absolute w-4 h-4 bg-red-400 rounded-full animate-ping opacity-75" />
-                                        <Zap className="w-4 h-4 text-blue-500 fill-blue-500 relative z-10 animate-pulse" />
+                                    {showNudgeCooldownIcon && (
+                                      <div className="relative flex items-center justify-center mr-1" title={hasNudgeUpdate ? "Nudge on cooldown — update received" : "Nudge on cooldown"}>
+                                        {!hasNudgeUpdate && (
+                                          <div className="absolute w-4 h-4 bg-red-400 rounded-full animate-ping opacity-75" />
+                                        )}
+                                        <Zap className={`w-4 h-4 text-blue-500 fill-blue-500 relative z-10 ${hasNudgeUpdate ? "" : "animate-pulse"}`} />
                                       </div>
                                     )}
                                   </div>
@@ -1031,7 +1061,7 @@ export default function MyJobsTab({
       </div>
 
       {/* Right Sidebar - Candidate Metrics (Collapsible) */}
-      <div className="flex-shrink-0 h-full relative z-40">
+      <div className="flex-shrink-0 sticky top-0 self-start relative z-20">
         <motion.div 
           animate={{ width: isMetricsExpanded ? 320 : 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -1044,7 +1074,7 @@ export default function MyJobsTab({
         </motion.div>
 
         {/* Toggle Button - Outside the overflow area with Tooltip-like label */}
-        <div className="absolute left-[-16px] top-1/2 -translate-y-1/2 z-50 flex items-center">
+        <div className="absolute left-[-16px] top-1/2 -translate-y-1/2 z-10 flex items-center">
           <button
             onClick={() => setIsMetricsExpanded(!isMetricsExpanded)}
             className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-all hover:scale-110 group relative"
@@ -1505,6 +1535,98 @@ export default function MyJobsTab({
               </motion.div>
             )}
           </AnimatePresence>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>
+        <DialogContent className="max-w-[1000px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
+          <DialogHeader className="p-6 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+                <Archive size={20} />
+              </div>
+              Application Archive
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead className="bg-gray-50/50 text-gray-500 border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Role</th>
+                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Company</th>
+                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Applied on</th>
+                    <th className="px-6 py-4 font-semibold tracking-tight text-[11px]">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {archivedApplications.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-20 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
+                            <Archive size={32} />
+                          </div>
+                          <p className="font-semibold text-gray-400 tracking-tight text-xs">
+                            No archived applications found
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    archivedApplications.map((app) => (
+                      <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-red-50/50 flex items-center justify-center text-red-500 border border-red-100/50">
+                              <Briefcase size={14} />
+                            </div>
+                            <span className="font-semibold text-gray-900">{app.jobTitle}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2 text-gray-500 font-medium">
+                            <Building2 size={14} className="text-gray-300" />
+                            {app.company}
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-gray-400 text-[12px]">
+                          {formatDate(app.appliedDate)}
+                        </td>
+                        <td className="px-6 py-5">
+                          <Badge
+                            className={`${
+                              app.status === "Withdrawn"
+                                ? "bg-amber-50 text-amber-600 border-amber-100"
+                                : app.status === "Archived"
+                                  ? "bg-gray-50 text-gray-600 border-gray-100"
+                                  : "bg-red-50 text-red-600 border-red-100"
+                            } border-none rounded-lg px-3 py-1 text-[10px] font-semibold`}
+                          >
+                            {app.status === "Withdrawn"
+                              ? "Withdrawn"
+                              : app.status === "Archived"
+                                ? "Archived"
+                                : "Rejected"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="p-6 border-t bg-white flex justify-end">
+            <Button
+              onClick={() => setShowArchiveModal(false)}
+              className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-semibold px-8"
+            >
+              Close Archive
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
