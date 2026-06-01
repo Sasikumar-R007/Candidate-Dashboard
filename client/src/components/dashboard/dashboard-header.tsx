@@ -1,6 +1,4 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -20,14 +18,14 @@ export default function DashboardHeader({
   actions 
 }: DashboardHeaderProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-gray-800/80">
-      <div className="flex items-center gap-6">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+    <div className="sticky top-0 z-[100] overflow-visible bg-white/95 dark:bg-gray-800/95 border-b border-gray-200 dark:border-gray-700 px-4 py-3 lg:px-8 lg:py-4 flex flex-row items-center justify-between gap-3 backdrop-blur-md shadow-sm">
+      <div className="flex min-w-0 flex-1 items-center gap-3 lg:gap-6">
+        <h1 className="truncate text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent lg:text-2xl">
           {title}
         </h1>
         
         {showSearch && (
-          <div className="relative group min-w-[320px]">
+          <div className="relative group hidden min-w-[320px] md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
             <Input 
               placeholder="Search..." 
@@ -39,7 +37,7 @@ export default function DashboardHeader({
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-2 lg:gap-4">
         {actions}
       </div>
     </div>

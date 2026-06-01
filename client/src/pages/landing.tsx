@@ -12,12 +12,10 @@ import {
   GraduationCap,
   Home,
   Linkedin,
-  Menu,
   Rocket,
   TrendingUp,
   Twitter,
   Users,
-  X,
 } from "lucide-react";
 import navLogoImage from "@/assets/nav logo.png";
 import { useAuth } from "@/contexts/auth-context";
@@ -130,7 +128,6 @@ export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState<LocationOption>("All India");
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const JOBS_PER_PAGE = 6;
@@ -194,110 +191,48 @@ export default function Landing() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans text-gray-900">
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto max-w-[90rem] px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1 sm:space-x-1.5">
-              <img
-                src={navLogoImage}
-                alt="StaffOS Logo"
-                className="h-8 sm:h-10 w-auto"
-                data-testid="img-logo"
-                style={{ objectFit: "contain" }}
-              />
-              <span className="text-base sm:text-lg font-semibold text-gray-900">
-                StaffOS
-              </span>
-            </div>
-
-            <div className="hidden md:flex items-center gap-3">
-              <Button
-                onClick={() => handleDelayedNav("/candidate-login")}
-                className="rounded-[6px] bg-[#2563EB] px-6 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-              >
-                Login
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleDelayedNav("/employer-login")}
-                className="rounded-[6px] border-gray-300 bg-white text-sm font-semibold text-gray-900 hover:bg-gray-50"
-              >
-                For Employer
-              </Button>
-            </div>
-
-            <button
-              className="md:hidden p-2 text-gray-700 hover:text-gray-900"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-
-          <div
-            className={`md:hidden fixed inset-0 bg-gray-500/80 z-40 transition-opacity duration-300 ease-in-out ${
-              mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-            onClick={() => setMobileMenuOpen(false)}
-          />
-
-          <div
-            className={`md:hidden fixed top-0 right-0 h-full w-80 bg-gray-200 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
-              mobileMenuOpen ? "translate-x-0" : "translate-x-full"
-            }`}
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200/80 bg-white/95 shadow-sm backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-[90rem] items-center justify-between gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
+          <a
+            href="/"
+            className="flex min-w-0 items-center gap-2 sm:gap-2.5"
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           >
-            <div className="h-full flex flex-col">
-              <div className="px-6 py-5 border-b-2 border-gray-300 bg-gray-200">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-gray-900">Menu</h2>
-                  <button
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-300 rounded-lg transition-colors"
-                    aria-label="Close menu"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
+            <img
+              src={navLogoImage}
+              alt="StaffOS Logo"
+              className="h-8 w-auto shrink-0 sm:h-9"
+              data-testid="img-logo"
+              style={{ objectFit: "contain" }}
+            />
+            <span className="truncate text-base font-semibold tracking-tight text-gray-900 sm:text-lg">
+              StaffOS
+            </span>
+          </a>
 
-              <div className="flex-1 px-6 py-8 bg-gray-200">
-                <div className="flex flex-col gap-6">
-                  <button 
-                    onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/candidate-login"); }}
-                    className="w-full rounded-[6px] bg-[#2563EB] px-6 py-4 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700 hover:shadow-lg"
-                  >
-                    Login
-                  </button>
-
-                  <button 
-                    onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/candidate-registration"); }}
-                    className="w-full rounded-[6px] border-2 border-[#2563EB] bg-white px-6 py-4 text-base font-semibold text-[#2563EB] shadow-sm transition-all duration-200 hover:bg-blue-50 hover:shadow-md"
-                  >
-                    Register
-                  </button>
-
-                  <button 
-                    onClick={() => { setMobileMenuOpen(false); handleDelayedNav("/employer-login"); }}
-                    className="w-full rounded-[6px] border-2 border-gray-300 bg-white px-6 py-4 text-base font-semibold text-gray-900 shadow-sm transition-all duration-200 hover:bg-gray-50 hover:shadow-md"
-                  >
-                    For Employer
-                  </button>
-
-                  <button 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="w-full bg-white text-gray-800 hover:bg-gray-50 border-2 border-gray-300 rounded-lg px-6 py-4 text-base font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    Contact
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <Button
+              onClick={() => handleDelayedNav("/candidate-login")}
+              className="h-9 rounded-[6px] bg-[#2563EB] px-3.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 sm:h-10 sm:px-6 sm:text-sm"
+            >
+              Login
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleDelayedNav("/employer-login")}
+              className="h-9 rounded-[6px] border-gray-300 bg-white px-3.5 text-xs font-semibold text-gray-900 hover:bg-gray-50 sm:h-10 sm:px-5 sm:text-sm"
+            >
+              <span className="sm:hidden">Employer</span>
+              <span className="hidden sm:inline">For Employer</span>
+            </Button>
           </div>
         </div>
       </nav>
 
-      <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 pb-8 pt-24 sm:px-6 sm:pb-12 sm:pt-28">
+      <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 pb-8 pt-[4.25rem] sm:px-6 sm:pb-12 sm:pt-20">
         <LandingHeroSection
           onSignUp={() => handleDelayedNav("/candidate-registration")}
         />

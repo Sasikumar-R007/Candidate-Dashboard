@@ -15,6 +15,11 @@ import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { useUpdateProfile } from '@/hooks/use-profile';
 import { Plus, Trash2, GraduationCap, Star, BookOpen, Globe } from 'lucide-react';
 import type { Profile } from '@shared/schema';
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from '@/lib/candidate-ui-preferences';
+import { cn } from '@/lib/utils';
 
 interface EducationEntry {
   degreeLevel: string;
@@ -125,17 +130,24 @@ export default function EditStrengthsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[95vh]">
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
+      <DialogContent
+        className={cn(
+          "max-w-4xl rounded-2xl lg:rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[95vh]",
+          CANDIDATE_MOBILE_DIALOG_CLASSES,
+          CANDIDATE_DESKTOP_DIALOG_CLASSES,
+          "max-lg:w-[calc(100vw-1rem)]",
+        )}
+      >
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-4 py-4 sm:px-8 sm:py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Your Strengths</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Your Strengths</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-2">
               Showcase your academic background and professional expertise.
             </DialogDescription>
           </DialogHeader>
         </div>
         
-        <form onSubmit={form.handleSubmit(onSubmit)} className="p-10 pt-6 space-y-10 bg-white dark:bg-gray-800 flex-1 overflow-y-auto scrollbar-hide">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 sm:p-10 sm:pt-6 space-y-8 sm:space-y-10 bg-white dark:bg-gray-800 flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-hide">
           {/* Education Section */}
           <section className="space-y-8">
             <div className="flex justify-end mb-4">

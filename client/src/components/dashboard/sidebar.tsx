@@ -77,7 +77,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   return (
     <>
       <div
-        className={`${isExpanded ? 'w-64' : 'w-16'} bg-slate-900 text-white flex-shrink-0 h-screen transition-all duration-300 fixed left-0 top-0 z-50 flex flex-col shadow-xl overflow-visible`}
+        className={`hidden lg:flex ${isExpanded ? 'w-64' : 'w-16'} bg-slate-900 text-white flex-shrink-0 h-screen transition-all duration-300 fixed left-0 top-0 z-50 flex-col shadow-xl overflow-visible`}
       >
         <div className={`h-16 flex items-center ${isExpanded ? 'px-4' : 'justify-center'} border-b border-slate-700 gap-3 overflow-hidden`}>
           <img 

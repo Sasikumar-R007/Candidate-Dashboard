@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useIsBelowLg } from '@/hooks/use-mobile';
 import JobDescriptionDetailsModal, {
   type JobDescriptionDetailsData,
 } from '@/components/dashboard/modals/job-description-details-modal';
@@ -36,11 +37,16 @@ import ProfileStrength from '@/components/dashboard/profile-strength';
 import ProfileCompletionSession from '@/components/dashboard/profile-completion-session';
 import { formatJobAppliedDate, PIPELINE_COLUMN_STYLES, getArchiveStatusLabel, getArchiveTerminalMeta, mapCandidateApplicationStage, getApplicationNudgeDisplayState } from '@/lib/candidate-pipeline-utils';
 import ProfileMenu from '@/components/dashboard/profile-menu';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import CandidateApplicationConsentModal from "@/components/candidate-dashboard/candidate-application-consent-modal";
 import { logConsent } from "@/lib/consent-log";
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from "@/lib/candidate-ui-preferences";
+import { cn } from "@/lib/utils";
 
 // Helper function to format date
 function formatDate(date: Date | string): string {
@@ -156,6 +162,7 @@ export default function MyJobsTab({
   const [withdrawText, setWithdrawText] = useState("");
   const [confirmChecks, setConfirmChecks] = useState<Record<string, boolean>>({});
   const jobsPerPage = 3;
+  const isBelowLg = useIsBelowLg();
   
   const { data: jobApplications = [], isLoading } = useJobApplications();
   const { data: candidateNudges = [] } = useQuery<any[]>({
@@ -338,6 +345,13 @@ export default function MyJobsTab({
     () => jobApplications.filter(app => (app as any).isCandidateConfirmed !== false),
     [jobApplications]
   );
+
+  const mobileExpandedContext = useMemo(() => {
+    if (!expandedJobId || !isBelowLg) return null;
+    const job = confirmedApplications.find((j) => j.id === expandedJobId);
+    if (!job) return null;
+    return { job, stage: mapStatusToStage(job.status) };
+  }, [expandedJobId, isBelowLg, confirmedApplications]);
 
   const archivedApplications = useMemo(
     () =>
@@ -613,19 +627,19 @@ export default function MyJobsTab({
 
   return (
     <>
-    <div className={`flex w-full items-start ${className || ''}`}>
+    <div className={`flex flex-col lg:flex-row w-full items-start ${className || ''}`}>
       {/* Main Content Area - Applied Jobs and Job Suggestions */}
-      <div className="flex-1 min-w-0 bg-gray-50 font-poppins">
-        <div className="p-4 space-y-4 max-w-full">
+      <div className="flex-1 min-w-0 bg-gray-50 font-poppins w-full">
+        <div className="p-3 lg:p-4 space-y-4 max-w-full">
           {/* Applied Jobs Section - Pipeline Layout */}
           <div className="bg-white rounded-[8px] p-4 shadow-sm relative border border-gray-100">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">Applied Jobs</h2>
+            <div className="flex flex-row items-center justify-between gap-2 mb-4">
+              <h2 className="text-base font-semibold text-gray-800 min-w-0 lg:text-lg">Applied Jobs</h2>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowArchiveModal(true)}
-                className="h-9 gap-2 rounded-[6px] border-red-200 bg-red-50 px-3.5 text-sm font-semibold text-red-600 hover:bg-red-100 hover:text-red-700"
+                className="h-8 gap-1.5 px-2.5 text-xs sm:h-9 sm:gap-2 sm:px-3.5 sm:text-sm rounded-[6px] border-red-200 bg-red-50 font-semibold text-red-600 hover:bg-red-100 hover:text-red-700 shrink-0"
                 data-testid="button-applied-jobs-archive"
               >
                 <Archive className="h-4 w-4" />
@@ -635,14 +649,14 @@ export default function MyJobsTab({
 
             {pendingConfirmations.length > 0 && (
               <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 mb-3">
+                  <div className="min-w-0">
                     <h3 className="text-sm font-bold text-amber-900">Pending confirmations</h3>
                     <p className="text-[12px] text-amber-800">
                       A recruiter applied you to the following role(s) on StaffOS. Confirm to show them in your Applied Jobs pipeline.
                     </p>
                   </div>
-                  <span className="text-[11px] font-bold bg-white/70 border border-amber-200 text-amber-900 px-2 py-1 rounded-full">
+                  <span className="self-start sm:self-auto text-[11px] font-bold bg-white/70 border border-amber-200 text-amber-900 px-2 py-1 rounded-full shrink-0">
                     {pendingConfirmations.length}
                   </span>
                 </div>
@@ -653,7 +667,7 @@ export default function MyJobsTab({
                     const canConfirm = checked && !confirmApplicationMutation.isPending;
                     return (
                       <div key={app.id} className="bg-white rounded-md border border-amber-100 p-4">
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                               <div className="text-[13px] font-bold text-gray-900 truncate">{app.jobTitle}</div>
@@ -667,7 +681,7 @@ export default function MyJobsTab({
                             </div>
                           </div>
                           <Button
-                            className="bg-[#4F00FF] hover:bg-[#3D00CC] text-white text-[11px] h-8 font-bold rounded-[6px]"
+                            className="bg-[#4F00FF] hover:bg-[#3D00CC] text-white text-[11px] h-8 font-bold rounded-[6px] w-full sm:w-auto shrink-0"
                             disabled={!canConfirm}
                             onClick={() => confirmApplicationMutation.mutate(app.id)}
                           >
@@ -698,7 +712,7 @@ export default function MyJobsTab({
               </div>
             )}
             
-            <div className="flex gap-3 overflow-x-auto pb-4 min-h-[400px] custom-scrollbar">
+            <div className="flex gap-3 overflow-x-auto pb-4 min-h-[320px] lg:min-h-[400px] custom-scrollbar max-lg:gap-2 max-lg:-mx-1 max-lg:px-1 max-lg:snap-x max-lg:snap-mandatory">
               {PIPELINE_STAGES.map((stage) => {
                 const stageApplications = confirmedApplications.filter(app => mapStatusToStage(app.status) === stage);
                 const columnStyle = PIPELINE_COLUMN_STYLES[stage] ?? PIPELINE_COLUMN_STYLES.Applied;
@@ -706,7 +720,7 @@ export default function MyJobsTab({
                 return (
                   <div
                     key={stage}
-                    className={`flex-shrink-0 w-[248px] rounded-[8px] overflow-hidden ${columnStyle.topBorder} ${columnStyle.columnBg}`}
+                    className={`flex-shrink-0 w-[248px] max-lg:w-[min(85vw,200px)] max-lg:snap-start rounded-[8px] overflow-hidden ${columnStyle.topBorder} ${columnStyle.columnBg}`}
                   >
                     <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200/80">
                       <h3 className="font-bold text-gray-800 text-[13px]">
@@ -719,7 +733,7 @@ export default function MyJobsTab({
                     
                     <div className="space-y-2 p-2 min-h-[360px]">
                       {stageApplications.map((job) => {
-                        const isExpanded = expandedJobId === job.id;
+                        const isExpanded = !isBelowLg && expandedJobId === job.id;
                         const timeRemaining = timeRemainingMap[job.id];
                         const isNudgeDisabled =
                           !!timeRemaining ||
@@ -740,10 +754,9 @@ export default function MyJobsTab({
                             key={job.id} 
                             className={`relative transition-all duration-300 ${isExpanded ? 'z-10' : 'z-0'}`}
                           >
-                            {/* Backdrop blur when expanded */}
                             {isExpanded && (
                               <div 
-                                className="fixed inset-0 bg-black/10 backdrop-blur-[3px] z-[-1]"
+                                className="fixed inset-0 bg-black/10 backdrop-blur-[3px] z-[-1] hidden lg:block"
                                 onClick={() => setExpandedJobId(null)}
                               />
                             )}
@@ -826,12 +839,12 @@ export default function MyJobsTab({
                                       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                       .slice(0, 1)
                                       .map(nudge => (
-                                        <div key={nudge.id} className="bg-white/60 dark:bg-gray-800/40 p-2 rounded border border-indigo-100 dark:border-indigo-900/50 mb-2">
+                                        <div key={nudge.id} className="bg-teal-50 p-2.5 rounded-[6px] border border-teal-200 mb-2">
                                           <div className="flex items-center gap-1.5 mb-1">
-                                            <MessageCircle className="w-3 h-3 text-indigo-500" />
-                                            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Latest Update</span>
+                                            <MessageCircle className="w-3 h-3 text-teal-600" />
+                                            <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">Latest Update</span>
                                           </div>
-                                          <p className="text-[11px] text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                                          <p className="text-[11px] text-teal-900 font-medium leading-relaxed">
                                             "{nudge.message || 'Responded'}"
                                           </p>
                                           <div className="text-[9px] text-gray-400 mt-1 text-right">
@@ -972,17 +985,73 @@ export default function MyJobsTab({
           {/* Candidate Nudges Updates Section */}
           {candidateNudges.filter(n => n.isResponded || n.message).length > 0 && (
             <div className="bg-white rounded-md p-4 shadow-sm relative border border-gray-100 mb-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-blue-500 fill-blue-500" /> Nudge Updates
+              <div className="flex flex-row items-center justify-between gap-2 mb-4">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2 min-w-0">
+                  <Zap className="w-5 h-5 text-blue-500 fill-blue-500 shrink-0" /> Nudge Updates
                 </h2>
                 {candidateNudges.filter(n => n.isResponded || n.message).length > 5 && (
-                  <Button size="sm" onClick={() => setShowAllNudgesDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-[5px] font-medium h-8">
+                  <Button size="sm" onClick={() => setShowAllNudgesDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-[5px] font-medium h-8 shrink-0 px-2.5 text-xs sm:px-3">
                     View More
                   </Button>
                 )}
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile: card list */}
+              <div className="lg:hidden space-y-3">
+                {candidateNudges
+                  .filter(n => n.isResponded || n.message)
+                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 5)
+                  .map((nudge: any) => (
+                    <div
+                      key={nudge.id}
+                      className={`rounded-lg border p-3 ${!nudge.isRead ? 'border-blue-200 bg-blue-50/40' : 'border-gray-100 bg-gray-50/50'}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            {!nudge.isRead && (
+                              <div className="w-2 h-2 bg-red-500 rounded-full shrink-0" />
+                            )}
+                            <span className="font-semibold text-gray-900 text-sm truncate">{nudge.jobTitle}</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-0.5">{nudge.company}</p>
+                        </div>
+                        {!nudge.isRead && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => markAsReadMutation.mutate(nudge.id)}
+                            className="h-7 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 shrink-0"
+                          >
+                            Mark read
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-500 mb-2">
+                        <div>
+                          <span className="font-medium text-gray-600 block">Nudged</span>
+                          {new Date(nudge.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600 block">Responded</span>
+                          {nudge.respondedAt
+                            ? new Date(nudge.respondedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                            : '—'}
+                        </div>
+                      </div>
+                      {nudge.message ? (
+                        <p className="text-xs font-medium text-teal-900 bg-teal-50 border border-teal-200 rounded-[6px] px-2.5 py-2 leading-relaxed">
+                          {nudge.message}
+                        </p>
+                      ) : (
+                        <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-800 text-xs rounded-[6px] border border-emerald-200 font-medium">
+                          Responded
+                        </span>
+                      )}
+                    </div>
+                  ))}
+              </div>
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-50 text-gray-700 border-b">
                     <tr>
@@ -1018,11 +1087,11 @@ export default function MyJobsTab({
                         </td>
                         <td className="px-4 py-3">
                           {nudge.message ? (
-                            <span className="block text-xs text-gray-700">
+                            <span className="block text-xs font-medium text-teal-900 bg-teal-50 border border-teal-200 rounded-[6px] px-2 py-1.5">
                               {nudge.message}
                             </span>
                           ) : (
-                            <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs rounded border border-green-200">
+                            <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-800 text-xs rounded-[6px] border border-emerald-200">
                               Responded
                             </span>
                           )}
@@ -1047,6 +1116,11 @@ export default function MyJobsTab({
             </div>
           )}
 
+          {/* Mobile: metrics after applied jobs & nudges */}
+          <div className="lg:hidden">
+            <CandidateMetrics />
+          </div>
+
           {profile && (
             <ProfileCompletionSession
               profile={profile}
@@ -1057,8 +1131,8 @@ export default function MyJobsTab({
         </div>
       </div>
 
-      {/* Right Sidebar - Candidate Metrics (Collapsible) */}
-      <div className="flex-shrink-0 sticky top-0 self-start relative z-20">
+      {/* Right Sidebar - Candidate Metrics (Collapsible) — desktop only */}
+      <div className="hidden lg:block flex-shrink-0 sticky top-0 self-start relative z-20">
         <motion.div 
           animate={{ width: isMetricsExpanded ? 320 : 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -1086,6 +1160,144 @@ export default function MyJobsTab({
         </div>
       </div>
     </div>
+
+    {/* Mobile: centered pipeline job actions */}
+    <Dialog
+      open={!!mobileExpandedContext}
+      onOpenChange={(open) => {
+        if (!open) setExpandedJobId(null);
+      }}
+    >
+      <DialogContent
+        className={cn(
+          "flex w-[calc(100vw-1.25rem)] max-w-md flex-col gap-0 overflow-hidden p-0 lg:hidden",
+          CANDIDATE_MOBILE_DIALOG_CLASSES,
+        )}
+      >
+        {mobileExpandedContext && (() => {
+          const { job, stage } = mobileExpandedContext;
+          const timeRemaining = timeRemainingMap[job.id];
+          const isNudgeDisabled =
+            !!timeRemaining ||
+            nudgingApplicationIds.has(job.id) ||
+            (nudgeMutation.isPending && nudgeMutation.variables === job.id);
+          const latestNudge = candidateNudges
+            .filter((n) => n.applicationId === job.id && (n.isResponded || n.message))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+          return (
+            <>
+              <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12 text-left">
+                <DialogTitle className="text-base font-bold text-gray-900 leading-snug pr-2">
+                  {job.jobTitle}
+                </DialogTitle>
+                <p className="text-sm font-medium text-gray-600 mt-0.5">{job.company}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Applied {formatJobAppliedDate(job.appliedDate)} · {stage}
+                </p>
+              </DialogHeader>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-3">
+                {latestNudge && (
+                  <div className="bg-teal-50 rounded-[6px] border border-teal-200 p-3">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <MessageCircle className="w-4 h-4 text-teal-600" />
+                      <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wide">
+                        Recruiter update
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-teal-900 leading-relaxed">
+                      {latestNudge.message || "Responded"}
+                    </p>
+                    <p className="text-[10px] text-teal-700/80 mt-1.5 text-right">
+                      {new Date(latestNudge.respondedAt || latestNudge.createdAt).toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                {stage !== "Screened Out" ? (
+                  <>
+                    <Button
+                      className="w-full bg-[#4F00FF] hover:bg-[#3D00CC] text-white text-sm h-10 font-bold rounded-[6px]"
+                      onClick={() => {
+                        setExpandedJobId(null);
+                        handleViewJob(job);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-[#FF4D4D] hover:bg-[#E64444] text-white text-sm h-10 font-bold rounded-[6px]"
+                        onClick={() => {
+                          setExpandedJobId(null);
+                          handleWithdraw(job);
+                        }}
+                      >
+                        <Ban className="w-4 h-4 mr-1.5" />
+                        Withdraw
+                      </Button>
+                      <Button
+                        className={`flex-1 text-white text-sm h-10 font-bold rounded-[6px] ${
+                          isNudgeDisabled
+                            ? "bg-[#00AF00]/50 cursor-not-allowed"
+                            : "bg-[#00AF00] hover:bg-[#009500]"
+                        }`}
+                        disabled={isNudgeDisabled}
+                        onClick={() => handleNudge(job)}
+                      >
+                        {isNudgeDisabled ? (
+                          <span className="flex items-center justify-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {nudgingApplicationIds.has(job.id) || nudgeMutation.variables === job.id
+                              ? "Sending…"
+                              : timeRemaining}
+                          </span>
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4 mr-1" />
+                            Nudge
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-red-500">
+                      <h6 className="text-sm font-bold text-gray-900 mb-1">
+                        {job.rejectionReason?.trim() || "Screened Out"}
+                      </h6>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        {job.statusNote?.trim() &&
+                        job.statusNote.trim() !== (job.rejectionReason?.trim() || "")
+                          ? job.statusNote.trim()
+                          : job.rejectionReason?.trim()
+                            ? ""
+                            : "Thank you for your interest. We will not be moving forward at this stage."}
+                      </p>
+                    </div>
+                    <Button
+                      className="w-full bg-[#4CAF50] hover:bg-[#43A047] text-white text-sm h-10 font-bold rounded-[6px]"
+                      onClick={() => {
+                        setExpandedJobId(null);
+                        handleArchiveJob(job);
+                      }}
+                    >
+                      Move to Archive
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
+      </DialogContent>
+    </Dialog>
 
     {/* Job Details Modal - Exact copy of JobBoardTab modal */}
     {showJobModal && selectedJob && (
@@ -1345,22 +1557,87 @@ export default function MyJobsTab({
           if (!open) setNudgeLogSearch('');
         }}
       >
-        <DialogContent className="max-w-[1280px] w-[96vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-xl">
-          <DialogHeader className="p-6 border-b shrink-0 space-y-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-blue-500 fill-blue-500" /> All Nudge Logs
+        <DialogContent
+          className={cn(
+            "flex flex-col overflow-hidden p-0",
+            CANDIDATE_MOBILE_DIALOG_CLASSES,
+            CANDIDATE_DESKTOP_DIALOG_CLASSES,
+            "max-lg:w-[calc(100vw-1rem)]",
+            "lg:max-w-[1280px] lg:max-h-[85vh] lg:w-[96vw] lg:rounded-xl",
+          )}
+        >
+          <DialogHeader className="shrink-0 space-y-4 border-b p-6 max-lg:space-y-3 max-lg:p-4">
+            <DialogTitle className="flex items-center gap-2 text-lg max-lg:pr-8 max-lg:text-base max-lg:text-left">
+              <Zap className="w-5 h-5 text-blue-500 fill-blue-500 shrink-0" /> All Nudge Logs
             </DialogTitle>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 value={nudgeLogSearch}
                 onChange={(e) => setNudgeLogSearch(e.target.value)}
-                placeholder="Search by job, company, status, or response…"
-                className="pl-9 h-10 rounded-lg border-gray-200"
+                placeholder="Search job, company, status…"
+                className="pl-9 h-10 rounded-lg border-gray-200 max-lg:h-9 max-lg:text-sm max-lg:rounded-[6px]"
               />
             </div>
           </DialogHeader>
-          <div className="flex-1 min-h-0 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y">
+            {/* Mobile: nudge log cards */}
+            <div className="lg:hidden p-3 pb-4 space-y-2.5">
+              {filteredNudgeLogs.length === 0 ? (
+                <p className="py-12 text-center text-gray-400 text-sm">
+                  {nudgeLogSearch.trim() ? 'No nudge logs match your search' : 'No nudge logs yet'}
+                </p>
+              ) : (
+                filteredNudgeLogs.map((nudge: any) => {
+                  const pipelineStage = mapCandidateApplicationStage(nudge.currentStatus);
+                  return (
+                    <div
+                      key={nudge.id}
+                      className={`rounded-xl border p-4 ${!nudge.isRead && (nudge.isResponded || nudge.message) ? 'border-blue-200 bg-blue-50/40' : 'border-gray-100 bg-white'}`}
+                    >
+                      <div className="flex items-start gap-2 mb-2">
+                        {!nudge.isRead && (nudge.isResponded || nudge.message) && (
+                          <div className="w-2 h-2 bg-red-500 rounded-full shrink-0 mt-1.5" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">{nudge.jobTitle}</p>
+                          <p className="text-xs text-gray-600">{nudge.company}</p>
+                        </div>
+                        <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-semibold shrink-0">
+                          {pipelineStage}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-500 mb-2">
+                        <div>
+                          <span className="font-medium text-gray-600 block">Nudged</span>
+                          {new Date(nudge.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600 block">Responded</span>
+                          {nudge.respondedAt
+                            ? new Date(nudge.respondedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                            : '—'}
+                        </div>
+                      </div>
+                      {nudge.message ? (
+                        <p className="text-sm font-medium text-teal-900 bg-teal-50 border border-teal-200 rounded-[6px] px-3 py-2 leading-relaxed">
+                          {nudge.message}
+                        </p>
+                      ) : nudge.isResponded ? (
+                        <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-800 text-xs rounded-[6px] border border-emerald-200 font-medium">
+                          Responded
+                        </span>
+                      ) : (
+                        <span className="inline-block text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-[6px] px-2.5 py-1.5">
+                          Awaiting response
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="hidden lg:block overflow-auto p-0">
             <table className="w-full table-fixed text-sm text-left border-collapse">
               <colgroup>
                 <col className="w-[150px]" />
@@ -1436,6 +1713,7 @@ export default function MyJobsTab({
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1562,9 +1840,17 @@ export default function MyJobsTab({
       </Dialog>
 
       <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>
-        <DialogContent className="max-w-[1200px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="p-6 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3">
+        <DialogContent
+          className={cn(
+            "flex flex-col overflow-hidden p-0 rounded-2xl border-none shadow-2xl",
+            CANDIDATE_MOBILE_DIALOG_CLASSES,
+            CANDIDATE_DESKTOP_DIALOG_CLASSES,
+            "max-lg:w-[calc(100vw-1rem)]",
+            "lg:max-w-[1200px] lg:w-[95vw] lg:max-h-[85vh]",
+          )}
+        >
+          <DialogHeader className="shrink-0 border-b bg-white/50 p-6 backdrop-blur-sm max-lg:p-4">
+            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3 max-lg:text-lg">
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
                 <Archive size={20} />
               </div>
@@ -1572,8 +1858,46 @@ export default function MyJobsTab({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gray-50/30 p-4 sm:p-6">
+            {/* Mobile: archive cards */}
+            <div className="lg:hidden space-y-3 pb-2">
+              {archivedApplications.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-4 bg-white rounded-2xl border border-gray-100">
+                  <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
+                    <Archive size={32} />
+                  </div>
+                  <p className="font-semibold text-gray-400 tracking-tight text-xs text-center px-4">
+                    No archived applications found
+                  </p>
+                </div>
+              ) : (
+                archivedApplications.map((app) => {
+                  const statusDisplay = getArchiveStatusLabel(app.status, app.statusNote);
+                  const terminalMeta = getArchiveTerminalMeta(app.status, app.statusNote);
+                  return (
+                    <div key={app.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                      <p className="font-semibold text-gray-900 text-sm">{app.jobTitle}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{app.company}</p>
+                      <p className="text-[11px] text-gray-500 mt-2">Applied {formatDate(app.appliedDate)}</p>
+                      <p className={`mt-2 text-sm font-semibold ${statusDisplay.isRed ? 'text-red-600' : 'text-gray-600'}`}>
+                        {statusDisplay.label}
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                          <span className="font-medium text-gray-600 block">Rejected / Withdrawn on</span>
+                          <span className="text-gray-700">{terminalMeta.date}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600 block">At stage</span>
+                          <span className="text-gray-700">{terminalMeta.stage}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="hidden lg:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse min-w-[900px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
@@ -1634,10 +1958,10 @@ export default function MyJobsTab({
             </div>
           </div>
 
-          <div className="p-6 border-t bg-white flex justify-end">
+          <div className="flex shrink-0 justify-end border-t bg-white p-6 max-lg:p-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]">
             <Button
               onClick={() => setShowArchiveModal(false)}
-              className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-semibold px-8"
+              className="rounded-xl bg-gray-900 px-8 font-semibold text-white hover:bg-gray-800 max-lg:w-full"
             >
               Close Archive
             </Button>

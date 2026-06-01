@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import Sidebar from '@/components/dashboard/sidebar';
+import CandidateMobileBottomNav from '@/components/dashboard/candidate-mobile-bottom-nav';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import TabNavigation from '@/components/dashboard/tab-navigation';
 import ResumeTab from '@/components/dashboard/tabs/resume-tab';
@@ -46,7 +47,7 @@ export default function Dashboard() {
   };
 
   const headerActions = (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 lg:gap-3">
       <CandidateNotificationBell onNavigateToMyJobs={() => setSidebarTab('my-jobs')} />
       <ProfileMenu
         name={profile?.firstName ? `${profile.firstName} ${profile.lastName}` : ''}
@@ -153,7 +154,7 @@ export default function Dashboard() {
         return (
           <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
             <DashboardHeader 
-              title="My Jobs" 
+              title="StaffOS" 
               actions={headerActions}
             />
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">
@@ -170,22 +171,22 @@ export default function Dashboard() {
         return (
           <div className="flex flex-col flex-1 h-full">
             <DashboardHeader 
-              title="Settings" 
+              title="StaffOS" 
               actions={headerActions}
             />
-            <div className="flex-1 overflow-y-auto mt-4 px-8 pb-8">
+            <div className="flex-1 overflow-y-auto mt-2 max-lg:mt-0 px-4 pb-24 max-lg:pb-28 lg:mt-4 lg:px-8 lg:pb-8">
               <SettingsTab onOpenSupport={() => setChatOpen(true)} />
             </div>
           </div>
         );
       case 'edit-view':
         return (
-          <div className="flex flex-col flex-1 h-full font-poppins">
+          <div className="flex flex-col flex-1 min-h-0 h-full font-poppins overflow-hidden">
             <DashboardHeader 
-              title="Profile" 
+              title="StaffOS" 
               actions={headerActions}
             />
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
               <EditViewProfile profile={profile!} onNavigateToJobBoard={() => setSidebarTab('job-board')} />
             </div>
           </div>
@@ -194,7 +195,7 @@ export default function Dashboard() {
         return (
           <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
             <DashboardHeader 
-              title="Job Board" 
+              title="StaffOS" 
               actions={headerActions}
             />
             <div className="flex-1 min-h-0 overflow-hidden">
@@ -208,7 +209,7 @@ export default function Dashboard() {
       default:
         return (
           <div className="flex flex-col flex-1 h-full">
-            <DashboardHeader title="Candidate Workspace" />
+            <DashboardHeader title="StaffOS" />
             <div className="flex-1 overflow-y-auto">
               <MyJobsTab 
                 onNavigateToJobBoard={() => setSidebarTab('job-board')} 
@@ -267,7 +268,8 @@ export default function Dashboard() {
         aria-hidden={anyConsentBlocking}
       >
         <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden ml-16 bg-gray-50">
+        <CandidateMobileBottomNav activeTab={sidebarTab} onTabChange={setSidebarTab} />
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden ml-0 pb-[4.5rem] lg:ml-16 lg:pb-0 bg-gray-50">
           {renderSidebarContent()}
         </div>
         
@@ -280,7 +282,7 @@ export default function Dashboard() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="fixed bottom-6 right-6 z-40"
+              className="fixed bottom-[4.75rem] right-4 z-40 lg:bottom-6 lg:right-6"
             >
               <button
                 type="button"

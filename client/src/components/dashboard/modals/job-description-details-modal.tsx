@@ -13,6 +13,11 @@ import {
   type RequirementJdExtras,
 } from "@shared/requirement-jd-extras";
 import { CompanyBrandAvatar } from "@/components/client-brand-avatar";
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from "@/lib/candidate-ui-preferences";
+import { cn } from "@/lib/utils";
 
 export type JobDescriptionDetailsData = {
   id?: string;
@@ -280,16 +285,24 @@ export default function JobDescriptionDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-6xl overflow-hidden bg-white p-0 dark:bg-slate-900">
-        <DialogHeader className="border-b bg-slate-50/80 px-6 pb-4 pt-5 dark:bg-slate-900/80">
-          <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-white">
+      <DialogContent
+        className={cn(
+          "flex flex-col overflow-hidden bg-white p-0 dark:bg-slate-900",
+          CANDIDATE_MOBILE_DIALOG_CLASSES,
+          CANDIDATE_DESKTOP_DIALOG_CLASSES,
+          "max-lg:max-h-[min(92dvh,900px)] max-lg:w-[calc(100vw-1rem)] max-lg:max-w-[calc(100vw-1rem)]",
+          "lg:max-h-[92vh] lg:max-w-6xl",
+        )}
+      >
+        <DialogHeader className="shrink-0 border-b bg-slate-50/80 px-4 pb-3 pt-4 dark:bg-slate-900/80 sm:px-6 sm:pb-4 sm:pt-5">
+          <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-white sm:text-xl">
             Job Description Details
           </DialogTitle>
           <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
         </DialogHeader>
 
-        <div className="max-h-[calc(90vh-10rem)] px-6 py-4">
-          <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-4">
               <div className="rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5 shadow-sm dark:border-cyan-900 dark:from-cyan-950/30 dark:to-blue-950/30">
                 <div className="flex items-center gap-3">
@@ -403,8 +416,11 @@ export default function JobDescriptionDetailsModal({
           </div>
         </div>
 
-        <div className="flex justify-end border-t bg-gray-50 px-6 py-4 dark:bg-gray-800/50">
-          <Button onClick={() => onOpenChange(false)} className="bg-blue-600 px-6 text-white hover:bg-blue-700">
+        <div className="flex shrink-0 justify-end border-t bg-gray-50 px-4 py-3 dark:bg-gray-800/50 sm:px-6 sm:py-4">
+          <Button
+            onClick={() => onOpenChange(false)}
+            className="w-full rounded-[6px] bg-blue-600 px-6 text-white hover:bg-blue-700 sm:w-auto"
+          >
             Close
           </Button>
         </div>

@@ -1,5 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from '@/lib/candidate-ui-preferences';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -123,18 +128,25 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
+      <DialogContent
+        className={cn(
+          "max-w-2xl rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]",
+          CANDIDATE_MOBILE_DIALOG_CLASSES,
+          CANDIDATE_DESKTOP_DIALOG_CLASSES,
+          "max-lg:w-[calc(100vw-1rem)]",
+        )}
+      >
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-4 py-4 sm:px-8 sm:py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Edit Profile Information</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Edit Profile Information</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-1">
               Update your personal and contact details for better visibility and record keeping.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-8 bg-white dark:bg-gray-800 overflow-y-auto flex-1">
-          <div className="grid grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-6 sm:space-y-8 bg-white dark:bg-gray-800 overflow-y-auto flex-1 min-h-0 overscroll-contain">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <Field 
               id="firstName" 
               label="First Name" 

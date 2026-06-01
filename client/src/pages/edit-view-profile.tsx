@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useIsBelowLg } from '@/hooks/use-mobile';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, type ResumeMergeFieldChange } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,11 @@ import EditStrengthsModal from '@/components/dashboard/modals/edit-strengths-mod
 import ProfileCompletionWidget from '@/components/dashboard/profile-completion-widget';
 import { calculateProfileCompletion } from '@/lib/profile-utils';
 import { resolveUploadAssetUrl } from '@/lib/resolve-upload-url';
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from '@/lib/candidate-ui-preferences';
+import { cn } from '@/lib/utils';
 
 interface EditViewProfileProps {
   profile: Profile;
@@ -32,7 +38,20 @@ interface EditViewProfileProps {
 }
 
 const PROFILE_EDIT_BTN_CLASS =
-  "bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:hover:text-white rounded-xl px-5 py-5 border-none shadow-lg transition-all transform hover:scale-105";
+  "bg-gray-900 text-white hover:bg-gray-800 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-700 dark:hover:text-white rounded-[6px] lg:rounded-xl px-4 py-2.5 lg:px-5 lg:py-5 border-none shadow-lg transition-all w-full sm:w-auto shrink-0 lg:hover:scale-105";
+
+const PROFILE_CARD_CLASS =
+  "bg-white dark:bg-gray-800 rounded-2xl lg:rounded-3xl border border-gray-100 dark:border-gray-700 p-4 sm:p-6 lg:p-8 shadow-sm transition-all hover:shadow-md";
+
+const PROFILE_SECTION_HEADER_CLASS =
+  "flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start lg:items-center";
+
+const PROFILE_DIALOG_CONTENT_CLASS = cn(
+  "flex flex-col overflow-hidden p-0 max-h-[90vh]",
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  "lg:max-h-[90vh]",
+);
 
 export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditViewProfileProps) {
   const [showProTip, setShowProTip] = useState(true);
@@ -48,6 +67,10 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
   const [showResumeTextModal, setShowResumeTextModal] = useState(false);
   const { data: jobPreferences } = useJobPreferences();
 
+  const isBelowLg = useIsBelowLg();
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const tabButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
   const menuItems = [
     { id: 'about-you', label: 'About you' },
     { id: 'online-presence', label: 'Online Presence' },
@@ -58,7 +81,7 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
   ];
 
   const renderField = (label: string, value: string | null | undefined) => (
-    <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all">
+    <div className="flex flex-col gap-1.5 p-3 sm:p-4 rounded-xl lg:rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all">
       <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{label}</label>
       <div className="flex items-center gap-2">
         <span className="text-base font-bold text-gray-900 dark:text-white truncate">
@@ -69,10 +92,10 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
   );
 
   const renderAboutYou = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm transition-all hover:shadow-md">
-      <div className="flex justify-between items-center mb-10">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">About You</h2>
+    <div className={PROFILE_CARD_CLASS}>
+      <div className={`${PROFILE_SECTION_HEADER_CLASS} mb-6 lg:mb-10`}>
+        <div className="min-w-0">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">About You</h2>
           <p className="text-gray-500 text-sm mt-1">Manage your basic information and contact details.</p>
         </div>
         <Button 
@@ -103,10 +126,10 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
   );
 
   const renderOnlinePresence = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm transition-all hover:shadow-md">
-      <div className="flex justify-between items-center mb-10">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Online Presence</h2>
+    <div className={PROFILE_CARD_CLASS}>
+      <div className={`${PROFILE_SECTION_HEADER_CLASS} mb-6 lg:mb-10`}>
+        <div className="min-w-0">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Online Presence</h2>
           <p className="text-gray-500 text-sm mt-1">Links to your professional profiles and work.</p>
         </div>
         <Button 
@@ -147,10 +170,10 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
   );
 
   const renderYourJourney = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm transition-all hover:shadow-md">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Journey</h2>
+    <div className={PROFILE_CARD_CLASS}>
+      <div className={`${PROFILE_SECTION_HEADER_CLASS} mb-5 lg:mb-8`}>
+        <div className="min-w-0">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Your Journey</h2>
           <p className="text-gray-500 text-sm mt-1">Details about your current role and company.</p>
         </div>
         <Button 
@@ -181,10 +204,10 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
     const higherEd = hasPG || educations[0] || {};
     
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm transition-all hover:shadow-md">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Strengths</h2>
+      <div className={PROFILE_CARD_CLASS}>
+        <div className={`${PROFILE_SECTION_HEADER_CLASS} mb-5 lg:mb-8`}>
+          <div className="min-w-0">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Your Strengths</h2>
             <p className="text-gray-500 text-sm mt-1">Your education, skills, and qualifications.</p>
           </div>
           <Button 
@@ -249,17 +272,17 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
       profile.resumeFile?.toLowerCase().endsWith(".pdf");
 
     return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm transition-all hover:shadow-md">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Resume</h2>
+    <div className={PROFILE_CARD_CLASS}>
+      <div className={`${PROFILE_SECTION_HEADER_CLASS} mb-5 lg:mb-8`}>
+        <div className="min-w-0">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Resume</h2>
           <p className="text-gray-500 text-sm mt-1">Preview your resume and upload or edit it anytime.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left — live resume preview */}
-        <div className="flex flex-col min-h-[520px]">
+        <div className="flex flex-col min-h-[240px] lg:min-h-[520px]">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 tracking-widest">
               Current Resume
@@ -273,15 +296,15 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
               </Button>
             )}
           </div>
-          <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 overflow-hidden min-h-[480px]">
+          <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 overflow-hidden min-h-[220px] lg:min-h-[480px]">
             {resumeUrl && isPdf ? (
               <iframe
                 src={resumeUrl}
                 title="Resume preview"
-                className="w-full h-full min-h-[480px] border-0 bg-white"
+                className="w-full h-full min-h-[220px] lg:min-h-[480px] border-0 bg-white"
               />
             ) : resumeUrl ? (
-              <div className="flex flex-col items-center justify-center h-full min-h-[480px] p-8 text-center">
+              <div className="flex flex-col items-center justify-center h-full min-h-[220px] lg:min-h-[480px] p-8 text-center">
                 <FileText className="w-12 h-12 text-blue-500 mb-4" />
                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 truncate max-w-full">
                   {resumeFileName}
@@ -294,13 +317,13 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
                 </Button>
               </div>
             ) : profile.resumeText ? (
-              <div className="h-full min-h-[480px] overflow-y-auto p-6">
+              <div className="h-full min-h-[220px] lg:min-h-[480px] overflow-y-auto p-6">
                 <pre className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-sans leading-relaxed">
                   {profile.resumeText}
                 </pre>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full min-h-[480px] p-8 text-center text-gray-400">
+              <div className="flex flex-col items-center justify-center h-full min-h-[220px] lg:min-h-[480px] p-8 text-center text-gray-400">
                 <FileText className="w-12 h-12 mb-3 opacity-40" />
                 <p className="text-sm font-medium">No resume uploaded yet</p>
                 <p className="text-xs mt-1">Upload a file or write your resume on the right.</p>
@@ -374,22 +397,22 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
 
   const renderJobPreferences = () => {
     if (!jobPreferences) return (
-      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm text-center">
+      <div className={`${PROFILE_CARD_CLASS} text-center`}>
         <p className="text-gray-500 mb-4">No job preferences set yet.</p>
         <Button 
           variant="outline" 
           onClick={() => setShowJobPreferencesModal(true)}
-          className="bg-blue-600 text-white hover:bg-blue-700 rounded-xl"
+          className="bg-blue-600 text-white hover:bg-blue-700 rounded-[6px] lg:rounded-xl w-full sm:w-auto"
         >
           Set Preferences
         </Button>
       </div>
     );
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm transition-all hover:shadow-md">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Job Preferences</h2>
+      <div className={PROFILE_CARD_CLASS}>
+        <div className={`${PROFILE_SECTION_HEADER_CLASS} mb-5 lg:mb-8`}>
+          <div className="min-w-0">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Job Preferences</h2>
             <p className="text-gray-500 text-sm mt-1">Specify your ideal role and working conditions.</p>
           </div>
           <Button 
@@ -451,25 +474,44 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
 
   const { percentage } = calculateProfileCompletion(profile, jobPreferences);
 
+  const scrollActiveTabIntoView = useCallback((sectionId: string) => {
+    if (!isBelowLg) return;
+    const container = tabsScrollRef.current;
+    const button = tabButtonRefs.current[sectionId];
+    if (!container || !button) return;
+    const scrollLeft =
+      button.offsetLeft - container.clientWidth / 2 + button.offsetWidth / 2;
+    container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+  }, [isBelowLg]);
+
+  const handleSectionChange = (sectionId: string) => {
+    setActiveSection(sectionId);
+    requestAnimationFrame(() => scrollActiveTabIntoView(sectionId));
+  };
+
+  useEffect(() => {
+    if (isBelowLg) scrollActiveTabIntoView(activeSection);
+  }, [activeSection, isBelowLg, scrollActiveTabIntoView]);
+
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 font-inter">
+    <div className="min-h-0 bg-gray-50/50 dark:bg-gray-900/50 font-inter pb-4 lg:pb-0">
       {/* Premium Profile Header - Modernized & Compact */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative overflow-hidden">
         {/* Subtle Background Accent */}
         <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-50/50 to-transparent dark:from-blue-900/5 pointer-events-none" />
         
-        <div className="max-w-[1400px] mx-auto px-6 py-6 md:py-8">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-10">
+        <div className="max-w-[1400px] mx-auto px-4 py-5 sm:px-6 sm:py-6 lg:py-8">
+          <div className="flex flex-row items-start gap-4 max-lg:text-left md:gap-10 lg:items-start">
             {/* Avatar Section with Badge */}
-            <div className="relative group shrink-0">
-              <div className="relative w-32 h-32 md:w-36 md:h-36">
+            <div className="relative group shrink-0 max-lg:pt-0.5">
+              <div className="relative w-20 h-20 sm:w-32 sm:h-32 md:w-36 md:h-36">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-cyan-400 to-emerald-400 rounded-full animate-gradient-xy opacity-75 blur-sm group-hover:opacity-100 transition-opacity"></div>
                 <Avatar 
                   className="relative w-full h-full border-4 border-white dark:border-gray-800 cursor-pointer shadow-xl transition-transform duration-300 group-hover:scale-[1.02]" 
                   onClick={() => setShowProfilePictureModal(true)}
                 >
                   <AvatarImage src={profile.profilePicture || undefined} className="object-cover" />
-                  <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-400 dark:text-gray-500 text-4xl font-bold">
+                  <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-400 dark:text-gray-500 text-2xl sm:text-4xl font-bold">
                     {profile.firstName?.[0]}{profile.lastName?.[0]}
                   </AvatarFallback>
                 </Avatar>
@@ -477,12 +519,12 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
                 {/* Real-time Completion Badge */}
                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-800 px-3 py-1 rounded-full shadow-md border border-gray-100 dark:border-gray-700 flex items-center gap-1.5 z-20 whitespace-nowrap">
                   <div className={`w-2 h-2 rounded-full animate-pulse ${percentage < 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
-                  <span className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{percentage}% Complete</span>
+                  <span className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{percentage}%</span>
                 </div>
 
                 <button
                   onClick={() => setShowProfilePictureModal(true)}
-                  className="absolute top-1 right-1 bg-white/90 dark:bg-gray-800/90 text-blue-600 dark:text-blue-400 rounded-full p-2 shadow-lg hover:bg-white dark:hover:bg-gray-700 transition-all transform hover:scale-110 opacity-0 group-hover:opacity-100 z-10"
+                  className="absolute top-1 right-1 bg-white/90 dark:bg-gray-800/90 text-blue-600 dark:text-blue-400 rounded-full p-2 shadow-lg hover:bg-white dark:hover:bg-gray-700 transition-all transform hover:scale-110 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 z-10"
                 >
                   <Camera className="w-3.5 h-3.5" />
                 </button>
@@ -490,84 +532,88 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
             </div>
 
             {/* User Info Section */}
-            <div className="flex-1 text-center md:text-left pt-1">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                <div className="flex-1">
-                  <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-4 mb-1">
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                      {profile.firstName} {profile.lastName}
-                    </h1>
-                  </div>
-                  <h2 className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center justify-center md:justify-start gap-2">
-                    <Briefcase className="w-4 h-4" />
-                    {profile.title && profile.title !== 'Not set' ? profile.title : (profile.currentRole || 'Job Title Not Set')}
+            <div className="flex-1 min-w-0 text-left pt-0.5">
+              <div className="max-lg:space-y-2 md:flex md:flex-row md:items-center md:justify-between md:gap-4 md:mb-4">
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
+                    {profile.firstName} {profile.lastName}
+                  </h1>
+                  <h2 className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 shrink-0" />
+                    <span className="truncate">
+                      {profile.title && profile.title !== 'Not set' ? profile.title : (profile.currentRole || 'Job Title Not Set')}
+                    </span>
                   </h2>
                 </div>
-                
-                <div className="flex items-center justify-center md:justify-end gap-3 self-center md:self-start">
-                  <div className="shrink-0">
-                    <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3">
-                      <span className="text-gray-400 font-bold whitespace-nowrap">Candidate ID</span>
-                      <span className="text-blue-600 dark:text-blue-400 text-sm font-black">{profile.candidateId}</span>
-                    </div>
-                  </div>
 
+                <div className="hidden md:flex shrink-0 items-center justify-end">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3">
+                    <span className="text-gray-400 font-bold whitespace-nowrap">Candidate ID</span>
+                    <span className="text-blue-600 dark:text-blue-400 text-sm font-black">{profile.candidateId}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Quick Info Grid - Compact & Modern */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 backdrop-blur-sm">
-                <div className="flex items-center gap-3 group">
-                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Location</span>
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
-                      {profile.currentLocation || 'Not set'}
-                    </span>
-                  </div>
+              <div className="md:hidden mb-0">
+                <div className="bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 dark:border-gray-700 shadow-sm inline-flex items-center gap-2">
+                  <span className="text-gray-400 font-bold">Candidate ID</span>
+                  <span className="text-blue-600 dark:text-blue-400 text-xs font-black">{profile.candidateId}</span>
                 </div>
-                <div className="flex items-center gap-3 group">
-                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Phone</span>
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                      {profile.phone || 'Not set'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 group">
-                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                    <GraduationCap className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Education</span>
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
-                      {(() => {
-                        const educations = (profile.educationHistory as any[]) || [];
-                        const hasPG = educations.find(e => e.degreeLevel === 'Postgraduate');
-                        const higherEd = hasPG || educations[0] || {};
-                        return higherEd.collegeName 
-                          ? `${higherEd.collegeName}${higherEd.degreeLevel === 'Postgraduate' ? ' (PG)' : ''}` 
-                          : (profile.collegeName || 'Not set');
-                      })()}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 group">
-                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-all">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Notice Period</span>
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
-                      {profile.noticePeriod || 'Not set'}
-                    </span>
-                  </div>
-                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Info Grid — full width below avatar / name row */}
+          <div className="mt-4 w-full grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl lg:rounded-2xl bg-gray-50/50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 backdrop-blur-sm">
+            <div className="flex items-center gap-3 group">
+              <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Location</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
+                  {profile.currentLocation || 'Not set'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 group">
+              <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                <Phone className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Phone</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
+                  {profile.phone || 'Not set'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 group">
+              <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Education</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
+                  {(() => {
+                    const educations = (profile.educationHistory as any[]) || [];
+                    const hasPG = educations.find(e => e.degreeLevel === 'Postgraduate');
+                    const higherEd = hasPG || educations[0] || {};
+                    return higherEd.collegeName 
+                      ? `${higherEd.collegeName}${higherEd.degreeLevel === 'Postgraduate' ? ' (PG)' : ''}` 
+                      : (profile.collegeName || 'Not set');
+                  })()}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 group">
+              <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-all">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Notice Period</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
+                  {profile.noticePeriod || 'Not set'}
+                </span>
               </div>
             </div>
           </div>
@@ -575,12 +621,12 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
       </div>
 
       {/* Main Content Area - Match Image 4 (Horizontal Tabs) */}
-      <div className="max-w-[1400px] mx-auto px-6 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+      <div className="max-w-[1400px] mx-auto px-4 py-5 sm:px-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-5 lg:gap-8">
           {/* Left Column: Navigation and Sections */}
-          <div className="flex-1 space-y-8 relative">
+          <div className="flex-1 space-y-5 lg:space-y-8 relative min-w-0">
             {showProTip && (
-              <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-3xl p-6 text-gray-900 dark:text-white border border-blue-100 dark:border-blue-800 shadow-sm relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-500 mb-2">
+              <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl lg:rounded-3xl p-4 sm:p-6 text-gray-900 dark:text-white border border-blue-100 dark:border-blue-800 shadow-sm relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-500 mb-2">
                 <button 
                   onClick={() => setShowProTip(false)}
                   className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1 hover:bg-white/50 rounded-lg"
@@ -597,13 +643,19 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
               </div>
             )}
             {/* Horizontal Tabs - Match Image 4 */}
-            <div className="bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm inline-flex w-full overflow-x-auto scroller-hidden">
-              <div className="flex items-center gap-1 min-w-max">
+            <div
+              ref={tabsScrollRef}
+              className="bg-white dark:bg-gray-800 p-1.5 sm:p-2 rounded-xl lg:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm w-full overflow-x-auto scroller-hidden scroll-smooth max-lg:snap-x max-lg:snap-mandatory"
+            >
+              <div className="flex items-center gap-1 min-w-max pr-1">
                 {menuItems.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 flex items-center gap-2 ${
+                    ref={(el) => {
+                      tabButtonRefs.current[item.id] = el;
+                    }}
+                    onClick={() => handleSectionChange(item.id)}
+                    className={`max-lg:snap-center shrink-0 px-3 py-2 sm:px-6 sm:py-3 max-lg:rounded-[6px] rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${
                       activeSection === item.id
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none'
                         : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-200'
@@ -619,13 +671,16 @@ export default function EditViewProfile({ profile, onNavigateToJobBoard }: EditV
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               {renderContent()}
             </div>
+
+            {/* Mobile: completion widget below edit sections */}
+            <div className="lg:hidden w-full">
+              <ProfileCompletionWidget profile={profile} jobPreferences={jobPreferences} />
+            </div>
           </div>
 
-          {/* Right Column: Profile Completion Widget - Match Image 5 */}
-          <div className="lg:w-[380px] space-y-6">
+          {/* Right Column: Profile Completion Widget - desktop only */}
+          <div className="hidden lg:block lg:w-[380px] shrink-0 space-y-6">
             <ProfileCompletionWidget profile={profile} jobPreferences={jobPreferences} />
-            
-            {/* Additional Info or Stats could go here */}
           </div>
         </div>
       </div>
@@ -760,10 +815,10 @@ function ProfilePictureModal({ open, onOpenChange, profile }: { open: boolean; o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden">
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
+      <DialogContent className={cn("max-w-md rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl", PROFILE_DIALOG_CONTENT_CLASS)}>
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-4 py-4 sm:px-8 sm:py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Profile Picture</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Profile Picture</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-1">
               Manage your professional headshot for your profile.
             </DialogDescription>
@@ -844,10 +899,10 @@ function GenderModal({ open, onOpenChange, profile }: { open: boolean; onOpenCha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden">
-        <div className="bg-purple-50/50 dark:bg-purple-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
+      <DialogContent className={cn("max-w-md rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl", PROFILE_DIALOG_CONTENT_CLASS)}>
+        <div className="bg-purple-50/50 dark:bg-purple-900/10 px-4 py-4 sm:px-8 sm:py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Gender Details</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Gender Details</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-1">
               Specify your gender for profile records and diversity reporting.
             </DialogDescription>
@@ -1036,7 +1091,13 @@ function ResumeUploadModal({ open, onOpenChange, profile: _profile }: { open: bo
         if (!val) resetModal();
       }
     }}>
-      <DialogContent className={`${step === 'preview' ? 'max-w-2xl' : 'max-w-md'} rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden max-h-[90vh] flex flex-col`}>
+      <DialogContent
+        className={cn(
+          step === "preview" ? "max-w-2xl" : "max-w-md",
+          "rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl",
+          PROFILE_DIALOG_CONTENT_CLASS,
+        )}
+      >
         {step === 'analyzing' || step === 'applying' ? (
           <div className="p-12 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in duration-300">
             <div className="relative">
@@ -1200,7 +1261,7 @@ ${profile.currentRole || 'Current Position'} at ${profile.currentCompany || 'Com
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden">
+      <DialogContent className={cn("max-w-2xl rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl", PROFILE_DIALOG_CONTENT_CLASS)}>
         <div className="bg-indigo-50/50 dark:bg-indigo-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Write or Paste Resume</DialogTitle>
@@ -1318,17 +1379,23 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto scrollbar-hide rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0">
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
+      <DialogContent
+        className={cn(
+          "max-w-2xl rounded-2xl lg:rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-2xl flex flex-col overflow-hidden",
+          PROFILE_DIALOG_CONTENT_CLASS,
+          "lg:max-h-[80vh]",
+        )}
+      >
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-4 py-4 sm:px-8 sm:py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Job Preference Details</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Job Preference Details</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-2">
               Configure your career preferences such as notice period and domain expertise.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white dark:bg-gray-800">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-5 sm:space-y-6 bg-white dark:bg-gray-800 overflow-y-auto flex-1 min-h-0 overscroll-contain">
           <ModalField 
             id="jobTitles" 
             label="Job Titles" 
@@ -1338,7 +1405,7 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
             focusColor="blue"
           />
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="relative group">
               <label className="absolute -top-2 left-3 bg-white dark:bg-gray-800 px-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest z-10 group-focus-within:text-blue-500 transition-colors">
                 Work Mode
@@ -1373,7 +1440,7 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <ModalField 
               id="locations" 
               label="Preferred Locations" 
@@ -1475,17 +1542,17 @@ function EditOnlinePresenceModal({ open, onOpenChange, profile }: { open: boolea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden">
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
+      <DialogContent className={cn("max-w-md rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl", PROFILE_DIALOG_CONTENT_CLASS)}>
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-4 py-4 sm:px-8 sm:py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Online Presence</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Online Presence</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-1">
               Update your professional networking links like LinkedIn and Portfolio.
             </DialogDescription>
           </DialogHeader>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white dark:bg-gray-800">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-5 sm:space-y-6 bg-white dark:bg-gray-800 overflow-y-auto flex-1 min-h-0 overscroll-contain">
           <ModalField 
             id="portfolioUrl" 
             label="Portfolio URL" 

@@ -4,6 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from '@/lib/candidate-ui-preferences';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -63,17 +68,24 @@ export default function EditJobDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
+      <DialogContent
+        className={cn(
+          "max-w-2xl rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]",
+          CANDIDATE_MOBILE_DIALOG_CLASSES,
+          CANDIDATE_DESKTOP_DIALOG_CLASSES,
+          "max-lg:w-[calc(100vw-1rem)]",
+        )}
+      >
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 px-4 py-4 sm:px-8 sm:py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Your Journey</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Your Journey</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-2">
               Configure your career preferences such as notice period and domain expertise.
             </DialogDescription>
           </DialogHeader>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white dark:bg-gray-800 flex-1 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-5 sm:space-y-6 bg-white dark:bg-gray-800 flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="relative group">
               {/* <label className="absolute -top-2 left-3 bg-white dark:bg-gray-800 px-1.5 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest z-10 group-focus-within:text-blue-500 transition-colors">

@@ -35,6 +35,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { LegalPoliciesSettingsCard } from "@/components/dashboard/legal-policies-settings-card";
+import { cn } from "@/lib/utils";
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from "@/lib/candidate-ui-preferences";
 
 interface SettingsTabProps {
   onOpenSupport?: () => void;
@@ -188,17 +193,24 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
     );
   }
 
+  const settingsDialogClass = cn(
+    "rounded-2xl lg:rounded-[2.5rem] border-none shadow-2xl font-poppins overflow-y-auto",
+    CANDIDATE_MOBILE_DIALOG_CLASSES,
+    CANDIDATE_DESKTOP_DIALOG_CLASSES,
+    "max-lg:p-5 lg:p-10 max-lg:max-w-none lg:max-w-md"
+  );
+
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10 space-y-8 font-poppins">
-      <div className="flex flex-col gap-1 mb-8">
+    <div className="max-w-4xl mx-auto px-0 py-4 sm:py-6 lg:py-10 space-y-6 lg:space-y-8 font-poppins">
+      <div className="hidden lg:flex flex-col gap-1 mb-8">
         <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Settings</h1>
         <p className="text-sm font-medium text-gray-500 uppercase tracking-widest">Manage your account preferences and security.</p>
       </div>
 
-      <div className="grid gap-8">
+      <div className="grid gap-5 lg:gap-8">
         {/* Notifications */}
-        <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-[2rem] overflow-hidden">
-          <CardHeader className="flex flex-row items-center gap-4 border-b border-gray-50 dark:border-gray-700 pb-6">
+        <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem] overflow-hidden">
+          <CardHeader className="flex flex-row items-center gap-3 sm:gap-4 border-b border-gray-50 dark:border-gray-700 pb-4 sm:pb-6 p-4 sm:p-6">
             <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
               <Bell className="w-5 h-5 text-blue-600" />
             </div>
@@ -209,22 +221,22 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-gray-50 dark:divide-gray-700">
-              <div className="flex items-center justify-between p-6 hover:bg-gray-50/50 transition-colors">
-                <div className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-4 p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <Label className="text-sm font-bold">New Job Alerts</Label>
                   <p className="text-xs font-medium text-gray-400">Get notified when new jobs match your preferences.</p>
                 </div>
-                <Switch checked={notifications.jobAlerts} onCheckedChange={() => handleToggle('notifications', 'jobAlerts')} className="data-[state=checked]:bg-blue-600" />
+                <Switch checked={notifications.jobAlerts} onCheckedChange={() => handleToggle('notifications', 'jobAlerts')} className="data-[state=checked]:bg-blue-600 shrink-0" />
               </div>
-              <div className="flex items-center justify-between p-6 hover:bg-gray-50/50 transition-colors">
-                <div className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-4 p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <Label className="text-sm font-bold">Application Updates</Label>
                   <p className="text-xs font-medium text-gray-400">Receive updates on your job application status.</p>
                 </div>
-                <Switch checked={notifications.applicationStatus} onCheckedChange={() => handleToggle('notifications', 'applicationStatus')} className="data-[state=checked]:bg-blue-600" />
+                <Switch checked={notifications.applicationStatus} onCheckedChange={() => handleToggle('notifications', 'applicationStatus')} className="data-[state=checked]:bg-blue-600 shrink-0" />
               </div>
               {/* Disabled: Security Alerts */}
-              <div className="flex items-center justify-between p-6 opacity-40 select-none grayscale cursor-not-allowed">
+              <div className="flex items-start justify-between gap-4 p-4 sm:p-6 opacity-40 select-none grayscale cursor-not-allowed">
                 <div className="flex flex-col gap-1">
                   <Label className="text-sm font-bold">Security Alerts</Label>
                   <p className="text-xs font-medium text-gray-400">Critical alerts about your account security.</p>
@@ -236,8 +248,8 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
         </Card>
 
         {/* Privacy */}
-        <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-[2rem] overflow-hidden">
-          <CardHeader className="flex flex-row items-center gap-4 border-b border-gray-50 dark:border-gray-700 pb-6">
+        <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem] overflow-hidden">
+          <CardHeader className="flex flex-row items-center gap-3 sm:gap-4 border-b border-gray-50 dark:border-gray-700 pb-4 sm:pb-6 p-4 sm:p-6">
             <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
               <Eye className="w-5 h-5 text-teal-600" />
             </div>
@@ -248,15 +260,15 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-gray-50 dark:divide-gray-700">
-              <div className="flex items-center justify-between p-6 hover:bg-gray-50/50 transition-colors">
-                <div className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-4 p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <Label className="text-sm font-bold">Recruiter Visibility</Label>
                   <p className="text-xs font-medium text-gray-400">Allow verified recruiters to find and contact you.</p>
                 </div>
-                <Switch checked={privacy.profileVisible} onCheckedChange={() => handleToggle('privacy', 'profileVisible')} className="data-[state=checked]:bg-blue-600" />
+                <Switch checked={privacy.profileVisible} onCheckedChange={() => handleToggle('privacy', 'profileVisible')} className="data-[state=checked]:bg-blue-600 shrink-0" />
               </div>
               {/* Disabled: Show Work History */}
-              <div className="flex items-center justify-between p-6 opacity-40 select-none grayscale cursor-not-allowed">
+              <div className="flex items-start justify-between gap-4 p-4 sm:p-6 opacity-40 select-none grayscale cursor-not-allowed">
                 <div className="flex flex-col gap-1">
                   <Label className="text-sm font-bold">Show Work History</Label>
                   <p className="text-xs font-medium text-gray-400">Display your detailed experience on your profile.</p>
@@ -270,8 +282,8 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
         <LegalPoliciesSettingsCard variant="dashboard" />
 
         {/* Security & Account Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-[2rem]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6">
+          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem]">
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
                 <Lock className="w-5 h-5 text-amber-600" />
@@ -298,7 +310,7 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-[2rem]">
+          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem]">
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
                 <Globe className="w-5 h-5 text-indigo-600" />
@@ -324,8 +336,8 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
         </div>
 
         {/* Danger Zone */}
-        <Card className="border-none shadow-sm bg-rose-50/50 dark:bg-rose-900/10 rounded-[2rem] border border-rose-100/50">
-          <CardHeader>
+        <Card className="border-none shadow-sm bg-rose-50/50 dark:bg-rose-900/10 rounded-2xl lg:rounded-[2rem] border border-rose-100/50">
+          <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-2">
               <UserX className="w-5 h-5 text-rose-600" />
               <CardTitle className="text-lg font-bold tracking-tight text-rose-600">Danger Zone</CardTitle>
@@ -349,7 +361,7 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
 
       {/* Change Password Dialog */}
       <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
-        <DialogContent className="rounded-[2.5rem] border-none shadow-2xl p-10 max-w-md font-poppins">
+        <DialogContent className={settingsDialogClass}>
           <DialogHeader>
             <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 mx-auto">
               <KeyRound size={32} />
@@ -394,7 +406,7 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
 
       {/* Delete Account Step-by-Step UI */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl p-10 max-w-md font-poppins">
+        <AlertDialogContent className={settingsDialogClass}>
            <AnimatePresence mode="wait">
               {deleteStep === 1 && (
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
@@ -478,7 +490,7 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
 
       {/* Pre-OTP Confirmation Modal */}
       <AlertDialog open={confirmModal.isOpen} onOpenChange={(open) => setConfirmModal(prev => ({ ...prev, isOpen: open }))}>
-        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl p-10 max-w-md font-poppins">
+        <AlertDialogContent className={settingsDialogClass}>
           <AlertDialogHeader>
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto ${confirmModal.type === 'delete' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
               <Shield size={32} />

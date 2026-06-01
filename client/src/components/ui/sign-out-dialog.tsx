@@ -17,6 +17,7 @@ interface SignOutDialogProps {
   onConfirm: () => void;
   userName?: string;
   isLoading?: boolean;
+  contentClassName?: string;
 }
 
 export function SignOutDialog({ 
@@ -24,11 +25,12 @@ export function SignOutDialog({
   onOpenChange, 
   onConfirm, 
   userName,
-  isLoading = false 
+  isLoading = false,
+  contentClassName,
 }: SignOutDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md rounded-[6px]">
+      <AlertDialogContent className={contentClassName ?? "max-w-md rounded-[6px]"}>
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
@@ -50,9 +52,10 @@ export function SignOutDialog({
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="gap-2">
+        <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <AlertDialogCancel 
             disabled={isLoading}
+            className="max-lg:w-full"
             data-testid="button-cancel-sign-out"
           >
             Close
@@ -60,7 +63,7 @@ export function SignOutDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isLoading}
-            className={modalSignOutButtonClass}
+            className={`${modalSignOutButtonClass} max-lg:w-full`}
             data-testid="button-confirm-sign-out"
           >
             {isLoading ? (

@@ -25,10 +25,20 @@ import ProfileStrength from '@/components/dashboard/profile-strength';
 import { useQuery } from '@tanstack/react-query';
 import type { RecruiterJob } from "@shared/schema";
 import { calculateProfileCompletion } from '@/lib/profile-utils';
-import { getArchiveStatusLabel, getArchiveTerminalMeta } from '@/lib/candidate-pipeline-utils';
+import {
+  getArchiveStatusLabel,
+  getArchiveTerminalMeta,
+  mapCandidateApplicationStage,
+} from '@/lib/candidate-pipeline-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CandidateApplicationConsentModal from "@/components/candidate-dashboard/candidate-application-consent-modal";
 import { logConsent } from "@/lib/consent-log";
+import { useIsBelowLg } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import {
+  CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_DIALOG_CLASSES,
+} from '@/lib/candidate-ui-preferences';
 
 interface JobBoardTabProps {
   onNavigateToSettings?: () => void;
@@ -72,6 +82,11 @@ const backgroundColors = [
 
 /** Slight curve for job board cards/inputs (8px). */
 const JB_RADIUS = "rounded-[8px]";
+
+function formatArchiveDate(date: Date | string): string {
+  const d = new Date(date);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
 function sanitizeSkillList(items: unknown[]): string[] {
   const out: string[] = [];
@@ -153,10 +168,14 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [loadingJobDetailId, setLoadingJobDetailId] = useState<string | null>(null);
   const [detailsPanelPulse, setDetailsPanelPulse] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileShowJobDetail, setMobileShowJobDetail] = useState(false);
+  const isBelowLg = useIsBelowLg();
 
   const openJobDetails = (job: JobListing) => {
     setLoadingJobDetailId(job.id);
     setSelectedJob(null);
+    if (isBelowLg) setMobileShowJobDetail(true);
     window.setTimeout(() => {
       setSelectedJob(job);
       setLoadingJobDetailId(null);
@@ -164,6 +183,12 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
       window.setTimeout(() => setDetailsPanelPulse(false), 700);
     }, 400);
   };
+
+  useEffect(() => {
+    if (!isBelowLg) return;
+    setMobileShowJobDetail(false);
+    setMobileFiltersOpen(false);
+  }, [isBelowLg]);
   
   // Filter States
   const [roleFilter, setRoleFilter] = useState('');
@@ -232,6 +257,17 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
     });
   }, [jobListings, jobFilter, savedJobs, searchQuery, roleFilter, skillsFilter, companyFilter, productFilter, locationFilter, selectedWorkModes, selectedExperience, selectedEmploymentTypes, salaryRange]);
 
+  const archivedApplications = useMemo(
+    () =>
+      jobApplicationsData.filter(
+        (app) =>
+          app.status === "Withdrawn" ||
+          app.status === "Archived" ||
+          mapCandidateApplicationStage(app.status) === "Screened Out" ||
+          (app.statusNote || "").includes("[[TERMINAL:WITHDRAW]]"),
+      ),
+    [jobApplicationsData],
+  );
 
   useEffect(() => {
     if (filteredJobs.length > 0 && !selectedJob) {
@@ -308,19 +344,47 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   return (
     <>
     <div className="flex bg-gray-50 dark:bg-gray-900 h-full min-h-0 overflow-hidden font-inter text-gray-900">
+      {mobileFiltersOpen && (
+        <button
+          type="button"
+          aria-label="Close filters"
+          className="lg:hidden fixed inset-0 z-[55] bg-black/40"
+          onClick={() => setMobileFiltersOpen(false)}
+        />
+      )}
       {/* Left Session: Sidebar with Filters */}
       <div 
-        className={`relative flex flex-col border-r border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-500 ease-in-out scrollbar-hide shrink-0 z-50 ${isSidebarCollapsed ? 'w-[72px]' : 'w-[320px]'}`}
+        className={cn(
+          "relative flex flex-col border-r border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-500 ease-in-out scrollbar-hide shrink-0 z-20",
+          "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-[60] max-lg:w-[min(100vw-2rem,320px)] max-lg:shadow-2xl max-lg:transition-transform",
+          mobileFiltersOpen ? "max-lg:translate-x-0 max-lg:flex" : "max-lg:-translate-x-full max-lg:hidden",
+          "lg:flex",
+          isSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[320px]"
+        )}
       >
-        {/* Toggle Button - Redesigned for visibility */}
+        {/* Toggle Button - desktop only */}
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className={`absolute -right-4 top-10 w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-full flex items-center justify-center z-[60] shadow-xl hover:scale-110 transition-all active:scale-95 group text-white border-2 border-white dark:border-gray-900 ${isSidebarCollapsed ? 'rotate-0' : 'rotate-0'}`}
+          className={`hidden lg:flex absolute -right-4 top-10 w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-full items-center justify-center z-30 shadow-xl hover:scale-110 transition-all active:scale-95 group text-white border-2 border-white dark:border-gray-900`}
         >
           {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
 
-        <div className={`flex flex-col h-full px-6 py-10 overflow-y-auto scrollbar-hide transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+        <div className={cn(
+          "flex flex-col h-full px-4 py-6 sm:px-6 sm:py-10 overflow-y-auto scrollbar-hide transition-all duration-300 max-lg:opacity-100 max-lg:visible",
+          isSidebarCollapsed ? "lg:opacity-0 lg:invisible" : "lg:opacity-100 lg:visible"
+        )}>
+          <div className="lg:hidden flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-white">Filters</h3>
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen(false)}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label="Close filters"
+            >
+              <X size={18} />
+            </button>
+          </div>
           {!isSidebarCollapsed && (
             <>
               <div className="mb-0">
@@ -513,7 +577,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
         </div>
         
         {isSidebarCollapsed && (
-          <div className="flex flex-col items-center py-10 gap-6">
+          <div className="hidden lg:flex flex-col items-center py-10 gap-6">
             <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
               <Avatar className="w-8 h-8">
                 <AvatarImage src={profile?.profilePicture || ""} />
@@ -538,8 +602,18 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 min-w-0">
         {/* Top Header Bar */}
-        <div className="min-h-[4.5rem] shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-wrap items-center gap-3 px-4 sm:px-6 lg:px-8 py-3 relative z-40">
-           <div className="flex-1 min-w-[200px] max-w-xl relative group">
+        <div className="min-h-[4.5rem] shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 relative z-40">
+           <Button
+             type="button"
+             variant="outline"
+             size="sm"
+             onClick={() => setMobileFiltersOpen(true)}
+             className="lg:hidden shrink-0 h-11 rounded-xl border-gray-200 px-3 font-semibold text-sm gap-2"
+           >
+             <Filter size={16} />
+             Filters
+           </Button>
+           <div className="flex-1 min-w-0 max-lg:min-w-[140px] lg:min-w-[200px] max-w-xl relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-blue-600 transition-colors" size={18} />
               <input 
                 type="text" 
@@ -610,30 +684,35 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                   </button>
                </div>
                
-               <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
-               
-               <div className="flex flex-col items-end">
-                 <span className="text-sm font-semibold text-gray-700">{filteredJobs.length} jobs found</span>
-                </div>
+               <div className="hidden sm:block h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
 
-                <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
-                
-                 <Button 
-                   variant="outline" 
-                   size="sm" 
-                   onClick={() => setShowArchiveModal(true)}
-                   className="bg-red-50 hover:bg-red-100 text-red-600 border-red-100 rounded-xl h-11 px-5 flex items-center gap-2 font-semibold text-sm tracking-wide"
-                 >
-                   <Archive size={18} className="text-red-500" />
-                   Archive
-                 </Button>
+               <div className="flex flex-col items-end max-lg:order-last w-full sm:w-auto sm:max-lg:w-auto">
+                 <span className="text-xs sm:text-sm font-semibold text-gray-700">{filteredJobs.length} jobs found</span>
+               </div>
+
+               <div className="hidden sm:block h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-2"></div>
+
+               <Button
+                 type="button"
+                 variant="outline"
+                 size="sm"
+                 onClick={() => setShowArchiveModal(true)}
+                 className="bg-red-50 hover:bg-red-100 text-red-600 border-red-100 rounded-xl h-10 sm:h-11 px-3 sm:px-5 flex items-center justify-center gap-2 font-semibold text-xs sm:text-sm tracking-wide max-lg:flex-1 max-lg:min-w-[5.5rem] max-lg:max-w-full sm:flex-none sm:max-w-none"
+               >
+                 <Archive size={18} className="text-red-500 shrink-0" />
+                 Archive
+               </Button>
             </div>
         </div>
 
         {/* Split Content View */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Job List (42%) */}
-          <div className="w-[42%] min-w-[280px] flex flex-col border-r border-gray-200 dark:border-gray-700 bg-gray-50 overflow-y-auto px-3 py-3 gap-2.5 scrollbar-hide">
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          {/* Job List (42% desktop; full width mobile) */}
+          <div className={cn(
+            "flex flex-col border-r border-gray-200 dark:border-gray-700 bg-gray-50 overflow-y-auto px-2 sm:px-3 py-2 sm:py-3 gap-2.5 scrollbar-hide min-h-0",
+            "w-full lg:w-[42%] lg:min-w-[280px]",
+            mobileShowJobDetail && "max-lg:hidden"
+          )}>
             {isLoadingJobs ? (
               <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
                         ) : filteredJobs.map((job) => {
@@ -706,8 +785,27 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
           </div>
 
 
-          {/* Job Detail Preview (58%) */}
-          <div className={`flex-1 min-w-0 bg-white dark:bg-gray-800 overflow-hidden flex flex-col border-l border-gray-200 transition-shadow duration-500 ${detailsPanelPulse ? 'ring-2 ring-inset ring-blue-200 shadow-inner' : ''}`}>
+          {/* Job Detail Preview (58% desktop; full screen mobile when open) */}
+          <div className={cn(
+            "flex-1 min-w-0 bg-white dark:bg-gray-800 overflow-hidden flex flex-col border-l border-gray-200 dark:border-gray-700 transition-shadow duration-500",
+            detailsPanelPulse ? "ring-2 ring-inset ring-blue-200 shadow-inner" : "",
+            mobileShowJobDetail ? "max-lg:flex" : "max-lg:hidden",
+            "lg:flex"
+          )}>
+            {mobileShowJobDetail && (
+              <div className="lg:hidden shrink-0 flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 rounded-lg font-semibold text-sm gap-1"
+                  onClick={() => setMobileShowJobDetail(false)}
+                >
+                  <ChevronLeft size={18} />
+                  Back
+                </Button>
+              </div>
+            )}
             {loadingJobDetailId ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
                 <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
@@ -718,7 +816,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
               </div>
             ) : selectedJob ? (
               <>
-                <div className="flex-1 min-h-0 overflow-y-auto px-6 sm:px-8 py-6 pb-8 scrollbar-hide">
+                <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 max-lg:pb-28 lg:pb-8 scrollbar-hide">
                   <div className="max-w-[700px] mx-auto">
                       {/* Header */}
                       <div className="flex gap-6 mb-8">
@@ -888,23 +986,23 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
                 {/* Fixed action bar — details scroll above; bar stays full width */}
                 <div className="shrink-0 z-20 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-                  <div className="px-5 sm:px-8 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-wrap items-center gap-3 min-h-[2.5rem]">
-                      <div className={`flex items-center gap-2 bg-blue-50 text-blue-800 px-3.5 py-2 ${JB_RADIUS} border border-blue-100 text-sm font-medium whitespace-nowrap`}>
+                  <div className="px-4 sm:px-8 py-4 flex flex-col gap-3">
+                    <div className="flex flex-row flex-wrap items-center justify-between gap-2 min-h-[2rem] w-full">
+                      <div className={`flex items-center gap-2 bg-blue-50 text-blue-800 px-3 py-1.5 ${JB_RADIUS} border border-blue-100 text-sm font-medium whitespace-nowrap`}>
                         <Users size={16} className="text-blue-700 shrink-0" />
-                        <span>{selectedJob.applicationCount || 0} candidates applied</span>
+                        <span>{selectedJob.applicationCount || 0} applied</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm font-medium text-gray-600 whitespace-nowrap">
                         <Clock size={16} className="text-gray-500 shrink-0" />
                         <span>Posted {selectedJob.postedDays}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0 sm:ml-auto">
+                    <div className="flex items-stretch gap-3 w-full">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => toggleSaveJob(selectedJob)}
-                        className={`${JB_RADIUS} h-11 min-w-[7rem] px-5 font-semibold text-sm flex items-center justify-center gap-2 border-gray-200 ${
+                        className={`${JB_RADIUS} h-11 flex-1 font-semibold text-sm flex items-center justify-center gap-2 border-gray-200 ${
                           savedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
                             ? 'text-blue-700 border-blue-200 bg-blue-50'
                             : 'text-gray-700 hover:text-blue-700 hover:border-blue-200'
@@ -931,7 +1029,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                               setShowApplicationConsent(true);
                             }}
                             disabled={applyJobMutation.isPending || isApplied}
-                            className={`${JB_RADIUS} h-11 min-w-[8.5rem] px-6 font-semibold text-sm flex items-center justify-center gap-2 shadow-sm ${
+                            className={`${JB_RADIUS} h-11 flex-1 font-semibold text-sm flex items-center justify-center gap-2 shadow-sm ${
                               isApplied
                                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-none'
                                 : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -978,22 +1076,69 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
       />
     </div>
     
-    {/* Archive Modal */}
+    {/* Archive Modal — matches My Jobs tab */}
     <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>
-      <DialogContent className="max-w-[1200px] w-[95vw] max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-2xl border-none shadow-2xl">
-        <DialogHeader className="p-6 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
-                <Archive size={20} />
-              </div>
-              Application Archive
-            </DialogTitle>
-          </div>
+      <DialogContent
+        className={cn(
+          "flex flex-col overflow-hidden p-0 rounded-2xl border-none shadow-2xl",
+          CANDIDATE_MOBILE_DIALOG_CLASSES,
+          CANDIDATE_DESKTOP_DIALOG_CLASSES,
+          "max-lg:w-[calc(100vw-1rem)]",
+          "lg:max-w-[1200px] lg:w-[95vw] lg:max-h-[85vh]",
+        )}
+      >
+        <DialogHeader className="shrink-0 border-b bg-white/50 p-6 backdrop-blur-sm max-lg:p-4">
+          <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight flex items-center gap-3 max-lg:text-lg">
+            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+              <Archive size={20} />
+            </div>
+            Application Archive
+          </DialogTitle>
         </DialogHeader>
-        
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gray-50/30 p-4 sm:p-6">
+          <div className="lg:hidden space-y-3 pb-2">
+            {archivedApplications.length === 0 ? (
+              <div className="py-16 flex flex-col items-center gap-4 bg-white rounded-2xl border border-gray-100">
+                <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
+                  <Archive size={32} />
+                </div>
+                <p className="font-semibold text-gray-400 tracking-tight text-xs text-center px-4">
+                  No archived applications found
+                </p>
+              </div>
+            ) : (
+              archivedApplications.map((app) => {
+                const statusDisplay = getArchiveStatusLabel(app.status, app.statusNote);
+                const terminalMeta = getArchiveTerminalMeta(app.status, app.statusNote);
+                return (
+                  <div key={app.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                    <p className="font-semibold text-gray-900 text-sm">{app.jobTitle}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{app.company}</p>
+                    <p className="text-[11px] text-gray-500 mt-2">
+                      Applied {formatArchiveDate(app.appliedDate)}
+                    </p>
+                    <p
+                      className={`mt-2 text-sm font-semibold ${statusDisplay.isRed ? "text-red-600" : "text-gray-600"}`}
+                    >
+                      {statusDisplay.label}
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="font-medium text-gray-600 block">Rejected / Withdrawn on</span>
+                        <span className="text-gray-700">{terminalMeta.date}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600 block">At stage</span>
+                        <span className="text-gray-700">{terminalMeta.stage}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div className="hidden lg:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse min-w-[900px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -1006,77 +1151,54 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {(() => {
-                  const mapStatusToStage = (status: string | null): string => {
-                    if (!status) return 'Applied';
-                    const s = status.toLowerCase();
-                    if (s.includes('applied') || s.includes('new') || s.includes('process')) return 'Applied';
-                    if (s === 'l1' || s === 'l2' || s.includes('review')) return 'In-Review';
-                    if (s.includes('interview') || s === 'l3' || s.includes('scheduled') || s.includes('final')) return 'Interview Stage';
-                    if (s.includes('hr')) return 'HR Round';
-                    if (s.includes('offer')) return 'Offer';
-                    if (s.includes('reject') || s.includes('screened') || s.includes('out')) return 'Screened Out';
-                    return 'Applied';
-                  };
-
-                  const archivedApplications = jobApplicationsData.filter(
-                    (app) => app.status === 'Withdrawn' || mapStatusToStage(app.status) === 'Screened Out' || app.status === 'Archived'
-                      || (app.statusNote || '').includes('[[TERMINAL:WITHDRAW]]')
-                  );
-
-                  if (archivedApplications.length === 0) {
-                    return (
-                      <tr>
-                        <td colSpan={6} className="py-20 text-center">
-                          <div className="flex flex-col items-center gap-4">
-                            <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
-                              <Archive size={32} />
-                            </div>
-                            <p className="font-semibold text-gray-400 tracking-tight text-xs">No archived applications found</p>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  return archivedApplications.map((app) => {
+                {archivedApplications.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
+                          <Archive size={32} />
+                        </div>
+                        <p className="font-semibold text-gray-400 tracking-tight text-xs">
+                          No archived applications found
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  archivedApplications.map((app) => {
                     const statusDisplay = getArchiveStatusLabel(app.status, app.statusNote);
                     const terminalMeta = getArchiveTerminalMeta(app.status, app.statusNote);
                     return (
-                      <tr key={app.id} className="hover:bg-gray-50/50 transition-colors group">
+                      <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-4">
                           <span className="font-semibold text-gray-900">{app.jobTitle}</span>
                         </td>
-                        <td className="px-5 py-4 text-gray-700 font-medium">
-                          {app.company}
-                        </td>
+                        <td className="px-5 py-4 text-gray-700 font-medium">{app.company}</td>
                         <td className="px-5 py-4 text-gray-500">
-                          {new Date(app.appliedDate).toLocaleDateString()}
+                          {formatArchiveDate(app.appliedDate)}
                         </td>
                         <td className="px-5 py-4">
-                          <span className={`font-semibold ${statusDisplay.isRed ? 'text-red-600' : 'text-gray-600'}`}>
+                          <span
+                            className={`font-semibold ${statusDisplay.isRed ? "text-red-600" : "text-gray-600"}`}
+                          >
                             {statusDisplay.label}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
-                          {terminalMeta.date}
-                        </td>
-                        <td className="px-5 py-4 text-gray-700">
-                          {terminalMeta.stage}
-                        </td>
+                        <td className="px-5 py-4 text-gray-700">{terminalMeta.date}</td>
+                        <td className="px-5 py-4 text-gray-700">{terminalMeta.stage}</td>
                       </tr>
                     );
-                  });
-                })()}
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
-        
-        <div className="p-6 border-t bg-white flex justify-end">
-          <Button 
+
+        <div className="flex shrink-0 justify-end border-t bg-white p-6 max-lg:p-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Button
             onClick={() => setShowArchiveModal(false)}
-            className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-semibold px-8"
+            className="rounded-xl bg-gray-900 px-8 font-semibold text-white hover:bg-gray-800 max-lg:w-full"
           >
             Close Archive
           </Button>

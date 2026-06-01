@@ -45,6 +45,10 @@ type NotificationPanelProps = {
   onActOnNudge?: (row: NotificationPanelRow) => void;
   showActButton?: boolean;
   previewLimit?: number;
+  /** Optional root class (e.g. candidate portal panel surface) */
+  className?: string;
+  /** Always show per-notification dismiss (touch devices / mobile) */
+  showDismissAlways?: boolean;
 };
 
 function formatNotificationDisplayLine(line: string): string {
@@ -154,6 +158,7 @@ function NotificationCard({
   onDismiss,
   onNavigate,
   onAct,
+  showDismissAlways = false,
 }: {
   row: NotificationPanelRow;
   section: NotificationSectionConfig;
@@ -161,6 +166,7 @@ function NotificationCard({
   onDismiss: (row: NotificationPanelRow) => void;
   onNavigate: (section: NotificationNavigateSection, row: NotificationPanelRow) => void;
   onAct?: (row: NotificationPanelRow) => void;
+  showDismissAlways?: boolean;
 }) {
   const parts = parseLineParts(row.line);
   const boldIndices = getBoldIndices(parts, row.kind);
@@ -188,7 +194,7 @@ function NotificationCard({
         }
       }}
     >
-      <div className="flex items-start gap-3 pr-8">
+      <div className={`flex items-start gap-3 ${showDismissAlways ? "pr-10" : "pr-8"}`}>
         <div className="min-w-0 flex-1">
           <NotificationLineText parts={parts} boldIndices={boldIndices} />
           {remaining && (
@@ -219,8 +225,10 @@ function NotificationCard({
           e.stopPropagation();
           onDismiss(row);
         }}
-        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-red-600 opacity-0 transition-all duration-200 hover:bg-red-100 group-hover:opacity-100"
-        aria-label="Dismiss notification"
+        className={`absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-red-100 bg-red-50 text-red-600 transition-all duration-200 hover:bg-red-100 active:scale-95 ${
+          showDismissAlways ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }`}
+        aria-label="Close notification"
       >
         <X className="h-4 w-4" strokeWidth={2.5} />
       </button>
@@ -236,6 +244,7 @@ function NotificationSectionBlock({
   onDismiss,
   onNavigate,
   onAct,
+  showDismissAlways,
 }: {
   section: NotificationSectionConfig;
   rows: NotificationPanelRow[];
@@ -244,6 +253,7 @@ function NotificationSectionBlock({
   onDismiss: (row: NotificationPanelRow) => void;
   onNavigate: (section: NotificationNavigateSection, row: NotificationPanelRow) => void;
   onAct?: (row: NotificationPanelRow) => void;
+  showDismissAlways?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? rows : rows.slice(0, previewLimit);
@@ -252,7 +262,7 @@ function NotificationSectionBlock({
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-2xl bg-slate-100/90 p-3">
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
       <h4 className={`mb-2 text-sm font-semibold ${section.headingClassName}`}>{section.heading}</h4>
       <div className="space-y-2">
         {visible.map((row) => (
@@ -305,6 +315,8 @@ export default function NotificationPanel({
   onNavigate,
   onActOnNudge,
   previewLimit = 3,
+  className,
+  showDismissAlways = false,
 }: NotificationPanelProps) {
   const [exitingKeys, setExitingKeys] = useState<Set<string>>(new Set());
 
@@ -370,8 +382,8 @@ export default function NotificationPanel({
   const totalCount = rows.length;
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="border-b border-slate-100 px-5 pb-3 pt-4">
+    <div className={`flex h-full flex-col bg-white ${className ?? ""}`}>
+      <div className="border-b border-slate-200 bg-slate-50/80 px-5 pb-3 pt-4">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-xl font-bold tracking-tight text-slate-900">Notification</h3>
           <span className="text-sm text-slate-500">
@@ -430,6 +442,7 @@ export default function NotificationPanel({
                 onDismiss={handleDismissWithAnimation}
                 onNavigate={handleNavigateWithDismiss}
                 onAct={onActOnNudge ? handleAct : undefined}
+                showDismissAlways={showDismissAlways}
               />
             ))}
           </div>
