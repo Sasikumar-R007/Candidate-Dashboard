@@ -44,6 +44,7 @@ import CandidateApplicationConsentModal from "@/components/candidate-dashboard/c
 import { logConsent } from "@/lib/consent-log";
 import {
   CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_MOBILE_CENTERED_DIALOG_CLASSES,
   CANDIDATE_MOBILE_DIALOG_CLASSES,
 } from "@/lib/candidate-ui-preferences";
 import { cn } from "@/lib/utils";
@@ -1170,8 +1171,8 @@ export default function MyJobsTab({
     >
       <DialogContent
         className={cn(
-          "flex w-[calc(100vw-1.25rem)] max-w-md flex-col gap-0 overflow-hidden p-0 lg:hidden",
-          CANDIDATE_MOBILE_DIALOG_CLASSES,
+          "flex w-[calc(100vw-1.5rem)] max-w-md flex-col gap-0 overflow-hidden p-0 lg:hidden",
+          CANDIDATE_MOBILE_CENTERED_DIALOG_CLASSES,
         )}
       >
         {mobileExpandedContext && (() => {
@@ -1197,7 +1198,7 @@ export default function MyJobsTab({
                 </p>
               </DialogHeader>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-3">
+              <div className="overflow-y-auto overscroll-contain px-4 py-4 space-y-3">
                 {latestNudge && (
                   <div className="bg-teal-50 rounded-[6px] border border-teal-200 p-3">
                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -1730,7 +1731,14 @@ export default function MyJobsTab({
           }
         }}
       >
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-none shadow-2xl font-poppins">
+        <DialogContent
+          className={cn(
+            "max-w-md p-0 overflow-hidden rounded-2xl border-none shadow-2xl font-poppins",
+            CANDIDATE_MOBILE_CENTERED_DIALOG_CLASSES,
+            CANDIDATE_DESKTOP_DIALOG_CLASSES,
+            "max-lg:max-h-[min(90dvh,calc(100dvh-5rem))] max-lg:overflow-y-auto max-lg:overscroll-contain",
+          )}
+        >
           <AnimatePresence mode="wait">
             {!showWithdrawSuccess ? (
               <motion.div 
@@ -1738,7 +1746,7 @@ export default function MyJobsTab({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="p-8 space-y-6"
+                className="p-5 sm:p-8 space-y-5 sm:space-y-6"
               >
                 <div className="space-y-2">
                   <h2 className="text-xl font-bold text-gray-900">Help us improve</h2>

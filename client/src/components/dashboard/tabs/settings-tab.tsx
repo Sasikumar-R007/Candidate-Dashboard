@@ -194,14 +194,14 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
   }
 
   const settingsDialogClass = cn(
-    "rounded-2xl lg:rounded-[2.5rem] border-none shadow-2xl font-poppins overflow-y-auto",
+    "rounded-2xl lg:rounded-[2.5rem] border-none shadow-2xl font-poppins",
     CANDIDATE_MOBILE_DIALOG_CLASSES,
     CANDIDATE_DESKTOP_DIALOG_CLASSES,
-    "max-lg:p-5 lg:p-10 max-lg:max-w-none lg:max-w-md"
+    "max-lg:p-5 max-lg:min-h-0 max-lg:overflow-y-auto max-lg:overscroll-contain lg:p-10 max-lg:max-w-none lg:max-w-md"
   );
 
   return (
-    <div className="max-w-4xl mx-auto px-0 py-4 sm:py-6 lg:py-10 space-y-6 lg:space-y-8 font-poppins">
+    <div className="w-full min-w-0 max-w-4xl mx-auto px-0 py-3 sm:py-6 lg:py-10 space-y-5 lg:space-y-8 font-poppins overflow-x-hidden">
       <div className="hidden lg:flex flex-col gap-1 mb-8">
         <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Settings</h1>
         <p className="text-sm font-medium text-gray-500 uppercase tracking-widest">Manage your account preferences and security.</p>
@@ -210,13 +210,13 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
       <div className="grid gap-5 lg:gap-8">
         {/* Notifications */}
         <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem] overflow-hidden">
-          <CardHeader className="flex flex-row items-center gap-3 sm:gap-4 border-b border-gray-50 dark:border-gray-700 pb-4 sm:pb-6 p-4 sm:p-6">
-            <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
-              <Bell className="w-5 h-5 text-blue-600" />
+          <CardHeader className="flex flex-row items-center gap-2.5 sm:gap-4 border-b border-gray-50 dark:border-gray-700 pb-3 sm:pb-6 p-4 sm:p-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             </div>
-            <div className="flex flex-col gap-1">
-              <CardTitle className="text-xl font-bold tracking-tight">Notifications</CardTitle>
-              <CardDescription className="text-xs font-medium uppercase tracking-wider text-gray-400">Choose how you want to be notified.</CardDescription>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <CardTitle className="text-base sm:text-xl font-bold tracking-tight">Notifications</CardTitle>
+              <CardDescription className="text-[11px] sm:text-xs font-medium max-lg:normal-case max-lg:tracking-normal text-gray-400 sm:uppercase sm:tracking-wider">Choose how you want to be notified.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -249,13 +249,13 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
 
         {/* Privacy */}
         <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem] overflow-hidden">
-          <CardHeader className="flex flex-row items-center gap-3 sm:gap-4 border-b border-gray-50 dark:border-gray-700 pb-4 sm:pb-6 p-4 sm:p-6">
-            <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
-              <Eye className="w-5 h-5 text-teal-600" />
+          <CardHeader className="flex flex-row items-center gap-2.5 sm:gap-4 border-b border-gray-50 dark:border-gray-700 pb-3 sm:pb-6 p-4 sm:p-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center shrink-0">
+              <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
             </div>
-            <div className="flex flex-col gap-1">
-              <CardTitle className="text-xl font-bold tracking-tight">Privacy & Visibility</CardTitle>
-              <CardDescription className="text-xs font-medium uppercase tracking-wider text-gray-400">Control who can see your profile.</CardDescription>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <CardTitle className="text-base sm:text-xl font-bold tracking-tight">Privacy & Visibility</CardTitle>
+              <CardDescription className="text-[11px] sm:text-xs font-medium max-lg:normal-case max-lg:tracking-normal text-gray-400 sm:uppercase sm:tracking-wider">Control who can see your profile.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -282,25 +282,25 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
         <LegalPoliciesSettingsCard variant="dashboard" />
 
         {/* Security & Account Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6">
-          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem]">
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <Lock className="w-5 h-5 text-amber-600" />
-                <CardTitle className="text-lg font-bold tracking-tight">Security</CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem] overflow-hidden">
+            <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+              <div className="flex items-center gap-2.5 mb-0">
+                <Lock className="w-5 h-5 text-amber-600 shrink-0" />
+                <CardTitle className="text-base sm:text-lg font-bold tracking-tight">Security</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
               <Button 
                 variant="outline" 
                 onClick={() => setConfirmModal({ isOpen: true, type: 'password' })}
-                className="w-full justify-between h-12 rounded-xl border-gray-100 font-bold text-xs uppercase tracking-widest text-gray-600 hover:bg-gray-50"
+                className="w-full justify-between h-11 sm:h-12 rounded-xl border-gray-100 font-bold text-[10px] sm:text-xs uppercase max-lg:tracking-wide sm:tracking-widest text-gray-600 hover:bg-gray-50"
               >
                 <span className="flex items-center gap-3"><Shield className="w-4 h-4" /> Change Password</span>
                 <ChevronRight className="w-4 h-4" />
               </Button>
-              <div className="flex items-center justify-between px-3 h-12 rounded-xl border border-dashed border-gray-200">
-                <span className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-gray-400"><Smartphone className="w-4 h-4" /> Two-Factor Auth</span>
+              <div className="flex items-center justify-between gap-2 px-3 h-11 sm:h-12 rounded-xl border border-dashed border-gray-200 min-w-0">
+                <span className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-bold uppercase max-lg:tracking-wide sm:tracking-widest text-gray-400 min-w-0"><Smartphone className="w-4 h-4 shrink-0" /> <span className="truncate">Two-Factor Auth</span></span>
                 {profile?.isVerified ? (
                    <Badge className="bg-emerald-100 text-emerald-700 text-[8px] font-black uppercase">Active</Badge>
                 ) : (
@@ -310,23 +310,23 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem]">
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <Globe className="w-5 h-5 text-indigo-600" />
-                <CardTitle className="text-lg font-bold tracking-tight">Account</CardTitle>
+          <Card className="border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem] overflow-hidden">
+            <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+              <div className="flex items-center gap-2.5 mb-0">
+                <Globe className="w-5 h-5 text-indigo-600 shrink-0" />
+                <CardTitle className="text-base sm:text-lg font-bold tracking-tight">Account</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
               {/* Disabled: Subscription */}
-              <div className="w-full flex items-center justify-between h-12 px-4 rounded-xl border border-gray-100 opacity-40 select-none grayscale bg-gray-50/50">
-                <span className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-gray-400"><CreditCard className="w-4 h-4" /> Subscription</span>
+              <div className="w-full flex items-center justify-between gap-2 h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-gray-100 opacity-40 select-none grayscale bg-gray-50/50 min-w-0">
+                <span className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-bold uppercase max-lg:tracking-wide sm:tracking-widest text-gray-400 min-w-0"><CreditCard className="w-4 h-4 shrink-0" /> <span className="truncate">Subscription</span></span>
                 <Badge variant="secondary" className="text-[8px] font-black uppercase">Free Plan</Badge>
               </div>
               <Button 
                 variant="outline" 
                 onClick={() => onOpenSupport?.()}
-                className="w-full justify-between h-12 rounded-xl border-gray-100 font-bold text-xs uppercase tracking-widest text-gray-600 hover:bg-gray-50"
+                className="w-full justify-between h-11 sm:h-12 rounded-xl border-gray-100 font-bold text-[10px] sm:text-xs uppercase max-lg:tracking-wide sm:tracking-widest text-gray-600 hover:bg-gray-50"
               >
                 <span className="flex items-center gap-3"><HelpCircle className="w-4 h-4" /> Help & Support</span>
                 <ChevronRight className="w-4 h-4" />
@@ -336,22 +336,22 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
         </div>
 
         {/* Danger Zone */}
-        <Card className="border-none shadow-sm bg-rose-50/50 dark:bg-rose-900/10 rounded-2xl lg:rounded-[2rem] border border-rose-100/50">
-          <CardHeader className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <UserX className="w-5 h-5 text-rose-600" />
-              <CardTitle className="text-lg font-bold tracking-tight text-rose-600">Danger Zone</CardTitle>
+        <Card className="border-none shadow-sm bg-rose-50/50 dark:bg-rose-900/10 rounded-2xl lg:rounded-[2rem] border border-rose-100/50 overflow-hidden">
+          <CardHeader className="p-4 sm:p-6 pb-2">
+            <div className="flex items-center gap-2.5 mb-1">
+              <UserX className="w-5 h-5 text-rose-600 shrink-0" />
+              <CardTitle className="text-base sm:text-lg font-bold tracking-tight text-rose-600">Danger Zone</CardTitle>
             </div>
-            <CardDescription className="text-[11px] font-bold uppercase tracking-widest text-rose-400">Irreversible actions</CardDescription>
+            <CardDescription className="text-[11px] font-bold max-lg:normal-case max-lg:tracking-normal text-rose-400 sm:uppercase sm:tracking-widest">Irreversible actions</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-xs font-medium text-rose-700/70 mb-6 leading-relaxed max-w-[500px]">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <p className="text-xs font-medium text-rose-700/70 mb-4 sm:mb-6 leading-relaxed">
               Once you delete your account, all your data including applications and profile settings will be permanently removed.
             </p>
             <Button 
               variant="destructive" 
               onClick={() => setConfirmModal({ isOpen: true, type: 'delete' })}
-              className="bg-rose-600 hover:bg-rose-700 rounded-xl px-8 h-12 font-bold text-xs uppercase tracking-widest shadow-lg shadow-rose-200/40 flex items-center gap-2 transition-all active:scale-[0.98]"
+              className="w-full max-lg:justify-center bg-rose-600 hover:bg-rose-700 rounded-xl px-6 sm:px-8 h-11 sm:h-12 font-bold text-[10px] sm:text-xs uppercase max-lg:tracking-wide sm:tracking-widest shadow-lg shadow-rose-200/40 flex items-center gap-2 transition-all active:scale-[0.98]"
             >
               <Trash2 className="w-4 h-4" /> Delete Account Permanently
             </Button>
@@ -363,11 +363,11 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
       <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
         <DialogContent className={settingsDialogClass}>
           <DialogHeader>
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 mx-auto">
-              <KeyRound size={32} />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4 sm:mb-6 mx-auto">
+              <KeyRound className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900 text-center tracking-tight mb-2">Change Password</DialogTitle>
-            <DialogDescription className="text-sm font-medium text-gray-500 text-center leading-relaxed mb-6">
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-gray-900 text-center tracking-tight mb-2">Change Password</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-gray-500 text-center leading-relaxed mb-4 sm:mb-6">
               A verification code has been sent to your email. Enter it along with your new password.
             </DialogDescription>
           </DialogHeader>
@@ -396,7 +396,7 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
              <Button 
                 onClick={() => changePasswordMutation.mutate()}
                 disabled={changePasswordMutation.isPending || otpValue.length < 4 || newPassword.length < 6}
-                className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]"
+                className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 sm:py-6 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]"
              >
                 {changePasswordMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : "Update Password"}
              </Button>

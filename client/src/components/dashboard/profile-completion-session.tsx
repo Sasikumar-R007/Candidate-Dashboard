@@ -79,7 +79,7 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
           <div className="mt-5 flex justify-end">
             <Button
               onClick={onNavigateToProfile}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-[6px]"
             >
               Complete Profile
               <ArrowRight className="ml-2 w-4 h-4" />

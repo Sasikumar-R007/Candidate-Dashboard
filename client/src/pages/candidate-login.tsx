@@ -266,9 +266,9 @@ export default function CandidateLogin() {
 
   if (showOTP) {
     return (
-      <div className="min-h-screen flex">
+      <div className="flex min-h-screen flex-col lg:flex-row">
         {/* Left Side - Modern 2FA Design */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700">
+        <div className="hidden lg:flex lg:h-screen lg:w-1/2 lg:shrink-0 relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700">
           {/* Abstract geometric patterns */}
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl" />
@@ -331,8 +331,8 @@ export default function CandidateLogin() {
         </div>
 
         {/* Right Side - OTP Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center bg-white dark:bg-gray-900 p-8">
-          <div className="w-full max-w-md space-y-8">
+        <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-white p-6 dark:bg-gray-900 sm:px-8 lg:min-h-screen lg:w-1/2 lg:px-14 lg:py-6 xl:px-20">
+          <div className="my-auto w-full max-w-[26rem] space-y-6 sm:space-y-8 lg:mx-auto">
             {/* Mobile Logo */}
             <div className="lg:hidden flex items-center justify-center space-x-3 mb-6">
               <div className="w-10 h-10 bg-[#2563EB] rounded-xl flex items-center justify-center">
@@ -415,10 +415,10 @@ export default function CandidateLogin() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="flex min-h-screen flex-col lg:flex-row">
       {/* Left Side - Modern SaaS Design with Gradient - Matching Landing Page Theme */}
       <div
-        className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
+        className="hidden lg:flex lg:h-screen lg:w-1/2 lg:shrink-0 relative overflow-hidden"
         style={{
           background:
             "radial-gradient(circle at 18% 18%, rgba(96, 165, 250, 0.35), transparent 28%), radial-gradient(circle at 82% 78%, rgba(14, 165, 233, 0.28), transparent 32%), linear-gradient(135deg, #0B1F5E 0%, #1D4ED8 48%, #2563EB 100%)",
@@ -494,18 +494,18 @@ export default function CandidateLogin() {
       </div>
 
       {/* Right Side - Login/Register Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-white dark:bg-gray-900">
-        <div className="w-full max-w-md">
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-white p-6 dark:bg-gray-900 sm:px-8 lg:min-h-screen lg:w-1/2 lg:px-14 lg:py-6 xl:px-20">
+        <div className="my-auto w-full max-w-[26rem] space-y-6 sm:space-y-8 lg:mx-auto">
           {/* Back Button */}
           <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-4 text-gray-600 hover:text-gray-900">
+            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </Button>
           </Link>
           
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center space-x-2 mb-8">
+          <div className="lg:hidden flex items-center justify-center space-x-2">
             <img
               src={staffosLogo3}
               alt="StaffOS Logo"
@@ -515,7 +515,7 @@ export default function CandidateLogin() {
           </div>
 
           {/* Form Container */}
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Welcome Section */}
             <div className="text-center space-y-3">
               <div className="hidden lg:flex justify-center">

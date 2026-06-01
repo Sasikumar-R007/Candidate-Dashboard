@@ -72,32 +72,32 @@ export function LegalPoliciesSettingsCard({
   const cardClass =
     variant === "modal"
       ? "border-slate-200 bg-white shadow-none"
-      : "border-none shadow-sm bg-white dark:bg-gray-800 rounded-[2rem]";
+      : "border-none shadow-sm bg-white dark:bg-gray-800 rounded-2xl lg:rounded-[2rem]";
 
   return (
     <Card className={cn(cardClass, "overflow-hidden", className)}>
       <CardHeader
         className={cn(
-          "flex flex-row items-center gap-4 pb-6",
+          "flex flex-row items-center gap-2.5 sm:gap-4 pb-4 sm:pb-6 p-4 sm:p-6",
           variant === "modal" ? "border-b border-slate-200" : "border-b border-gray-50 dark:border-gray-700",
         )}
       >
         <div
           className={cn(
-            "flex h-12 w-12 items-center justify-center rounded-2xl",
+            "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl shrink-0",
             variant === "modal" ? "bg-slate-50" : "bg-gray-50 dark:bg-gray-700",
           )}
         >
-          <Scale className={cn("h-5 w-5", variant === "modal" ? "text-slate-700" : "text-indigo-600")} />
+          <Scale className={cn("h-4 w-4 sm:h-5 sm:w-5", variant === "modal" ? "text-slate-700" : "text-indigo-600")} />
         </div>
-        <div className="flex flex-col gap-1">
-          <CardTitle className={cn("tracking-tight", variant === "modal" ? "text-lg font-semibold" : "text-xl font-bold")}>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <CardTitle className={cn("tracking-tight", variant === "modal" ? "text-lg font-semibold" : "text-base sm:text-xl font-bold")}>
             Legal / Policies
           </CardTitle>
           <CardDescription
             className={cn(
-              "font-medium uppercase tracking-wider",
-              variant === "modal" ? "text-[11px] text-slate-500" : "text-xs text-gray-400",
+              "font-medium max-lg:normal-case max-lg:tracking-normal sm:uppercase sm:tracking-wider",
+              variant === "modal" ? "text-[11px] text-slate-500" : "text-[11px] sm:text-xs text-gray-400",
             )}
           >
             Last Updated: {POLICY_LAST_UPDATED}
@@ -105,7 +105,7 @@ export function LegalPoliciesSettingsCard({
         </div>
       </CardHeader>
       <CardContent className={variant === "modal" ? "p-5 pt-2" : "p-0"}>
-        <div className={variant === "modal" ? "" : "px-6"}>
+        <div className={variant === "modal" ? "" : "px-4 sm:px-6"}>
           <div className={rowClass}>
             <span className={titleClass}>Privacy Policy</span>
             <Link href="/privacy-policy" className={linkClass}>
