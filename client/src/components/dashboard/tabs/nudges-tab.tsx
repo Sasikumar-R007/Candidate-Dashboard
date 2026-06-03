@@ -88,15 +88,16 @@ export default function NudgeLogsTab() {
               <CardTitle className="text-xl font-bold text-gray-900">Candidate Nudge Logs</CardTitle>
               <p className="text-sm text-gray-500 mt-1">Full history of all candidate nudges</p>
             </div>
-            <div className="flex flex-1 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
-              <div className="relative w-full sm:max-w-md">
+            <div className="flex w-full flex-1 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <div className="relative w-full min-w-0 sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <Input
                   type="search"
                   placeholder="Search by candidate, role, company, status..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-10 w-full bg-slate-100 border-slate-300 text-slate-900 placeholder:text-slate-500 shadow-sm focus-visible:ring-slate-400"
+                  className="h-10 w-full rounded-[4px] border-slate-300 bg-slate-100 pl-9 text-slate-900 shadow-sm placeholder:text-slate-500 focus-visible:ring-slate-400"
+                  style={{ borderRadius: 4 }}
                   data-testid="input-nudge-logs-search"
                 />
               </div>
@@ -119,12 +120,71 @@ export default function NudgeLogsTab() {
               )}
             </div>
           </div>
-          <p className="mt-2 text-xs text-gray-500 text-right" data-testid="text-nudge-logs-search-count">
+          <p className="mt-2 text-left text-xs text-gray-500 sm:text-right" data-testid="text-nudge-logs-search-count">
             {resultLabel}
           </p>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="space-y-3 p-4 md:hidden">
+            {filteredNudges.length === 0 ? (
+              <p className="py-6 text-center text-sm italic text-gray-500">
+                {searchQuery.trim() ? "No logs match your search." : "No nudge history found."}
+              </p>
+            ) : (
+              displayedNudges.map((nudge) => (
+                <div
+                  key={nudge.id}
+                  className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                  data-testid={`card-nudge-log-${nudge.id}`}
+                >
+                  <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                    <span className="text-sm font-semibold text-gray-900">{nudge.candidateName}</span>
+                    <span className="text-xs text-gray-500">
+                      {format(new Date(nudge.createdAt), "MMM d, yyyy h:mm a")}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-sm text-gray-700">
+                    <p>
+                      <span className="font-medium text-gray-500">Role: </span>
+                      {nudge.jobTitle}
+                    </p>
+                    <p>
+                      <span className="font-medium text-gray-500">Company: </span>
+                      {nudge.company}
+                    </p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge variant="outline" className="bg-gray-50 text-xs">
+                      {nudge.currentStatus}
+                    </Badge>
+                    <Badge
+                      className="text-xs capitalize"
+                      variant={nudge.escalationLevel === "recruiter" ? "secondary" : "destructive"}
+                    >
+                      {nudge.escalationLevel.replace("_", " ")}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Response:{" "}
+                    {nudge.respondedAt
+                      ? format(new Date(nudge.respondedAt), "MMM d, hh:mm a")
+                      : "—"}
+                  </p>
+                  {nudge.message ? (
+                    <p className="mt-2 break-words rounded-[4px] bg-green-50 px-2 py-1.5 text-xs font-medium text-green-700">
+                      {nudge.message}
+                    </p>
+                  ) : nudge.isResponded ? (
+                    <p className="mt-2 text-xs font-medium text-green-700">Responded</p>
+                  ) : (
+                    <p className="mt-2 text-xs font-medium text-orange-600">Pending</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full border-collapse font-poppins">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
@@ -179,7 +239,7 @@ export default function NudgeLogsTab() {
                       </td>
                       <td className="py-3 px-6">
                         {nudge.message ? (
-                          <span className="block max-w-md text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded whitespace-normal break-words">
+                          <span className="block max-w-md whitespace-normal break-words rounded-[4px] bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
                             {nudge.message}
                           </span>
                         ) : nudge.isResponded ? (

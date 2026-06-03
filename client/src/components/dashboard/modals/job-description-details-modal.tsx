@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   parseRequirementJdExtras,
+  resolveRequirementDisplayId,
   resolveDisplayRoleId,
   type RequirementJdExtras,
 } from "@shared/requirement-jd-extras";
@@ -21,6 +22,8 @@ import { cn } from "@/lib/utils";
 
 export type JobDescriptionDetailsData = {
   id?: string;
+  displayRequirementId?: string | null;
+  companyLogo?: string | null;
   clientId?: string;
   position?: string;
   company?: string;
@@ -282,6 +285,10 @@ export default function JobDescriptionDetailsModal({
       jdExtras.specialInstructions?.trim(),
   );
   const displayRoleId = resolveDisplayRoleId(data);
+  const displayRequirementId = resolveRequirementDisplayId(
+    data,
+    data.displayRequirementId ?? undefined,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -333,7 +340,13 @@ export default function JobDescriptionDetailsModal({
                 )}
                 <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    {variant === "admin" ? "Role ID" : "Requirement ID"}
+                    Requirement ID
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{displayRequirementId}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Role ID
                   </p>
                   <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{displayRoleId}</p>
                 </div>

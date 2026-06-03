@@ -1,16 +1,21 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, Loader2, Plus, Image, Search, RefreshCw, ClipboardList } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, Loader2, Plus, Image, Search, RefreshCw, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { mapRequirementToJobForm } from '@shared/requirement-to-job-form';
-import { resolveRequirementDisplayId } from '@shared/requirement-jd-extras';
+import {
+  formatRoleIdDropdownLabel,
+  resolveDisplayRoleId,
+  resolveRequirementDisplayId,
+} from '@shared/requirement-jd-extras';
 
 interface JobFormData {
   id?: string | number;
@@ -77,8 +82,12 @@ export default function PostJobModal({
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [skillInputs, setSkillInputs] = useState({ primary: '', secondary: '', knowledge: '' });
+  const [selectedClientCompany, setSelectedClientCompany] = useState("");
+  const [selectedRoleId, setSelectedRoleId] = useState("");
+  const [isPostingInfoOpen, setIsPostingInfoOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const closeDropdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const infoHoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openDropdown = useCallback((id: string) => {
     if (closeDropdownTimerRef.current) {
@@ -103,6 +112,31 @@ export default function PostJobModal({
       clearTimeout(closeDropdownTimerRef.current);
       closeDropdownTimerRef.current = null;
     }
+  }, []);
+  const openPostingInfo = useCallback(() => {
+    if (infoHoverCloseTimerRef.current) {
+      clearTimeout(infoHoverCloseTimerRef.current);
+      infoHoverCloseTimerRef.current = null;
+    }
+    setIsPostingInfoOpen(true);
+  }, []);
+
+  const scheduleClosePostingInfo = useCallback(() => {
+    if (infoHoverCloseTimerRef.current) {
+      clearTimeout(infoHoverCloseTimerRef.current);
+    }
+    infoHoverCloseTimerRef.current = setTimeout(() => {
+      setIsPostingInfoOpen(false);
+      infoHoverCloseTimerRef.current = null;
+    }, 160);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (infoHoverCloseTimerRef.current) {
+        clearTimeout(infoHoverCloseTimerRef.current);
+      }
+    };
   }, []);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -166,12 +200,52 @@ export default function PostJobModal({
     );
   }, [linkableRequirements]);
 
+  const clientOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          postableRequirements
+            .map((req) => String(req.company || "").trim())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [postableRequirements],
+  );
+
+  const roleOptions = useMemo(() => {
+    const byRole = new Map<string, { roleId: string; position: string }>();
+    for (const req of postableRequirements) {
+      const company = String(req.company || "").trim();
+      if (!company || (selectedClientCompany && company !== selectedClientCompany)) continue;
+      const roleId = resolveDisplayRoleId(req);
+      const position = String(req.position || "Role");
+      if (!byRole.has(roleId)) {
+        byRole.set(roleId, { roleId, position });
+      }
+    }
+    return Array.from(byRole.values()).sort((a, b) => a.roleId.localeCompare(b.roleId));
+  }, [postableRequirements, selectedClientCompany]);
+
+  const filteredRequirements = useMemo(
+    () =>
+      postableRequirements.filter((req) => {
+        const company = String(req.company || "").trim();
+        const roleId = resolveDisplayRoleId(req);
+        if (selectedClientCompany && company !== selectedClientCompany) return false;
+        if (selectedRoleId && roleId !== selectedRoleId) return false;
+        return true;
+      }),
+    [postableRequirements, selectedClientCompany, selectedRoleId],
+  );
+
   const requiresRequirementLink = Boolean(linkableRequirements?.length) && !formData.id;
 
-  const handleRequirementSelect = (requirementId: string) => {
+  const applyRequirementSelection = (requirementId: string) => {
     const requirement = postableRequirements.find((r) => r.id === requirementId);
     if (!requirement) return;
     const mapped = mapRequirementToJobForm(requirement);
+    setSelectedClientCompany(String(requirement.company || "").trim());
+    setSelectedRoleId(resolveDisplayRoleId(requirement));
     setFormData({
       ...formData,
       ...mapped,
@@ -181,7 +255,28 @@ export default function PostJobModal({
     setFormError("");
   };
 
+  const handleRequirementSelect = (requirementId: string) => {
+    applyRequirementSelection(requirementId);
+  };
+
+  const autoSelectRequirementForRole = (
+    clientCompany: string,
+    roleId: string,
+  ) => {
+    const matches = postableRequirements.filter((req) => {
+      const company = String(req.company || "").trim();
+      return company === clientCompany && resolveDisplayRoleId(req) === roleId;
+    });
+    if (matches.length > 0) {
+      applyRequirementSelection(matches[0].id);
+    } else {
+      setFormData({ ...formData, requirementId: "" });
+    }
+  };
+
   const resetForm = () => {
+    setSelectedClientCompany("");
+    setSelectedRoleId("");
     setFormData({
       requirementId: '',
       companyName: '',
@@ -218,17 +313,39 @@ export default function PostJobModal({
     return { min: null, max: null };
   };
 
-  const sanitizeSalaryInput = (value: string) => value.replace(/\D/g, "");
+  useEffect(() => {
+    if (!formData.requirementId) return;
+    const selectedReq = postableRequirements.find((req) => req.id === formData.requirementId);
+    if (!selectedReq) return;
+    setSelectedClientCompany(String(selectedReq.company || "").trim());
+    setSelectedRoleId(resolveDisplayRoleId(selectedReq));
+  }, [formData.requirementId, postableRequirements]);
+
+  const sanitizeSalaryInput = (value: string) => {
+    // Allow decimals like 2.2 LPA; normalize to a single dot.
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    const parts = cleaned.split(".");
+    if (parts.length <= 1) return cleaned;
+    return `${parts[0]}.${parts.slice(1).join("")}`;
+  };
 
   const parseSalary = (salary: string): { min: number | null; max: number | null } => {
     if (!salary) return { min: null, max: null };
-    const match = salary.match(/(\d+)/g);
-    if (match && match.length >= 2) {
-      return { min: parseInt(match[0]) * 100000, max: parseInt(match[1]) * 100000 };
-    } else if (match && match.length === 1) {
-      return { min: parseInt(match[0]) * 100000, max: null };
+
+    const normalized = salary.trim().toLowerCase().replace(/\s+/g, "");
+    const rangeParts = normalized.split("-").map((part) => part.replace(/[^0-9.]/g, ""));
+    const parseLpa = (value: string): number | null => {
+      if (!value) return null;
+      const parsed = Number.parseFloat(value);
+      if (!Number.isFinite(parsed)) return null;
+      return Math.round(parsed * 100000);
+    };
+
+    if (rangeParts.length >= 2) {
+      return { min: parseLpa(rangeParts[0]), max: parseLpa(rangeParts[1]) };
     }
-    return { min: null, max: null };
+
+    return { min: parseLpa(rangeParts[0] || normalized), max: null };
   };
 
 // Custom Suggestions Dropdown Component
@@ -239,6 +356,7 @@ const SuggestionsList = ({
   isVisible,
   onClose,
   onPointerDownInList,
+  allowCustomAdd = false,
 }: {
   options: string[];
   searchTerm: string;
@@ -246,11 +364,17 @@ const SuggestionsList = ({
   isVisible: boolean;
   onClose: () => void;
   onPointerDownInList?: () => void;
+  allowCustomAdd?: boolean;
 }) => {
-  const trimmed = (searchTerm || '').trim().toLowerCase();
+  const trimmedRaw = (searchTerm || '').trim();
+  const trimmed = trimmedRaw.toLowerCase();
   const filteredOptions = options.filter(
     (opt) => !trimmed || opt.toLowerCase().includes(trimmed),
   );
+  const showCustomAdd =
+    allowCustomAdd &&
+    trimmedRaw.length > 0 &&
+    !options.some((opt) => opt.toLowerCase() === trimmed);
 
   if (!isVisible) return null;
 
@@ -263,23 +387,35 @@ const SuggestionsList = ({
         onPointerDownInList?.();
       }}
     >
-      {filteredOptions.length === 0 ? (
+      {filteredOptions.map((opt) => (
+        <div
+          key={opt}
+          role="option"
+          className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-600 cursor-pointer transition-colors font-medium text-left"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onSelect(opt);
+            onClose();
+          }}
+        >
+          {opt}
+        </div>
+      ))}
+      {showCustomAdd && (
+        <div
+          role="option"
+          className="px-4 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 cursor-pointer transition-colors font-medium text-left border-t border-gray-100 dark:border-gray-800"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onSelect(trimmedRaw);
+            onClose();
+          }}
+        >
+          Add {trimmedRaw}
+        </div>
+      )}
+      {filteredOptions.length === 0 && !showCustomAdd && (
         <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">No matches</div>
-      ) : (
-        filteredOptions.map((opt) => (
-          <div
-            key={opt}
-            role="option"
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-600 cursor-pointer transition-colors font-medium text-left"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              onSelect(opt);
-              onClose();
-            }}
-          >
-            {opt}
-          </div>
-        ))
       )}
     </div>
   );
@@ -305,6 +441,14 @@ const deriveLocationType = (workMode: string): string => {
   const handlePostJob = () => {
     if (requiresRequirementLink && !formData.requirementId?.trim()) {
       setFormError("Please select a requirement to link this job posting.");
+      return;
+    }
+    if (requiresRequirementLink && !selectedClientCompany) {
+      setFormError("Please select a client.");
+      return;
+    }
+    if (requiresRequirementLink && !selectedRoleId) {
+      setFormError("Please select a Role ID.");
       return;
     }
 
@@ -343,6 +487,8 @@ const deriveLocationType = (workMode: string): string => {
       status: 'Active',
       companyLogo: formData.companyLogo || null,
       requirementId: formData.requirementId?.trim() || undefined,
+      selectedClientCompany: selectedClientCompany || undefined,
+      selectedRoleId: selectedRoleId || undefined,
     };
 
     postJobMutation.mutate(jobData);
@@ -455,39 +601,149 @@ const deriveLocationType = (workMode: string): string => {
               )}
 
               {requiresRequirementLink && (
-                <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
-                  <Label className="text-sm font-medium text-slate-700">
-                    Link to requirement *
-                  </Label>
-                  <p className="text-xs text-slate-500">
-                    Select a requirement with an assigned TA. Job details will auto-fill; the mapped TA receives applicants.
-                  </p>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">
-                      <ClipboardList size={16} />
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <Label className="text-sm font-semibold text-gray-800">Link to requirement *</Label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Select Client, Role ID, and Requirement. Job details auto-fill; the mapped TA receives applicants.
+                      </p>
                     </div>
+                    <Popover open={isPostingInfoOpen} onOpenChange={setIsPostingInfoOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          aria-label="Posting flow information"
+                          data-testid="button-post-job-flow-info"
+                          onMouseEnter={openPostingInfo}
+                          onMouseLeave={scheduleClosePostingInfo}
+                          onClick={() => setIsPostingInfoOpen((prev) => !prev)}
+                        >
+                          <Info size={14} />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="end"
+                        className="w-96 text-sm space-y-2 bg-blue-50 border border-blue-200"
+                        onMouseEnter={openPostingInfo}
+                        onMouseLeave={scheduleClosePostingInfo}
+                      >
+                        <p className="font-semibold text-slate-800">Job posting flow</p>
+                        <p className="text-slate-600">
+                          Normal (not split): select Client, Role ID, and Requirement; posting succeeds and mapped TA gets applications.
+                        </p>
+                        <p className="text-slate-600">
+                          Split requirements: multiple Requirements can share one Role ID. Only first post is allowed for that Role ID (first come, first serve).
+                        </p>
+                        <p className="text-slate-600">
+                          If already posted for same Role ID, system blocks with: <span className="font-medium">Job already Posted for this JD</span>.
+                        </p>
+                        <p className="text-slate-600">
+                          Candidate applications are distributed round-robin across split Requirements and their assigned TAs.
+                        </p>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="space-y-1.5 px-1">
+                    <Label className="text-xs text-gray-600">Select Client</Label>
                     <Select
-                      value={formData.requirementId || ""}
-                      onValueChange={handleRequirementSelect}
+                      value={selectedClientCompany}
+                      onValueChange={(value) => {
+                        setSelectedClientCompany(value);
+                        setSelectedRoleId("");
+                        setFormData({ ...formData, requirementId: "" });
+                      }}
                     >
-                      <SelectTrigger className="pl-10 bg-white" data-testid="select-linked-requirement">
-                        <SelectValue placeholder="Select requirement" />
+                      <SelectTrigger
+                        className="bg-slate-100 border-slate-300 h-10 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0"
+                        data-testid="select-post-job-client"
+                      >
+                        <SelectValue placeholder="Select Client" />
                       </SelectTrigger>
                       <SelectContent>
-                        {postableRequirements.length === 0 ? (
+                        {clientOptions.length === 0 ? (
                           <SelectItem value="__none" disabled>
-                            No requirements with TA assigned
+                            No client companies
                           </SelectItem>
                         ) : (
-                          postableRequirements.map((req) => (
-                            <SelectItem key={req.id} value={req.id}>
-                              {resolveRequirementDisplayId(req, req.displayRequirementId ?? undefined)} — {req.position} @ {req.company}
-                              {req.talentAdvisor ? ` (TA: ${req.talentAdvisor})` : ""}
+                          clientOptions.map((company) => (
+                            <SelectItem key={company} value={company}>
+                              {company}
                             </SelectItem>
                           ))
                         )}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-1.5 px-1">
+                    <Label className="text-xs text-gray-600">Select Role ID</Label>
+                    <Select
+                      value={selectedRoleId}
+                      onValueChange={(value) => {
+                        setSelectedRoleId(value);
+                        autoSelectRequirementForRole(selectedClientCompany, value);
+                      }}
+                      disabled={!selectedClientCompany}
+                    >
+                      <SelectTrigger
+                        className="bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0"
+                        data-testid="select-post-job-role-id"
+                      >
+                        <SelectValue placeholder="Select Role ID" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roleOptions.length === 0 ? (
+                          <SelectItem value="__none" disabled>
+                            No role IDs
+                          </SelectItem>
+                        ) : (
+                          roleOptions.map((role) => (
+                            <SelectItem key={role.roleId} value={role.roleId}>
+                              {formatRoleIdDropdownLabel(role.roleId, role.position)}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-slate-500">
+                      First posted Role ID is locked for duplicate job posting.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 px-1">
+                    <Label className="text-xs text-gray-600">Requirement</Label>
+                    <Select
+                      value={formData.requirementId || ""}
+                      onValueChange={handleRequirementSelect}
+                      disabled={!selectedRoleId}
+                    >
+                      <SelectTrigger
+                        className="bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0"
+                        data-testid="select-linked-requirement"
+                      >
+                        <SelectValue placeholder="Select Requirement" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredRequirements.length === 0 ? (
+                          <SelectItem value="__none" disabled>
+                            No matching requirements
+                          </SelectItem>
+                        ) : (
+                          filteredRequirements.map((req) => (
+                            <SelectItem key={req.id} value={req.id}>
+                              {resolveRequirementDisplayId(req, req.displayRequirementId ?? undefined)} ·{" "}
+                              {req.position}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {!selectedRoleId && (
+                      <p className="text-[11px] text-slate-500">Choose Client and Role ID first.</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -717,8 +973,8 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <Input
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.]?[0-9]*"
                     value={formData.salaryPackage}
                     onChange={(e) =>
                       setFormData({
@@ -738,7 +994,7 @@ const deriveLocationType = (workMode: string): string => {
                 <textarea
                   value={formData.aboutCompany}
                   onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-400"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-16 placeholder:text-gray-400"
                   placeholder="About Company * (max 1000 characters)"
                   data-testid="textarea-about-company"
                   maxLength={1000}
@@ -753,7 +1009,7 @@ const deriveLocationType = (workMode: string): string => {
                 <textarea
                   value={formData.roleDefinitions}
                   onChange={(e) => setFormData({...formData, roleDefinitions: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-400"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-16 placeholder:text-gray-400"
                   placeholder="Role Definitions * (max 1500 characters)"
                   data-testid="textarea-role-definitions"
                   maxLength={1500}
@@ -768,7 +1024,7 @@ const deriveLocationType = (workMode: string): string => {
                 <textarea
                   value={formData.keyResponsibility}
                   onChange={(e) => setFormData({...formData, keyResponsibility: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20 placeholder:text-gray-400"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-20 placeholder:text-gray-400"
                   placeholder="Key Responsibilities * (Enter as bullet points or sentences)"
                   data-testid="textarea-key-responsibility"
                   maxLength={2000}
@@ -807,6 +1063,7 @@ const deriveLocationType = (workMode: string): string => {
                       isVisible={activeDropdown === 'primarySkill'}
                       searchTerm={skillInputs.primary}
                       options={["Java", "Python", "React", "Angular", "Node.js", "AWS", "SQL", "Project Management"]}
+                      allowCustomAdd
                       onSelect={(val) => {
                         addSkill('primary', val);
                         setSkillInputs({...skillInputs, primary: ''});
@@ -827,7 +1084,7 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(formData.primarySkills || []).filter(s => s && s.trim() !== '').map((skill, index) => (
-                      <Badge key={index} className="bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
+                      <Badge key={index} className="bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-medium">
                         {skill}
                         <X size={12} className="cursor-pointer hover:text-blue-900" onClick={() => removeSkill('primary', index)} />
                       </Badge>
@@ -860,6 +1117,7 @@ const deriveLocationType = (workMode: string): string => {
                       isVisible={activeDropdown === 'secondarySkill'}
                       searchTerm={skillInputs.secondary}
                       options={["Git", "Docker", "Jira", "TypeScript", "CSS", "HTML", "Communication"]}
+                      allowCustomAdd
                       onSelect={(val) => {
                         addSkill('secondary', val);
                         setSkillInputs({...skillInputs, secondary: ''});
@@ -880,7 +1138,7 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(formData.secondarySkills || []).filter(s => s && s.trim() !== '').map((skill, index) => (
-                      <Badge key={index} className="bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
+                      <Badge key={index} className="bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-medium">
                         {skill}
                         <X size={12} className="cursor-pointer hover:text-indigo-900" onClick={() => removeSkill('secondary', index)} />
                       </Badge>
@@ -911,6 +1169,7 @@ const deriveLocationType = (workMode: string): string => {
                       isVisible={activeDropdown === 'knowledgeSkill'}
                       searchTerm={skillInputs.knowledge}
                       options={["Machine Learning", "Blockchain", "AI", "Cybersecurity", "Data Science"]}
+                      allowCustomAdd
                       onSelect={(val) => {
                         addSkill('knowledge', val);
                         setSkillInputs({...skillInputs, knowledge: ''});
@@ -931,7 +1190,7 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(formData.knowledgeOnly || []).filter(s => s && s.trim() !== '').map((skill, index) => (
-                      <Badge key={index} className="bg-gray-50 text-gray-600 border border-gray-200 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-bold">
+                      <Badge key={index} className="bg-gray-50 text-gray-600 border border-gray-200 rounded-full px-3 py-1 flex items-center gap-2 text-[11px] font-medium">
                         {skill}
                         <X size={12} className="cursor-pointer hover:text-gray-900" onClick={() => removeSkill('knowledge', index)} />
                       </Badge>
@@ -988,7 +1247,7 @@ const deriveLocationType = (workMode: string): string => {
               <div className="flex gap-3 pt-4">
                 <Button 
                   variant="outline" 
-                  className="flex-1 bg-blue-50 text-blue-600 border-blue-200 rounded-sm"
+                  className="flex-1 bg-blue-50 text-blue-600 border-blue-200 rounded-[4px]"
                   onClick={() => setIsPreviewModalOpen(true)}
                   disabled={postJobMutation.isPending}
                   data-testid="button-preview-job"
@@ -996,7 +1255,7 @@ const deriveLocationType = (workMode: string): string => {
                   Preview
                 </Button>
                 <Button 
-                  className="flex-1 bg-blue-600 text-white rounded-sm disabled:bg-gray-300 disabled:text-gray-500"
+                  className="flex-1 bg-blue-600 text-white rounded-[4px] disabled:bg-gray-300 disabled:text-gray-500"
                   onClick={handlePostJob}
                   disabled={!isFormValid || postJobMutation.isPending}
                   data-testid="button-post-job"

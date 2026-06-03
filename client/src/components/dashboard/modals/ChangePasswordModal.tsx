@@ -83,23 +83,23 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[450px] bg-white border-none shadow-2xl rounded-3xl p-0 overflow-hidden">
-        <DialogHeader className="bg-slate-900 px-8 py-8 text-white relative">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border-none bg-white p-0 shadow-2xl sm:max-w-[450px] sm:w-full sm:rounded-3xl">
+        <DialogHeader className="relative bg-slate-900 px-4 py-6 text-white md:px-8 md:py-8">
+          <div className="absolute top-0 right-0 hidden p-8 opacity-10 sm:block">
             <ShieldCheck size={120} />
           </div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-blue-500/20 p-2 rounded-xl backdrop-blur-sm">
-              <Lock className="text-blue-400 h-6 w-6" />
+          <div className="mb-2 flex items-center gap-3">
+            <div className="rounded-xl bg-blue-500/20 p-2 backdrop-blur-sm">
+              <Lock className="h-5 w-5 text-blue-400 md:h-6 md:w-6" />
             </div>
-            <DialogTitle className="text-2xl font-black tracking-tight">Change Password</DialogTitle>
+            <DialogTitle className="text-xl font-black tracking-tight md:text-2xl">Change Password</DialogTitle>
           </div>
           <DialogDescription className="text-slate-400 font-medium text-sm">
             Keep your account secure by updating your password regularly.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="px-8 py-8 space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 px-4 py-6 md:px-8 md:py-8">
           {error && (
             <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
               <AlertCircle size={18} />
@@ -181,19 +181,19 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             </div>
           </div>
 
-          <DialogFooter className="pt-4 flex sm:justify-between gap-3">
+          <DialogFooter className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-between">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="h-12 px-8 rounded-2xl border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-all flex-1 tracking-tight"
+              className="h-11 w-full rounded-2xl border-slate-200 px-6 font-semibold tracking-tight text-slate-600 transition-all hover:bg-slate-50 sm:h-12 sm:flex-1 sm:px-8"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="h-12 px-10 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex-1 tracking-tight"
+              className="h-11 w-full rounded-2xl bg-blue-600 px-6 font-semibold tracking-tight text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 sm:h-12 sm:flex-1 sm:px-10"
             >
               {isSubmitting ? (
                 <>

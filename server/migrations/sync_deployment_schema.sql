@@ -199,7 +199,8 @@ CREATE TABLE IF NOT EXISTS profile_media (
 );
 
 ALTER TABLE revenue_mappings
-  ADD COLUMN IF NOT EXISTS in_revenue_data boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS in_revenue_data boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS payment_date text;
 
 -- Existing admin revenue rows (non-zero revenue/incentive) count as Revenue Data
 UPDATE revenue_mappings

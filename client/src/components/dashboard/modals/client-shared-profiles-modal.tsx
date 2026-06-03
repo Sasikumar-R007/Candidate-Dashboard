@@ -81,7 +81,7 @@ export function ClientSharedProfilesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[92vh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-w-2xl sm:w-full md:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Shared profiles</DialogTitle>
           <DialogDescription>

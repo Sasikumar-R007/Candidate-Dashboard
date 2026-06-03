@@ -15,6 +15,8 @@ export type ClientJdSourceDetails = RequirementJdExtras & {
 
 const STR_ROLE_ID_PATTERN = /^STR\d{5}$/;
 const STREQ_ID_PATTERN = /^STREQ\d+$/i;
+const UUID_LIKE_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function extractStreqId(
   requirement: { id?: string | null; sourceDetails?: string | null } | null | undefined,
@@ -186,6 +188,22 @@ export function resolveDisplayRoleId(
 /** @deprecated Use resolveDisplayRoleId — kept for call sites that only pass id string. */
 export function formatRoleIdShort(id?: string | null): string {
   return resolveDisplayRoleId(id);
+}
+
+/** Compact Role ID label for dropdowns — hides long UUIDs, keeps STR ids. */
+export function formatRoleIdDropdownLabel(
+  roleId: string,
+  position?: string | null,
+): string {
+  const pos = String(position || "Role").trim();
+  if (!roleId || roleId === "N/A") return pos;
+  if (STR_ROLE_ID_PATTERN.test(roleId)) {
+    return `${roleId.toUpperCase()} · ${pos}`;
+  }
+  if (UUID_LIKE_PATTERN.test(roleId) || roleId.length > 20) {
+    return pos;
+  }
+  return `${roleId} · ${pos}`;
 }
 
 /** Persist STR Role ID in sourceDetails for admin-created requirements (UUID primary keys). */

@@ -14,8 +14,16 @@ import {
   extractStreqId,
   mergeDisplayRequirementIdInSourceDetails,
   parseRequirementJdExtras,
+  resolveDisplayRoleId,
 } from "@shared/requirement-jd-extras";
 import { normalizePipelineDisplayStatus } from "@shared/pipeline-stages";
+import {
+  buildClientQualityChartPoints,
+  buildClientSpeedChartPoints,
+  computeClientQualityMetrics,
+  computeClientSpeedMetrics,
+  filterApplicationsByPeriod,
+} from "./client-portal-metrics";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { sql, eq, and, or, desc, lte, gte, inArray, isNull } from "drizzle-orm";
@@ -2163,6 +2171,55 @@ async function buildProfilePictureLookup(
     lookup.set(id, candidate?.profilePicture || profile?.profilePicture || null);
   }
   return lookup;
+}
+
+function formatPipelineAppliedOn(value: unknown): string {
+  if (value == null || value === "") return "N/A";
+  const d = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(d.getTime())) return "N/A";
+  return d
+    .toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
+    .replace(/\//g, "-");
+}
+
+function isTeamLeaderRole(role: string | null | undefined): boolean {
+  const normalized = (role || "").toLowerCase().replace(/[\s-]+/g, "_");
+  return normalized === "team_leader" || normalized === "teamleader" || normalized === "tl";
+}
+
+async function safeSelectActiveRequirementAssignmentsForRecruiters(
+  recruiterIds: string[],
+): Promise<any[]> {
+  if (recruiterIds.length === 0) return [];
+  try {
+    const { requirementAssignments } = await import("@shared/schema");
+    return await db
+      .select()
+      .from(requirementAssignments)
+      .where(
+        and(
+          eq(requirementAssignments.status, "active"),
+          inArray(requirementAssignments.recruiterId, recruiterIds),
+        ),
+      );
+  } catch (error) {
+    console.warn("[team-leader/pipeline] requirement_assignments unavailable:", error);
+    return [];
+  }
+}
+
+async function safeSelectResumeSubmissionsForRecruiters(recruiterIds: string[]): Promise<any[]> {
+  if (recruiterIds.length === 0) return [];
+  try {
+    const { resumeSubmissions } = await import("@shared/schema");
+    return await db
+      .select()
+      .from(resumeSubmissions)
+      .where(inArray(resumeSubmissions.recruiterId, recruiterIds));
+  } catch (error) {
+    console.warn("[team-leader/pipeline] resume_submissions unavailable:", error);
+    return [];
+  }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -4508,6 +4565,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ownerEmployeeId = job.ownerEmployeeId;
             ownerRole = job.ownerRole;
           }
+
+          if (job?.requirementId) {
+            const baseRequirement = await storage.getRequirementById(job.requirementId);
+            if (baseRequirement) {
+              const splitRoleId = resolveDisplayRoleId(baseRequirement).trim().toUpperCase();
+              const allRequirements = await storage.getRequirements();
+              const splitRequirements = allRequirements
+                .filter(
+                  (req: any) =>
+                    req.talentAdvisorId &&
+                    resolveDisplayRoleId(req).trim().toUpperCase() === splitRoleId &&
+                    String(req.company || "").trim().toLowerCase() ===
+                      String(baseRequirement.company || "").trim().toLowerCase(),
+                )
+                .sort(
+                  (a: any, b: any) =>
+                    new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime(),
+                );
+
+              if (splitRequirements.length > 0) {
+                const jobApplicationsForThisJob = await storage.getJobApplicationsByRecruiterJobId(job.id);
+                const rrIndex = jobApplicationsForThisJob.length % splitRequirements.length;
+                const selectedRequirement = splitRequirements[rrIndex];
+                ownerEmployeeId = selectedRequirement.talentAdvisorId;
+                ownerRole = "recruiter";
+                (validationResult.data as any).requirementId = selectedRequirement.id;
+              }
+            }
+          }
         } catch (err) {
           console.error("Failed to check job assignment for ownership:", err);
         }
@@ -5562,90 +5648,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      if (employee.role !== 'team_leader') {
+      if (!isTeamLeaderRole(employee.role)) {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
-      // Get optional TA filter from query parameter
       const taFilter = req.query.ta as string | undefined;
 
-      // Get team members (recruiters/TAs reporting to this TL)
       const allEmployees = await storage.getAllEmployees();
-      const teamRecruiters = allEmployees.filter(
-        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
-      );
-
-      // If TA filter is specified, filter to that specific TA
-      let filteredTeamRecruiters = teamRecruiters;
-      if (taFilter && taFilter !== 'all') {
-        filteredTeamRecruiters = teamRecruiters.filter(ta => ta.id === taFilter || ta.employeeId === taFilter);
+      let teamRecruiters = getTeamLeaderRecruiters(employee, allEmployees);
+      if (taFilter && taFilter !== "all") {
+        teamRecruiters = teamRecruiters.filter(
+          (ta) => ta.id === taFilter || ta.employeeId === taFilter,
+        );
       }
 
-      const teamRecruiterIds = new Set(filteredTeamRecruiters.map(r => r.id));
-      const teamRecruiterEmployeeIds = new Set(filteredTeamRecruiters.map(r => r.employeeId));
+      const teamRecruiterIds = new Set(teamRecruiters.map((r) => r.id));
+      const teamRecruiterEmployeeIds = new Set(
+        teamRecruiters.map((r) => r.employeeId).filter(Boolean) as string[],
+      );
+      const teamRecruiterIdsArray = Array.from(teamRecruiterIds);
 
-      // Get all job applications
       const allApplications = await storage.getAllJobApplications();
 
-      // Filter applications by TAs who report to this TL
-      // Applications are linked via recruiterId (session.employeeId when created)
-      const teamApplications = allApplications.filter((app: any) => {
-        // Check if application was created by one of the team recruiters
-        // We need to find the recruiter who created this application
-        // Applications have recruiterJobId which links to recruiter_jobs table
-        // Or we can check if the application's recruiterId matches any team recruiter
-
-        // Try to match by recruiter ID from the application
-        // Since we don't have direct recruiterId in job_applications, we'll use a different approach
-        // We'll get all recruiter jobs for the team and match applications to those jobs
-        return true; // We'll filter this properly below
-      });
-
-      // Get all recruiter jobs for team members to match applications
       const allRecruiterJobs = await storage.getAllRecruiterJobs();
       const teamRecruiterJobIds = new Set(
         allRecruiterJobs
-          .filter((job: any) => teamRecruiterIds.has(job.recruiterId) || teamRecruiterEmployeeIds.has(job.recruiterId))
-          .map((job: any) => job.id)
+          .filter(
+            (job: any) =>
+              teamRecruiterIds.has(job.recruiterId) ||
+              teamRecruiterEmployeeIds.has(job.recruiterId),
+          )
+          .map((job: any) => job.id),
       );
 
-      // Get requirements assigned to team TAs (using active assignments only)
       const allRequirements = await storage.getRequirements();
-      const { requirementAssignments } = await import("@shared/schema");
+      const allAssignments = await safeSelectActiveRequirementAssignmentsForRecruiters(
+        teamRecruiterIdsArray,
+      );
 
-      // Get requirement IDs assigned to team TAs (both from requirements table and assignments table)
       const teamRequirementIds = new Set<string>();
-
-      // Method 1: From requirements table (talentAdvisorId)
-      allRequirements.forEach((req: any) => {
-        if (req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId)) {
+      for (const req of allRequirements) {
+        if (req.isArchived) continue;
+        if (taFilter && taFilter !== "all") {
+          if (req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId)) {
+            teamRequirementIds.add(req.id);
+          }
+          if (
+            allAssignments.some(
+              (a) =>
+                a.requirementId === req.id &&
+                a.status === "active" &&
+                teamRecruiterIds.has(a.recruiterId),
+            )
+          ) {
+            teamRequirementIds.add(req.id);
+          }
+        } else if (
+          requirementMatchesTeamLeader(employee, req, allEmployees, allAssignments)
+        ) {
           teamRequirementIds.add(req.id);
         }
-      });
-
-      // Method 2: From requirementAssignments table (active assignments for team recruiters)
-      const teamRecruiterIdsArray = Array.from(teamRecruiterIds);
-      let allAssignments: any[] = [];
-      if (teamRecruiterIdsArray.length > 0) {
-        allAssignments = await db.select().from(requirementAssignments)
-          .where(
-            and(
-              eq(requirementAssignments.status, "active"),
-              inArray(requirementAssignments.recruiterId, teamRecruiterIdsArray)
-            )
-          );
-
-        allAssignments.forEach((assignment: any) => {
-          teamRequirementIds.add(assignment.requirementId);
-        });
       }
 
-      // Also get resume submissions for team TAs (these are also part of pipeline)
-      const { resumeSubmissions } = await import("@shared/schema");
-      const teamResumeSubmissions = teamRecruiterIdsArray.length > 0
-        ? await db.select().from(resumeSubmissions)
-          .where(inArray(resumeSubmissions.recruiterId, teamRecruiterIdsArray))
-        : [];
+      const teamResumeSubmissions =
+        await safeSelectResumeSubmissionsForRecruiters(teamRecruiterIdsArray);
 
       // Filter applications that belong to team recruiter jobs OR tagged to team requirements
       const finalApplications = allApplications.filter((app: any) => {
@@ -5703,6 +5769,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const status = (app.status || "").trim().toLowerCase();
         return status !== "archived" && status !== "";
       });
+
+      const profilePictureLookup = await buildProfilePictureLookup(
+        pipelineApplications.map((app: any) => app.profileId),
+      );
 
       // Format pipeline data similar to recruiter pipeline
       const pipelineData = pipelineApplications.map((app: any) => {
@@ -5798,9 +5868,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           })(),
           appliedDate: app.appliedDate || null,
-          appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
-          createdAt: app.appliedDate || new Date().toISOString(),
-          updatedAt: app.appliedDate || new Date().toISOString(),
+          appliedOn: formatPipelineAppliedOn(app.appliedDate),
+          createdAt: app.appliedDate
+            ? (app.appliedDate instanceof Date
+                ? app.appliedDate.toISOString()
+                : String(app.appliedDate))
+            : new Date().toISOString(),
+          updatedAt: app.appliedDate
+            ? (app.appliedDate instanceof Date
+                ? app.appliedDate.toISOString()
+                : String(app.appliedDate))
+            : new Date().toISOString(),
           profileId: app.profileId || null,
           requirementId: app.requirementId || null,
           profilePicture: app.profileId
@@ -5811,8 +5889,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(pipelineData);
     } catch (error) {
-      console.error('Get team leader pipeline error:', error);
-      res.status(500).json({ message: "Failed to fetch pipeline data", error: error instanceof Error ? error.message : String(error) });
+      console.error("Get team leader pipeline error:", error);
+      res.status(500).json({
+        message: "Failed to fetch pipeline data",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   });
 
@@ -5825,51 +5906,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const role = (employee.role || '').toLowerCase();
-      if (role !== 'team_leader') {
+      if (!isTeamLeaderRole(employee.role)) {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
-      // Get team members (recruiters reporting to this TL)
       const allEmployees = await storage.getAllEmployees();
-      const teamRecruiters = allEmployees.filter(
-        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
-      );
-      const teamRecruiterNames = teamRecruiters.map(r => r.name.toLowerCase());
-      const teamRecruiterIdsArray = teamRecruiters.map(r => r.id);
+      const teamRecruiters = getTeamLeaderRecruiters(employee, allEmployees);
+      const teamRecruiterIdsArray = teamRecruiters.map((r) => r.id);
+      const teamRecruiterIds = new Set(teamRecruiterIdsArray);
 
-      // Get team data similarly to the main pipeline endpoint
       const allApplications = await storage.getAllJobApplications();
       const recruiterJobsList = await storage.getAllRecruiterJobs();
       const teamRecruiterJobIds = new Set(
         recruiterJobsList
-          .filter(job => job.recruiterId && teamRecruiterIdsArray.includes(job.recruiterId))
-          .map(job => job.id)
+          .filter((job) => job.recruiterId && teamRecruiterIds.has(job.recruiterId))
+          .map((job) => job.id),
       );
 
-      const assignments = await storage.getActiveRequirementAssignments();
+      const allRequirements = await storage.getRequirements();
+      const assignments = await safeSelectActiveRequirementAssignmentsForRecruiters(
+        teamRecruiterIdsArray,
+      );
       const teamRequirementIds = new Set<string>();
-      if (assignments && assignments.length > 0) {
-        assignments.forEach((assignment: any) => {
-          if (teamRecruiterIdsArray.includes(assignment.recruiterId)) {
-            teamRequirementIds.add(assignment.requirementId);
-          }
-        });
+      for (const req of allRequirements) {
+        if (requirementMatchesTeamLeader(employee, req, allEmployees, assignments)) {
+          teamRequirementIds.add(req.id);
+        }
       }
 
-      // Filter applications that belong to team
       const teamApplications = allApplications.filter((app: any) => {
         if (app.recruiterJobId && teamRecruiterJobIds.has(app.recruiterJobId)) return true;
         if (app.requirementId && teamRequirementIds.has(app.requirementId)) return true;
         return false;
       });
 
-      // Also get resume submissions for team
-      const { resumeSubmissions } = await import("@shared/schema");
-      const teamResumeSubmissions = teamRecruiterIdsArray.length > 0
-        ? await db.select().from(resumeSubmissions)
-          .where(inArray(resumeSubmissions.recruiterId, teamRecruiterIdsArray))
-        : [];
+      const teamResumeSubmissions =
+        await safeSelectResumeSubmissionsForRecruiters(teamRecruiterIdsArray);
 
       // Combine all "pipeline entities"
       const allPipelineItems = [
@@ -11251,6 +11323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceNumber,
         receivedPayment,
         paymentDetails,
+        paymentDate,
         paymentStatus,
         incentivePaidMonth,
       } = req.body;
@@ -11297,6 +11370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceNumber,
         receivedPayment: receivedPayment ? parseFloat(receivedPayment) : null,
         paymentDetails,
+        paymentDate: paymentDate || null,
         paymentStatus,
         incentivePaidMonth,
         inRevenueData: true,
@@ -11537,6 +11611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceNumber,
         receivedPayment,
         paymentDetails,
+        paymentDate,
         paymentStatus,
         incentivePaidMonth,
       } = req.body;
@@ -11592,6 +11667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (invoiceNumber) updateData.invoiceNumber = invoiceNumber;
       if (receivedPayment !== undefined) updateData.receivedPayment = receivedPayment ? parseFloat(receivedPayment) : null;
       if (paymentDetails) updateData.paymentDetails = paymentDetails;
+      if (paymentDate !== undefined) updateData.paymentDate = paymentDate || null;
       if (paymentStatus) updateData.paymentStatus = paymentStatus;
       if (incentivePaidMonth) updateData.incentivePaidMonth = incentivePaidMonth;
       if (req.body.candidateName !== undefined) {
@@ -12861,6 +12937,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         companyLogo,
         requirementId: linkedRequirementId,
+        selectedClientCompany,
+        selectedRoleId,
       } = req.body;
 
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -12878,11 +12956,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let assignedTaId: string | null = null;
       let assignedTaName: string | null = null;
       let resolvedRequirementId: string | null = linkedRequirementId || null;
+      let resolvedRoleId: string | null = null;
 
       if (linkedRequirementId) {
         const linkedRequirement = await storage.getRequirementById(linkedRequirementId);
         if (!linkedRequirement) {
           return res.status(404).json({ message: "Linked requirement not found" });
+        }
+        resolvedRoleId = resolveDisplayRoleId(linkedRequirement);
+
+        if (
+          selectedClientCompany &&
+          String(selectedClientCompany).trim().toLowerCase() !==
+            String(linkedRequirement.company || "").trim().toLowerCase()
+        ) {
+          return res.status(400).json({ message: "Selected client does not match the selected requirement" });
+        }
+
+        if (
+          selectedRoleId &&
+          String(selectedRoleId).trim().toUpperCase() !==
+            String(resolvedRoleId || "").trim().toUpperCase()
+        ) {
+          return res.status(400).json({ message: "Selected Role ID does not match the selected requirement" });
         }
 
         if (employee.role === "team_leader") {
@@ -12920,6 +13016,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             (emp) => emp.role === "recruiter" && emp.name === assignedTaName,
           );
           if (taEmployee) assignedTaId = taEmployee.id;
+        }
+      }
+
+      if (resolvedRoleId) {
+        const existingJobs = await storage.getAllRecruiterJobs();
+        const activeJobsWithRequirement = existingJobs.filter(
+          (job) =>
+            job.status !== "Closed" &&
+            job.requirementId &&
+            String(job.requirementId).trim() !== String(resolvedRequirementId || "").trim(),
+        );
+
+        if (activeJobsWithRequirement.length > 0) {
+          const linkedRequirements = await Promise.all(
+            activeJobsWithRequirement.map((job) => storage.getRequirementById(String(job.requirementId))),
+          );
+          const duplicateRequirement = linkedRequirements.find(
+            (req) =>
+              req &&
+              String(resolveDisplayRoleId(req)).trim().toUpperCase() ===
+                String(resolvedRoleId).trim().toUpperCase(),
+          );
+          if (duplicateRequirement) {
+            return res.status(409).json({
+              message: `Job already Posted for this JD (${duplicateRequirement.position || resolvedRoleId})`,
+            });
+          }
         }
       }
 
@@ -15843,132 +15966,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         app.requirementId && clientRequirementIds.has(app.requirementId)
       );
 
-      // Filter by period
-      let filteredApplications = clientApplications;
-      if (dateStr) {
-        const filterDate = new Date(dateStr);
-        // Helper to parse date (handles DD-MM-YYYY and ISO formats)
-        const parseDate = (dateStr: string): Date | null => {
-          if (!dateStr) return null;
-          try {
-            // Try DD-MM-YYYY format first
-            if (dateStr.includes('-') && dateStr.split('-').length === 3) {
-              const parts = dateStr.split('-');
-              if (parts[0].length <= 2 && parts[1].length <= 2) {
-                const [day, month, year] = parts;
-                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-              }
-            }
-            // Try ISO format
-            return new Date(dateStr);
-          } catch {
-            return null;
-          }
-        };
-
-        if (period === 'daily') {
-          filteredApplications = clientApplications.filter((app: any) => {
-            if (!app.appliedDate) return false;
-            const appDate = parseDate(app.appliedDate);
-            if (!appDate) return false;
-            return appDate.toDateString() === filterDate.toDateString();
-          });
-        } else if (period === 'weekly') {
-          const weekStart = new Date(filterDate);
-          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekEnd.getDate() + 6);
-          filteredApplications = clientApplications.filter((app: any) => {
-            if (!app.appliedDate) return false;
-            const appDate = parseDate(app.appliedDate);
-            if (!appDate) return false;
-            return appDate >= weekStart && appDate <= weekEnd;
-          });
-        } else if (period === 'monthly') {
-          filteredApplications = clientApplications.filter((app: any) => {
-            if (!app.appliedDate) return false;
-            const appDate = parseDate(app.appliedDate);
-            if (!appDate) return false;
-            return appDate.getMonth() === filterDate.getMonth() &&
-              appDate.getFullYear() === filterDate.getFullYear();
-          });
-        }
-      }
-
-      // Calculate Time to 1st Submission
-      let timeToFirstSubmission = 0;
-      const firstSubmissions = scopedRequirements.map((req: any) => {
-        const firstApp = filteredApplications
-          .filter((app: any) => app.requirementId === req.id)
-          .sort((a: any, b: any) => new Date(a.appliedDate).getTime() - new Date(b.appliedDate).getTime())[0];
-        if (firstApp && req.createdAt) {
-          const reqDate = new Date(req.createdAt);
-          const appDate = new Date(firstApp.appliedDate);
-          return Math.floor((appDate.getTime() - reqDate.getTime()) / (1000 * 60 * 60 * 24));
-        }
-        return null;
-      }).filter((days: any) => days !== null && days >= 0);
-      if (firstSubmissions.length > 0) {
-        timeToFirstSubmission = Math.round(firstSubmissions.reduce((a: number, b: number) => a + b, 0) / firstSubmissions.length);
-      }
-
-      // Calculate Time to Interview (simplified - using status changes)
-      let timeToInterview = 0;
-      const interviewTimes = filteredApplications
-        .filter((app: any) => ['L1', 'L2', 'L3', 'Final Round', 'HR Round'].includes(app.status))
-        .map((app: any) => {
-          if (app.appliedDate && app.updatedAt) {
-            const appDate = new Date(app.appliedDate);
-            const interviewDate = new Date(app.updatedAt);
-            return Math.floor((interviewDate.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24));
-          }
-          return null;
-        })
-        .filter((days: any) => days !== null && days >= 0);
-      if (interviewTimes.length > 0) {
-        timeToInterview = Math.round(interviewTimes.reduce((a: number, b: number) => a + b, 0) / interviewTimes.length);
-      }
-
-      // Calculate Time to Offer
-      let timeToOffer = 0;
-      const offerTimes = filteredApplications
-        .filter((app: any) => ['Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status))
-        .map((app: any) => {
-          if (app.appliedDate && app.updatedAt) {
-            const appDate = new Date(app.appliedDate);
-            const offerDate = new Date(app.updatedAt);
-            return Math.floor((offerDate.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24));
-          }
-          return null;
-        })
-        .filter((days: any) => days !== null && days >= 0);
-      if (offerTimes.length > 0) {
-        timeToOffer = Math.round(offerTimes.reduce((a: number, b: number) => a + b, 0) / offerTimes.length);
-      }
-
-      // Calculate Time to Fill
-      let timeToFill = 0;
-      const fillTimes = allRequirements
-        .filter((req: any) => req.status === 'closed' || req.status === 'filled')
-        .map((req: any) => {
-          if (req.createdAt && req.updatedAt) {
-            const reqDate = new Date(req.createdAt);
-            const fillDate = new Date(req.updatedAt);
-            return Math.floor((fillDate.getTime() - reqDate.getTime()) / (1000 * 60 * 60 * 24));
-          }
-          return null;
-        })
-        .filter((days: any) => days !== null && days >= 0);
-      if (fillTimes.length > 0) {
-        timeToFill = Math.round(fillTimes.reduce((a: number, b: number) => a + b, 0) / fillTimes.length);
-      }
-
-      res.json({
-        timeToFirstSubmission: timeToFirstSubmission || 0,
-        timeToInterview: timeToInterview || 0,
-        timeToOffer: timeToOffer || 0,
-        timeToFill: timeToFill || 0
-      });
+      const filteredApplications = filterApplicationsByPeriod(
+        clientApplications,
+        period,
+        dateStr,
+      );
+      const metrics = computeClientSpeedMetrics(scopedRequirements, filteredApplications);
+      res.json(metrics);
     } catch (error: any) {
       console.error('Speed metrics error:', error);
       res.status(500).json({
@@ -16019,89 +16023,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         app.requirementId && clientRequirementIds.has(app.requirementId)
       );
 
-      // Filter by period
-      if (dateStr) {
-        const filterDate = new Date(dateStr);
-        // Helper to parse date (handles DD-MM-YYYY and ISO formats)
-        const parseDate = (dateStr: string): Date | null => {
-          if (!dateStr) return null;
-          try {
-            // Try DD-MM-YYYY format first
-            if (dateStr.includes('-') && dateStr.split('-').length === 3) {
-              const parts = dateStr.split('-');
-              if (parts[0].length <= 2 && parts[1].length <= 2) {
-                const [day, month, year] = parts;
-                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-              }
-            }
-            // Try ISO format
-            return new Date(dateStr);
-          } catch {
-            return null;
-          }
-        };
-
-        if (period === 'daily') {
-          clientApplications = clientApplications.filter((app: any) => {
-            if (!app.appliedDate) return false;
-            const appDate = parseDate(app.appliedDate);
-            if (!appDate) return false;
-            return appDate.toDateString() === filterDate.toDateString();
-          });
-        } else if (period === 'weekly') {
-          const weekStart = new Date(filterDate);
-          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekEnd.getDate() + 6);
-          clientApplications = clientApplications.filter((app: any) => {
-            if (!app.appliedDate) return false;
-            const appDate = parseDate(app.appliedDate);
-            if (!appDate) return false;
-            return appDate >= weekStart && appDate <= weekEnd;
-          });
-        } else if (period === 'monthly') {
-          clientApplications = clientApplications.filter((app: any) => {
-            if (!app.appliedDate) return false;
-            const appDate = parseDate(app.appliedDate);
-            if (!appDate) return false;
-            return appDate.getMonth() === filterDate.getMonth() &&
-              appDate.getFullYear() === filterDate.getFullYear();
-          });
-        }
-      }
-
-      // Calculate Submission to Short List %
-      const totalSubmissions = clientApplications.length;
-      const shortlisted = clientApplications.filter((app: any) =>
-        ['Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
-      ).length;
-      const submissionToShortList = totalSubmissions > 0 ? Math.round((shortlisted / totalSubmissions) * 100) : 0;
-
-      // Calculate Interview to Offer %
-      const interviewed = clientApplications.filter((app: any) =>
-        ['L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
-      ).length;
-      const offersExtended = clientApplications.filter((app: any) =>
-        ['Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
-      ).length;
-      const interviewToOffer = interviewed > 0 ? Math.round((offersExtended / interviewed) * 100) : 0;
-
-      // Calculate Offer Acceptance %
-      const totalOffers = offersExtended;
-      const acceptedOffers = clientApplications.filter((app: any) =>
-        ['Closure', 'Joined'].includes(app.status)
-      ).length;
-      const offerAcceptance = totalOffers > 0 ? Math.round((acceptedOffers / totalOffers) * 100) : 0;
-
-      // Calculate Early Attrition % (simplified - would need hire date and exit date tracking)
-      const earlyAttrition = 0; // TODO: Implement with proper tracking
-
-      res.json({
-        submissionToShortList: submissionToShortList || 0,
-        interviewToOffer: interviewToOffer || 0,
-        offerAcceptance: offerAcceptance || 0,
-        earlyAttrition: earlyAttrition || 0
-      });
+      const filteredApplications = filterApplicationsByPeriod(
+        clientApplications,
+        period,
+        dateStr,
+      );
+      const metrics = computeClientQualityMetrics(filteredApplications);
+      res.json(metrics);
     } catch (error: any) {
       console.error('Quality metrics error:', error);
       res.status(500).json({
@@ -16113,28 +16041,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Speed metrics chart data
-  app.get("/api/client/speed-metrics-chart", (req, res) => {
-    res.json([
-      { month: 'Jan', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
-      { month: 'Feb', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
-      { month: 'Mar', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
-      { month: 'Apr', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
-      { month: 'May', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
-      { month: 'Jun', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 }
-    ]);
+  // Speed metrics chart data (monthly trend from live client-scoped records)
+  app.get("/api/client/speed-metrics-chart", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      };
+      const { requirements: allRequirements } = await getClientScopedRequirements(authEmp);
+      const roleId = req.query.role as string;
+      const scopedRequirements =
+        roleId && roleId !== "all"
+          ? allRequirements.filter((req: any) => String(req.id) === String(roleId))
+          : allRequirements;
+
+      const allApplications = await storage.getAllJobApplications();
+      const clientRequirementIds = new Set(scopedRequirements.map((req: any) => req.id));
+      const clientApplications = allApplications.filter(
+        (app: any) => app.requirementId && clientRequirementIds.has(app.requirementId),
+      );
+
+      res.json(buildClientSpeedChartPoints(scopedRequirements, clientApplications));
+    } catch (error) {
+      console.error("Client speed metrics chart error:", error);
+      res.status(500).json([]);
+    }
   });
 
-  // Quality metrics chart data
-  app.get("/api/client/quality-metrics-chart", (req, res) => {
-    res.json([
-      { month: 'Jan', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
-      { month: 'Feb', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
-      { month: 'Mar', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
-      { month: 'Apr', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
-      { month: 'May', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
-      { month: 'Jun', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 }
-    ]);
+  // Quality metrics chart data (monthly trend from live client-scoped records)
+  app.get("/api/client/quality-metrics-chart", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const authEmp = {
+        id: employee.id,
+        role: employee.role,
+        name: employee.name,
+        email: employee.email,
+        employeeId: employee.employeeId,
+        clientCompanyId: employee.clientCompanyId,
+      };
+      const { requirements: allRequirements } = await getClientScopedRequirements(authEmp);
+      const roleId = req.query.role as string;
+      const scopedRequirements =
+        roleId && roleId !== "all"
+          ? allRequirements.filter((req: any) => String(req.id) === String(roleId))
+          : allRequirements;
+
+      const allApplications = await storage.getAllJobApplications();
+      const clientRequirementIds = new Set(scopedRequirements.map((req: any) => req.id));
+      const clientApplications = allApplications.filter(
+        (app: any) => app.requirementId && clientRequirementIds.has(app.requirementId),
+      );
+
+      res.json(buildClientQualityChartPoints(clientApplications));
+    } catch (error) {
+      console.error("Client quality metrics chart error:", error);
+      res.status(500).json([]);
+    }
   });
 
   // Client Impact Metrics Endpoint
@@ -16332,9 +16308,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (req.status === 'completed' || req.status === 'closed') status = 'Closed';
         else if (req.status === 'open' || req.status === 'in_progress') status = 'Active';
 
+        const displayRoleId = resolveDisplayRoleId({
+          id: req.id,
+          sourceDetails: req.sourceDetails ?? null,
+        });
+
         return {
           id: req.id, // Include id field for filtering
-          roleId: req.id, // This is already in STR format (or UUID)
+          roleId: req.id,
+          displayRoleId,
+          sourceDetails: req.sourceDetails ?? null,
           role: req.position,
           noOfPositions: req.noOfPositions ?? 1,
           position: req.position, // Include position field as well

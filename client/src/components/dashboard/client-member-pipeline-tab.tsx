@@ -1,25 +1,11 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { PipelineCandidateSessionShell } from "@/components/dashboard/pipeline-candidate-session-shell";
 import { PipelineKanbanBoard } from "@/components/dashboard/pipeline-kanban-board";
 import { PipelineWorkspace } from "@/components/dashboard/pipeline-workspace";
 import type { PipelineStageKey } from "@shared/pipeline-stages";
 import { PipelineStatsSidebar } from "@/components/dashboard/pipeline-stats-sidebar";
-import {
-  PIPELINE_BUTTON_RADIUS_PX,
-  PIPELINE_FILTER_RADIUS_PX,
-} from "@/lib/pipeline-ui-tokens";
-import { Users } from "lucide-react";
-import type { ReactNode } from "react";
-
-const filterRadiusStyle = { borderRadius: PIPELINE_FILTER_RADIUS_PX };
-const buttonRadiusStyle = { borderRadius: PIPELINE_BUTTON_RADIUS_PX };
+import { ClientPipelineMobileFilters } from "@/components/client-dashboard/client-pipeline-mobile-filters";
+import { BarChart3, Users } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 export type ClientMemberPipelineRoleOption = {
   id: string;
@@ -74,61 +60,7 @@ export function ClientMemberPipelineTab({
   pipelineView = "board",
   candidateSession = null,
 }: ClientMemberPipelineTabProps) {
-  const isTodayActive = pipelinePeriod === "today";
-  const isAllDatesActive = pipelinePeriod === "all";
-
-  const pipelineFilters = (
-    <div className="flex flex-wrap items-center justify-end gap-4">
-      <Select value={selectedRequirement} onValueChange={onRequirementChange}>
-        <SelectTrigger
-          style={filterRadiusStyle}
-          className="h-9 w-52 min-w-[12rem] border-gray-200 bg-gray-50 text-sm shadow-none hover:bg-gray-100"
-        >
-          <SelectValue placeholder="All Requirements" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Requirements</SelectItem>
-          {roleOptions.map((role) => (
-            <SelectItem key={role.id} value={role.id}>
-              {role.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <StandardDatePicker
-        value={isTodayActive ? pipelineDate : undefined}
-        onChange={(date) => {
-          if (date) onPipelineDateChange(date);
-        }}
-        placeholder="dd-mm-yyyy"
-        className="h-9 w-36 border-gray-200 bg-white text-sm rounded-[6px]"
-      />
-      <button
-        type="button"
-        style={buttonRadiusStyle}
-        className={`h-9 border px-4 text-sm font-medium transition-colors ${
-          isTodayActive
-            ? "border-blue-600 bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-        }`}
-        onClick={onTodayClick}
-      >
-        Today
-      </button>
-      <button
-        type="button"
-        style={buttonRadiusStyle}
-        className={`h-9 border px-4 text-sm font-medium transition-colors ${
-          isAllDatesActive
-            ? "border-blue-600 bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-        }`}
-        onClick={onAllClick}
-      >
-        All
-      </button>
-    </div>
-  );
+  const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
 
   const isSessionOpen =
     pipelineView === "candidate-session" && Boolean(candidateSession);
@@ -138,25 +70,47 @@ export function ClientMemberPipelineTab({
       className="pipeline-admin-session flex h-full min-h-0 flex-col overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm"
       data-testid="pipeline-session-panel"
     >
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 px-5 py-3">
-        <h2
-          className="shrink-0 text-xl font-semibold text-gray-900"
-          data-testid="text-pipeline-header"
-        >
-          Pipeline
-        </h2>
-        {pipelineFilters}
+      <div className="flex shrink-0 flex-col gap-3 border-b border-gray-200 px-3 py-3 md:flex-row md:items-center md:justify-between md:gap-4 md:px-5">
+        <div className="flex items-center justify-between gap-2 md:contents">
+          <h2
+            className="shrink-0 text-lg font-semibold text-gray-900 md:text-xl"
+            data-testid="text-pipeline-header"
+          >
+            Pipeline
+          </h2>
+          <button
+            type="button"
+            onClick={() => setMobileStatsOpen((open) => !open)}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 md:hidden"
+            aria-expanded={mobileStatsOpen}
+            aria-label={mobileStatsOpen ? "Hide pipeline stats" : "Show pipeline stats"}
+            data-testid="button-client-pipeline-mobile-stats"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Stats
+          </button>
+        </div>
+        <ClientPipelineMobileFilters
+          selectedRequirement={selectedRequirement}
+          onRequirementChange={onRequirementChange}
+          roleOptions={roleOptions}
+          pipelineDate={pipelineDate}
+          pipelinePeriod={pipelinePeriod}
+          onPipelineDateChange={onPipelineDateChange}
+          onTodayClick={onTodayClick}
+          onAllClick={onAllClick}
+        />
       </div>
       <div className="pipeline-session-board-body min-h-0 flex-1 overflow-hidden">
         {isLoading ? (
-          <div className="flex h-full min-h-[320px] items-center justify-center">
+          <div className="flex h-full min-h-[240px] items-center justify-center md:min-h-[320px]">
             <p className="text-gray-500">Loading pipeline data...</p>
           </div>
         ) : isEmpty ? (
-          <div className="flex h-full min-h-[320px] flex-col items-center justify-center">
-            <Users className="mb-4 h-16 w-16 text-gray-300" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">No Pipeline Data</h3>
-            <p className="max-w-md text-center text-gray-500">
+          <div className="flex h-full min-h-[240px] flex-col items-center justify-center px-4 md:min-h-[320px]">
+            <Users className="mb-4 h-12 w-12 text-gray-300 md:h-16 md:w-16" />
+            <h3 className="mb-2 text-base font-semibold text-gray-900 md:text-lg">No Pipeline Data</h3>
+            <p className="max-w-md text-center text-sm text-gray-500 md:text-base">
               Candidates will appear here as they move through your hiring pipeline.
             </p>
           </div>
@@ -164,7 +118,7 @@ export function ClientMemberPipelineTab({
           <PipelineKanbanBoard
             embedded
             naturalScroll
-            className="h-full min-h-0 overflow-hidden"
+            className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
             groupedByStage={groupedByStage}
             onCandidateClick={onCandidateClick}
             getCandidateName={getCandidateName}
@@ -181,13 +135,22 @@ export function ClientMemberPipelineTab({
 
   return (
     <div
-      className={`relative flex h-full min-h-0 w-full min-w-0 overflow-hidden${
+      className={`client-portal-pipeline-root relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-x-hidden overflow-y-auto md:overflow-hidden${
         isSessionOpen ? " pipeline-tab-session-open" : ""
-      }`}
+      }${mobileStatsOpen ? " client-pipeline-stats-open" : ""}`}
     >
+      {mobileStatsOpen && (
+        <button
+          type="button"
+          className="fixed bottom-[4.25rem] left-0 top-[3.25rem] z-[90] bg-black/25 md:hidden"
+          style={{ width: "calc(100% - 13.75rem)" }}
+          onClick={() => setMobileStatsOpen(false)}
+          aria-label="Close pipeline stats"
+        />
+      )}
       <PipelineCandidateSessionShell
         fullscreen
-        className="h-full min-h-0 w-full"
+        className="flex min-h-0 w-full flex-1 flex-col overflow-visible md:h-full md:overflow-hidden"
         mode={isSessionOpen ? "candidate-session" : "board"}
         board={
           <PipelineWorkspace

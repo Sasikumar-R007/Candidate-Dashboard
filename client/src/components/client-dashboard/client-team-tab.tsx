@@ -439,40 +439,41 @@ export function ClientTeamTab() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-gray-50">
-      <div className="flex flex-shrink-0 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Team</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+      <div className="flex shrink-0 flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 md:flex-row md:items-center md:justify-between md:gap-4 md:px-6 md:py-4">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-gray-900 md:text-xl">Team</h2>
+          <p className="mt-0.5 text-sm text-gray-500">
             Members and departments for {data.company.brandName}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
+            className="h-9 flex-1 bg-blue-600 hover:bg-blue-700 sm:flex-none"
             onClick={() => {
               resetMemberForm();
               setAddMemberOpen(true);
             }}
           >
-            <UserPlus className="h-4 w-4 mr-2" />
+            <UserPlus className="mr-2 h-4 w-4" />
             Add Member
           </Button>
           <Button
             size="sm"
             variant="outline"
+            className="h-9 flex-1 sm:flex-none"
             onClick={() => {
               setDeptName("");
               setAddDeptOpen(true);
             }}
           >
-            <Building2 className="h-4 w-4 mr-2" />
+            <Building2 className="mr-2 h-4 w-4" />
             Add Department
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex space-x-1 border-b border-gray-200">
             <button
@@ -529,7 +530,108 @@ export function ClientTeamTab() {
 
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {subTab === "members" ? (
+              <div className="space-y-3 p-4 md:hidden">
+                {memberRows.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-500">
+                    No members found. Use Add Member to add someone to your team.
+                  </p>
+                ) : (
+                  groupedMemberRows.map((group) => (
+                    <Fragment key={group.label ?? "ungrouped-mobile"}>
+                      {group.label && departmentFilter === DEPARTMENT_FILTER_ALL && (
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          {group.label}
+                        </p>
+                      )}
+                      {group.rows.map((row) => (
+                        <div
+                          key={`mobile-${row.key}`}
+                          className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                        >
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-900">{row.name}</p>
+                              <p className="text-xs text-gray-500">{row.employeeId}</p>
+                            </div>
+                            {row.memberId ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button type="button" variant="ghost" size="sm" className="h-8 w-8 shrink-0 p-0">
+                                    <MoreVertical className="h-4 w-4 text-gray-600" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => openEditMember(row)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit member
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-600"
+                                    onClick={() =>
+                                      setDeleteTarget({
+                                        id: row.memberId!,
+                                        name: row.name,
+                                        email: row.email,
+                                      })
+                                    }
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete member
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : null}
+                          </div>
+                          <p className="truncate text-sm text-gray-600">{row.email}</p>
+                          <p className="mt-1 text-xs text-gray-500">Dept: {row.department}</p>
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                            <Badge variant={row.statusVariant}>{row.status}</Badge>
+                            {row.showInviteAction ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1.5 border-blue-200 px-2 text-blue-700 hover:bg-blue-50"
+                                onClick={() => openInviteConfirm(row)}
+                              >
+                                <Mail className="h-4 w-4" />
+                                <span className="text-xs font-medium">Invite</span>
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </Fragment>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3 p-4 md:hidden">
+                {filteredDepartments.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-500">
+                    No departments yet. Use Add Department to create one.
+                  </p>
+                ) : (
+                  filteredDepartments.map((d) => (
+                    <div
+                      key={`mobile-dept-${d.id}`}
+                      className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">{d.name}</p>
+                        <p className="text-xs text-gray-500">{d.memberCount} members</p>
+                      </div>
+                      <Badge variant={d.isActive ? "default" : "outline"}>
+                        {d.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            <div className="hidden overflow-x-auto md:block">
               {subTab === "members" ? (
                 <table className="w-full border-collapse text-sm">
                   <thead>
@@ -675,7 +777,7 @@ export function ClientTeamTab() {
       </div>
 
       <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-md sm:w-full">
           <DialogHeader>
             <DialogTitle>Add member</DialogTitle>
             <DialogDescription>

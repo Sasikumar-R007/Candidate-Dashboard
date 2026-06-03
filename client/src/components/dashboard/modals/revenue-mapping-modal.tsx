@@ -31,15 +31,12 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
   const [closureDate, setClosureDate] = useState<Date | undefined>(undefined);
   const [percentage, setPercentage] = useState<string>("");
   const [revenue, setRevenue] = useState<string>("");
-  const [incentivePlan, setIncentivePlan] = useState<string>("");
-  const [incentive, setIncentive] = useState<string>("");
-  const [paymentStatus, setPaymentStatus] = useState<string>("");
   const [source, setSource] = useState<string>("");
   const [otherSource, setOtherSource] = useState<string>("");
   const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(undefined);
   const [invoiceNumber, setInvoiceNumber] = useState<string>("");
-  const [receivedPayment, setReceivedPayment] = useState<string>("");
   const [paymentDetails, setPaymentDetails] = useState<string>("");
+  const [paymentDate, setPaymentDate] = useState<Date | undefined>(undefined);
   const [incentivePaidMonth, setIncentivePaidMonth] = useState<string>("");
   const [selectedClosureId, setSelectedClosureId] = useState<string>("");
 
@@ -142,22 +139,12 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
       setClosureDate(editingRevenueMapping.closureDate ? new Date(editingRevenueMapping.closureDate) : undefined);
       setPercentage(editingRevenueMapping.percentage?.toString() || "");
       setRevenue(editingRevenueMapping.revenue?.toString() || "");
-      setIncentivePlan(editingRevenueMapping.incentivePlan || "");
-      setIncentive(editingRevenueMapping.incentive?.toString() || "");
-      setPaymentStatus(
-        editingRevenueMapping.paymentStatus ||
-          (editingRevenueMapping.receivedPayment ? "Received" : "Pending"),
-      );
       setSource(editingRevenueMapping.source || "");
       setOtherSource(editingRevenueMapping.source === "Other" ? editingRevenueMapping.source : "");
       setInvoiceDate(editingRevenueMapping.invoiceDate ? new Date(editingRevenueMapping.invoiceDate) : undefined);
       setInvoiceNumber(editingRevenueMapping.invoiceNumber || "");
-      setReceivedPayment(
-        editingRevenueMapping.receivedPayment && Number(editingRevenueMapping.receivedPayment) > 0
-          ? "Yes"
-          : "No",
-      );
       setPaymentDetails(editingRevenueMapping.paymentDetails || "");
+      setPaymentDate(editingRevenueMapping.paymentDate ? new Date(editingRevenueMapping.paymentDate) : undefined);
       setIncentivePaidMonth(editingRevenueMapping.incentivePaidMonth || "");
     } else {
       // Reset form when creating new
@@ -173,15 +160,12 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
       setClosureDate(undefined);
       setPercentage("");
       setRevenue("");
-      setIncentivePlan("");
-      setIncentive("");
-      setPaymentStatus("");
       setSource("");
       setOtherSource("");
       setInvoiceDate(undefined);
       setInvoiceNumber("");
-      setReceivedPayment("");
       setPaymentDetails("");
+      setPaymentDate(undefined);
       setIncentivePaidMonth("");
       setSelectedClosureId("");
     }
@@ -265,7 +249,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
     }
     
     // Check basic required fields
-    if (!talentAdvisor || !teamLead || !year || !quarter || !position || !client || !clientType || !percentage || !revenue || !incentivePlan || !incentive || !finalSource) {
+    if (!talentAdvisor || !teamLead || !year || !quarter || !position || !client || !clientType || !percentage || !revenue || !finalSource) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -315,14 +299,15 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
       closureDate: closureDate ? format(closureDate, "yyyy-MM-dd") : null,
       percentage, // string
       revenue, // string
-      incentivePlan,
-      incentive, // string
+      incentivePlan: editingRevenueMapping?.incentivePlan ?? "TA",
+      incentive: editingRevenueMapping?.incentive ?? 0,
       source: finalSource,
       invoiceDate: invoiceDate ? format(invoiceDate, "yyyy-MM-dd") : null,
       invoiceNumber: invoiceNumber || null,
-      receivedPayment: receivedPayment || null,
       paymentDetails: paymentDetails || null,
-      paymentStatus: paymentStatus || null,
+      paymentDate: paymentDate ? format(paymentDate, "yyyy-MM-dd") : null,
+      receivedPayment: editingRevenueMapping?.receivedPayment ?? null,
+      paymentStatus: editingRevenueMapping?.paymentStatus ?? null,
       incentivePaidMonth: incentivePaidMonth || null,
     };
 
@@ -583,40 +568,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
             </div>
           </div>
 
-          {/* Row 7 - Incentive Plan & Incentive */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <RequiredLabel text="Incentive Plan" />
-              <Select value={incentivePlan} onValueChange={setIncentivePlan}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700" data-testid="select-incentive-plan">
-                  <SelectValue placeholder="Select Plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TL">TL</SelectItem>
-                  <SelectItem value="TA">TA</SelectItem>
-                  <SelectItem value="Business Development">Business Development</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <RequiredLabel text="Incentive" />
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={incentive}
-                  onChange={(e) => setIncentive(e.target.value)}
-                  className="pl-8 bg-gray-50 dark:bg-gray-700"
-                  min="0"
-                  step="0.01"
-                  data-testid="input-incentive"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Row 8 - Source & Other Source (Conditional) */}
+          {/* Row 7 - Source & Other Source (Conditional) */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <RequiredLabel text="Source" />
@@ -647,7 +599,32 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
             </div>
           </div>
 
-          {/* Row 9 - Invoice Date & Invoice Number */}
+          {/* Row 9 - Payment Date & Payment Details */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
+              <StandardDatePicker
+                value={paymentDate}
+                onChange={setPaymentDate}
+                placeholder="Select date"
+                className="w-full bg-gray-50 dark:bg-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Details</label>
+              <Select value={paymentDetails} onValueChange={setPaymentDetails}>
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700" data-testid="select-payment-details">
+                  <SelectValue placeholder="Select Details" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Fully paid">Fully paid</SelectItem>
+                  <SelectItem value="Part paid">Part paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 10 - Invoice Date & Invoice Number */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice Date</label>
@@ -671,51 +648,8 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
             </div>
           </div>
 
-          {/* Row 10 - Received Payment & Payment Details */}
+          {/* Row 11 - Incentive Paid Month */}
           <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Received Payment</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={receivedPayment}
-                  onChange={(e) => setReceivedPayment(e.target.value)}
-                  className="pl-8 bg-gray-50 dark:bg-gray-700"
-                  min="0"
-                  step="0.01"
-                  data-testid="input-received-payment"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Details</label>
-              <Select value={paymentDetails} onValueChange={setPaymentDetails}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700" data-testid="select-payment-details">
-                  <SelectValue placeholder="Select Details" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Fully paid">Fully paid</SelectItem>
-                  <SelectItem value="Part paid">Part paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Row 11 - Payment Status & Incentive Paid Month */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Status</label>
-              <Input
-                type="text"
-                placeholder="Payment Status"
-                value={paymentStatus}
-                onChange={(e) => setPaymentStatus(e.target.value)}
-                className="bg-gray-50 dark:bg-gray-700"
-                data-testid="input-payment-status"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incentive Paid Month</label>
               <Select value={incentivePaidMonth} onValueChange={setIncentivePaidMonth}>

@@ -3,7 +3,6 @@ import {
   FileText,
   GitBranch,
   LayoutDashboard,
-  Settings,
   Users,
   Zap,
   type LucideIcon,
@@ -32,7 +31,6 @@ const ADMIN_NAV: ClientPortalNavItem[] = [
   { id: "team", label: "Team", icon: Users, adminOnly: true },
   { id: "reports", label: "Reports", icon: Briefcase, adminOnly: true },
   { id: "nudges", label: "Nudges", icon: Zap },
-  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 const MEMBER_NAV: ClientPortalNavItem[] = [
@@ -40,11 +38,28 @@ const MEMBER_NAV: ClientPortalNavItem[] = [
   { id: "pipeline", label: "Pipeline & Closures", icon: GitBranch },
   { id: "req_jd", label: "Req / JD", icon: FileText },
   { id: "nudges", label: "Nudges", icon: Zap },
-  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 export function getClientPortalNav(isClientAdmin: boolean): ClientPortalNavItem[] {
   return isClientAdmin ? ADMIN_NAV : MEMBER_NAV;
+}
+
+const MOBILE_BOTTOM_NAV_LABELS: Partial<Record<ClientPortalTabId, string>> = {
+  overview: "Overview",
+  pipeline: "Pipeline",
+  req_jd: "JD",
+  team: "Team",
+  reports: "Reports",
+};
+
+/** Bottom bar on mobile — excludes Nudges (logs live on Overview); short tab labels. */
+export function getClientPortalMobileNav(isClientAdmin: boolean): ClientPortalNavItem[] {
+  return getClientPortalNav(isClientAdmin)
+    .filter((item) => item.id !== "nudges")
+    .map((item) => ({
+      ...item,
+      label: MOBILE_BOTTOM_NAV_LABELS[item.id] ?? item.label,
+    }));
 }
 
 /** Map legacy tab ids from bookmarks / old state */

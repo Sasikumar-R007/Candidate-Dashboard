@@ -6234,6 +6234,13 @@ export default function AdminDashboard() {
                   >
                     Revenue Mapping
                   </Button>
+                  <Button
+                    className="bg-purple-800 text-white px-4 py-2 rounded text-sm opacity-60 cursor-not-allowed"
+                    disabled
+                    data-testid="button-incentive-mapping"
+                  >
+                    Incentive Mapping
+                  </Button>
                 </div>
               </div>
 
@@ -7616,6 +7623,13 @@ export default function AdminDashboard() {
                     onClick={() => setIsRevenueMappingModalOpen(true)}
                   >
                     Revenue Mapping
+                  </Button>
+                  <Button
+                    className="bg-purple-800 text-white px-4 py-2 rounded text-sm opacity-60 cursor-not-allowed"
+                    disabled
+                    data-testid="button-incentive-mapping"
+                  >
+                    Incentive Mapping
                   </Button>
                 </div>
               </div>

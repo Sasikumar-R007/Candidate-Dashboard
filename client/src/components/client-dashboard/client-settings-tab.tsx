@@ -55,7 +55,10 @@ export function ClientSettingsTab({
       </div>
 
       <ProfileSettingsModal open={profileOpen} onOpenChange={setProfileOpen} />
-      <ChangePasswordModal open={passwordOpen} onOpenChange={setPasswordOpen} />
+      <ChangePasswordModal
+        isOpen={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+      />
     </div>
   );
 }

@@ -548,6 +548,7 @@ export function CandidateCommentsSession({
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [mobileSessionTab, setMobileSessionTab] = useState<"details" | "comments">("details");
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const prevApplicationIdRef = useRef(applicationId);
 
@@ -604,6 +605,7 @@ export function CandidateCommentsSession({
       setRejectReason("");
       setShowRejectForm(false);
       setConfirmRejectOpen(false);
+      setMobileSessionTab("details");
     }
   }, [applicationId]);
 
@@ -857,17 +859,134 @@ export function CandidateCommentsSession({
     );
   }
 
+  const commentsPanelHeaderRight = effectiveClientReject ? (
+    isRejected ? (
+      <span className="text-xs font-medium text-red-600">Rejected</span>
+    ) : effectiveClientReject.canReject ? (
+      showRejectForm ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={cn("h-8 text-xs text-gray-600 hover:text-gray-900", BTN_RADIUS)}
+          onClick={() => {
+            setShowRejectForm(false);
+            setRejectReason("");
+          }}
+        >
+          Cancel
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(
+            "h-8 border-red-300 bg-white text-xs text-red-600 hover:bg-red-50 hover:text-red-700",
+            BTN_RADIUS,
+          )}
+          onClick={() => setShowRejectForm(true)}
+          data-testid="button-open-reject-candidate"
+        >
+          Reject Candidate
+        </Button>
+      )
+    ) : null
+  ) : null;
+
   return (
     <div
       className="flex h-full min-h-0 flex-col bg-white text-gray-900"
       data-testid="candidate-comments-session"
     >
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      {/* Mobile: compact header + Details / Comments tabs */}
+      <div className="flex shrink-0 flex-col border-b border-gray-200 md:hidden">
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <button
+            type="button"
+            onClick={onBack}
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center bg-blue-600 text-white transition-colors hover:bg-blue-700",
+              BTN_RADIUS,
+            )}
+            aria-label="Back to pipeline"
+            data-testid="button-back-pipeline-mobile"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate text-sm font-semibold text-gray-900"
+              data-testid="text-session-candidate-name-mobile"
+            >
+              {displayName}
+            </p>
+            {pipelineStage ? (
+              <div className="mt-0.5">
+                <PipelineStageBadge status={pipelineStage} />
+              </div>
+            ) : null}
+          </div>
+          {navTotal > 1 ? (
+            <PipelineNav
+              index={navIndex}
+              total={navTotal}
+              canPrev={canGoPrev}
+              canNext={canGoNext}
+              onPrev={() => navigateApplicant("prev")}
+              onNext={() => navigateApplicant("next")}
+            />
+          ) : null}
+        </div>
+        <div
+          className="grid grid-cols-2 border-t border-gray-200"
+          role="tablist"
+          aria-label="Candidate session"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileSessionTab === "details"}
+            onClick={() => setMobileSessionTab("details")}
+            className={cn(
+              "py-2.5 text-sm font-medium transition-colors",
+              mobileSessionTab === "details"
+                ? "border-b-2 border-blue-600 bg-blue-50/50 text-blue-700"
+                : "text-gray-600 hover:bg-gray-50",
+            )}
+            data-testid="tab-session-details"
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileSessionTab === "comments"}
+            onClick={() => setMobileSessionTab("comments")}
+            className={cn(
+              "py-2.5 text-sm font-medium transition-colors",
+              mobileSessionTab === "comments"
+                ? "border-b-2 border-blue-600 bg-blue-50/50 text-blue-700"
+                : "text-gray-600 hover:bg-gray-50",
+            )}
+            data-testid="tab-session-comments"
+          >
+            Comments
+          </button>
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <section
-          className="flex w-[58%] min-w-0 flex-col border-r border-gray-200"
+          className={cn(
+            "min-h-0 min-w-0 flex-col border-gray-200 md:w-[58%] md:max-w-[58%] md:border-r",
+            mobileSessionTab === "details" ? "flex flex-1" : "hidden",
+            "md:flex",
+          )}
           aria-label="Candidate Details"
         >
           <SectionHeader
+            className="hidden md:flex"
             title="Candidate Details"
             left={
               <button
@@ -905,17 +1024,17 @@ export function CandidateCommentsSession({
             )}
             <div
               className={cn(
-                "h-full overflow-y-auto p-5 transition-opacity duration-200",
+                "h-full overflow-y-auto p-4 transition-opacity duration-200 md:p-5",
                 showContentFade ? "opacity-50" : "opacity-100",
               )}
             >
               <div
                 className={cn(
-                  "mb-5 flex min-h-[112px] overflow-hidden border border-gray-200 bg-gray-50 shadow-sm",
+                  "mb-5 flex min-h-0 flex-col overflow-hidden border border-gray-200 bg-gray-50 shadow-sm sm:min-h-[112px] sm:flex-row",
                   BTN_RADIUS,
                 )}
               >
-                <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4 pr-3">
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4 sm:pr-3">
                   <div className="flex items-start justify-between gap-2">
                     <h2
                       className="min-w-0 flex-1 text-xl font-semibold leading-tight text-gray-900"
@@ -960,7 +1079,7 @@ export function CandidateCommentsSession({
 
                 {(appliedRoleTitle || appliedCompanyName) && (
                   <div
-                    className="flex w-[min(11rem,34%)] max-w-[200px] shrink-0 flex-col justify-center border-l border-blue-100 bg-blue-50/80 px-3 py-3 text-right"
+                    className="flex w-full shrink-0 flex-col justify-center border-t border-blue-100 bg-blue-50/80 px-3 py-3 text-left sm:max-w-[200px] sm:border-l sm:border-t-0 sm:text-right md:w-[min(11rem,34%)]"
                     data-testid="session-applied-requirement"
                   >
                     <p className="text-xs font-medium text-blue-800">Applied for</p>
@@ -983,7 +1102,7 @@ export function CandidateCommentsSession({
                   </div>
                 )}
 
-                <div className="flex w-[min(38%,148px)] max-w-[148px] shrink-0 self-stretch border-l border-gray-200 bg-white p-2">
+                <div className="flex h-28 w-full shrink-0 border-t border-gray-200 bg-white p-2 sm:h-auto sm:w-[min(38%,148px)] sm:max-w-[148px] sm:self-stretch sm:border-l sm:border-t-0">
                   <CandidateProfilePhoto
                     name={displayName}
                     imageUrl={profilePictureUrl}
@@ -1024,7 +1143,7 @@ export function CandidateCommentsSession({
               )}
 
               <DetailCard title="Professional">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <Field label="Experience" value={experience} />
                   <Field label="Notice period" value={app?.noticePeriod} />
                   <Field label="CTC" value={ctcLabel} />
@@ -1112,10 +1231,10 @@ export function CandidateCommentsSession({
                 title="Resume"
                 actions={
                   resumeUrl ? (
-                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                       <Button
                         size="sm"
-                        className={cn("bg-blue-600 text-white hover:bg-blue-700", BTN_RADIUS)}
+                        className={cn("w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto", BTN_RADIUS)}
                         onClick={() => window.open(resumeUrl, "_blank")}
                       >
                         <FileText className="mr-1.5 h-3.5 w-3.5" />
@@ -1124,7 +1243,7 @@ export function CandidateCommentsSession({
                       {profilePageId && (
                         <Button
                           size="sm"
-                          className={cn("bg-indigo-600 text-white hover:bg-indigo-700", BTN_RADIUS)}
+                          className={cn("w-full bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto", BTN_RADIUS)}
                           onClick={() => window.open(`/candidate-profile/${profilePageId}`, "_blank")}
                         >
                           <Briefcase className="mr-1.5 h-3.5 w-3.5" />
@@ -1141,7 +1260,7 @@ export function CandidateCommentsSession({
                       title="Resume preview"
                       src={resumeUrl}
                       className={cn(
-                        "h-[min(420px,45vh)] w-full border border-gray-200 bg-white",
+                        "h-[min(280px,42vh)] w-full border border-gray-200 bg-white sm:h-[min(360px,45vh)] md:h-[min(420px,45vh)]",
                         BTN_RADIUS,
                       )}
                     />
@@ -1159,49 +1278,24 @@ export function CandidateCommentsSession({
         </section>
 
         <section
-          className="flex w-[42%] min-h-0 flex-col bg-gray-100 text-gray-900"
+          className={cn(
+            "min-h-0 w-full flex-col bg-gray-100 text-gray-900 md:min-h-0 md:w-[42%] md:max-w-[42%] md:flex-none",
+            mobileSessionTab === "comments" ? "flex flex-1" : "hidden",
+            "md:flex",
+          )}
           aria-label="Candidate Comments"
         >
+          {commentsPanelHeaderRight ? (
+            <div className="flex shrink-0 items-center justify-end gap-2 border-b border-gray-200 bg-gray-50/80 px-3 py-2 md:hidden">
+              {commentsPanelHeaderRight}
+            </div>
+          ) : null}
           <SectionHeader
+            className="hidden md:flex"
             title="Comments"
             mutedPanel
             taRail={taCommentsRail}
-            right={
-              effectiveClientReject ? (
-                isRejected ? (
-                  <span className="text-xs font-medium text-red-600">Rejected</span>
-                ) : effectiveClientReject.canReject ? (
-                  showRejectForm ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={cn("h-8 text-xs text-gray-600 hover:text-gray-900", BTN_RADIUS)}
-                      onClick={() => {
-                        setShowRejectForm(false);
-                        setRejectReason("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "h-8 border-red-300 bg-white text-xs text-red-600 hover:bg-red-50 hover:text-red-700",
-                        BTN_RADIUS,
-                      )}
-                      onClick={() => setShowRejectForm(true)}
-                      data-testid="button-open-reject-candidate"
-                    >
-                      Reject Candidate
-                    </Button>
-                  )
-                ) : null
-              ) : null
-            }
+            right={commentsPanelHeaderRight}
           />
           {clientRejectionReason ? (
             <div
@@ -1219,7 +1313,7 @@ export function CandidateCommentsSession({
             </div>
           ) : null}
           {showRejectForm && effectiveClientReject?.canReject && !isRejected && (
-            <div className="shrink-0 space-y-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
+            <div className="shrink-0 space-y-2 border-b border-gray-200 bg-gray-50 px-3 py-3 sm:px-4">
               <Textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
@@ -1268,7 +1362,7 @@ export function CandidateCommentsSession({
           <div
             className={cn(
               "relative min-h-0 flex-1 overflow-y-auto transition-opacity duration-200",
-              taCommentsRail ? "px-4 py-2" : "px-5 py-4",
+              taCommentsRail ? "px-3 py-2 sm:px-4" : "px-3 py-3 sm:px-5 sm:py-4",
               showContentFade ? "opacity-50" : "opacity-100",
             )}
           >
@@ -1330,8 +1424,8 @@ export function CandidateCommentsSession({
 
           <div
             className={cn(
-              "shrink-0 border-t border-gray-200 bg-gray-50",
-              taCommentsRail ? "px-3 py-2.5" : "px-4 py-3",
+              "shrink-0 border-t border-gray-200 bg-gray-50 pb-[env(safe-area-inset-bottom)]",
+              taCommentsRail ? "px-3 py-2.5" : "px-3 py-3 sm:px-4",
             )}
           >
             <p className={cn("text-[11px] text-gray-600", taCommentsRail ? "mb-1.5" : "mb-2")}>
@@ -1385,7 +1479,12 @@ export function CandidateCommentsSession({
 
       {effectiveClientReject && (
         <AlertDialog open={confirmRejectOpen} onOpenChange={setConfirmRejectOpen}>
-          <AlertDialogContent className={cn("max-w-md", BTN_RADIUS)}>
+          <AlertDialogContent
+            className={cn(
+              "mx-auto w-[calc(100vw-1.5rem)] max-w-md sm:w-full",
+              BTN_RADIUS,
+            )}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle>Reject candidate?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -1425,22 +1524,25 @@ function SectionHeader({
   right,
   mutedPanel = false,
   taRail = false,
+  className,
 }: {
   title: string;
   left?: ReactNode;
   right?: ReactNode;
   mutedPanel?: boolean;
   taRail?: boolean;
+  className?: string;
 }) {
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-between gap-3 border-b px-4",
+        "flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 sm:gap-3 sm:px-4",
         taRail ? "min-h-[44px] py-3" : "py-2.5",
         mutedPanel ? "border-gray-200 bg-gray-50/80" : "border-gray-200",
+        className,
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         {left}
         <h2
           className={cn(
@@ -1451,7 +1553,7 @@ function SectionHeader({
           {title}
         </h2>
       </div>
-      {right}
+      {right ? <div className="flex shrink-0 items-center">{right}</div> : null}
     </div>
   );
 }

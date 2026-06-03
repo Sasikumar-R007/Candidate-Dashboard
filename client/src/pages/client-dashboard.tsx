@@ -14,9 +14,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw, UserCheck, Archive, Loader2 } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw, UserCheck, Archive, Loader2, Info } from "lucide-react";
 import { CompanyBrandAvatar } from "@/components/client-brand-avatar";
 import { resolveDisplayRoleId } from "@shared/requirement-jd-extras";
+import {
+  CLIENT_MOBILE_DIALOG_CLASS,
+  CLIENT_MOBILE_DIALOG_WIDE_CLASS,
+  resolveClientRoleDisplayId,
+} from "@/lib/client-role-display";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +36,7 @@ import ClientMainSidebar from '@/components/dashboard/client-main-sidebar';
 import AddCandidateModal from '@/components/dashboard/modals/add-candidate-modal';
 import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
 import { RequirementRoleCell } from '@/components/dashboard/requirement-role-cell';
 import { ClientPipelineTab } from '@/components/dashboard/client-pipeline-tab';
@@ -55,11 +66,16 @@ import {
 } from '@/components/dashboard/candidate-comments-session';
 import { isClientPortalRole, isClientAdminRole } from "@shared/client-roles";
 import {
+  getClientPortalMobileNav,
   isClientPortalTabAllowed,
   normalizeClientPortalTab,
 } from "@/lib/client-portal-nav";
 import { ClientTeamTab } from "@/components/client-dashboard/client-team-tab";
-import { ClientMembersSidebar } from "@/components/client-dashboard/client-members-sidebar";
+import { ClientMobileBottomNav } from "@/components/client-dashboard/client-mobile-bottom-nav";
+import {
+  ClientRequirementsRoleMobileCards,
+  type ClientRequirementRoleRow,
+} from "@/components/client-dashboard/client-requirements-role-mobile-cards";
 import { ClientSettingsTab } from "@/components/client-dashboard/client-settings-tab";
 import { ClientRequirementAssignModal } from "@/components/client-dashboard/client-requirement-assign-modal";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
@@ -104,6 +120,7 @@ export default function ClientDashboard() {
   
   const [showInterviewDropModal, setShowInterviewDropModal] = useState(false);
   const [showOfferDropModal, setShowOfferDropModal] = useState(false);
+  const [expandedChart, setExpandedChart] = useState<"speed" | "quality" | null>(null);
 
   // Fetch drop rates from API (calculated from actual data)
   const { data: dropRatesData, isLoading: isLoadingDropRates } = useQuery({
@@ -387,12 +404,35 @@ export default function ClientDashboard() {
     }
   };
 
+  const clientMobileNavItems = useMemo(
+    () =>
+      getClientPortalMobileNav(isClientAdmin).map((item) => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+      })),
+    [isClientAdmin],
+  );
+
   useEffect(() => {
     const normalized = normalizeClientPortalTab(sidebarTab);
     if (!isClientPortalTabAllowed(normalized, isClientAdmin)) {
       setSidebarTab('overview');
     }
   }, [isClientAdmin, sidebarTab]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const redirectIfMobile = () => {
+      if (mq.matches && normalizeClientPortalTab(sidebarTab) === "nudges") {
+        setSidebarTab("overview");
+      }
+    };
+    redirectIfMobile();
+    mq.addEventListener("change", redirectIfMobile);
+    return () => mq.removeEventListener("change", redirectIfMobile);
+  }, [sidebarTab]);
 
   useEffect(() => {
     if (!isClientPortalUser) {
@@ -411,8 +451,10 @@ export default function ClientDashboard() {
         (clientProfile as { company?: string })?.company ||
         (isLoadingProfile ? "Loading..." : "Company"),
       companyLogo: (clientProfile as { companyLogo?: string | null })?.companyLogo ?? null,
+      clientProfilePicture: (clientProfile as { profilePicture?: string | null })?.profilePicture ?? null,
       clientName: (clientProfile as { name?: string })?.name || employee?.name || undefined,
       clientEmail: (clientProfile as { email?: string })?.email || employee?.email || undefined,
+      activeTabId: sidebarTab,
       displayEmployeeId:
         employee?.employeeId || (clientProfile as { employeeId?: string })?.employeeId || null,
       isClientAdmin,
@@ -431,6 +473,7 @@ export default function ClientDashboard() {
       clientProfile,
       isLoadingProfile,
       employee,
+      sidebarTab,
       isClientAdmin,
       activeNudges,
       allClosureReports,
@@ -655,6 +698,25 @@ export default function ClientDashboard() {
         revenueRecovered: 0
       };
 
+  const speedMetrics = {
+    timeToFirstSubmission: 0,
+    timeToInterview: 0,
+    timeToOffer: 0,
+    timeToFill: 0,
+    ...(speedMetricsData || {}),
+  } as Record<string, number>;
+
+  const qualityMetrics = {
+    submissionToShortList: 0,
+    interviewToOffer: 0,
+    offerAcceptance: 0,
+    earlyAttrition: 0,
+    ...(qualityMetricsData || {}),
+  } as Record<string, number>;
+
+  const speedTrendData = Array.isArray(speedChartData) ? speedChartData : [];
+  const qualityTrendData = Array.isArray(qualityChartData) ? qualityChartData : [];
+
   // Show all roles in dashboard (user requested to show all, not just 2)
   const rolesData = useMemo(() => {
     const items = Array.isArray(allRolesData) ? [...allRolesData] : [];
@@ -728,71 +790,82 @@ export default function ClientDashboard() {
 
             <div className="flex min-h-0 flex-1 overflow-hidden">
               <div className="flex-1 overflow-y-auto">
-                <div className="space-y-6 px-6 py-6">
+                <div className="space-y-6 px-4 py-4 md:px-6 md:py-6">
               {/* Stats Cards - Individual Cards Design (Image 2) */}
-              <div className="grid grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-6 md:gap-4">
                 {/* Roles Assigned - Highlighted Card */}
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 shadow-sm">
-                  <div className="flex items-center justify-center mb-3">
-                    <Briefcase className="h-6 w-6 text-blue-600" />
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 shadow-sm md:rounded-lg md:p-4">
+                  <div className="mb-2 flex items-center justify-between md:mb-3 md:justify-center">
+                    <Briefcase className="h-5 w-5 text-blue-600 md:h-6 md:w-6" />
+                    <div className="text-xl font-bold text-blue-600 md:hidden">{computedDashboardStats.rolesAssigned}</div>
                   </div>
-                  <div className="text-xs font-medium text-blue-600 mb-1">Roles Assigned</div>
-                  <div className="text-2xl font-bold text-blue-600">{computedDashboardStats.rolesAssigned}</div>
+                  <div className="mb-1 text-[11px] font-medium text-blue-600 md:text-xs">Roles Assigned</div>
+                  <div className="hidden text-2xl font-bold text-blue-600 md:block">{computedDashboardStats.rolesAssigned}</div>
                 </div>
 
                 {/* Total Positions */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="flex items-center justify-center mb-3">
-                    <Users className="h-6 w-6 text-gray-600" />
+                <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:rounded-lg md:p-4">
+                  <div className="mb-2 flex items-center justify-between md:mb-3 md:justify-center">
+                    <Users className="h-5 w-5 text-gray-600 md:h-6 md:w-6" />
+                    <div className="text-xl font-bold text-gray-900 md:hidden">{computedDashboardStats.totalPositions}</div>
                   </div>
-                  <div className="text-xs font-medium text-gray-600 mb-1">Total Positions</div>
-                  <div className="text-2xl font-bold text-gray-900">{computedDashboardStats.totalPositions}</div>
+                  <div className="mb-1 text-[11px] font-medium text-gray-600 md:text-xs">Total Positions</div>
+                  <div className="hidden text-2xl font-bold text-gray-900 md:block">{computedDashboardStats.totalPositions}</div>
                 </div>
 
                 {/* Active Roles */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="flex items-center justify-center mb-3">
-                    <Play className="h-6 w-6 text-gray-600" />
+                <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:rounded-lg md:p-4">
+                  <div className="mb-2 flex items-center justify-between md:mb-3 md:justify-center">
+                    <Play className="h-5 w-5 text-gray-600 md:h-6 md:w-6" />
+                    <div className="text-xl font-bold text-gray-900 md:hidden">{computedDashboardStats.activeRoles}</div>
                   </div>
-                  <div className="text-xs font-medium text-gray-600 mb-1">Active Roles</div>
-                  <div className="text-2xl font-bold text-gray-900">{computedDashboardStats.activeRoles}</div>
+                  <div className="mb-1 text-[11px] font-medium text-gray-600 md:text-xs">Active Roles</div>
+                  <div className="hidden text-2xl font-bold text-gray-900 md:block">{computedDashboardStats.activeRoles}</div>
                 </div>
 
                 {/* Paused Roles */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="flex items-center justify-center mb-3">
-                    <Pause className="h-6 w-6 text-gray-600" />
+                <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:rounded-lg md:p-4">
+                  <div className="mb-2 flex items-center justify-between md:mb-3 md:justify-center">
+                    <Pause className="h-5 w-5 text-gray-600 md:h-6 md:w-6" />
+                    <div className="text-xl font-bold text-gray-900 md:hidden">{computedDashboardStats.pausedRoles}</div>
                   </div>
-                  <div className="text-xs font-medium text-gray-600 mb-1">Paused Roles</div>
-                  <div className="text-2xl font-bold text-gray-900">{computedDashboardStats.pausedRoles}</div>
+                  <div className="mb-1 text-[11px] font-medium text-gray-600 md:text-xs">Paused Roles</div>
+                  <div className="hidden text-2xl font-bold text-gray-900 md:block">{computedDashboardStats.pausedRoles}</div>
                 </div>
 
                 {/* Withdrawn Roles */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="flex items-center justify-center mb-3">
-                    <Minus className="h-6 w-6 text-orange-500" />
+                <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:rounded-lg md:p-4">
+                  <div className="mb-2 flex items-center justify-between md:mb-3 md:justify-center">
+                    <Minus className="h-5 w-5 text-orange-500 md:h-6 md:w-6" />
+                    <div className="text-xl font-bold text-orange-500 md:hidden">{computedDashboardStats.withdrawnRoles}</div>
                   </div>
-                  <div className="text-xs font-medium text-orange-500 mb-1">Withdrawn Roles</div>
-                  <div className="text-2xl font-bold text-orange-500">{computedDashboardStats.withdrawnRoles}</div>
+                  <div className="mb-1 text-[11px] font-medium text-orange-500 md:text-xs">Withdrawn Roles</div>
+                  <div className="hidden text-2xl font-bold text-orange-500 md:block">{computedDashboardStats.withdrawnRoles}</div>
                 </div>
 
                 {/* Successful Hires */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="flex items-center justify-center mb-3">
-                    <Trophy className="h-6 w-6 text-green-500" />
+                <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:rounded-lg md:p-4">
+                  <div className="mb-2 flex items-center justify-between md:mb-3 md:justify-center">
+                    <Trophy className="h-5 w-5 text-green-500 md:h-6 md:w-6" />
+                    <div className="text-xl font-bold text-green-500 md:hidden">{computedDashboardStats.successfulHires}</div>
                   </div>
-                  <div className="text-xs font-medium text-green-500 mb-1">Successful Hires</div>
-                  <div className="text-2xl font-bold text-green-500">{computedDashboardStats.successfulHires}</div>
+                  <div className="mb-1 text-[11px] font-medium text-green-500 md:text-xs">Successful Hires</div>
+                  <div className="hidden text-2xl font-bold text-green-500 md:block">{computedDashboardStats.successfulHires}</div>
                 </div>
               </div>
 
               {/* Nudge Escalation Table */}
               <ActiveNudgesTable />
 
+              {isClientAdmin && (
+                <div className="mt-6 md:hidden">
+                  <NudgesTab />
+                </div>
+              )}
+
                 </div>
               </div>
 
-              {isClientAdmin && <ClientMembersSidebar />}
             </div>
           </div>
         );
@@ -801,7 +874,7 @@ export default function ClientDashboard() {
         return (
           <div className="h-full overflow-y-auto">
             <SimpleClientHeader {...clientHeaderProps} />
-            <div className="px-6 py-6 space-y-6">
+            <div className="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
               {!isClientAdmin && (
                 <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   View-only access. Contact your Client Admin to create or update requirements.
@@ -809,16 +882,34 @@ export default function ClientDashboard() {
               )}
 
               {isClientAdmin && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-gray-900">JD Upload</h3>
-                  <div className="flex gap-3">
+              <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6 md:py-4">
+                  <div className="flex items-center justify-between gap-2 md:contents">
+                    <h3 className="text-base font-bold text-gray-900 md:text-lg">JD Upload</h3>
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 md:order-last"
+                            aria-label="JD upload information"
+                          >
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[240px] text-xs">
+                          Upload a JD file (PDF or DOCX) and role details will be fetched automatically.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={resetJdUploadForm}
-                      className="h-10 w-10 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                      className="h-9 w-9 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 md:h-10 md:w-10"
                       title="Reset JD upload"
                     >
                       <RotateCcw className="h-4 w-4" />
@@ -826,21 +917,21 @@ export default function ClientDashboard() {
                     <Button
                       onClick={openJdPreviewIfValid}
                       variant="outline"
-                      className="px-6 py-2 rounded border-gray-300 hover:bg-gray-50"
+                      className="h-9 flex-1 rounded border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 sm:flex-none md:px-6"
                     >
                       Preview
                     </Button>
                     <Button
                       onClick={openJdPreviewIfValid}
                       disabled={!isJdFormReady}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-9 flex-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none md:px-6"
                     >
                       Submit
                     </Button>
                   </div>
                 </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="p-4 md:p-6">
+                  <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                     {/* Drag & Drop Upload - Left Side */}
                     <div className="relative">
                       <input
@@ -871,7 +962,7 @@ export default function ClientDashboard() {
                             await parseJdFromFile(file);
                           }
                         }}
-                        className="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors h-full min-h-[200px] flex flex-col items-center justify-center"
+                        className="relative flex h-full min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 md:min-h-[200px] md:p-8"
                       >
                         {isParsingJd && (
                           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 backdrop-blur-[2px]">
@@ -901,7 +992,7 @@ export default function ClientDashboard() {
                     {/* JD Text Area - Right Side */}
                     <div
                       onClick={() => setIsJdModalOpen(true)}
-                      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors min-h-[200px] flex flex-col items-center justify-center"
+                      className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 md:min-h-[200px] md:p-8"
                     >
                       {jdText ? (
                         <>
@@ -924,9 +1015,9 @@ export default function ClientDashboard() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="mb-2 block text-sm font-semibold text-gray-700">
                         Position/Role <span className="text-red-500">*</span>
                       </label>
                       <Input
@@ -950,9 +1041,9 @@ export default function ClientDashboard() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Primary Skills <span className="text-red-500">*</span></label>
+                      <label className="mb-2 block text-sm font-semibold text-gray-700">Primary Skills <span className="text-red-500">*</span></label>
                       <Input
                         value={primarySkills}
                         onChange={(e) => setPrimarySkills(e.target.value)}
@@ -994,9 +1085,9 @@ export default function ClientDashboard() {
               )}
 
               {/* Requirements / JD */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-lg font-bold text-gray-900">Requirements / JD</h3>
+              <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6 md:py-4">
+                  <h3 className="text-base font-bold text-gray-900 md:text-lg">Requirements / JD</h3>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     {isClientAdmin && (
                       <Button
@@ -1013,7 +1104,7 @@ export default function ClientDashboard() {
                     <Button
                       type="button"
                       size="sm"
-                      className="shrink-0 rounded-[4px] bg-blue-600 text-white hover:bg-blue-700"
+                      className="h-8 shrink-0 rounded-[4px] bg-blue-600 px-3 text-xs text-white hover:bg-blue-700 md:h-9 md:px-4 md:text-sm"
                       onClick={() => setIsRolesModalOpen(true)}
                       disabled={!Array.isArray(allRolesData) || allRolesData.length === 0}
                     >
@@ -1021,7 +1112,52 @@ export default function ClientDashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <ClientRequirementsRoleMobileCards
+                  roles={rolesData as ClientRequirementRoleRow[]}
+                  isLoading={isLoadingRoles}
+                  isClientAdmin={isClientAdmin}
+                  onView={(role) => {
+                    const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId);
+                    setSelectedRoleForView(fullRole || role);
+                    setIsViewRoleModalOpen(true);
+                  }}
+                  onSharedProfiles={(role) => {
+                    const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId) || role;
+                    const rid = fullRole?.id || fullRole?.roleId || role.roleId;
+                    if (!rid) return;
+                    setSharedProfilesRequirementId(String(rid));
+                    setSharedProfilesRoleTitle(fullRole?.position || fullRole?.role || role.role || "");
+                    setSharedProfilesOpen(true);
+                  }}
+                  onEdit={(role) => {
+                    const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId);
+                    setSelectedRoleForEdit(fullRole || role);
+                    setEditJdPosition(fullRole?.role || role?.role || "");
+                    setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
+                    setEditJdText(fullRole?.jdText || role?.jdText || "");
+                    setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || "");
+                    setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || "");
+                    setEditKnowledgeOnly(fullRole?.knowledgeOnly || role?.knowledgeOnly || "");
+                    setEditSpecialInstructions(fullRole?.specialInstructions || role?.specialInstructions || "");
+                    setEditJdFile(null);
+                    if (editJdFilePreviewUrl) {
+                      URL.revokeObjectURL(editJdFilePreviewUrl);
+                    }
+                    setEditJdFilePreviewUrl(null);
+                    setIsEditRoleModalOpen(true);
+                  }}
+                  onDelete={(roleId) => setRoleToDelete(roleId)}
+                  onAssign={(role) => {
+                    const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId) || role;
+                    setAssignRequirement({
+                      id: fullRole.id || fullRole.roleId,
+                      title: fullRole.position || fullRole.role || "Requirement",
+                      memberId: fullRole.assignedClientMemberId || null,
+                    });
+                    setAssignModalOpen(true);
+                  }}
+                />
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1070,7 +1206,7 @@ export default function ClientDashboard() {
 
                           return (
                             <tr key={role.roleId || index} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{resolveDisplayRoleId(role.roleId)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.id || role.roleId}>{resolveClientRoleDisplayId(role)}</td>
                               <td className="px-6 py-4 text-sm text-gray-700">
                                 <RequirementRoleCell
                                   title={role.role}
@@ -1264,13 +1400,13 @@ export default function ClientDashboard() {
         };
 
         const closureReportsFooter = (
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-gray-900 md:text-lg">Closure Reports</h3>
               {closureReportsList.length > 5 ? (
                 <Button
                   variant="outline"
-                  className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                  className="h-7 shrink-0 border-blue-600 px-2.5 py-0 text-xs text-blue-600 hover:bg-blue-50 md:h-9 md:px-4 md:py-2 md:text-sm"
                   style={{ borderRadius: PIPELINE_BUTTON_RADIUS_PX }}
                   onClick={() => setIsClosureModalOpen(true)}
                 >
@@ -1288,9 +1424,9 @@ export default function ClientDashboard() {
         );
 
         return (
-          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+          <div className="client-pipeline-tab-layout flex h-full min-h-0 flex-col overflow-hidden">
             <SimpleClientHeader {...clientHeaderProps} />
-            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden max-md:overflow-y-auto max-md:overflow-x-hidden">
               {isClientAdmin ? (
                 <ClientPipelineTab
                   title="Pipeline"
@@ -1310,27 +1446,29 @@ export default function ClientDashboard() {
 
       case 'reports':
         return (
-          <div className="flex flex-col h-full">
-            {/* Simple Client Header */}
+          <div className="flex h-full flex-col">
             <div className="print:hidden">
               <SimpleClientHeader {...clientHeaderProps} />
             </div>
-            <div className="flex flex-1 overflow-hidden">
-              {/* Main Content Area */}
-              <div id="metrics-print-area" className="flex-1 p-6 space-y-6 overflow-y-auto bg-gray-50">
-                {/* Header with controls */}
-                <div className="flex justify-between items-center print:mb-8">
-                  <h2 className="text-xl font-semibold text-gray-900 print:text-2xl">Speed Metrics</h2>
-                  <div className="flex items-center space-x-4 print:hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
+              <div
+                id="metrics-print-area"
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gray-50 p-4 md:space-y-6 md:p-6"
+              >
+                <div className="flex flex-col gap-3 print:mb-8 md:flex-row md:items-center md:justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 md:text-xl print:text-2xl">Speed Metrics</h2>
+                  <div className="flex flex-wrap items-center gap-2 print:hidden md:gap-3">
                     <Select value={metricsRoleFilter} onValueChange={setMetricsRoleFilter}>
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="h-9 w-full min-w-[7rem] sm:w-32">
                         <SelectValue placeholder="All Roles" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Roles</SelectItem>
                         {allRolesData && Array.isArray(allRolesData) && allRolesData.length > 0 ? (
                           allRolesData.map((role: any) => (
-                            <SelectItem key={role.id || role.roleId} value={role.id || role.roleId}>{role.position || role.role || role.roleId}</SelectItem>
+                            <SelectItem key={role.id || role.roleId} value={role.id || role.roleId}>
+                              {role.position || role.role || resolveClientRoleDisplayId(role)}
+                            </SelectItem>
                           ))
                         ) : (
                           <SelectItem value="active">Active Roles</SelectItem>
@@ -1342,11 +1480,11 @@ export default function ClientDashboard() {
                         value={metricsDate}
                         onChange={(date) => date && setMetricsDate(date)}
                         placeholder="Select date"
-                        className="w-60"
+                        className="h-9 w-full min-w-[8.5rem] sm:w-44 md:w-60"
                       />
                     )}
                     {metricsPeriod === 'monthly' && (
-                      <div className="flex gap-2">
+                      <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                         <Select value={format(metricsDate, 'MMMM')} onValueChange={(month) => {
                           const monthMap: Record<string, number> = {
                             'January': 0, 'February': 1, 'March': 2, 'April': 3,
@@ -1387,11 +1525,11 @@ export default function ClientDashboard() {
                         value={metricsDate}
                         onChange={(date) => date && setMetricsDate(date)}
                         placeholder="Select week start date"
-                        className="w-60"
+                        className="h-9 w-full min-w-[8.5rem] sm:w-44 md:w-60"
                       />
                     )}
                     <Select value={metricsPeriod} onValueChange={setMetricsPeriod}>
-                      <SelectTrigger className="w-24">
+                      <SelectTrigger className="h-9 w-full min-w-[5.5rem] sm:w-24">
                         <SelectValue placeholder="Period" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1404,79 +1542,111 @@ export default function ClientDashboard() {
                 </div>
 
                 {/* Speed Metrics Row */}
-                <div className={`grid grid-cols-4 gap-4 ${!printMetrics.speed ? 'print:hidden' : ''}`} data-metric-section="speed">
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <h3 className="text-sm font-medium text-blue-700 mb-2">Time to 1st Submission</h3>
-                    <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToFirstSubmission}</span>
+                <div className={`grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4 ${!printMetrics.speed ? 'print:hidden' : ''}`} data-metric-section="speed">
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 md:p-4">
+                    <h3 className="mb-2 text-xs font-medium text-blue-700 md:text-sm">Time to 1st Submission</h3>
+                    <div className="mb-2 flex items-end space-x-3">
+                      <span className="text-2xl font-bold text-blue-900 md:text-3xl">{speedMetrics.timeToFirstSubmission}</span>
                       <span className="text-sm text-blue-700 mb-1">days</span>
                       <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Interview</h3>
-                    <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToInterview}</span>
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 md:p-4">
+                    <h3 className="mb-2 text-xs font-medium text-blue-700 md:text-sm">Time to Interview</h3>
+                    <div className="mb-2 flex items-end space-x-3">
+                      <span className="text-2xl font-bold text-blue-900 md:text-3xl">{speedMetrics.timeToInterview}</span>
                       <span className="text-sm text-blue-700 mb-1">days</span>
                       <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Offer</h3>
-                    <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToOffer}</span>
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 md:p-4">
+                    <h3 className="mb-2 text-xs font-medium text-blue-700 md:text-sm">Time to Offer</h3>
+                    <div className="mb-2 flex items-end space-x-3">
+                      <span className="text-2xl font-bold text-blue-900 md:text-3xl">{speedMetrics.timeToOffer}</span>
                       <span className="text-sm text-blue-700 mb-1">days</span>
                       <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Fill</h3>
-                    <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToFill}</span>
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 md:p-4">
+                    <h3 className="mb-2 text-xs font-medium text-blue-700 md:text-sm">Time to Fill</h3>
+                    <div className="mb-2 flex items-end space-x-3">
+                      <span className="text-2xl font-bold text-blue-900 md:text-3xl">{speedMetrics.timeToFill}</span>
                       <span className="text-sm text-blue-700 mb-1">days</span>
                       <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
                     </div>
                   </div>
                 </div>
 
+                {/* Speed Metrics Trend — below cards on mobile */}
+                <div className="space-y-3 print:hidden md:hidden" data-metric-section="speed-trend-mobile">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-500"
+                      onClick={() => setExpandedChart("speed")}
+                      title="Open full view"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="h-48 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={speedTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#6B7280" }} stroke="#9CA3AF" />
+                        <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} stroke="#9CA3AF" />
+                        <RechartsTooltip contentStyle={{ fontSize: 12, backgroundColor: "#FFF", border: "1px solid #E5E7EB" }} />
+                        <Legend wrapperStyle={{ fontSize: 9 }} iconType="line" />
+                        <Line type="monotone" dataKey="timeToFirstSubmission" stroke="#06B6D4" strokeWidth={2} dot={false} name="1st Submission" />
+                        <Line type="monotone" dataKey="timeToInterview" stroke="#EF4444" strokeWidth={2} dot={false} name="Interview" />
+                        <Line type="monotone" dataKey="timeToOffer" stroke="#A855F7" strokeWidth={2} dot={false} name="Offer" />
+                        <Line type="monotone" dataKey="timeToFill" stroke="#D97706" strokeWidth={2} dot={false} name="Fill" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
                 {/* Quality Metrics */}
                 <div className={`${!printMetrics.quality ? 'print:hidden' : ''}`} data-metric-section="quality">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Quality Metrics</h2>
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-green-100 rounded-lg p-4 border border-green-200">
-                      <h3 className="text-sm font-medium text-green-700 mb-2">Submission to Short List %</h3>
-                      <div className="flex items-end space-x-3 mb-2">
-                        <span className="text-3xl font-bold text-green-800">{qualityMetricsData.submissionToShortList}</span>
+                  <h2 className="mb-3 text-lg font-semibold text-gray-900 md:mb-4 md:text-xl">Quality Metrics</h2>
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
+                    <div className="rounded-lg border border-green-200 bg-green-100 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-green-700 md:text-sm">Submission to Short List %</h3>
+                      <div className="mb-2 flex items-end space-x-3">
+                        <span className="text-2xl font-bold text-green-800 md:text-3xl">{qualityMetrics.submissionToShortList}</span>
                         <span className="text-sm text-green-700 mb-1">%</span>
                         <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                       </div>
                     </div>
 
-                    <div className="bg-green-100 rounded-lg p-4 border border-green-200">
-                      <h3 className="text-sm font-medium text-green-700 mb-2">Interview to Offer %</h3>
-                      <div className="flex items-end space-x-3 mb-2">
-                        <span className="text-3xl font-bold text-green-800">{qualityMetricsData.interviewToOffer}</span>
+                    <div className="rounded-lg border border-green-200 bg-green-100 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-green-700 md:text-sm">Interview to Offer %</h3>
+                      <div className="mb-2 flex items-end space-x-3">
+                        <span className="text-2xl font-bold text-green-800 md:text-3xl">{qualityMetrics.interviewToOffer}</span>
                         <span className="text-sm text-green-700 mb-1">%</span>
                         <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                       </div>
                     </div>
 
-                    <div className="bg-green-100 rounded-lg p-4 border border-green-200">
-                      <h3 className="text-sm font-medium text-green-700 mb-2">Offer Acceptance %</h3>
-                      <div className="flex items-end space-x-3 mb-2">
-                        <span className="text-3xl font-bold text-green-800">{qualityMetricsData.offerAcceptance}</span>
+                    <div className="rounded-lg border border-green-200 bg-green-100 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-green-700 md:text-sm">Offer Acceptance %</h3>
+                      <div className="mb-2 flex items-end space-x-3">
+                        <span className="text-2xl font-bold text-green-800 md:text-3xl">{qualityMetrics.offerAcceptance}</span>
                         <span className="text-sm text-green-700 mb-1">%</span>
                         <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                       </div>
                     </div>
 
-                    <div className="bg-green-100 rounded-lg p-4 border border-green-200">
-                      <h3 className="text-sm font-medium text-green-700 mb-2">Early Attrition %</h3>
-                      <div className="flex items-end space-x-3 mb-2">
-                        <span className="text-3xl font-bold text-green-800">{qualityMetricsData.earlyAttrition}</span>
+                    <div className="rounded-lg border border-green-200 bg-green-100 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-green-700 md:text-sm">Early Attrition %</h3>
+                      <div className="mb-2 flex items-end space-x-3">
+                        <span className="text-2xl font-bold text-green-800 md:text-3xl">{qualityMetrics.earlyAttrition}</span>
                         <span className="text-sm text-green-700 mb-1">%</span>
                         <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
                       </div>
@@ -1484,68 +1654,142 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
+                {/* Quality Metrics Trend — below cards on mobile */}
+                <div className="mb-6 space-y-3 print:hidden md:hidden" data-metric-section="quality-trend-mobile">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-500"
+                      onClick={() => setExpandedChart("quality")}
+                      title="Open full view"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="h-48 rounded-lg border border-green-100 bg-green-50 p-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={qualityTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#6B7280" }} stroke="#9CA3AF" />
+                        <YAxis tick={{ fontSize: 10, fill: "#6B7280" }} stroke="#9CA3AF" />
+                        <RechartsTooltip contentStyle={{ fontSize: 12, backgroundColor: "#FFF", border: "1px solid #E5E7EB" }} />
+                        <Legend wrapperStyle={{ fontSize: 9 }} iconType="line" />
+                        <Line type="monotone" dataKey="submissionToShortList" stroke="#06B6D4" strokeWidth={2} dot={false} name="Submission Rate" />
+                        <Line type="monotone" dataKey="interviewToOffer" stroke="#EF4444" strokeWidth={2} dot={false} name="Interview Rate" />
+                        <Line type="monotone" dataKey="offerAcceptance" stroke="#A855F7" strokeWidth={2} dot={false} name="Offer Rate" />
+                        <Line type="monotone" dataKey="earlyAttrition" stroke="#D97706" strokeWidth={2} dot={false} name="Attrition" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
                 {/* Impact Metrics */}
                 <div className={`${!printMetrics.impact ? 'print:hidden' : ''}`} data-metric-section="impact">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact Metrics</h2>
-                  <div className="grid grid-cols-4 gap-4 mb-4">
-                    <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                      <h3 className="text-sm font-medium text-red-700 mb-2">Speed to Hire value</h3>
-                      <div className="text-3xl font-bold text-red-600">{firstImpactMetrics.speedToHire}</div>
+                  <h2 className="mb-3 text-lg font-semibold text-gray-900 md:mb-4 md:text-xl">Impact Metrics</h2>
+                  <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-red-700 md:text-sm">Speed to Hire value</h3>
+                      <div className="text-2xl font-bold text-red-600 md:text-3xl">{firstImpactMetrics.speedToHire}</div>
                       <div className="text-sm text-gray-600 mt-1">Days faster*</div>
                     </div>
 
-                    <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                      <h3 className="text-sm font-medium text-red-700 mb-2">Revenue Impact Of Delay</h3>
-                      <div className="text-3xl font-bold text-red-600">{firstImpactMetrics.revenueImpactOfDelay}</div>
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-red-700 md:text-sm">Revenue Impact Of Delay</h3>
+                      <div className="text-2xl font-bold text-red-600 md:text-3xl">{firstImpactMetrics.revenueImpactOfDelay}</div>
                       <div className="text-sm text-gray-600 mt-1">Lost per Role*</div>
                     </div>
 
-                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                      <h3 className="text-sm font-medium text-purple-700 mb-2">Client NPS</h3>
-                      <div className="text-3xl font-bold text-purple-600">+{firstImpactMetrics.clientNps}</div>
+                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-purple-700 md:text-sm">Client NPS</h3>
+                      <div className="text-2xl font-bold text-purple-600 md:text-3xl">+{firstImpactMetrics.clientNps}</div>
                       <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                     </div>
 
-                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                      <h3 className="text-sm font-medium text-purple-700 mb-2">Candidate NPS</h3>
-                      <div className="text-3xl font-bold text-purple-600">+{firstImpactMetrics.candidateNps}</div>
+                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-purple-700 md:text-sm">Candidate NPS</h3>
+                      <div className="text-2xl font-bold text-purple-600 md:text-3xl">+{firstImpactMetrics.candidateNps}</div>
                       <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                      <h3 className="text-sm font-medium text-yellow-700 mb-2">Feedback Turn Around</h3>
-                      <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.feedbackTurnAround}</div>
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
+                    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-yellow-700 md:text-sm">Feedback Turn Around</h3>
+                      <div className="text-2xl font-bold text-yellow-600 md:text-3xl">{firstImpactMetrics.feedbackTurnAround}</div>
                       <div className="text-sm text-gray-600 mt-1">days</div>
                       <div className="text-xs text-gray-500 mt-1">Industry Avg. 5 days*</div>
                     </div>
 
-                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                      <h3 className="text-sm font-medium text-yellow-700 mb-2">First Year Retention Rate</h3>
-                      <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.firstYearRetentionRate}</div>
-                      <div className="text-sm text-gray-600 mt-1">%</div>
+                    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-yellow-700 md:text-sm">First Year Retention Rate</h3>
+                      <div className="text-2xl font-bold text-yellow-600 md:text-3xl">{firstImpactMetrics.firstYearRetentionRate}</div>
+                      <div className="mt-1 text-sm text-gray-600">%</div>
                     </div>
 
-                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                      <h3 className="text-sm font-medium text-yellow-700 mb-2">Fulfillment Rate</h3>
-                      <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.fulfillmentRate}</div>
-                      <div className="text-sm text-gray-600 mt-1">%</div>
+                    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-yellow-700 md:text-sm">Fulfillment Rate</h3>
+                      <div className="text-2xl font-bold text-yellow-600 md:text-3xl">{firstImpactMetrics.fulfillmentRate}</div>
+                      <div className="mt-1 text-sm text-gray-600">%</div>
                     </div>
 
-                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                      <h3 className="text-sm font-medium text-yellow-700 mb-2">Revenue Recovered</h3>
-                      <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.revenueRecovered} <span className="text-2xl">L</span></div>
-                      <div className="text-sm text-gray-600 mt-1">Gained per hire*</div>
+                    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 md:p-4">
+                      <h3 className="mb-2 text-xs font-medium text-yellow-700 md:text-sm">Revenue Recovered</h3>
+                      <div className="text-2xl font-bold text-yellow-600 md:text-3xl">
+                        {firstImpactMetrics.revenueRecovered} <span className="text-xl md:text-2xl">L</span>
+                      </div>
+                      <div className="mt-1 text-sm text-gray-600">Gained per hire*</div>
                     </div>
                   </div>
                 </div>
 
+                {/* Drop rates — mobile (scrolls with page, not in sidebar) */}
+                <div className="relative grid grid-cols-2 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 print:hidden md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowInterviewDropModal(true)}
+                    className="rounded-lg p-2 text-center transition-colors hover:bg-gray-100"
+                    data-testid="button-interview-drop-rate-mobile"
+                  >
+                    <div className="mb-1 text-xs text-gray-600">Interview Drop Rate</div>
+                    <div className="text-xl font-bold text-gray-900">
+                      {isLoadingDropRates ? "..." : `${dropRatesData?.interviewDropRate || 0}%`}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowOfferDropModal(true)}
+                    className="rounded-lg p-2 text-center transition-colors hover:bg-gray-100"
+                    data-testid="button-offer-drop-rate-mobile"
+                  >
+                    <div className="mb-1 text-xs text-gray-600">Offer Drop Rate</div>
+                    <div className="text-xl font-bold text-gray-900">
+                      {isLoadingDropRates ? "..." : `${dropRatesData?.offerDropRate || 0}%`}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast({
+                        title: "Drop Rate Information",
+                        description:
+                          "Interview Drop Rate: candidates who drop out during interviews. Offer Drop Rate: candidates who decline offers.",
+                      });
+                    }}
+                    className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-purple-500 text-white shadow-md hover:bg-purple-600"
+                    aria-label="Drop rate help"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
                 {/* Download Button */}
-                <div className="flex justify-end mt-6 print:hidden">
+                <div className="mt-4 flex justify-end print:hidden md:mt-6">
                   <Button
                     onClick={() => setIsDownloadModalOpen(true)}
-                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded shadow-lg flex items-center gap-2"
+                    className="flex h-9 items-center gap-2 rounded bg-cyan-400 px-4 py-2 text-sm text-black shadow-lg hover:bg-cyan-500 md:h-10 md:px-6"
                     data-testid="button-download-metrics"
                   >
                     <Download className="h-4 w-4" />
@@ -1554,15 +1798,26 @@ export default function ClientDashboard() {
                 </div>
               </div>
 
-              {/* Right Sidebar with Charts */}
-              <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6 overflow-y-auto print:hidden">
-                {/* Speed Metrics Chart - 4 Lines */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
-                  <div className="h-56 bg-blue-50 border border-blue-100 rounded-lg p-4">
+              <div className="w-full shrink-0 space-y-4 overflow-y-auto border-t border-gray-200 bg-white p-4 md:w-80 md:border-l md:border-t-0 md:p-6 md:space-y-6 print:hidden">
+                {/* Speed Metrics Chart - desktop sidebar only */}
+                <div className="hidden space-y-4 md:block">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-500 hover:text-gray-800"
+                      onClick={() => setExpandedChart("speed")}
+                      title="Open full view"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="h-48 rounded-lg border border-blue-100 bg-blue-50 p-3 md:h-56 md:p-4">
                     <div className="h-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={speedChartData}>
+                        <LineChart data={speedTrendData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                           <XAxis
                             dataKey="month"
@@ -1573,7 +1828,7 @@ export default function ClientDashboard() {
                             tick={{ fontSize: 11, fill: '#6B7280' }}
                             stroke="#9CA3AF"
                           />
-                          <Tooltip
+                          <RechartsTooltip
                             contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
                           />
                           <Legend
@@ -1618,13 +1873,25 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                {/* Quality Metrics Chart - 4 Lines */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
-                  <div className="h-56 bg-green-50 border border-green-100 rounded-lg p-4">
+                {/* Quality Metrics Chart - desktop sidebar only */}
+                <div className="hidden space-y-4 md:block">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-500 hover:text-gray-800"
+                      onClick={() => setExpandedChart("quality")}
+                      title="Open full view"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="h-48 rounded-lg border border-green-100 bg-green-50 p-3 md:h-56 md:p-4">
                     <div className="h-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={qualityChartData}>
+                        <LineChart data={qualityTrendData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                           <XAxis
                             dataKey="month"
@@ -1635,7 +1902,7 @@ export default function ClientDashboard() {
                             tick={{ fontSize: 11, fill: '#6B7280' }}
                             stroke="#9CA3AF"
                           />
-                          <Tooltip
+                          <RechartsTooltip
                             contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
                           />
                           <Legend
@@ -1680,8 +1947,47 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                {/* Drop Rates Section - Fully Functional */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative">
+                <Dialog open={expandedChart !== null} onOpenChange={(open) => !open && setExpandedChart(null)}>
+                  <DialogContent className={`${CLIENT_MOBILE_DIALOG_WIDE_CLASS} md:max-w-5xl`}>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {expandedChart === "speed" ? "Speed Metrics Trend" : "Quality Metrics Trend"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="h-[min(52vh,520px)] rounded-lg border border-gray-200 bg-white p-3 md:h-[520px] md:p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        {expandedChart === "speed" ? (
+                          <LineChart data={speedTrendData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                            <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6B7280' }} stroke="#9CA3AF" />
+                            <YAxis tick={{ fontSize: 12, fill: '#6B7280' }} stroke="#9CA3AF" />
+                            <RechartsTooltip contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }} />
+                            <Legend />
+                            <Line type="monotone" dataKey="timeToFirstSubmission" stroke="#06B6D4" strokeWidth={2.5} dot={false} name="1st Submission" />
+                            <Line type="monotone" dataKey="timeToInterview" stroke="#EF4444" strokeWidth={2.5} dot={false} name="Interview" />
+                            <Line type="monotone" dataKey="timeToOffer" stroke="#A855F7" strokeWidth={2.5} dot={false} name="Offer" />
+                            <Line type="monotone" dataKey="timeToFill" stroke="#D97706" strokeWidth={2.5} dot={false} name="Fill" />
+                          </LineChart>
+                        ) : (
+                          <LineChart data={qualityTrendData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                            <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6B7280' }} stroke="#9CA3AF" />
+                            <YAxis tick={{ fontSize: 12, fill: '#6B7280' }} stroke="#9CA3AF" />
+                            <RechartsTooltip contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }} />
+                            <Legend />
+                            <Line type="monotone" dataKey="submissionToShortList" stroke="#06B6D4" strokeWidth={2.5} dot={false} name="Submission Rate" />
+                            <Line type="monotone" dataKey="interviewToOffer" stroke="#EF4444" strokeWidth={2.5} dot={false} name="Interview Rate" />
+                            <Line type="monotone" dataKey="offerAcceptance" stroke="#A855F7" strokeWidth={2.5} dot={false} name="Offer Rate" />
+                            <Line type="monotone" dataKey="earlyAttrition" stroke="#D97706" strokeWidth={2.5} dot={false} name="Attrition" />
+                          </LineChart>
+                        )}
+                      </ResponsiveContainer>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Drop Rates Section - desktop sidebar */}
+                <div className="relative hidden rounded-lg border border-gray-200 bg-gray-50 p-4 md:block">
                   {/* Interview Drop of Rate - Clickable */}
                   <button
                     onClick={() => setShowInterviewDropModal(true)}
@@ -1723,7 +2029,7 @@ export default function ClientDashboard() {
                 
                 {/* Interview Drop Rate Modal - Simplified */}
                 <Dialog open={showInterviewDropModal} onOpenChange={setShowInterviewDropModal}>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className={CLIENT_MOBILE_DIALOG_CLASS}>
                     <DialogHeader>
                       <DialogTitle className="text-xl font-semibold">Interview Drop of Rate</DialogTitle>
                       <DialogDescription>
@@ -1744,7 +2050,7 @@ export default function ClientDashboard() {
                 
                 {/* Offer Drop Rate Modal - Simplified */}
                 <Dialog open={showOfferDropModal} onOpenChange={setShowOfferDropModal}>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className={CLIENT_MOBILE_DIALOG_CLASS}>
                     <DialogHeader>
                       <DialogTitle className="text-xl font-semibold">Offer Drop of Rate</DialogTitle>
                       <DialogDescription>
@@ -1921,22 +2227,75 @@ export default function ClientDashboard() {
         />
 
         {/* Main Content Area */}
-        <div className="flex min-h-0 min-w-0 flex-1 ml-16 overflow-x-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 overflow-x-hidden md:ml-16">
           {/* Middle Section */}
-          <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-white">
+          <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-white pb-20 md:pb-0">
             {renderMainContent()}
           </div>
         </div>
       </div>
 
+      <ClientMobileBottomNav
+        activeTab={normalizeClientPortalTab(sidebarTab)}
+        items={clientMobileNavItems}
+        onTabChange={handleSidebarTabChange}
+      />
+
       {/* Roles Modal */}
       <Dialog open={isRolesModalOpen} onOpenChange={setIsRolesModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+        <DialogContent className={`${CLIENT_MOBILE_DIALOG_WIDE_CLASS} max-h-[92vh]`}>
           <DialogHeader>
             <DialogTitle>All Roles & Status</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[60vh]">
-            <table className="w-full">
+          <div className="max-h-[min(70vh,560px)] overflow-y-auto md:hidden">
+            <ClientRequirementsRoleMobileCards
+              roles={(Array.isArray(allRolesData) ? allRolesData : []) as ClientRequirementRoleRow[]}
+              isLoading={isLoadingRoles}
+              isClientAdmin={isClientAdmin}
+              onView={(role) => {
+                const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId);
+                setSelectedRoleForView(fullRole || role);
+                setIsViewRoleModalOpen(true);
+              }}
+              onSharedProfiles={(role) => {
+                const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId) || role;
+                const rid = fullRole?.id || fullRole?.roleId || role.roleId;
+                if (!rid) return;
+                setSharedProfilesRequirementId(String(rid));
+                setSharedProfilesRoleTitle(fullRole?.position || fullRole?.role || role.role || "");
+                setSharedProfilesOpen(true);
+                setIsRolesModalOpen(false);
+              }}
+              onEdit={(role) => {
+                const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId);
+                setSelectedRoleForEdit(fullRole || role);
+                setEditJdPosition(fullRole?.role || role?.role || "");
+                setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
+                setEditJdText(fullRole?.jdText || role?.jdText || "");
+                setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || "");
+                setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || "");
+                setEditKnowledgeOnly(fullRole?.knowledgeOnly || role?.knowledgeOnly || "");
+                setEditSpecialInstructions(fullRole?.specialInstructions || role?.specialInstructions || "");
+                setEditJdFile(null);
+                if (editJdFilePreviewUrl) URL.revokeObjectURL(editJdFilePreviewUrl);
+                setEditJdFilePreviewUrl(null);
+                setIsEditRoleModalOpen(true);
+              }}
+              onDelete={(roleId) => setRoleToDelete(roleId)}
+              onAssign={(role) => {
+                const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId) || role;
+                setAssignRequirement({
+                  id: fullRole.id || fullRole.roleId,
+                  title: fullRole.position || fullRole.role || "Requirement",
+                  memberId: fullRole.assignedClientMemberId || null,
+                });
+                setAssignModalOpen(true);
+              }}
+              layout="stack"
+            />
+          </div>
+          <div className="hidden max-h-[60vh] overflow-x-auto overflow-y-auto md:block">
+            <table className="min-w-[720px] w-full">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role ID</th>
@@ -1958,7 +2317,7 @@ export default function ClientDashboard() {
                 ) : (
                   (Array.isArray(allRolesData) ? allRolesData : []).map((role, index) => (
                     <tr key={role.roleId || index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.roleId}>{resolveDisplayRoleId(role.roleId)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={role.id || role.roleId}>{resolveClientRoleDisplayId(role)}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         <RequirementRoleCell
                           title={role.role}
@@ -2053,7 +2412,7 @@ export default function ClientDashboard() {
 
       {/* JD Text Modal */}
       <Dialog open={isJdModalOpen} onOpenChange={setIsJdModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className={`${CLIENT_MOBILE_DIALOG_CLASS} md:max-w-2xl`}>
           <DialogHeader>
             <DialogTitle>Write Job Description</DialogTitle>
             <DialogDescription>
@@ -2094,7 +2453,7 @@ export default function ClientDashboard() {
                   }
                 }}
                 placeholder="Enter your job description here..."
-                className="w-full h-64 border border-gray-300 rounded p-3 resize-none text-sm"
+                className="h-48 w-full resize-none rounded border border-gray-300 p-3 text-sm md:h-64"
               />
             </div>
             <div className="flex justify-end space-x-2">
@@ -2124,7 +2483,7 @@ export default function ClientDashboard() {
 
       {/* JD Preview Modal */}
       <Dialog open={isJdPreviewModalOpen} onOpenChange={setIsJdPreviewModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className={`${CLIENT_MOBILE_DIALOG_CLASS} md:max-w-3xl`}>
           <DialogHeader>
             <DialogTitle>Job Description Preview</DialogTitle>
           </DialogHeader>
@@ -2323,7 +2682,7 @@ export default function ClientDashboard() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={roleToDelete !== null} onOpenChange={(open) => !open && setRoleToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className={`${CLIENT_MOBILE_DIALOG_CLASS} md:max-w-lg`}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Role</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2348,17 +2707,17 @@ export default function ClientDashboard() {
 
       {/* View Role Modal */}
       <Dialog open={isViewRoleModalOpen} onOpenChange={setIsViewRoleModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className={`${CLIENT_MOBILE_DIALOG_CLASS} md:max-w-4xl`}>
           <DialogHeader>
             <DialogTitle>View Role Details</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 max-h-[calc(90vh-8rem)]">
             {selectedRoleForView && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-semibold text-gray-700">Role ID</label>
-                    <p className="text-sm text-gray-900">{selectedRoleForView.roleId}</p>
+                    <p className="text-sm text-gray-900">{resolveClientRoleDisplayId(selectedRoleForView)}</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700">Role</label>
@@ -2507,17 +2866,17 @@ export default function ClientDashboard() {
           setEditNoOfPositions(1);
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className={`${CLIENT_MOBILE_DIALOG_CLASS} md:max-w-3xl`}>
           <DialogHeader>
             <DialogTitle>Edit Job Description</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 max-h-[calc(90vh-8rem)]">
             {selectedRoleForEdit && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-semibold text-gray-700">Role ID</label>
-                    <p className="text-sm text-gray-900">{selectedRoleForEdit.roleId}</p>
+                    <p className="text-sm text-gray-900">{resolveClientRoleDisplayId(selectedRoleForEdit)}</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700">Current Role</label>
@@ -2718,9 +3077,9 @@ export default function ClientDashboard() {
 
       {/* Closure Reports Modal */}
       <Dialog open={isClosureModalOpen} onOpenChange={setIsClosureModalOpen}>
-        <DialogContent className="mx-auto max-h-[80vh] max-w-5xl overflow-hidden">
+        <DialogContent className={`${CLIENT_MOBILE_DIALOG_WIDE_CLASS} overflow-hidden md:max-w-5xl`}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">
+            <DialogTitle className="text-lg font-semibold text-gray-900 md:text-xl">
               All Closure Reports
             </DialogTitle>
           </DialogHeader>
@@ -2736,7 +3095,7 @@ export default function ClientDashboard() {
 
       {/* Download Metrics Modal */}
       <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
-        <DialogContent className="max-w-md print:hidden">
+        <DialogContent className={`${CLIENT_MOBILE_DIALOG_CLASS} print:hidden md:max-w-md`}>
           <DialogHeader>
             <DialogTitle>Download Metrics as PDF</DialogTitle>
           </DialogHeader>

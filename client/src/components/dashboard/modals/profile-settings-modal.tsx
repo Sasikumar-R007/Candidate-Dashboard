@@ -277,9 +277,9 @@ export function ProfileSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden border-0 bg-[#f5f7fb] p-0 shadow-2xl">
-        <DialogHeader className="border-b border-slate-200 bg-white px-6 py-5">
-          <div className="flex items-start justify-between gap-4">
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-hidden border-0 bg-[#f5f7fb] p-0 shadow-2xl md:max-w-5xl md:w-full">
+        <DialogHeader className="border-b border-slate-200 bg-white px-4 py-4 md:px-6 md:py-5">
+          <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
             <div>
               <DialogTitle className="text-xl font-semibold text-slate-900">
                 {activeView === "settings" ? "System Settings" : "Account Profile"}
@@ -304,8 +304,8 @@ export function ProfileSettingsModal({
           </div>
         </DialogHeader>
 
-        <div className="grid max-h-[calc(92vh-86px)] gap-0 overflow-hidden lg:grid-cols-[280px_1fr]">
-          <div className="overflow-y-auto border-r border-slate-200 bg-[#eef3fb] px-6 py-6">
+        <div className="grid max-h-[calc(92vh-86px)] gap-0 overflow-y-auto overflow-x-hidden lg:grid-cols-[280px_1fr] lg:overflow-hidden">
+          <div className="overflow-y-auto border-b border-slate-200 bg-[#eef3fb] px-4 py-5 md:px-6 md:py-6 lg:border-b-0 lg:border-r">
             <div className="flex flex-col items-center text-center">
               <div className="relative">
                 {profileImage ? (
@@ -385,10 +385,10 @@ export function ProfileSettingsModal({
             </div>
           </div>
 
-          <div className="overflow-y-auto px-6 py-6">
+          <div className="overflow-y-auto px-4 py-5 md:px-6 md:py-6">
             {activeView === "profile" ? (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900">Profile Details</h3>
                     <p className="text-sm text-slate-500">Use the edit button to unlock changes for your account information.</p>
@@ -441,7 +441,7 @@ export function ProfileSettingsModal({
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4">
+                <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end">
                   {isEditingProfile && (
                     <Button
                       type="button"

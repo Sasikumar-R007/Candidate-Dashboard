@@ -77,7 +77,7 @@ export function ClientMembersSidebar() {
 
   return (
     <div
-      className="flex h-full w-80 shrink-0 flex-col border-l border-gray-200 bg-white"
+      className="flex h-[320px] w-full shrink-0 flex-col border-t border-gray-200 bg-white lg:h-full lg:w-80 lg:border-l lg:border-t-0"
       data-testid="client-members-sidebar"
     >
       <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50/80 p-4">

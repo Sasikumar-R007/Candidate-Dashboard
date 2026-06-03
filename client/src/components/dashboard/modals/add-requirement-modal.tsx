@@ -266,10 +266,10 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         return;
       }
     }
-    if (!jdFilePreviewUrl && !jdFile) {
+    if (!jdFilePreviewUrl && !jdFile && !jdText.trim()) {
       toast({
         title: "Missing JD",
-        description: "Please upload a JD file.",
+        description: "Please provide either a JD file or JD text.",
         variant: "destructive",
       });
       return;

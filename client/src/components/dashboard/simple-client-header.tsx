@@ -11,8 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { Badge } from "@/components/ui/badge";
-import { CompanyBrandAvatar } from "@/components/client-brand-avatar";
 import { useNotificationSound } from "@/hooks/use-notification-sound";
+import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
 
 type PortalNudge = {
   id: string;
@@ -25,8 +25,10 @@ type PortalNudge = {
 interface SimpleClientHeaderProps {
   companyName?: string;
   companyLogo?: string | null;
+  clientProfilePicture?: string | null;
   clientName?: string;
   clientEmail?: string;
+  activeTabId?: string;
   displayEmployeeId?: string | null;
   isClientAdmin?: boolean;
   onHelpClick?: () => void;
@@ -84,8 +86,10 @@ type NotificationRow = {
 export default function SimpleClientHeader({ 
   companyName = "Loading...",
   companyLogo = null,
+  clientProfilePicture = null,
   clientName,
   clientEmail,
+  activeTabId,
   displayEmployeeId,
   isClientAdmin = false,
   onHelpClick,
@@ -100,6 +104,7 @@ export default function SimpleClientHeader({
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationTab, setNotificationTab] = useState<string>('all');
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [profileImgError, setProfileImgError] = useState(false);
   const { toast } = useToast();
   const { logout } = useAuth();
   const employee = useEmployeeAuth();
@@ -111,6 +116,16 @@ export default function SimpleClientHeader({
 
   const userName = clientName || employee?.name || "Client User";
   const userEmail = clientEmail || employee?.email || "";
+  const fallbackLogoSrc = useMemo(() => resolveProfilePictureUrl(companyLogo), [companyLogo]);
+  const profilePictureSrc = useMemo(
+    () => resolveProfilePictureUrl(clientProfilePicture),
+    [clientProfilePicture],
+  );
+  const avatarSrc = profilePictureSrc || fallbackLogoSrc;
+
+  useEffect(() => {
+    setProfileImgError(false);
+  }, [avatarSrc]);
 
   const {
     data: employeeFeed,
@@ -180,6 +195,26 @@ export default function SimpleClientHeader({
       setNotificationTab(notificationTabs[0]?.id || "all");
     }
   }, [notificationTabs, notificationTab]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showUserDropdown && !target.closest('[data-testid="button-client-user-dropdown"]') && !target.closest('[data-testid="client-user-dropdown-menu"]')) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    if (showUserDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showUserDropdown]);
+
+  useEffect(() => {
+    if (showUserDropdown) {
+      setShowUserDropdown(false);
+    }
+  }, [activeTabId]);
 
   const portalNudgeItems = useMemo<EmployeeNotificationItem[]>(() => {
     return (portalNudges || []).map((n) => ({
@@ -261,11 +296,10 @@ export default function SimpleClientHeader({
 
   const headerUnreadCount = useMemo(() => {
     const fromRows = visibleNotificationRows.filter((r) => r.isUnread).length;
-    if (employeeFeed && !feedError) {
-      return Math.max(employeeFeed.unreadCount, fromRows);
-    }
-    return fromRows;
-  }, [visibleNotificationRows, employeeFeed, feedError]);
+    const fromPortal = portalNudges.filter((n) => n.isRead !== true).length;
+    const fromFeed = employeeFeed?.unreadCount ?? 0;
+    return Math.max(fromFeed, fromRows, fromPortal);
+  }, [visibleNotificationRows, employeeFeed, feedError, portalNudges]);
 
   useNotificationSound(headerUnreadCount, true);
 
@@ -320,36 +354,30 @@ export default function SimpleClientHeader({
     setShowUserDropdown(false);
     onOpenChangePassword?.();
   };
+
+  const handleHelpClick = () => {
+    setShowUserDropdown(false);
+    onHelpClick?.();
+  };
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        {/* Company + role badge */}
-        <div className="min-w-0">
+    <div className="bg-white border-b border-gray-200 px-4 py-3 md:px-6 md:py-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-semibold text-gray-900 truncate">{companyName}</h1>
+            <h1 className="truncate text-base font-semibold text-gray-900 md:text-lg">{companyName}</h1>
             {isClientAdmin && (
-              <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 shrink-0">
+              <Badge className="hidden rounded-[6px] border-blue-200 bg-blue-100 text-blue-800 hover:bg-blue-100 shrink-0 md:inline-flex">
                 Client Admin
               </Badge>
             )}
           </div>
           {displayEmployeeId && (
-            <p className="text-xs text-gray-500 mt-0.5 font-mono">{displayEmployeeId}</p>
+            <p className="mt-0.5 hidden font-mono text-xs text-gray-500 md:block">{displayEmployeeId}</p>
           )}
         </div>
         
-        {/* Right side - Help, Notifications and User Profile */}
-        <div className="flex items-center gap-4">
-          {/* Help Button */}
-          <button 
-            onClick={onHelpClick}
-            className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 hover:bg-gray-100 rounded-lg"
-            data-testid="button-header-help"
-          >
-            <HelpCircle size={16} />
-            <span className="text-sm">Help</span>
-          </button>
-
+        {/* Right side - Notifications and User Profile */}
+        <div className="flex items-center gap-2 md:gap-4">
           {/* Notifications */}
           <div className="relative">
             <button
@@ -357,15 +385,23 @@ export default function SimpleClientHeader({
                 setShowUserDropdown(false);
                 setShowNotifications((prev) => !prev);
               }}
-              className="relative flex items-center justify-center h-10 w-10 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 transition-colors duration-200 hover:bg-gray-100 hover:text-gray-900 md:h-10 md:w-10"
               data-testid="button-client-notifications"
             >
-              <Bell size={18} />
-              {headerUnreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
-                  {headerUnreadCount}
-                </span>
-              )}
+              <span className="relative inline-flex">
+                <Bell size={18} />
+                {headerUnreadCount > 0 && (
+                  <>
+                    <span
+                      className="absolute -right-0.5 -top-0.5 z-10 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
+                      aria-hidden
+                    />
+                    <span className="absolute -right-1 -top-1 hidden min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white md:flex">
+                      {headerUnreadCount > 99 ? "99+" : headerUnreadCount}
+                    </span>
+                  </>
+                )}
+              </span>
             </button>
           </div>
           
@@ -374,34 +410,56 @@ export default function SimpleClientHeader({
             <button
               type="button"
               onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 transition-all duration-200 hover:bg-gray-100 rounded-lg"
+              className="flex items-center gap-2 px-2 py-1.5 text-gray-700 hover:text-gray-900 transition-all duration-200 hover:bg-gray-100 rounded-lg md:px-3 md:py-2"
               data-testid="button-client-user-dropdown"
             >
-              <CompanyBrandAvatar
-                logoUrl={companyLogo}
-                companyName={companyName}
-                size="sm"
-                className="shadow-sm"
-              />
-              <span className="text-sm font-medium">{userName}</span>
+              {avatarSrc && !profileImgError ? (
+                <img
+                  src={avatarSrc}
+                  alt={userName}
+                  className="h-9 w-9 rounded-full object-cover shadow-sm"
+                  onError={() => setProfileImgError(true)}
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-semibold text-white shadow-sm">
+                  {userName.split(" ").map((name) => name[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <span className="hidden text-sm font-medium sm:inline">{userName}</span>
               <ChevronDown 
                 size={16} 
-                className={`transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} 
+                className={`hidden transition-transform duration-200 sm:inline ${showUserDropdown ? 'rotate-180' : ''}`} 
               />
             </button>
 
-            {/* Dropdown Menu */}
             {showUserDropdown && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl py-4 z-50">
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-40 bg-black/25 backdrop-blur-sm"
+                  onClick={() => setShowUserDropdown(false)}
+                  aria-label="Close profile menu"
+                  data-testid="client-profile-menu-backdrop"
+                />
+                <div
+                  className="absolute right-0 top-full z-50 mt-2 w-[min(100vw-2rem,20rem)] rounded-lg border border-gray-200 bg-white py-4 shadow-xl md:w-80"
+                  data-testid="client-user-dropdown-menu"
+                >
                 {/* Profile Section */}
                 <div className="px-4 pb-4 border-b border-gray-200">
                   <div className="flex items-center space-x-4">
-                    <CompanyBrandAvatar
-                      logoUrl={companyLogo}
-                      companyName={companyName}
-                      size="lg"
-                      className="flex-shrink-0"
-                    />
+                    {avatarSrc && !profileImgError ? (
+                      <img
+                        src={avatarSrc}
+                        alt={userName}
+                        className="h-12 w-12 flex-shrink-0 rounded-2xl object-cover"
+                        onError={() => setProfileImgError(true)}
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-semibold text-white">
+                        {userName.split(" ").map((name) => name[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="text-lg font-semibold text-gray-900 truncate">
                         {userName}
@@ -441,6 +499,17 @@ export default function SimpleClientHeader({
                     <Settings size={16} />
                     <span>Change Password</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleHelpClick}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                    data-testid="button-client-help-inside-menu"
+                  >
+                    <HelpCircle size={16} />
+                    <span>Help</span>
+                  </button>
                   
                   <hr className="my-2 border-gray-200" />
                   
@@ -454,7 +523,8 @@ export default function SimpleClientHeader({
                     <span>{logoutMutation.isPending ? 'Signing out...' : 'Sign out'}</span>
                   </button>
                 </div>
-              </div>
+                </div>
+              </>
             )}
           </div>
         </div>
