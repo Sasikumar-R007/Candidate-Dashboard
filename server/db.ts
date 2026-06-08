@@ -426,6 +426,11 @@ export async function ensureCriticalPipelineColumns() {
     ADD COLUMN IF NOT EXISTS requirement_id varchar(255),
     ADD COLUMN IF NOT EXISTS no_of_positions integer DEFAULT 1
   `);
+
+  await pool.query(`
+    ALTER TABLE revenue_mappings
+    ADD COLUMN IF NOT EXISTS payment_date text
+  `);
 }
 
 /** Full idempotent schema sync for production DBs that lag behind localhost (drizzle push). */
@@ -455,7 +460,8 @@ export async function ensureDeploymentSchema() {
       if (
         statement.includes("job_applications") ||
         statement.includes("recruiter_jobs") ||
-        statement.includes("candidate_application_comments")
+        statement.includes("candidate_application_comments") ||
+        statement.includes("revenue_mappings")
       ) {
         throw error;
       }
