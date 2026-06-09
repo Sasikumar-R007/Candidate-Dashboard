@@ -135,12 +135,12 @@ export function CandidateNotificationBell({ onNavigateToMyJobs }: CandidateNotif
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-9 w-9 lg:h-10 lg:w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
+        className="relative flex h-8 w-8 lg:h-9 lg:w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
         aria-label="Notifications"
         aria-expanded={open}
         data-testid="button-candidate-notifications"
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
           <>
             <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
@@ -161,12 +161,12 @@ export function CandidateNotificationBell({ onNavigateToMyJobs }: CandidateNotif
           <>
             <button
               type="button"
-              className="fixed inset-0 z-[250] bg-slate-900/40 backdrop-blur-[2px]"
+              className="fixed inset-0 z-[240] bg-slate-900/50 backdrop-blur-md"
               aria-label="Close notifications"
               onClick={() => setOpen(false)}
             />
             <div
-              className="fixed z-[260] flex max-h-[min(85vh,640px)] lg:max-h-[min(78vh,640px)] flex-col overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100 shadow-[0_24px_60px_-12px_rgba(15,23,42,0.45)] ring-1 ring-slate-400/30"
+              className="fixed z-[250] flex max-h-[min(85vh,640px)] lg:max-h-[min(78vh,640px)] flex-col overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.45)] ring-1 ring-slate-400/30"
               style={{
                 top: panelPosition.top,
                 right: panelPosition.right,

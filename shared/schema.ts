@@ -385,6 +385,17 @@ export const employees = pgTable("employees", {
   clientDepartmentId: varchar("client_department_id"),
   /** Client member: whether this user may view salary details (enforced in UI later). */
   canSeeSalaryDetails: boolean("can_see_salary_details").default(false),
+
+  /** Portal access: active | hold (hold blocks login and dashboard access). */
+  accountStatus: text("account_status").notNull().default("active"),
+  /** Message shown to the user when account is on hold. */
+  holdMessage: text("hold_message"),
+  /** ISO timestamp when hold auto-resumes; null = until admin resumes manually. */
+  holdUntil: text("hold_until"),
+  heldAt: text("held_at"),
+  heldByEmployeeId: varchar("held_by_employee_id"),
+  /** ISO timestamp when forced logout countdown ends (held_at + 30s). */
+  logoutScheduledAt: text("logout_scheduled_at"),
 });
 
 export const clientDepartments = pgTable("client_departments", {
@@ -643,6 +654,30 @@ export const revenueMappings = pgTable("revenue_mappings", {
   incentivePaidMonth: text("incentive_paid_month"),
   /** false = Closure Reports only (TA closure); true = Admin Revenue Data + targets/charts */
   inRevenueData: boolean("in_revenue_data").notNull().default(false),
+  createdAt: text("created_at").notNull(),
+});
+
+export const incentiveMappings = pgTable("incentive_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  revenueMappingId: varchar("revenue_mapping_id").notNull(),
+  candidateName: text("candidate_name"),
+  teamLeadId: varchar("team_lead_id").notNull(),
+  teamLeadName: text("team_lead_name").notNull(),
+  talentAdvisorId: varchar("talent_advisor_id").notNull(),
+  talentAdvisorName: text("talent_advisor_name").notNull(),
+  quarter: text("quarter").notNull(),
+  year: integer("year").notNull(),
+  tlTargetAmount: integer("tl_target_amount").notNull().default(0),
+  taTargetAmount: integer("ta_target_amount").notNull().default(0),
+  tlRevenueAmount: real("tl_revenue_amount").notNull().default(0),
+  taRevenueAmount: real("ta_revenue_amount").notNull().default(0),
+  tlAchievedAmount: integer("tl_achieved_amount").notNull().default(0),
+  taAchievedAmount: integer("ta_achieved_amount").notNull().default(0),
+  tlRemainingTarget: integer("tl_remaining_target").notNull().default(0),
+  taRemainingTarget: integer("ta_remaining_target").notNull().default(0),
+  tlIncentiveAmount: real("tl_incentive_amount").notNull(),
+  taIncentiveAmount: real("ta_incentive_amount").notNull(),
+  bdIncentiveAmount: real("bd_incentive_amount").notNull(),
   createdAt: text("created_at").notNull(),
 });
 
@@ -1032,6 +1067,11 @@ export const insertRevenueMappingSchema = createInsertSchema(revenueMappings).om
   createdAt: true,
 });
 
+export const insertIncentiveMappingSchema = createInsertSchema(incentiveMappings).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertAdminMessageSchema = createInsertSchema(adminMessages).omit({
   id: true,
   sentAt: true,
@@ -1140,6 +1180,8 @@ export type InsertChatAttachment = z.infer<typeof insertChatAttachmentSchema>;
 export type ChatAttachment = typeof chatAttachments.$inferSelect;
 export type InsertRevenueMapping = z.infer<typeof insertRevenueMappingSchema>;
 export type RevenueMapping = typeof revenueMappings.$inferSelect;
+export type InsertIncentiveMapping = z.infer<typeof insertIncentiveMappingSchema>;
+export type IncentiveMapping = typeof incentiveMappings.$inferSelect;
 export type InsertAdminMessage = z.infer<typeof insertAdminMessageSchema>;
 export type AdminMessage = typeof adminMessages.$inferSelect;
 export type InsertRecruiterCommand = z.infer<typeof insertRecruiterCommandSchema>;

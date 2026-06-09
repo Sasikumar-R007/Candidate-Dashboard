@@ -23,10 +23,10 @@ interface AddClientCredentialsModalProps {
 
 export default function AddClientCredentialsModal({ isOpen, onClose, editData, onSubmit }: AddClientCredentialsModalProps) {
   const [formData, setFormData] = useState({
-    clientId: editData?.clientId || "",
+    clientId: editData?.clientCompanyId || editData?.clientId || "",
     firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
     lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
-    phoneNumber: editData?.phoneNumber || "",
+    phoneNumber: editData?.phone || editData?.phoneNumber || "",
     email: editData?.email || "",
     password: editData?.password || "",
     joiningDate: editData?.joiningDate || "",
@@ -48,10 +48,10 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
   useEffect(() => {
     if (editData) {
       setFormData({
-        clientId: editData?.clientId || "",
+        clientId: editData?.clientCompanyId || editData?.clientId || "",
         firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
         lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
-        phoneNumber: editData?.phoneNumber || "",
+        phoneNumber: editData?.phone || editData?.phoneNumber || "",
         email: editData?.email || "",
         password: editData?.password || "",
         joiningDate: editData?.joiningDate || "",
@@ -185,8 +185,8 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
             id="password"
             value={formData.password}
             onChange={(e) => setFormData({...formData, password: e.target.value})}
-            placeholder="Enter password"
-            required
+            placeholder={editData ? "Leave blank to keep current password" : "Enter password"}
+            required={!editData}
             className="w-full bg-gray-50 border-gray-200 text-sm text-gray-500"
             data-testid="input-client-password"
           />

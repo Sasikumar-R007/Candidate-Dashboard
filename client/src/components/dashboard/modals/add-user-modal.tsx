@@ -64,18 +64,23 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
     enabled: isOpen,
   });
 
+  const isClientRole = (role?: string | null) => {
+    const normalized = (role || "").toLowerCase();
+    return normalized === "client" || normalized === "client_admin" || normalized === "client_member";
+  };
+
   useEffect(() => {
     if (editData) {
       const role = editData.role?.toLowerCase();
-      if (role === 'client') {
+      if (isClientRole(role)) {
         setActiveTab("client");
         setClientFormData({
-          clientId: editData?.clientId || "",
+          clientId: editData?.clientCompanyId || editData?.clientId || "",
           firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
           lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
-          phoneNumber: editData?.phoneNumber || "",
+          phoneNumber: editData?.phone || editData?.phoneNumber || "",
           email: editData?.email || "",
-          password: editData?.password || "",
+          password: "",
           joiningDate: editData?.joiningDate || "",
         });
         setClientJoiningDate(editData?.joiningDate ? new Date(editData.joiningDate) : undefined);
@@ -85,9 +90,9 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
           clientId: editData?.clientId || "",
           firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
           lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
-          phoneNumber: editData?.phoneNumber || "",
+          phoneNumber: editData?.phone || editData?.phoneNumber || "",
           email: editData?.email || "",
-          password: editData?.password || "",
+          password: "",
           joiningDate: editData?.joiningDate || "",
         });
         setTeamLeaderJoiningDate(editData?.joiningDate ? new Date(editData.joiningDate) : undefined);
@@ -96,9 +101,9 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
         setRecruiterFormData({
           firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
           lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
-          phoneNumber: editData?.phoneNumber || "",
+          phoneNumber: editData?.phone || editData?.phoneNumber || "",
           email: editData?.email || "",
-          password: editData?.password || "",
+          password: "",
           joiningDate: editData?.joiningDate || "",
           reportingTo: editData?.reportingTo || "",
         });
@@ -170,9 +175,11 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
 
     onSubmit({
       ...clientFormData,
-      id: editData?.id || `STCL${String(Date.now()).slice(-3)}`,
+      dbId: editData?.id,
+      employeeId: editData?.employeeId,
+      id: editData?.employeeId || editData?.id || `STCL${String(Date.now()).slice(-3)}`,
       name: `${clientFormData.firstName} ${clientFormData.lastName}`.trim(),
-      role: "client"
+      role: editData?.role || "client_admin",
     });
     handleClose();
   };
@@ -181,9 +188,11 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
     e.preventDefault();
     onSubmit({
       ...teamLeaderFormData,
-      id: editData?.id || `STL${String(Date.now()).slice(-3)}`,
+      dbId: editData?.id,
+      employeeId: editData?.employeeId,
+      id: editData?.employeeId || editData?.id || `STL${String(Date.now()).slice(-3)}`,
       name: `${teamLeaderFormData.firstName} ${teamLeaderFormData.lastName}`.trim(),
-      role: "Team Leader"
+      role: "Team Leader",
     });
     handleClose();
   };
@@ -192,9 +201,11 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
     e.preventDefault();
     onSubmit({
       ...recruiterFormData,
-      id: editData?.id || `STA${String(Date.now()).slice(-3)}`,
+      dbId: editData?.id,
+      employeeId: editData?.employeeId,
+      id: editData?.employeeId || editData?.id || `STA${String(Date.now()).slice(-3)}`,
       name: `${recruiterFormData.firstName} ${recruiterFormData.lastName}`.trim(),
-      role: "Recruiter"
+      role: "Recruiter",
     });
     handleClose();
   };
@@ -266,9 +277,15 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
           Use this form to create login credentials for those existing records (matching by email).
         </div>
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "client" | "team-leader" | "recruiter")} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            if (!editData) setActiveTab(value as "client" | "team-leader" | "recruiter");
+          }}
+          className="w-full"
+        >
           <div className="px-6">
-            <TabsList className="grid h-11 w-full grid-cols-3 rounded-full bg-slate-100 p-1">
+            <TabsList className={`grid h-11 w-full grid-cols-3 rounded-full bg-slate-100 p-1 ${editData ? "pointer-events-none opacity-70" : ""}`}>
               <TabsTrigger value="client" className="rounded-full text-sm font-medium text-slate-600 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
                 Client
               </TabsTrigger>
@@ -313,7 +330,7 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
 
                   <Input id="client-phoneNumber" type="tel" value={clientFormData.phoneNumber} onChange={(e) => setClientFormData({ ...clientFormData, phoneNumber: e.target.value })} placeholder="Enter phone number" required className={inputClassName} data-testid="input-client-phone-number" />
                   <Input id="client-email" type="email" value={clientFormData.email} onChange={(e) => setClientFormData({ ...clientFormData, email: e.target.value })} placeholder="Enter email" required className={inputClassName} data-testid="input-client-email" />
-                  <PasswordInput id="client-password" value={clientFormData.password} onChange={(e) => setClientFormData({ ...clientFormData, password: e.target.value })} placeholder="Enter password" required className={inputClassName} data-testid="input-client-password" />
+                  <PasswordInput id="client-password" value={clientFormData.password} onChange={(e) => setClientFormData({ ...clientFormData, password: e.target.value })} placeholder={editData ? "Leave blank to keep current password" : "Enter password"} required={!editData} className={inputClassName} data-testid="input-client-password" />
 
                   <div className="space-y-2">
                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">Joining Date</label>
@@ -338,7 +355,7 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
 
                   <Input id="team-leader-phoneNumber" type="tel" value={teamLeaderFormData.phoneNumber} onChange={(e) => setTeamLeaderFormData({ ...teamLeaderFormData, phoneNumber: e.target.value })} placeholder="Enter phone number" required className={inputClassName} data-testid="input-team-leader-phone-number" />
                   <Input id="team-leader-email" type="email" value={teamLeaderFormData.email} onChange={(e) => setTeamLeaderFormData({ ...teamLeaderFormData, email: e.target.value })} placeholder="Enter email" required className={inputClassName} data-testid="input-team-leader-email" />
-                  <PasswordInput id="team-leader-password" value={teamLeaderFormData.password} onChange={(e) => setTeamLeaderFormData({ ...teamLeaderFormData, password: e.target.value })} placeholder="Enter password" required className={inputClassName} data-testid="input-team-leader-password" />
+                  <PasswordInput id="team-leader-password" value={teamLeaderFormData.password} onChange={(e) => setTeamLeaderFormData({ ...teamLeaderFormData, password: e.target.value })} placeholder={editData ? "Leave blank to keep current password" : "Enter password"} required={!editData} className={inputClassName} data-testid="input-team-leader-password" />
 
                   <div className="space-y-2">
                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">Joining Date</label>
@@ -363,7 +380,7 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
 
                   <Input id="recruiter-phoneNumber" type="tel" value={recruiterFormData.phoneNumber} onChange={(e) => setRecruiterFormData({ ...recruiterFormData, phoneNumber: e.target.value })} placeholder="Enter phone number" required className={inputClassName} data-testid="input-recruiter-phone-number" />
                   <Input id="recruiter-email" type="email" value={recruiterFormData.email} onChange={(e) => setRecruiterFormData({ ...recruiterFormData, email: e.target.value })} placeholder="Enter email" required className={inputClassName} data-testid="input-recruiter-email" />
-                  <PasswordInput id="recruiter-password" value={recruiterFormData.password} onChange={(e) => setRecruiterFormData({ ...recruiterFormData, password: e.target.value })} placeholder="Enter password" required className={inputClassName} data-testid="input-recruiter-password" />
+                  <PasswordInput id="recruiter-password" value={recruiterFormData.password} onChange={(e) => setRecruiterFormData({ ...recruiterFormData, password: e.target.value })} placeholder={editData ? "Leave blank to keep current password" : "Enter password"} required={!editData} className={inputClassName} data-testid="input-recruiter-password" />
 
                   <div className="space-y-2">
                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">Joining Date</label>

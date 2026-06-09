@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
+import { formatApiErrorMessage } from "@/lib/api-error-message";
 import { apiRequest } from "@/lib/queryClient";
 import { Users, ArrowLeft, Briefcase, TrendingUp, Shield } from "lucide-react";
 import { Link } from "wouter";
@@ -23,7 +24,13 @@ import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 import ForgotPasswordModal from "@/components/dashboard/modals/ForgotPasswordModal";
 
 interface LoginForm {
@@ -31,9 +38,15 @@ interface LoginForm {
   password: string;
 }
 
+type HeldLoginInfo = {
+  message: string;
+  holdUntilLabel?: string;
+};
+
 export default function EmployerLogin() {
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [heldLoginInfo, setHeldLoginInfo] = useState<HeldLoginInfo | null>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user, isLoading: isAuthLoading, isVerified, verifySession } = useAuth();
@@ -59,12 +72,27 @@ export default function EmployerLogin() {
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
+    setHeldLoginInfo(null);
     
     try {
-      const response = await apiRequest("POST", "/api/auth/employee-login", data);
+      const apiBase = import.meta.env.VITE_API_URL || "";
+      const response = await fetch(`${apiBase}/api/auth/employee-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
       const result = await response.json();
 
       if (!response.ok) {
+        if (result.accountHeld) {
+          setHeldLoginInfo({
+            message:
+              result.holdMessage ||
+              "Your account is on hold. You cannot access StaffOS at this time.",
+            holdUntilLabel: result.holdUntilLabel,
+          });
+        }
         throw new Error(result.message || "Login failed");
       }
 
@@ -100,7 +128,7 @@ export default function EmployerLogin() {
     } catch (error) {
       toast({
         title: "Login Failed",
-        description: error instanceof Error ? error.message : "Please check your email and password and try again.",
+        description: formatApiErrorMessage(error, "Please check your email and password and try again."),
         variant: "destructive",
       });
     } finally {
@@ -351,6 +379,33 @@ export default function EmployerLogin() {
         onClose={() => setIsForgotModalOpen(false)}
         initialEmail={getValues("email")}
       />
+
+      <AlertDialog open={Boolean(heldLoginInfo)} onOpenChange={(open) => !open && setHeldLoginInfo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-800">
+              <AlertTriangle className="h-5 w-5" />
+              Account On Hold
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-gray-700">
+                <p className="whitespace-pre-wrap">{heldLoginInfo?.message}</p>
+                {heldLoginInfo?.holdUntilLabel && (
+                  <p>
+                    Access resumes:{" "}
+                    <span className="font-medium text-gray-900">
+                      {heldLoginInfo.holdUntilLabel}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setHeldLoginInfo(null)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

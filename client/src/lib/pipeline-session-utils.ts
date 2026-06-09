@@ -10,7 +10,9 @@ export {
   FULL_PIPELINE_STAGES,
   FULL_PIPELINE_STAGE_ORDER,
   groupCandidatesByPipelineStage,
+  isTerminalRejectedStatus,
   normalizePipelineDisplayStatus,
+  resolvePipelineGroupingStatus,
   resolvePipelineStageKey,
   type PipelineStageKey,
 } from "@shared/pipeline-stages";

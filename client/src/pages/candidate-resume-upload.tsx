@@ -19,6 +19,7 @@ import {
   Edit2
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { useProfile } from "@/hooks/use-profile";
 import { motion, AnimatePresence } from "framer-motion";
 import staffosLogo2 from "@/assets/staffos logo 2.png";
@@ -34,6 +35,7 @@ export default function CandidateResumeUpload() {
   const { toast } = useToast();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   // Poll every 2s until AI onboarding finishes (stage becomes `completed`)
   const { data: profile } = useProfile({ pollUntilOnboardingComplete: true });
@@ -69,9 +71,14 @@ export default function CandidateResumeUpload() {
     advanceStepFromProfile,
   ]);
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setShowSignOutDialog(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await logout();
+      setShowSignOutDialog(false);
       setLocation("/");
       toast({
         title: "Logged out",
@@ -268,7 +275,7 @@ export default function CandidateResumeUpload() {
 
                   <div className="flex justify-center">
                     <button 
-                      onClick={handleLogout}
+                      onClick={handleLogoutClick}
                       className="text-slate-400 hover:text-red-500 text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <LogOut className="w-4 h-4" />
@@ -384,6 +391,13 @@ export default function CandidateResumeUpload() {
       {/* Decorative Blur Orbs */}
       <div className="fixed -top-24 -left-24 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="fixed -bottom-24 -right-24 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+      <SignOutDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
+        onConfirm={confirmLogout}
+        userName={profile?.email}
+      />
     </div>
   );
 }

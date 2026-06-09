@@ -5,7 +5,7 @@
 // semantic matching, and advanced scoring
 
 import { candidates } from "@shared/schema";
-import { sql, and, or, ilike, desc, asc } from "drizzle-orm";
+import { sql, and, or, ilike, desc, asc, not } from "drizzle-orm";
 
 // ============================================
 // PHASE B: SKILL NORMALIZATION ENGINE
@@ -305,22 +305,37 @@ function calculateSkillRecencyWeight(skill: string, candidateSkills: string[], s
  * Calculate multi-skill synergy score
  * Higher score when multiple related skills are present
  */
+function skillMatches(candidateSkill: string, searchSkill: string): boolean {
+  const cs = normalizeSkill(candidateSkill);
+  const ss = normalizeSkill(searchSkill);
+  if (!cs || !ss) return false;
+  if (cs === ss) return true;
+  // Avoid "java" matching "javascript" — require word boundary when one is a prefix of the other
+  if (cs.length >= 3 && ss.length >= 3) {
+    if (cs.includes(ss) || ss.includes(cs)) {
+      const shorter = cs.length <= ss.length ? cs : ss;
+      const longer = cs.length > ss.length ? cs : ss;
+      if (longer.startsWith(shorter) && longer.length > shorter.length + 1) {
+        return false;
+      }
+    }
+  }
+  return cs.includes(ss) || ss.includes(cs);
+}
+
 function calculateSkillSynergy(candidateSkills: string[], searchSkills: string[]): number {
-  const normalizedCandidate = candidateSkills.map(normalizeSkill);
-  const normalizedSearch = searchSkills.map(normalizeSkill);
-  
+  const normalizedCandidate = candidateSkills.map(normalizeSkill).filter(Boolean);
+  const normalizedSearch = searchSkills.map(normalizeSkill).filter(Boolean);
+  if (normalizedSearch.length === 0) return 0;
+
   let matchedCount = 0;
   for (const searchSkill of normalizedSearch) {
-    if (normalizedCandidate.includes(searchSkill)) {
+    if (normalizedCandidate.some((cs) => skillMatches(cs, searchSkill))) {
       matchedCount++;
     }
   }
-  
-  // Synergy bonus: having multiple matching skills increases score
-  const baseMatch = matchedCount / normalizedSearch.length;
-  const synergyBonus = matchedCount > 1 ? (matchedCount - 1) * 0.1 : 0;
-  
-  return Math.min(1.0, baseMatch + synergyBonus);
+
+  return matchedCount / normalizedSearch.length;
 }
 
 /**
@@ -364,8 +379,35 @@ function calculateCareerProgressionScore(candidate: any): number {
   }
 }
 
+function getCandidateSearchableText(candidate: any): string {
+  return [
+    candidate.fullName,
+    candidate.designation,
+    candidate.currentRole,
+    candidate.title,
+    candidate.position,
+    candidate.skills,
+    candidate.location,
+    candidate.preferredLocation,
+    candidate.company,
+    candidate.education,
+    candidate.resumeText,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function termMatchesText(text: string, term: string): boolean {
+  const lowerTerm = term.toLowerCase().trim();
+  if (!lowerTerm || !text) return false;
+  if (text.includes(lowerTerm)) return true;
+  const escaped = lowerTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
+}
+
 /**
- * Calculate comprehensive relevance score
+ * Calculate search relevance — only against active search criteria (no baseline inflation).
  */
 export function calculateRelevanceScore(
   candidate: any,
@@ -373,94 +415,75 @@ export function calculateRelevanceScore(
   searchSkills: string[],
   requirement?: any
 ): CandidateScore {
-  let totalScore = 0;
   const matchedTerms: string[] = [];
   const fieldMatches: Record<string, number> = {};
-  
-  // Field weights
-  const FIELD_WEIGHTS = {
-    skills: 1.0,
-    title: 0.8,
-    name: 0.6,
-    resumeText: 0.5,
-    company: 0.4,
-    education: 0.3,
-    location: 0.2,
-  };
-  
-  // Parse candidate skills
   const candidateSkills = parseAndNormalizeSkills(candidate.skills || '');
-  
-  // 1. Skill matching (40% weight)
-  if (searchSkills.length > 0) {
+  const hasSearchSkills = searchSkills.length > 0;
+  const trimmedQuery = (searchQuery || '').trim();
+  const hasSearchQuery = trimmedQuery.length > 0;
+
+  const scoreParts: number[] = [];
+  const weights: number[] = [];
+
+  if (hasSearchSkills) {
     const skillSynergy = calculateSkillSynergy(candidateSkills, searchSkills);
-    let skillScore = skillSynergy;
-    
-    // Add recency weight
+    const skillScore = skillSynergy * 100;
+    scoreParts.push(skillScore);
+    weights.push(0.65);
+    fieldMatches.skills = skillScore;
+
     for (const searchSkill of searchSkills) {
-      const normalizedSearch = normalizeSkill(searchSkill);
-      if (candidateSkills.includes(normalizedSearch)) {
-        const recencyWeight = calculateSkillRecencyWeight(normalizedSearch, candidateSkills, searchSkills);
-        skillScore += recencyWeight * 0.1;
+      if (candidateSkills.some((cs) => skillMatches(cs, searchSkill))) {
         matchedTerms.push(searchSkill);
       }
     }
-    
-    skillScore = Math.min(1.0, skillScore);
-    const weightedSkillScore = skillScore * 100 * FIELD_WEIGHTS.skills * 0.4;
-    totalScore += weightedSkillScore;
-    fieldMatches.skills = weightedSkillScore;
   }
-  
-  // 2. Title/Role matching (20% weight)
-  const title = (candidate.designation || candidate.currentRole || candidate.title || '').toLowerCase();
-  if (searchQuery) {
-    const queryLower = searchQuery.toLowerCase();
-    const titleSimilarity = calculateSimilarity(title, queryLower);
-    const titleScore = titleSimilarity * 100 * FIELD_WEIGHTS.title * 0.2;
-    totalScore += titleScore;
-    fieldMatches.title = titleScore;
-    
-    if (titleSimilarity > 0.7) {
-      matchedTerms.push(searchQuery);
+
+  if (hasSearchQuery) {
+    const searchableText = getCandidateSearchableText(candidate);
+    const title = (candidate.designation || candidate.currentRole || candidate.title || '').toLowerCase();
+    const queryTerms = trimmedQuery
+      .split(/\s+/)
+      .filter((t) => t.length > 1 && !/^(and|or|not)$/i.test(t));
+
+    let queryScore = 0;
+    if (queryTerms.length > 0) {
+      let matched = 0;
+      for (const term of queryTerms) {
+        if (termMatchesText(searchableText, term)) {
+          matched++;
+          matchedTerms.push(term);
+        }
+      }
+      queryScore = (matched / queryTerms.length) * 100;
+    } else if (termMatchesText(searchableText, trimmedQuery)) {
+      queryScore = 100;
+      matchedTerms.push(trimmedQuery);
     }
+
+    const titleBonus = calculateSimilarity(title, trimmedQuery.toLowerCase()) * 20;
+    queryScore = Math.min(100, queryScore + titleBonus);
+    scoreParts.push(queryScore);
+    weights.push(hasSearchSkills ? 0.35 : 1);
+    fieldMatches.query = queryScore;
   }
-  
-  // 3. Experience relevance (10% weight)
-  const experience = parseFloat(candidate.experience?.replace(/[^\d.]/g, '') || '0');
-  // This would ideally use filter range, but for now we use a simple score
-  const expScore = Math.min(1.0, experience / 15) * 100 * 0.1;
-  totalScore += expScore;
-  fieldMatches.experience = expScore;
-  
-  // 4. Recency (10% weight)
-  if (candidate.createdAt) {
-    const createdDate = new Date(candidate.createdAt);
-    const daysSinceCreation = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-    const recencyScore = Math.max(0, 100 - (daysSinceCreation / 30) * 10);
-    totalScore += recencyScore * 0.1;
-    fieldMatches.recency = recencyScore * 0.1;
+
+  let relevanceScore = 0;
+  if (scoreParts.length > 0) {
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    relevanceScore = Math.round(
+      scoreParts.reduce((sum, score, i) => sum + score * weights[i], 0) / totalWeight,
+    );
   }
-  
-  // 5. Stability score (10% weight)
-  const stabilityScore = calculateStabilityScore(candidate) * 100 * 0.1;
-  totalScore += stabilityScore;
-  fieldMatches.stability = stabilityScore;
-  
-  // 6. Career progression (10% weight)
-  const progressionScore = calculateCareerProgressionScore(candidate) * 100 * 0.1;
-  totalScore += progressionScore;
-  fieldMatches.progression = progressionScore;
-  
-  // Calculate requirement match if provided
+
   let matchPercentage: number | undefined;
   if (requirement) {
     matchPercentage = calculateRequirementMatch(candidate, requirement, candidateSkills);
   }
-  
+
   return {
     candidate,
-    relevanceScore: Math.min(100, Math.round(totalScore)),
+    relevanceScore: Math.min(100, Math.max(0, relevanceScore)),
     matchPercentage,
     matchedTerms: [...new Set(matchedTerms)],
     fieldMatches,
@@ -522,6 +545,101 @@ function calculateRequirementMatch(candidate: any, requirement: any, candidateSk
 }
 
 // ============================================
+// BOOLEAN SEARCH
+// ============================================
+
+export interface ParsedBooleanQuery {
+  orGroups: string[][];
+  excludeTerms: string[];
+}
+
+/** Parse AND / OR / NOT / +/- boolean query into groups for filtering. */
+export function parseBooleanQuery(query: string): ParsedBooleanQuery {
+  const excludeTerms: string[] = [];
+  const orGroups: string[][] = [];
+
+  const phrases: string[] = [];
+  const normalized = query
+    .replace(/"([^"]+)"/g, (_, phrase: string) => {
+      phrases.push(phrase.trim());
+      return ` __PHRASE_${phrases.length - 1}__ `;
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const resolveToken = (token: string): string => {
+    const phraseMatch = token.match(/^__PHRASE_(\d+)__$/);
+    if (phraseMatch) return phrases[Number(phraseMatch[1])] || token;
+    return token.replace(/^[-+]+/, '');
+  };
+
+  const orSegments = normalized.split(/\s+OR\s+/i).map((s) => s.trim()).filter(Boolean);
+
+  for (const segment of orSegments) {
+    const andTerms: string[] = [];
+    const tokens = segment.split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < tokens.length) {
+      const token = tokens[i];
+      if (/^NOT$/i.test(token)) {
+        const next = tokens[i + 1];
+        if (next) {
+          excludeTerms.push(resolveToken(next));
+          i += 2;
+          continue;
+        }
+      }
+      if (/^AND$/i.test(token)) {
+        i++;
+        continue;
+      }
+      if (token.startsWith('-')) {
+        excludeTerms.push(resolveToken(token.slice(1)));
+        i++;
+        continue;
+      }
+      if (token.startsWith('+')) {
+        andTerms.push(resolveToken(token.slice(1)));
+        i++;
+        continue;
+      }
+      andTerms.push(resolveToken(token));
+      i++;
+    }
+    if (andTerms.length > 0) {
+      orGroups.push(andTerms.filter(Boolean));
+    }
+  }
+
+  if (orGroups.length === 0 && excludeTerms.length === 0 && normalized) {
+    orGroups.push([normalized]);
+  }
+
+  return { orGroups, excludeTerms };
+}
+
+/** In-memory boolean filter — used after DB fetch when boolean mode is on. */
+export function candidateMatchesBooleanQuery(candidate: any, query: string): boolean {
+  const trimmed = (query || '').trim();
+  if (!trimmed) return true;
+
+  const { orGroups, excludeTerms } = parseBooleanQuery(trimmed);
+  const text = getCandidateSearchableText(candidate);
+
+  for (const exclude of excludeTerms) {
+    if (exclude && termMatchesText(text, exclude)) {
+      return false;
+    }
+  }
+
+  if (orGroups.length === 0) return true;
+
+  return orGroups.some((group) =>
+    group.every((term) => term && termMatchesText(text, term)),
+  );
+}
+
+// ============================================
 // PHASE E: DATABASE QUERY BUILDER
 // ============================================
 
@@ -536,19 +654,20 @@ export function buildSearchQuery(filters: any) {
     const query = filters.searchQuery.toLowerCase().trim();
     
     if (filters.booleanMode) {
-      // For boolean search, we'll use ILIKE for phrase matching
-      // Complex boolean logic would require full-text search (PostgreSQL tsvector)
-      conditions.push(
-        or(
-          ilike(candidates.fullName, `%${query}%`),
-          ilike(candidates.designation, `%${query}%`),
-          ilike(candidates.skills, `%${query}%`),
-          ilike(candidates.location, `%${query}%`),
-          ilike(candidates.company, `%${query}%`),
-          ilike(candidates.education, `%${query}%`),
-          ilike(candidates.resumeText, `%${query}%`)
-        )
-      );
+      const { orGroups, excludeTerms } = parseBooleanQuery(query);
+
+      for (const exclude of excludeTerms) {
+        if (exclude) {
+          conditions.push(not(buildSearchableTextCondition(exclude)));
+        }
+      }
+
+      if (orGroups.length > 0) {
+        const groupConditions = orGroups.map((group) =>
+          and(...group.map((term) => buildSearchableTextCondition(term))),
+        );
+        conditions.push(or(...groupConditions));
+      }
     } else {
       // For non-boolean mode, require each significant term to match at least one searchable field
       const queryTerms = query.split(/\s+/).filter(t => t.length > 0);

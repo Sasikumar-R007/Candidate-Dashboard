@@ -28,6 +28,7 @@ import { calculateProfileCompletion } from '@/lib/profile-utils';
 import { resolveUploadAssetUrl } from '@/lib/resolve-upload-url';
 import {
   CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_DIALOG_OVERLAY_CLASSES,
   CANDIDATE_MOBILE_DIALOG_CLASSES,
 } from '@/lib/candidate-ui-preferences';
 import { cn } from '@/lib/utils';
@@ -1261,47 +1262,52 @@ ${profile.currentRole || 'Current Position'} at ${profile.currentCompany || 'Com
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-w-2xl rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl", PROFILE_DIALOG_CONTENT_CLASS)}>
-        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 px-8 py-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
+      <DialogContent
+        overlayClassName={CANDIDATE_DIALOG_OVERLAY_CLASSES}
+        className={cn("max-w-2xl rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl", PROFILE_DIALOG_CONTENT_CLASS)}
+      >
+        <div className="shrink-0 bg-indigo-50/50 dark:bg-indigo-900/10 px-4 py-4 sm:px-8 sm:py-5 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Write or Paste Resume</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-bold pr-8">Write or Paste Resume</DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm mt-1">
               Manually update your professional experience or paste your resume content.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white dark:bg-gray-800">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <Label htmlFor="resumeText">Resume Content</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateResume}
-                className="text-cyan-600"
-              >
-                Generate from Profile
-              </Button>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-800">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-8 space-y-4">
+            <div>
+              <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+                <Label htmlFor="resumeText">Resume Content</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateResume}
+                  className="text-cyan-600"
+                >
+                  Generate from Profile
+                </Button>
+              </div>
+              <Textarea
+                id="resumeText"
+                value={resumeText}
+                onChange={(e) => setResumeText(e.target.value)}
+                placeholder="Paste or write your resume here..."
+                className="min-h-[220px] sm:min-h-[320px] font-mono text-sm resize-y"
+              />
             </div>
-            <Textarea
-              id="resumeText"
-              value={resumeText}
-              onChange={(e) => setResumeText(e.target.value)}
-              placeholder="Paste or write your resume here..."
-              className="min-h-[400px] font-mono text-sm"
-            />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl px-6 h-12 font-semibold">
+          <div className="shrink-0 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-700 p-4 sm:px-8 sm:py-4 bg-white dark:bg-gray-800">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl px-6 h-10 font-semibold">
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isPending || !resumeText} 
-              className="bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl px-10 h-12 font-bold shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-[1.02]"
+            <Button
+              type="submit"
+              disabled={isPending || !resumeText}
+              className="bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl px-8 h-10 font-bold shadow-lg shadow-indigo-200 dark:shadow-none"
             >
               {isPending ? 'Saving...' : 'Save Resume'}
             </Button>

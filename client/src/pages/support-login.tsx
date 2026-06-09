@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { formatApiErrorMessage } from "@/lib/api-error-message";
 import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit, Headset, ArrowLeft } from "lucide-react";
 import backgroundUrl from "@assets/Rectangle 1260_1758176515546.png";
@@ -51,7 +52,7 @@ export default function SupportLogin() {
     } catch (error) {
       toast({
         title: "Login Failed",
-        description: error instanceof Error ? error.message : "Please check your credentials and try again.",
+        description: formatApiErrorMessage(error, "Please check your credentials and try again."),
         variant: "destructive",
       });
     } finally {

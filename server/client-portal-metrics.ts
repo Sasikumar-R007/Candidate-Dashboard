@@ -39,6 +39,23 @@ export function parseClientMetricDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function applicationProgressDate(app: any): Date | null {
+  return (
+    parseClientMetricDate(app.updatedAt) ||
+    parseClientMetricDate(app.salaryEditedAt) ||
+    parseClientMetricDate(app.lastNudgedAt) ||
+    parseClientMetricDate(app.appliedDate)
+  );
+}
+
+function requirementFillDate(req: any): Date | null {
+  return (
+    parseClientMetricDate(req.completedAt) ||
+    parseClientMetricDate(req.managedAt) ||
+    parseClientMetricDate(req.updatedAt)
+  );
+}
+
 export function isAtLeastPipelineStage(
   status: string | null | undefined,
   minStage: PipelineStageKey,
@@ -53,6 +70,7 @@ export function filterApplicationsByPeriod(
   period: string,
   dateStr: string | undefined,
 ): any[] {
+  if (period === "overall") return applications;
   if (!dateStr) return applications;
   const filterDate = new Date(dateStr);
   if (Number.isNaN(filterDate.getTime())) return applications;
@@ -130,7 +148,7 @@ export function computeClientSpeedMetrics(
     .filter((app: any) => isAtLeastPipelineStage(app.status, "level1"))
     .map((app: any) => {
       const appDate = parseClientMetricDate(app.appliedDate);
-      const updated = parseClientMetricDate(app.updatedAt);
+      const updated = applicationProgressDate(app);
       if (!appDate || !updated) return null;
       const days = Math.floor(
         (updated.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24),
@@ -143,7 +161,7 @@ export function computeClientSpeedMetrics(
     .filter((app: any) => isAtLeastPipelineStage(app.status, "offerStage"))
     .map((app: any) => {
       const appDate = parseClientMetricDate(app.appliedDate);
-      const updated = parseClientMetricDate(app.updatedAt);
+      const updated = applicationProgressDate(app);
       if (!appDate || !updated) return null;
       const days = Math.floor(
         (updated.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24),
@@ -155,11 +173,17 @@ export function computeClientSpeedMetrics(
   const fillTimes = scopedRequirements
     .filter((req: any) => {
       const status = String(req.status || "").toLowerCase();
-      return status === "closed" || status === "filled" || status === "completed";
+      const managementStatus = String(req.managementStatus || "").toLowerCase();
+      return (
+        status === "closed" ||
+        status === "filled" ||
+        status === "completed" ||
+        managementStatus === "closed"
+      );
     })
     .map((req: any) => {
       const reqDate = parseClientMetricDate(req.createdAt);
-      const fillDate = parseClientMetricDate(req.updatedAt);
+      const fillDate = requirementFillDate(req);
       if (!reqDate || !fillDate) return null;
       const days = Math.floor(
         (fillDate.getTime() - reqDate.getTime()) / (1000 * 60 * 60 * 24),
@@ -271,4 +295,173 @@ export function buildClientQualityChartPoints(
     const metrics = computeClientQualityMetrics(appsInMonth);
     return { month: monthLabel, ...metrics };
   });
+}
+
+type AdminMetricsStorage = {
+  getClientById(id: string): Promise<
+    | {
+        brandName?: string | null;
+        incorporatedName?: string | null;
+        isLoginOnly?: boolean | null;
+      }
+    | undefined
+  >;
+  getAllClients(): Promise<
+    Array<{
+      brandName?: string | null;
+      incorporatedName?: string | null;
+      isLoginOnly?: boolean | null;
+    }>
+  >;
+  getRequirementsByCompany(companyName: string): Promise<any[]>;
+  getRequirements(): Promise<any[]>;
+  getAllJobApplications(): Promise<any[]>;
+};
+
+function dedupeRequirements(requirements: any[]): any[] {
+  const byId = new Map<string, any>();
+  for (const req of requirements) {
+    if (req?.id && !byId.has(req.id)) {
+      byId.set(req.id, req);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+function collectApplicationsForCompanies(
+  allApplications: any[],
+  companyNames: Set<string>,
+  requirementIds: Set<string>,
+): any[] {
+  const seen = new Set<string>();
+  const scoped: any[] = [];
+
+  for (const app of allApplications) {
+    if (!app?.id || seen.has(app.id)) continue;
+
+    const matchesRequirement =
+      app.requirementId && requirementIds.has(app.requirementId);
+    const matchesCompany = companyNames.has(
+      (app.company || "").trim().toLowerCase(),
+    );
+
+    if (matchesRequirement || matchesCompany) {
+      scoped.push(app);
+      seen.add(app.id);
+    }
+  }
+
+  return scoped;
+}
+
+function clientCompanyNames(client: {
+  brandName?: string | null;
+  incorporatedName?: string | null;
+}): string[] {
+  const names = new Set<string>();
+  for (const value of [client.brandName, client.incorporatedName]) {
+    const trimmed = (value || "").trim();
+    if (trimmed) names.add(trimmed);
+  }
+  return Array.from(names);
+}
+
+export async function getAdminClientMetricsScope(
+  storage: AdminMetricsStorage,
+  clientId?: string | null,
+): Promise<{ requirements: any[]; applications: any[] }> {
+  const allApplications = await storage.getAllJobApplications();
+
+  if (clientId && clientId !== "all") {
+    const client = await storage.getClientById(clientId);
+    if (!client) {
+      return { requirements: [], applications: [] };
+    }
+
+    const requirements: any[] = [];
+    for (const companyName of clientCompanyNames(client)) {
+      const companyReqs = await storage.getRequirementsByCompany(companyName);
+      requirements.push(...companyReqs);
+    }
+
+    const scopedRequirements = dedupeRequirements(
+      requirements.filter((req) => !req.isArchived),
+    );
+    const requirementIds = new Set(scopedRequirements.map((req) => req.id));
+    const companyNames = new Set(
+      clientCompanyNames(client).map((name) => name.trim().toLowerCase()),
+    );
+    const applications = collectApplicationsForCompanies(
+      allApplications,
+      companyNames,
+      requirementIds,
+    );
+
+    return { requirements: scopedRequirements, applications };
+  }
+
+  const allClients = await storage.getAllClients();
+  const knownCompanies = new Set<string>();
+  for (const client of allClients) {
+    if (client.isLoginOnly) continue;
+    for (const name of clientCompanyNames(client)) {
+      knownCompanies.add(name.trim().toLowerCase());
+    }
+  }
+
+  const allRequirements = await storage.getRequirements();
+  const requirements = allRequirements.filter((req) => {
+    if (req.isArchived) return false;
+    const company = (req.company || "").trim().toLowerCase();
+    return company && knownCompanies.has(company);
+  });
+
+  const requirementIds = new Set(requirements.map((req) => req.id));
+  const applications = collectApplicationsForCompanies(
+    allApplications,
+    knownCompanies,
+    requirementIds,
+  );
+
+  return { requirements, applications };
+}
+
+export function aggregateImpactMetricsRecords(records: any[]) {
+  const defaults = {
+    speedToHire: 0,
+    revenueImpactOfDelay: 0,
+    clientNps: 0,
+    candidateNps: 0,
+    feedbackTurnAround: 0,
+    feedbackTurnAroundAvgDays: 5,
+    firstYearRetentionRate: 0,
+    fulfillmentRate: 0,
+    revenueRecovered: 0,
+  };
+
+  if (!records.length) return defaults;
+
+  const average = (key: keyof typeof defaults) => {
+    const values = records
+      .map((row) => Number(row?.[key]))
+      .filter((value) => Number.isFinite(value));
+    if (!values.length) return defaults[key];
+    const total = values.reduce((sum, value) => sum + value, 0);
+    const avg = total / values.length;
+    return key.includes("Rate") || key.includes("Nps") || key === "fulfillmentRate"
+      ? Math.round(avg)
+      : Math.round(avg * 10) / 10;
+  };
+
+  return {
+    speedToHire: average("speedToHire"),
+    revenueImpactOfDelay: average("revenueImpactOfDelay"),
+    clientNps: average("clientNps"),
+    candidateNps: average("candidateNps"),
+    feedbackTurnAround: average("feedbackTurnAround"),
+    feedbackTurnAroundAvgDays: average("feedbackTurnAroundAvgDays"),
+    firstYearRetentionRate: average("firstYearRetentionRate"),
+    fulfillmentRate: average("fulfillmentRate"),
+    revenueRecovered: average("revenueRecovered"),
+  };
 }

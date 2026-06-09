@@ -6,7 +6,7 @@ import fs from "fs";
 import passport from "passport";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets, nudges, consentLogs, profiles, candidateApplicationComments } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, insertIncentiveMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets, nudges, consentLogs, profiles, candidateApplicationComments } from "@shared/schema";
 import {
   buildClientJdSourceDetails,
   buildStreqDisplayMap,
@@ -16,13 +16,17 @@ import {
   parseRequirementJdExtras,
   resolveDisplayRoleId,
 } from "@shared/requirement-jd-extras";
-import { normalizePipelineDisplayStatus } from "@shared/pipeline-stages";
+import {
+  normalizePipelineDisplayStatus,
+  resolvePipelineGroupingStatus,
+} from "@shared/pipeline-stages";
 import {
   buildClientQualityChartPoints,
   buildClientSpeedChartPoints,
   computeClientQualityMetrics,
   computeClientSpeedMetrics,
   filterApplicationsByPeriod,
+  getAdminClientMetricsScope,
 } from "./client-portal-metrics";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -31,6 +35,16 @@ import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
 import { db } from "./db";
+import {
+  HOLD_LOGOUT_GRACE_MS,
+  autoResumeEmployeeIfExpired,
+  buildHoldPayload,
+  computeHoldUntil,
+  evaluateEmployeeHold,
+  formatHoldUntilLabel,
+  revokeEmployeeSessions,
+  type HoldDurationType,
+} from "./user-hold";
 
 /** Public URL for client-member invite links (must match where the Vite app is served). */
 function resolveClientInviteBaseUrl(req: Request): string {
@@ -172,8 +186,10 @@ import {
   getSortOrder,
   calculateRelevanceScore,
   normalizeSkills,
-  parseAndNormalizeSkills
+  parseAndNormalizeSkills,
+  candidateMatchesBooleanQuery,
 } from "./source-resume-search";
+import { buildIncentiveMappingContext } from "./incentive-mapping-context";
 import {
   CLIENT_ADMIN_ROLE,
   isClientPortalRole,
@@ -1382,7 +1398,30 @@ function requireEmployeeAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.employeeId) {
     return res.status(401).json({ message: "Employee authentication required" });
   }
-  next();
+
+  void (async () => {
+    try {
+      let employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee || !employee.isActive) {
+        return res.status(401).json({ message: "Employee authentication required" });
+      }
+
+      employee = await autoResumeEmployeeIfExpired(employee);
+      const hold = evaluateEmployeeHold(employee);
+      if (hold.isHeld && !hold.inGracePeriod) {
+        await revokeEmployeeSessions(employee.id);
+        return res.status(403).json({
+          message: "Your account is on hold. Please contact your administrator.",
+          ...buildHoldPayload(hold),
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error("requireEmployeeAuth hold check error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  })();
 }
 
 function requireAnyAuth(req: Request, res: Response, next: NextFunction) {
@@ -2329,15 +2368,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check for employee session
       if (req.session.employeeId) {
-        const employee = await storage.getEmployeeById(req.session.employeeId);
+        let employee = await storage.getEmployeeById(req.session.employeeId);
         if (employee && employee.isActive) {
+          employee = await autoResumeEmployeeIfExpired(employee);
+          const hold = evaluateEmployeeHold(employee);
+
+          if (hold.isHeld && !hold.inGracePeriod) {
+            await revokeEmployeeSessions(employee.id);
+            req.session.destroy(() => {});
+            return res.json({
+              authenticated: false,
+              accountHeld: true,
+              ...buildHoldPayload(hold),
+            });
+          }
+
           const { password: _, ...employeeData } = employee;
           const employeeAgreementAccepted = await computeEmployeeAgreementAccepted(employee);
-          return res.json({
+          const response: Record<string, unknown> = {
             authenticated: true,
             userType: "employee",
             user: { ...employeeData, employeeAgreementAccepted },
-          });
+          };
+
+          if (hold.isHeld && hold.inGracePeriod) {
+            response.holdPending = buildHoldPayload(hold);
+          }
+
+          return res.json(response);
         }
       }
 
@@ -2782,6 +2840,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Account is inactive" });
       }
 
+      const refreshedEmployee = await autoResumeEmployeeIfExpired(employee);
+      const hold = evaluateEmployeeHold(refreshedEmployee);
+      if (hold.isHeld) {
+        return res.status(403).json({
+          message: "Your account is on hold. You cannot access StaffOS at this time.",
+          accountHeld: true,
+          ...buildHoldPayload(hold),
+        });
+      }
+
       // Update lastLoginAt
       try {
         await db.execute(sql`
@@ -3092,7 +3160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (loginAttempts?.lockedUntil && new Date(loginAttempts.lockedUntil) > new Date()) {
         return res.status(423).json({
-          message: "You can't login for next 30 mins",
+          message: "Too many failed login attempts. Your account is temporarily locked. Please try again in 30 minutes.",
           locked: true,
           lockedUntil: loginAttempts.lockedUntil
         });
@@ -3131,7 +3199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           return res.status(423).json({
-            message: "You can't login for next 30 mins",
+            message: "Too many failed login attempts. Your account is temporarily locked. Please try again in 30 minutes.",
             locked: true,
             lockedUntil: lockUntil.toISOString()
           });
@@ -11705,6 +11773,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/revenue-mappings/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const linkedIncentive = await storage.getIncentiveMappingByRevenueMappingId(id);
+      if (linkedIncentive) {
+        await storage.deleteIncentiveMapping(linkedIncentive.id);
+      }
       const deleted = await storage.deleteRevenueMapping(id);
 
       if (!deleted) {
@@ -11717,6 +11789,256 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete revenue mapping error:", error);
       res.status(500).json({ message: "Failed to delete revenue mapping" });
+    }
+  });
+
+  // Incentive Mappings CRUD (linked to Revenue Data rows)
+
+  app.get("/api/admin/incentive-mappings", requireAdminAuth, async (_req, res) => {
+    try {
+      const rows = await storage.getAllIncentiveMappings();
+      res.json(rows);
+    } catch (error) {
+      console.error("Get incentive mappings error:", error);
+      res.status(500).json({ message: "Failed to get incentive mappings" });
+    }
+  });
+
+  app.get(
+    "/api/admin/incentive-mappings/context/:revenueMappingId",
+    requireAdminAuth,
+    async (req, res) => {
+      try {
+        const revenueMapping = await storage.getRevenueMappingById(req.params.revenueMappingId);
+        if (!revenueMapping || !revenueMapping.inRevenueData) {
+          return res.status(404).json({ message: "Revenue mapped candidate not found" });
+        }
+
+        const targetMappings = await storage.getAllTargetMappings();
+        const allRevenue = await storage.getRevenueDataMappings();
+        const context = buildIncentiveMappingContext(
+          revenueMapping,
+          targetMappings,
+          allRevenue,
+        );
+
+        res.json(context);
+      } catch (error) {
+        console.error("Incentive mapping context error:", error);
+        res.status(500).json({ message: "Failed to load incentive mapping context" });
+      }
+    },
+  );
+
+  app.get(
+    "/api/admin/incentive-mapping-candidates",
+    requireAdminAuth,
+    async (_req, res) => {
+      try {
+        const revenueRows = await storage.getRevenueDataMappings();
+        const incentiveRows = await storage.getAllIncentiveMappings();
+        const mappedIds = new Set(incentiveRows.map((row) => row.revenueMappingId));
+
+        const candidates = revenueRows
+          .filter((rm) => (rm.candidateName || "").trim())
+          .map((rm) => ({
+            id: rm.id,
+            candidateName: rm.candidateName,
+            position: rm.position,
+            quarter: rm.quarter,
+            year: rm.year,
+            talentAdvisorName: rm.talentAdvisorName,
+            teamLeadName: rm.teamLeadName,
+            alreadyMapped: mappedIds.has(rm.id),
+            label: `${rm.candidateName} — ${rm.position} (${rm.quarter} ${rm.year})`,
+          }));
+
+        res.json(candidates);
+      } catch (error) {
+        console.error("Incentive mapping candidates error:", error);
+        res.status(500).json({ message: "Failed to load revenue mapped candidates" });
+      }
+    },
+  );
+
+  app.post("/api/admin/incentive-mappings", requireAdminAuth, async (req, res) => {
+    try {
+      const {
+        revenueMappingId,
+        tlIncentiveAmount,
+        taIncentiveAmount,
+        bdIncentiveAmount,
+      } = req.body;
+
+      if (!revenueMappingId) {
+        return res.status(400).json({ message: "Revenue mapped candidate is required" });
+      }
+
+      const existing = await storage.getIncentiveMappingByRevenueMappingId(revenueMappingId);
+      if (existing) {
+        return res.status(409).json({ message: "Incentive mapping already exists for this candidate" });
+      }
+
+      const revenueMapping = await storage.getRevenueMappingById(revenueMappingId);
+      if (!revenueMapping || !revenueMapping.inRevenueData) {
+        return res.status(404).json({ message: "Revenue mapped candidate not found" });
+      }
+
+      const tlIncentive = parseFloat(String(tlIncentiveAmount));
+      const taIncentive = parseFloat(String(taIncentiveAmount));
+      const bdIncentive = parseFloat(String(bdIncentiveAmount));
+
+      if (
+        !Number.isFinite(tlIncentive) ||
+        !Number.isFinite(taIncentive) ||
+        !Number.isFinite(bdIncentive) ||
+        tlIncentive < 0 ||
+        taIncentive < 0 ||
+        bdIncentive < 0
+      ) {
+        return res.status(400).json({ message: "All incentive amounts are required and must be valid" });
+      }
+
+      const targetMappings = await storage.getAllTargetMappings();
+      const allRevenue = await storage.getRevenueDataMappings();
+      const context = buildIncentiveMappingContext(
+        revenueMapping,
+        targetMappings,
+        allRevenue,
+      );
+
+      const payload = insertIncentiveMappingSchema.parse({
+        revenueMappingId,
+        candidateName: context.candidateName,
+        teamLeadId: context.teamLeadId,
+        teamLeadName: context.teamLeadName,
+        talentAdvisorId: context.talentAdvisorId,
+        talentAdvisorName: context.talentAdvisorName,
+        quarter: context.quarter,
+        year: context.year,
+        tlTargetAmount: context.tlTargetAmount,
+        taTargetAmount: context.taTargetAmount,
+        tlRevenueAmount: context.tlRevenueAmount,
+        taRevenueAmount: context.taRevenueAmount,
+        tlAchievedAmount: context.tlAchievedAmount,
+        taAchievedAmount: context.taAchievedAmount,
+        tlRemainingTarget: context.tlRemainingTarget,
+        taRemainingTarget: context.taRemainingTarget,
+        tlIncentiveAmount: tlIncentive,
+        taIncentiveAmount: taIncentive,
+        bdIncentiveAmount: bdIncentive,
+        createdAt: new Date().toISOString(),
+      });
+
+      const incentiveMapping = await storage.createIncentiveMapping(payload);
+      res.status(201).json({
+        message: "Incentive mapping created successfully",
+        incentiveMapping,
+      });
+    } catch (error: any) {
+      console.error("Create incentive mapping error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid incentive mapping data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create incentive mapping" });
+    }
+  });
+
+  app.put("/api/admin/incentive-mappings/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const {
+        revenueMappingId,
+        tlIncentiveAmount,
+        taIncentiveAmount,
+        bdIncentiveAmount,
+      } = req.body;
+
+      const existing = await storage.getIncentiveMappingById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Incentive mapping not found" });
+      }
+
+      const tlIncentive = parseFloat(String(tlIncentiveAmount));
+      const taIncentive = parseFloat(String(taIncentiveAmount));
+      const bdIncentive = parseFloat(String(bdIncentiveAmount));
+
+      if (
+        !Number.isFinite(tlIncentive) ||
+        !Number.isFinite(taIncentive) ||
+        !Number.isFinite(bdIncentive) ||
+        tlIncentive < 0 ||
+        taIncentive < 0 ||
+        bdIncentive < 0
+      ) {
+        return res.status(400).json({ message: "All incentive amounts are required and must be valid" });
+      }
+
+      let contextSnapshot: Partial<typeof existing> = {};
+      if (revenueMappingId && revenueMappingId !== existing.revenueMappingId) {
+        const duplicate = await storage.getIncentiveMappingByRevenueMappingId(revenueMappingId);
+        if (duplicate && duplicate.id !== id) {
+          return res.status(409).json({ message: "Incentive mapping already exists for this candidate" });
+        }
+      }
+
+      const revenueId = revenueMappingId || existing.revenueMappingId;
+      const revenueMapping = await storage.getRevenueMappingById(revenueId);
+      if (!revenueMapping || !revenueMapping.inRevenueData) {
+        return res.status(404).json({ message: "Revenue mapped candidate not found" });
+      }
+
+      const targetMappings = await storage.getAllTargetMappings();
+      const allRevenue = await storage.getRevenueDataMappings();
+      const context = buildIncentiveMappingContext(
+        revenueMapping,
+        targetMappings,
+        allRevenue,
+      );
+
+      contextSnapshot = {
+        revenueMappingId: revenueId,
+        candidateName: context.candidateName,
+        teamLeadId: context.teamLeadId,
+        teamLeadName: context.teamLeadName,
+        talentAdvisorId: context.talentAdvisorId,
+        talentAdvisorName: context.talentAdvisorName,
+        quarter: context.quarter,
+        year: context.year,
+        tlTargetAmount: context.tlTargetAmount,
+        taTargetAmount: context.taTargetAmount,
+        tlRevenueAmount: context.tlRevenueAmount,
+        taRevenueAmount: context.taRevenueAmount,
+        tlAchievedAmount: context.tlAchievedAmount,
+        taAchievedAmount: context.taAchievedAmount,
+        tlRemainingTarget: context.tlRemainingTarget,
+        taRemainingTarget: context.taRemainingTarget,
+      };
+
+      const updated = await storage.updateIncentiveMapping(id, {
+        ...contextSnapshot,
+        tlIncentiveAmount: tlIncentive,
+        taIncentiveAmount: taIncentive,
+        bdIncentiveAmount: bdIncentive,
+      });
+
+      res.json({ message: "Incentive mapping updated successfully", incentiveMapping: updated });
+    } catch (error) {
+      console.error("Update incentive mapping error:", error);
+      res.status(500).json({ message: "Failed to update incentive mapping" });
+    }
+  });
+
+  app.delete("/api/admin/incentive-mappings/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const deleted = await storage.deleteIncentiveMapping(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Incentive mapping not found" });
+      }
+      res.json({ message: "Incentive mapping deleted successfully" });
+    } catch (error) {
+      console.error("Delete incentive mapping error:", error);
+      res.status(500).json({ message: "Failed to delete incentive mapping" });
     }
   });
 
@@ -14981,6 +15303,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let candidatesList;
       try {
         candidatesList = await filteredCandidatesQuery;
+        if (booleanMode && searchQuery.trim()) {
+          candidatesList = candidatesList.filter((candidate) =>
+            candidateMatchesBooleanQuery(candidate, searchQuery),
+          );
+        }
         console.log('Source Resume Search - Query returned', candidatesList.length, 'candidates before scoring');
       } catch (queryError: any) {
         console.error('Source Resume Search - Query execution error:', queryError);
@@ -15641,6 +15968,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const holdUserSchema = z.object({
+    holdMessage: z.string().min(1, "Hold message is required"),
+    durationType: z.enum(["minutes", "hours", "days", "resume_date", "indefinite"]),
+    durationValue: z.coerce.number().positive().optional(),
+    resumeDate: z.string().optional(),
+  });
+
+  app.patch("/api/admin/employees/:id/hold", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const parsed = holdUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid hold request",
+          errors: parsed.error.errors,
+        });
+      }
+
+      const target = await storage.getEmployeeById(id);
+      if (!target) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (target.role === "admin") {
+        return res.status(400).json({ message: "Admin accounts cannot be placed on hold" });
+      }
+
+      if ((target.accountStatus || "active") === "hold") {
+        return res.status(409).json({ message: "User is already on hold" });
+      }
+
+      const { holdMessage, durationType, durationValue, resumeDate } = parsed.data;
+      if (
+        (durationType === "minutes" || durationType === "hours" || durationType === "days") &&
+        !durationValue
+      ) {
+        return res.status(400).json({ message: "Duration value is required for the selected hold period" });
+      }
+      if (durationType === "resume_date" && !resumeDate) {
+        return res.status(400).json({ message: "Resume date is required" });
+      }
+
+      const now = new Date();
+      const holdUntil = computeHoldUntil(
+        durationType as HoldDurationType,
+        durationValue,
+        resumeDate,
+      );
+      const logoutScheduledAt = new Date(now.getTime() + HOLD_LOGOUT_GRACE_MS).toISOString();
+
+      const updated = await storage.updateEmployee(id, {
+        accountStatus: "hold",
+        holdMessage: holdMessage.trim(),
+        holdUntil,
+        heldAt: now.toISOString(),
+        heldByEmployeeId: req.session.employeeId || null,
+        logoutScheduledAt,
+      });
+
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to hold user" });
+      }
+
+      res.json({
+        message: "User placed on hold",
+        employee: updated,
+        logoutGraceSeconds: Math.ceil(HOLD_LOGOUT_GRACE_MS / 1000),
+        holdUntilLabel: formatHoldUntilLabel(holdUntil),
+      });
+    } catch (error) {
+      console.error("Hold employee error:", error);
+      res.status(500).json({ message: "Failed to hold user" });
+    }
+  });
+
+  app.patch("/api/admin/employees/:id/resume", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const target = await storage.getEmployeeById(id);
+      if (!target) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if ((target.accountStatus || "active") !== "hold") {
+        return res.status(400).json({ message: "User is not on hold" });
+      }
+
+      const updated = await storage.updateEmployee(id, {
+        accountStatus: "active",
+        holdMessage: null,
+        holdUntil: null,
+        heldAt: null,
+        heldByEmployeeId: null,
+        logoutScheduledAt: null,
+      });
+
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to resume user" });
+      }
+
+      res.json({
+        message: "User resumed successfully",
+        employee: updated,
+      });
+    } catch (error) {
+      console.error("Resume employee error:", error);
+      res.status(500).json({ message: "Failed to resume user" });
+    }
+  });
+
   // Delete employee
   app.delete("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {
@@ -15923,6 +16360,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Delete impact metrics error:', error);
       res.status(500).json({ message: "Failed to delete impact metrics" });
+    }
+  });
+
+  // Admin Client Metrics — computed speed/quality from requirements + applications
+  app.get("/api/admin/client-metrics", requireAdminAuth, async (req, res) => {
+    try {
+      const clientId = (req.query.clientId as string | undefined) || "all";
+      const period = (req.query.period as string) || "monthly";
+      const dateStr = req.query.date as string | undefined;
+
+      const { requirements, applications } = await getAdminClientMetricsScope(
+        storage,
+        clientId,
+      );
+      const filteredApplications = filterApplicationsByPeriod(
+        applications,
+        period,
+        dateStr,
+      );
+
+      res.json({
+        speed: computeClientSpeedMetrics(requirements, filteredApplications),
+        quality: computeClientQualityMetrics(filteredApplications),
+        speedChart: buildClientSpeedChartPoints(requirements, applications),
+        qualityChart: buildClientQualityChartPoints(applications),
+        totals: {
+          requirements: requirements.length,
+          applications: applications.length,
+          filteredApplications: filteredApplications.length,
+        },
+      });
+    } catch (error) {
+      console.error("Admin client metrics error:", error);
+      res.status(500).json({
+        speed: {
+          timeToFirstSubmission: 0,
+          timeToInterview: 0,
+          timeToOffer: 0,
+          timeToFill: 0,
+        },
+        quality: {
+          submissionToShortList: 0,
+          interviewToOffer: 0,
+          offerAcceptance: 0,
+          earlyAttrition: 0,
+        },
+        speedChart: [],
+        qualityChart: [],
+        totals: { requirements: 0, applications: 0, filteredApplications: 0 },
+      });
     }
   });
 
@@ -16399,7 +16886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Transform applications to pipeline data format with TA information
       const pipelineData = applications.map((app: any) => {
-        const currentStatus = normalizePipelineDisplayStatus(app.status);
+        const currentStatus = resolvePipelineGroupingStatus(app.status, app.statusNote);
 
         // Find requirement and TA information
         let requirementPosition = 'N/A';
@@ -16451,6 +16938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           talentAdvisorId: talentAdvisorId,
           currentStatus,
           status: app.status,
+          statusNote: app.statusNote || null,
           email: app.candidateEmail || 'N/A',
           phone: app.candidatePhone || 'N/A',
           appliedDate: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', {

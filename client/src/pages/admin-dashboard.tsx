@@ -9,6 +9,7 @@ import AddRequirementModal from '@/components/dashboard/modals/add-requirement-m
 import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-description-details-modal';
 import TargetMappingModal from '@/components/dashboard/modals/target-mapping-modal';
 import RevenueMappingModal from '@/components/dashboard/modals/revenue-mapping-modal';
+import IncentiveMappingModal from '@/components/dashboard/modals/incentive-mapping-modal';
 import TeamPerformanceTableModal from '@/components/dashboard/modals/team-performance-modal';
 import PerformanceChartModal from '@/components/dashboard/modals/performance-chart-modal';
 import ClosureModal from '@/components/dashboard/modals/closure-modal';
@@ -18,11 +19,13 @@ import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal
 import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
 import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-credentials-modal';
 import AddUserModal from '@/components/dashboard/modals/add-user-modal';
+import HoldUserModal, { type HoldUserPayload } from '@/components/dashboard/modals/hold-user-modal';
+import { runAdminHoldCountdown } from '@/lib/admin-hold-countdown';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import NudgeLogsTab from "@/components/dashboard/tabs/nudges-tab";
-import { invalidateRevenueMappingQueries } from "@/lib/admin-performance-queries";
+import { invalidateIncentiveMappingQueries, invalidateRevenueMappingQueries } from "@/lib/admin-performance-queries";
 import {
   formatRevenuePaymentStatus,
   sortRevenueMappingsByRecency,
@@ -67,6 +70,7 @@ import {
   CheckCircle2,
   Trash2,
   RotateCcw,
+  PauseCircle,
   Eye,
   FileText,
   Folder,
@@ -90,8 +94,17 @@ import {
   cashOutflowMatchesPeriod,
   isDateInReportPeriod,
   getReportPeriodValidationError,
+  parseMonthName,
   type ReportPeriodSelection,
 } from "@/lib/report-period";
+import {
+  buildAdminReportMeta,
+  buildAdminReportShell,
+  buildCustomReportsBody,
+  buildGeneralReportBody,
+  buildTeamsReportBody,
+  openAdminReportPrintWindow,
+} from "@/lib/admin-report-document";
 import { hasNewAdminNudges, markAdminNudgesAsSeen } from "@/lib/admin-nudge-indicator";
 import {
   CandidateCommentsSession,
@@ -954,13 +967,21 @@ function formatEmployeeStatusLabel(role?: string | null): string {
     client_member: "Client Member",
     client_admin: "Client Admin",
     team_leader: "Team Leader",
+    recruiter: "Talent Advisor",
     talent_advisor: "Talent Advisor",
+    client: "Client",
+    admin: "Administrator",
   };
   if (map[normalized]) return map[normalized];
   return normalized
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+function isClientPortalEmployeeRole(role?: string | null): boolean {
+  const normalized = (role || "").trim().toLowerCase();
+  return normalized === "client" || normalized === "client_admin" || normalized === "client_member";
 }
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
@@ -1103,6 +1124,10 @@ export default function AdminDashboard() {
   // Fetch revenue mappings from API
   const { data: revenueMappings = [], isLoading: isLoadingRevenue } = useQuery<any[]>({
     queryKey: ["/api/admin/revenue-mappings"],
+  });
+
+  const { data: incentiveMappings = [], isLoading: isLoadingIncentiveMappings } = useQuery<any[]>({
+    queryKey: ["/api/admin/incentive-mappings"],
   });
 
   const recentRevenueMappings = useMemo(
@@ -1337,6 +1362,137 @@ export default function AdminDashboard() {
 
   // Revenue mapping state for editing
   const [editingRevenueMapping, setEditingRevenueMapping] = useState<any>(null);
+  const [isIncentiveMappingModalOpen, setIsIncentiveMappingModalOpen] = useState(false);
+  const [editingIncentiveMapping, setEditingIncentiveMapping] = useState<any>(null);
+
+  const deleteIncentiveMappingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/admin/incentive-mappings/${id}`);
+    },
+    onSuccess: () => {
+      invalidateIncentiveMappingQueries(queryClient);
+      toast({
+        title: "Success",
+        description: "Incentive mapping deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete incentive mapping",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteIncentiveMapping = (id: string, label: string) => {
+    if (!window.confirm(`Delete incentive mapping for "${label}"?`)) return;
+    deleteIncentiveMappingMutation.mutate(id);
+  };
+
+  const formatIncentiveInr = (value: number) =>
+    `₹${Number(value || 0).toLocaleString("en-IN")}`;
+
+  const renderIncentiveDataSection = () => (
+    <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+      <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
+        <CardTitle className="text-lg text-gray-900 dark:text-white">Incentive Data</CardTitle>
+        <Button
+          className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded font-medium text-sm"
+          onClick={() => {
+            setEditingIncentiveMapping(null);
+            setIsIncentiveMappingModalOpen(true);
+          }}
+          data-testid="button-add-incentive-mapping"
+        >
+          + Add Incentive
+        </Button>
+      </CardHeader>
+      <CardContent className="p-3">
+        <div className="overflow-x-auto admin-scrollbar">
+          {isLoadingIncentiveMappings ? (
+            <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+              Loading incentive data...
+            </div>
+          ) : incentiveMappings.length === 0 ? (
+            <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+              No incentive mappings yet. Map incentives for revenue-mapped candidates.
+            </div>
+          ) : (
+            <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded min-w-[1100px]">
+              <thead>
+                <tr className="bg-gray-200 dark:bg-gray-700">
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TL</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TA</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TL Target</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TA Target</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TL Revenue</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TA Revenue</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TL Incentive</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TA Incentive</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">BD Incentive</th>
+                  <th className="text-left py-3 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {incentiveMappings.map((row: any) => (
+                  <tr key={row.id} className="border-b border-gray-100 dark:border-gray-700" data-testid={`row-incentive-${row.id}`}>
+                    <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.candidateName || "N/A"}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.teamLeadName || "N/A"}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.talentAdvisorName || "N/A"}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.quarter || "N/A"}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.year || "N/A"}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatIncentiveInr(row.tlTargetAmount)}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatIncentiveInr(row.taTargetAmount)}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatIncentiveInr(row.tlRevenueAmount)}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatIncentiveInr(row.taRevenueAmount)}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatIncentiveInr(row.tlIncentiveAmount)}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatIncentiveInr(row.taIncentiveAmount)}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatIncentiveInr(row.bdIncentiveAmount)}</td>
+                    <td className="py-3 px-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingIncentiveMapping(row);
+                              setIsIncentiveMappingModalOpen(true);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <EditIcon className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteIncentiveMapping(row.id, row.candidateName || "candidate");
+                            }}
+                            className="cursor-pointer text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   // Delete revenue mapping mutation
   const deleteRevenueMappingMutation = useMutation({
@@ -1487,6 +1643,8 @@ export default function AdminDashboard() {
   // Password confirmation dialog state for user deletion
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
+  const [userToHold, setUserToHold] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [isHoldUserModalOpen, setIsHoldUserModalOpen] = useState(false);
   // Password confirmation dialog state for target deletion
   const [targetToDelete, setTargetToDelete] = useState<{ id: string, description: string } | null>(null);
   const [isTargetPasswordDialogOpen, setIsTargetPasswordDialogOpen] = useState(false);
@@ -1684,6 +1842,16 @@ export default function AdminDashboard() {
     return employees.filter((emp: any) => emp.role === 'team_leader' || emp.role === 'recruiter');
   }, [employees]);
 
+  const operationsEmployeesForReport = useMemo(
+    () => employees.filter((emp: any) => emp.role === "team_leader" || emp.role === "recruiter"),
+    [employees],
+  );
+
+  const clientPortalUsersForReport = useMemo(
+    () => employees.filter((emp: any) => isClientPortalEmployeeRole(emp.role)),
+    [employees],
+  );
+
   const filteredIncrementEmployees = useMemo(() => {
     if (!incrementEmployeeSearch.trim()) return incrementEligibleEmployees;
     const search = incrementEmployeeSearch.toLowerCase();
@@ -1767,6 +1935,8 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/clients']
   });
 
+  const clientCompaniesForReport = useMemo(() => clients, [clients]);
+
   // Fetch impact metrics for Client Metrics modal
   const impactMetricsQuery = useQuery<any[]>({
     queryKey: ['/api/admin/impact-metrics', selectedClientMetricsClientId],
@@ -1780,6 +1950,126 @@ export default function AdminDashboard() {
       return response.json();
     }
   });
+
+  const adminClientMetricsDateStr = useMemo(() => {
+    if (clientMetricsPeriod === "daily" && clientMetricsDate) {
+      return format(clientMetricsDate, "yyyy-MM-dd");
+    }
+    if (clientMetricsPeriod === "weekly" && clientMetricsWeekStart) {
+      return format(clientMetricsWeekStart, "yyyy-MM-dd");
+    }
+    if (clientMetricsPeriod === "monthly") {
+      const monthNum = parseMonthName(clientMetricsMonth);
+      if (monthNum > 0) {
+        return format(
+          new Date(parseInt(clientMetricsYear, 10), monthNum - 1, 1),
+          "yyyy-MM-dd",
+        );
+      }
+    }
+    return format(new Date(), "yyyy-MM-dd");
+  }, [
+    clientMetricsPeriod,
+    clientMetricsDate,
+    clientMetricsWeekStart,
+    clientMetricsMonth,
+    clientMetricsYear,
+  ]);
+
+  const adminClientMetricsEnabled =
+    sidebarTab === "metrics" || isClientMetricsModalOpen;
+
+  const { data: adminClientMetricsData } = useQuery<{
+    speed: {
+      timeToFirstSubmission: number;
+      timeToInterview: number;
+      timeToOffer: number;
+      timeToFill: number;
+    };
+    quality: {
+      submissionToShortList: number;
+      interviewToOffer: number;
+      offerAcceptance: number;
+      earlyAttrition: number;
+    };
+  }>({
+    queryKey: [
+      "/api/admin/client-metrics",
+      selectedClientMetricsClientId,
+      clientMetricsPeriod,
+      adminClientMetricsDateStr,
+    ],
+    enabled: adminClientMetricsEnabled,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append("period", clientMetricsPeriod);
+      params.append("date", adminClientMetricsDateStr);
+      if (selectedClientMetricsClientId !== "all") {
+        params.append("clientId", selectedClientMetricsClientId);
+      }
+      const response = await apiRequest("GET", `/api/admin/client-metrics?${params.toString()}`);
+      return response.json();
+    },
+  });
+
+  const adminSpeedMetrics = useMemo(
+    () => ({
+      timeToFirstSubmission: 0,
+      timeToInterview: 0,
+      timeToOffer: 0,
+      timeToFill: 0,
+      ...(adminClientMetricsData?.speed || {}),
+    }),
+    [adminClientMetricsData],
+  );
+
+  const adminQualityMetrics = useMemo(
+    () => ({
+      submissionToShortList: 0,
+      interviewToOffer: 0,
+      offerAcceptance: 0,
+      earlyAttrition: 0,
+      ...(adminClientMetricsData?.quality || {}),
+    }),
+    [adminClientMetricsData],
+  );
+
+  const adminImpactMetrics = useMemo(() => {
+    const defaults = {
+      speedToHire: 15,
+      revenueImpactOfDelay: 75000,
+      clientNps: 60,
+      candidateNps: 70,
+      feedbackTurnAround: 2,
+      feedbackTurnAroundAvgDays: 5,
+      firstYearRetentionRate: 90,
+      fulfillmentRate: 20,
+      revenueRecovered: 1.5,
+    };
+    const records = impactMetricsQuery.data || [];
+    if (!records.length) return defaults;
+    if (records.length === 1) return { ...defaults, ...records[0] };
+
+    const average = (key: string) => {
+      const values = records
+        .map((row) => Number(row?.[key]))
+        .filter((value) => Number.isFinite(value));
+      if (!values.length) return 0;
+      return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10;
+    };
+
+    return {
+      speedToHire: average("speedToHire"),
+      revenueImpactOfDelay: average("revenueImpactOfDelay"),
+      clientNps: average("clientNps"),
+      candidateNps: average("candidateNps"),
+      feedbackTurnAround: average("feedbackTurnAround"),
+      feedbackTurnAroundAvgDays: average("feedbackTurnAroundAvgDays"),
+      firstYearRetentionRate: average("firstYearRetentionRate"),
+      fulfillmentRate: average("fulfillmentRate"),
+      revenueRecovered: average("revenueRecovered"),
+    };
+  }, [impactMetricsQuery.data]);
   const { data: activeNudgesForIndicator = [] } = useQuery<any[]>({
     queryKey: ['/api/nudges'],
     refetchInterval: 30_000,
@@ -2779,6 +3069,8 @@ export default function AdminDashboard() {
       });
       setIsAddRecruiterModalOpen(false);
       setIsAddTeamLeaderModalNewOpen(false);
+      setIsAddUserModalOpen(false);
+      setIsAddClientCredentialsModalOpen(false);
       setEditingUser(null);
     },
     onError: (error: Error) => {
@@ -2810,6 +3102,50 @@ export default function AdminDashboard() {
         variant: "destructive",
       });
     }
+  });
+
+  const holdEmployeeMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: HoldUserPayload }) => {
+      const response = await apiRequest('PATCH', `/api/admin/employees/${id}/hold`, payload);
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/active-sessions'] });
+      setIsHoldUserModalOpen(false);
+      const heldName = userToHold?.name || 'User';
+      setUserToHold(null);
+      runAdminHoldCountdown(heldName);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hold failed",
+        description: error.message || "Could not place user on hold.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resumeEmployeeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('PATCH', `/api/admin/employees/${id}/resume`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
+      toast({
+        title: "User resumed",
+        description: `${data?.employee?.name || 'User'} can access StaffOS again.`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Resume failed",
+        description: error.message || "Could not resume user.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Delete client mutation
@@ -3619,19 +3955,19 @@ export default function AdminDashboard() {
 
   const handleUnifiedUserSubmit = (userData: any) => {
     const role = userData.role?.toLowerCase() || '';
-    if (role === "client" || role === "client_admin") {
+    if (isClientPortalEmployeeRole(role)) {
       if (editingUser) {
-        handleAddClientCredentials(userData);
+        handleUpdateUser(userData);
       } else {
         handleAddClientCredentials(userData);
       }
-    } else if (role === 'team leader') {
+    } else if (role === 'team leader' || role === 'team_leader') {
       if (editingUser) {
         handleUpdateUser(userData);
       } else {
         handleAddUser(userData);
       }
-    } else if (role === 'recruiter') {
+    } else if (role === 'recruiter' || role === 'talent advisor') {
       if (editingUser) {
         handleUpdateUser(userData);
       } else {
@@ -3641,23 +3977,50 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateUser = (userData: any) => {
-    const employeeData = {
-      employeeId: userData.id || `STU${Date.now()}`,
+    const employeeRecordId = userData.dbId || editingUser?.id;
+    if (!employeeRecordId) {
+      toast({
+        title: "Update failed",
+        description: "Could not resolve the user record to update.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const roleValue = String(userData.role || editingUser?.role || "").toLowerCase();
+    let normalizedRole = editingUser?.role || userData.role;
+    if (roleValue === "team leader" || roleValue === "team_leader") {
+      normalizedRole = "team_leader";
+    } else if (roleValue === "recruiter" || roleValue === "talent advisor") {
+      normalizedRole = "recruiter";
+    } else if (isClientPortalEmployeeRole(roleValue)) {
+      normalizedRole = roleValue === "client" ? "client_admin" : roleValue;
+    }
+
+    const employeeData: Record<string, unknown> = {
+      employeeId: userData.employeeId || userData.id || editingUser?.employeeId,
       name: userData.name,
       email: userData.email,
-      password: userData.password,
-      role: userData.role === 'Team Leader' ? 'team_leader' : 'recruiter',
-      phone: userData.phoneNumber || '',
-      department: '',
-      joiningDate: userData.joiningDate || '',
-      age: '',
-      reportingTo: userData.reportingTo || ''
+      role: normalizedRole,
+      phone: userData.phoneNumber || userData.phone || editingUser?.phone || "",
+      department: editingUser?.department || "",
+      joiningDate: userData.joiningDate || editingUser?.joiningDate || "",
+      reportingTo: userData.reportingTo || editingUser?.reportingTo || "",
     };
 
+    if (userData.password) {
+      employeeData.password = userData.password;
+    }
+    if (userData.clientId || editingUser?.clientCompanyId) {
+      employeeData.clientCompanyId = userData.clientId || editingUser?.clientCompanyId;
+    }
+
     updateEmployeeMutation.mutate({
-      id: userData.dbId,
-      data: employeeData
+      id: employeeRecordId,
+      data: employeeData,
     });
+    setIsAddUserModalOpen(false);
+    setEditingUser(null);
   };
 
   const handleArchivesClick = () => {
@@ -4282,9 +4645,7 @@ export default function AdminDashboard() {
 
   // Feedback Turn Around editing handlers for Client Metrics Modal
   const handleEditClickModal = () => {
-    const metrics = impactMetricsQuery.data;
-    const currentMetrics = (metrics && metrics.length > 0 && metrics[0]) || { feedbackTurnAroundAvgDays: 5 };
-    setAvgDaysValueModal(currentMetrics.feedbackTurnAroundAvgDays.toString());
+    setAvgDaysValueModal(String(adminImpactMetrics.feedbackTurnAroundAvgDays ?? 5));
     setIsEditingFeedbackModal(true);
   };
 
@@ -4412,410 +4773,93 @@ export default function AdminDashboard() {
     await new Promise((r) => setTimeout(r, 60));
     setReportGenerating({ active: true, message: "Collecting records…", progress: 45 });
 
-    // For PDF, generate HTML and use browser print to PDF
+    // For PDF, generate a branded StaffOS report document
     if (fileFormat === 'pdf') {
-      // Create a temporary HTML content for PDF
-      let htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>${reportDetails}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            .report-info { margin: 20px 0; }
-            .report-info p { margin: 5px 0; }
-          </style>
-        </head>
-        <body>
-          <h1>${reportDetails}</h1>
-          <div class="report-info">
-      `;
-
-      if (downloadSection === 'teams') {
-        htmlContent += `
-          <p><strong>Report Type:</strong> ${teamsReportType || 'N/A'}</p>
-          <p><strong>Period:</strong> ${teamsPeriod || 'N/A'}</p>
-        `;
-        if (teamsPeriod === 'custom' && teamsCustomDate) {
-          htmlContent += `<p><strong>Custom Date:</strong> ${teamsCustomDate.toLocaleDateString()}</p>`;
-        }
-        
-        // Add actual data based on report type
-        if (teamsReportType === 'cash-outflows') {
-          const filteredCashOutflows = cashoutData.filter((item: any) =>
-            cashOutflowMatchesPeriod(item, teamsPeriodSelection),
-          );
-
-          htmlContent += `
-            <h2 style="margin-top: 30px; color: #333;">Cash Outflows Data</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Year</th>
-                  <th>Employees</th>
-                  <th>Salary</th>
-                  <th>Incentive</th>
-                  <th>Tools Cost</th>
-                  <th>Rent</th>
-                  <th>Other Expenses</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-          
-          filteredCashOutflows.forEach((item: any) => {
-            const total = (parseInt(item.salary) || 0) + (parseInt(item.incentive) || 0) + 
-                         (parseInt(item.tools) || 0) + (parseInt(item.rent) || 0) + 
-                         (parseInt(item.others) || 0);
-            htmlContent += `
-              <tr>
-                <td>${item.month || '-'}</td>
-                <td>${item.year || '-'}</td>
-                <td>${item.employees || '-'}</td>
-                <td>₹${(parseInt(item.salary) || 0).toLocaleString('en-IN')}</td>
-                <td>₹${(parseInt(item.incentive) || 0).toLocaleString('en-IN')}</td>
-                <td>₹${(parseInt(item.tools) || 0).toLocaleString('en-IN')}</td>
-                <td>₹${(parseInt(item.rent) || 0).toLocaleString('en-IN')}</td>
-                <td>₹${(parseInt(item.others) || 0).toLocaleString('en-IN')}</td>
-                <td>₹${total.toLocaleString('en-IN')}</td>
-              </tr>
-            `;
-          });
-          
-          htmlContent += `
-              </tbody>
-            </table>
-          `;
-        }
-      } else if (downloadSection === 'reports') {
-        const selectedReports = Object.entries(reportsCheckboxes)
-          .filter(([_, checked]) => checked)
-          .map(([key, _]) => key);
-        htmlContent += `
-          <p><strong>Selected Reports:</strong> ${selectedReports.join(', ') || 'None'}</p>
-          <p><strong>Team:</strong> ${reportsTeam || 'All'}</p>
-          <p><strong>Priority:</strong> ${reportsPriority || 'All'}</p>
-          <p><strong>Type:</strong> ${reportsType || 'All'}</p>
-        `;
-        
-        // Add actual data based on selected reports
-        if (selectedReports.includes('requirements')) {
-          // Filter requirements based on selected filters
-          let filteredRequirements = requirements;
-          if (reportsTeam && reportsTeam !== 'all') {
-            filteredRequirements = filteredRequirements.filter((req: any) => 
-              req.teamLead?.toLowerCase() === reportsTeam.toLowerCase()
-            );
-          }
-          if (reportsPriority && reportsPriority !== 'all') {
-            filteredRequirements = filteredRequirements.filter((req: any) => 
-              req.priority?.toLowerCase() === reportsPriority.toLowerCase()
-            );
-          }
-          if (reportsType && reportsType !== 'all') {
-            if (reportsType === 'opened') {
-              filteredRequirements = filteredRequirements.filter((req: any) => req.status !== 'Closed' && req.status !== 'Archived');
-            } else if (reportsType === 'closed') {
-              filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Closed');
-            } else if (reportsType === 'archived') {
-              filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Archived');
-            }
-          }
-          filteredRequirements = filteredRequirements.filter((req: any) =>
-            isDateInReportPeriod(req.createdAt, reportsPeriodSelection),
-          );
-
-          htmlContent += `
-            <h2 style="margin-top: 30px; color: #333;">Requirements Data</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Position</th>
-                  <th>Company</th>
-                  <th>Team Lead</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Criticality</th>
-                  <th>Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-          
-          filteredRequirements.forEach((req: any) => {
-            htmlContent += `
-              <tr>
-                <td>${req.position || '-'}</td>
-                <td>${req.company || '-'}</td>
-                <td>${req.teamLead || '-'}</td>
-                <td>${req.priority || '-'}</td>
-                <td>${req.status || '-'}</td>
-                <td>${req.criticality || '-'}</td>
-                <td>${req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '-'}</td>
-              </tr>
-            `;
-          });
-          
-          htmlContent += `
-              </tbody>
-            </table>
-          `;
-        }
-
-        // Pipeline report section
-        const filteredPipeline = pipelineApplicantData.filter((app: any) =>
-          isDateInReportPeriod(app.appliedOn, reportsPeriodSelection),
-        );
-        if (selectedReports.includes('pipeline') && filteredPipeline.length > 0) {
-          htmlContent += `
-            <h2 style="margin-top: 40px; color: #333;">Pipeline Data</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Applied On</th>
-                  <th>Candidate</th>
-                  <th>Company</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Location</th>
-                  <th>Experience</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-
-          filteredPipeline.forEach((app: any) => {
-            htmlContent += `
-              <tr>
-                <td>${app.appliedOn || '-'}</td>
-                <td>${app.candidateName || '-'}</td>
-                <td>${app.company || '-'}</td>
-                <td>${app.roleApplied || '-'}</td>
-                <td>${app.currentStatus || '-'}</td>
-                <td>${app.location || '-'}</td>
-                <td>${app.experience || '-'}</td>
-              </tr>
-            `;
-          });
-
-          htmlContent += `
-              </tbody>
-            </table>
-          `;
-        }
-
-        // Closure reports section
-        const filteredClosures = closureReportsData.filter((report: any) =>
-          isDateInReportPeriod(report.offeredDate || report.joinedDate, reportsPeriodSelection),
-        );
-        if (selectedReports.includes('closureReports') && filteredClosures.length > 0) {
-          htmlContent += `
-            <h2 style="margin-top: 40px; color: #333;">Closure Reports</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Candidate</th>
-                  <th>Position</th>
-                  <th>Client</th>
-                  <th>Talent Advisor</th>
-                  <th>Fixed CTC</th>
-                  <th>Offered Date</th>
-                  <th>Joined Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-
-          filteredClosures.forEach((report: any) => {
-            htmlContent += `
-              <tr>
-                <td>${report.candidate || '-'}</td>
-                <td>${report.position || '-'}</td>
-                <td>${report.client || '-'}</td>
-                <td>${report.talentAdvisor || '-'}</td>
-                <td>${report.fixedCTC || '-'}</td>
-                <td>${report.offeredDate || '-'}</td>
-                <td>${report.joinedDate || '-'}</td>
-                <td>${report.status || '-'}</td>
-              </tr>
-            `;
-          });
-
-          htmlContent += `
-              </tbody>
-            </table>
-          `;
-        }
-
-        // Team performance section
-        const filteredTeamPerf = teamPerformanceData.filter((item: any) =>
-          isDateInReportPeriod(item.joiningDate, reportsPeriodSelection),
-        );
-        if (selectedReports.includes('teamPerformance') && filteredTeamPerf.length > 0) {
-          htmlContent += `
-            <h2 style="margin-top: 40px; color: #333;">Team Performance</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Talent Advisor</th>
-                  <th>Joining Date</th>
-                  <th>Tenure</th>
-                  <th>Closures</th>
-                  <th>Last Closure</th>
-                  <th>Quarters Achieved</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-
-          filteredTeamPerf.forEach((item: any) => {
-            htmlContent += `
-              <tr>
-                <td>${item.talentAdvisor || '-'}</td>
-                <td>${item.joiningDate || '-'}</td>
-                <td>${item.tenure || '-'}</td>
-                <td>${item.closures ?? '-'}</td>
-                <td>${item.lastClosure || '-'}</td>
-                <td>${item.qtrsAchieved ?? '-'}</td>
-              </tr>
-            `;
-          });
-
-          htmlContent += `
-              </tbody>
-            </table>
-          `;
-        }
-      } else {
-        htmlContent += `<p><strong>Report Type:</strong> ${generalReportType || 'N/A'}</p>`;
-        
-        // Employee Master report
-        if (generalReportType === 'employee-master') {
-          htmlContent += `
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Designation</th>
-                  <th>Department</th>
-                  <th>Joining Date</th>
-                  <th>Employment Status</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-          
-          hrEmployees.forEach((emp: any) => {
-            htmlContent += `
-              <tr>
-                <td>${emp.employeeId || '-'}</td>
-                <td>${emp.name || '-'}</td>
-                <td>${emp.email || '-'}</td>
-                <td>${emp.phone || '-'}</td>
-                <td>${emp.designation || '-'}</td>
-                <td>${emp.department || '-'}</td>
-                <td>${emp.joiningDate || '-'}</td>
-                <td>${emp.employmentStatus || '-'}</td>
-              </tr>
-            `;
-          });
-          
-          htmlContent += `
-              </tbody>
-            </table>
-          `;
-        }
-
-        // Client Master report
-        if (generalReportType === 'client-master') {
-          htmlContent += `
-            <table style="margin-top: 24px;">
-              <thead>
-                <tr>
-                  <th>Client Code</th>
-                  <th>Brand Name</th>
-                  <th>Location</th>
-                  <th>SPOC</th>
-                  <th>Website</th>
-                  <th>Current Status</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-
-          masterDataClients.forEach((client: any) => {
-            htmlContent += `
-              <tr>
-                <td>${client.clientCode || '-'}</td>
-                <td>${client.brandName || '-'}</td>
-                <td>${client.location || '-'}</td>
-                <td>${client.spoc || '-'}</td>
-                <td>${client.website || '-'}</td>
-                <td>${client.currentStatus || '-'}</td>
-              </tr>
-            `;
-          });
-
-          htmlContent += `
-              </tbody>
-            </table>
-          `;
-        }
-      }
-
       setReportGenerating({ active: true, message: "Building document…", progress: 78 });
       await new Promise((r) => setTimeout(r, 40));
 
-      htmlContent += `
-          </div>
-          <p style="margin-top: 30px; color: #666; font-size: 12px;">Generated on ${new Date().toLocaleString()}</p>
-        </body>
-        </html>
-      `;
+      const reportTypeLabel =
+        downloadSection === 'teams'
+          ? teamsReportType
+          : downloadSection === 'reports'
+            ? Object.entries(reportsCheckboxes)
+                .filter(([, checked]) => checked)
+                .map(([key]) => key)
+                .join(', ') || 'custom'
+            : generalReportType;
 
-      // Open print dialog for PDF
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        // Suppress console warnings from PDF rendering
-        const originalConsoleWarn = console.warn;
-        console.warn = (...args: any[]) => {
-          // Filter out PDF/font-related warnings (TT: undefined function)
-          const message = args[0]?.toString() || '';
-          if (!message.includes('TT: undefined function') && !message.includes('Warning: Missing')) {
-            originalConsoleWarn.apply(console, args);
-          }
-        };
-        
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        setTimeout(() => {
-          printWindow.print();
-          // Restore console.warn after printing
-          setTimeout(() => {
-            console.warn = originalConsoleWarn;
-            // Close the window after a delay
-            setTimeout(() => {
-              printWindow.close();
-            }, 1000);
-          }, 500);
-        }, 500);
-        toast({
-          title: "PDF Download",
-          description: "Use your browser's print dialog to save as PDF. Select 'Save as PDF' as the destination.",
-          className: "bg-blue-50 border-blue-200 text-blue-800",
+      const reportMeta = buildAdminReportMeta({
+        preparedBy: userName,
+        role: userRole === 'admin' ? 'Administrator' : formatEmployeeStatusLabel(userRole),
+        department: profileData?.department ?? employee?.department ?? null,
+        email: profileData?.email || employee?.email || null,
+        employeeId: profileData?.employeeId || employee?.employeeId || null,
+        period: periodSelection,
+        reportSection:
+          downloadSection === 'teams'
+            ? 'Teams Reports'
+            : downloadSection === 'reports'
+              ? 'Custom Reports'
+              : 'General Reports',
+        reportType: reportTypeLabel || 'N/A',
+      });
+
+      let bodyHtml = '';
+      if (downloadSection === 'teams') {
+        bodyHtml = buildTeamsReportBody({
+          reportType: teamsReportType,
+          period: teamsPeriodSelection,
+          cashoutData,
+          targetMappings,
+          dailyMetrics: dailyMetricsData,
+          keyAspects: keyAspectsData,
+          candidates: filteredCandidates,
+          masterTotals,
+          users: userManagementEmployees,
         });
+      } else if (downloadSection === 'reports') {
+        bodyHtml = buildCustomReportsBody({
+          selected: Object.entries(reportsCheckboxes)
+            .filter(([, checked]) => checked)
+            .map(([key]) => key),
+          period: reportsPeriodSelection,
+          team: reportsTeam,
+          priority: reportsPriority,
+          type: reportsType,
+          requirements,
+          pipeline: pipelineApplicantData,
+          closures: closureReportsData,
+          teamPerformance: teamPerformanceData,
+        });
+      } else {
+        bodyHtml = buildGeneralReportBody(
+          generalReportType,
+          operationsEmployeesForReport,
+          clientCompaniesForReport,
+          clientPortalUsersForReport,
+        );
       }
+
+      const htmlContent = buildAdminReportShell({
+        title:
+          downloadSection === 'teams'
+            ? 'Teams Report'
+            : downloadSection === 'reports'
+              ? 'Custom Operations Report'
+              : 'General Master Report',
+        subtitle: 'Generated from StaffOS Admin Portal',
+        meta: reportMeta,
+        bodyHtml,
+      });
+
+      openAdminReportPrintWindow(htmlContent);
+      toast({
+        title: "PDF Download",
+        description: "Use your browser's print dialog to save as PDF.",
+        className: "bg-blue-50 border-blue-200 text-blue-800",
+      });
+      setReportGenerating({ active: true, message: "Ready to print", progress: 100, done: true });
+      setTimeout(() => setReportGenerating(null), 1200);
     } else {
       // For CSV format
       let csvContent = '';
@@ -4874,24 +4918,37 @@ export default function AdminDashboard() {
         }
 
         // Pipeline section
-        if (selectedReports.includes('pipeline') && pipelineApplicantData.length > 0) {
-          if (lines.length > 0) lines.push('');
-          lines.push('Section,Applied On,Candidate,Company,Role,Status,Location,Experience');
-          pipelineApplicantData.forEach((app: any) => {
-            lines.push(`"Pipeline","${app.appliedOn || ''}","${app.candidateName || ''}","${app.company || ''}","${app.roleApplied || ''}","${app.currentStatus || ''}","${app.location || ''}","${app.experience || ''}"`);
-          });
+        if (selectedReports.includes('pipeline')) {
+          const filteredPipelineCsv = pipelineApplicantData.filter((app: any) =>
+            isDateInReportPeriod(app.appliedDate || app.appliedOn, reportsPeriodSelection),
+          );
+          if (filteredPipelineCsv.length > 0) {
+            if (lines.length > 0) lines.push('');
+            lines.push('Section,Applied On,Candidate,Company,Role,Status,Location,Experience');
+            filteredPipelineCsv.forEach((app: any) => {
+              lines.push(`"Pipeline","${app.appliedOn || ''}","${app.candidateName || ''}","${app.company || ''}","${app.roleApplied || ''}","${app.currentStatus || ''}","${app.location || ''}","${app.experience || ''}"`);
+            });
+          }
         }
 
         // Closure reports section
-        if (selectedReports.includes('closureReports') && closureReportsData.length > 0) {
-          if (lines.length > 0) lines.push('');
-          lines.push('Section,Candidate,Position,Client,Talent Advisor,Fixed CTC,Offered Date,Joined Date,Status');
-          closureReportsData.forEach((report: any) => {
-            lines.push(`"Closure Reports","${report.candidate || ''}","${report.position || ''}","${report.client || ''}","${report.talentAdvisor || ''}","${report.fixedCTC || ''}","${report.offeredDate || ''}","${report.joinedDate || ''}","${report.status || ''}"`);
-          });
+        if (selectedReports.includes('closureReports')) {
+          const filteredClosuresCsv = closureReportsData.filter((report: any) =>
+            isDateInReportPeriod(
+              report.offeredDateRaw || report.joinedDateRaw || report.offeredDate || report.joinedDate,
+              reportsPeriodSelection,
+            ),
+          );
+          if (filteredClosuresCsv.length > 0) {
+            if (lines.length > 0) lines.push('');
+            lines.push('Section,Candidate,Position,Client,Talent Advisor,Fixed CTC,Offered Date,Joined Date,Status');
+            filteredClosuresCsv.forEach((report: any) => {
+              lines.push(`"Closure Reports","${report.candidate || ''}","${report.position || ''}","${report.client || ''}","${report.talentAdvisor || ''}","${report.fixedCTC || ''}","${report.offeredDate || ''}","${report.joinedDate || ''}","${report.status || ''}"`);
+            });
+          }
         }
 
-        // Team performance section
+        // Team performance section (live snapshot — not period-filtered by join date)
         if (selectedReports.includes('teamPerformance') && teamPerformanceData.length > 0) {
           if (lines.length > 0) lines.push('');
           lines.push('Section,Talent Advisor,Joining Date,Tenure,Closures,Last Closure,Quarters Achieved');
@@ -4908,16 +4965,23 @@ export default function AdminDashboard() {
         csvContent = lines.join('\n');
       } else {
         if (generalReportType === 'employee-master') {
-          // Generate CSV with actual employee data
-          csvContent = 'Employee ID,Name,Email,Phone,Designation,Department,Joining Date,Employment Status\n';
-          hrEmployees.forEach((emp: any) => {
-            csvContent += `"${emp.employeeId || ''}","${emp.name || ''}","${emp.email || ''}","${emp.phone || ''}","${emp.designation || ''}","${emp.department || ''}","${emp.joiningDate || ''}","${emp.employmentStatus || ''}"\n`;
+          csvContent = 'Employee ID,Name,Email,Phone,Role,Department,Joining Date,Status\n';
+          operationsEmployeesForReport.forEach((emp: any) => {
+            csvContent += `"${emp.employeeId || ''}","${emp.name || ''}","${emp.email || ''}","${emp.phone || ''}","${formatEmployeeStatusLabel(emp.role)}","${emp.department || ''}","${emp.joiningDate || ''}","${emp.employmentStatus || (emp.isActive === false ? 'Inactive' : 'Active')}"\n`;
           });
         } else if (generalReportType === 'client-master') {
-          // Generate CSV with actual client data
-          csvContent = 'Client Code,Brand Name,Location,SPOC,Website,Current Status\n';
-          masterDataClients.forEach((client: any) => {
-            csvContent += `"${client.clientCode || ''}","${client.brandName || ''}","${client.location || ''}","${client.spoc || ''}","${client.website || ''}","${client.currentStatus || ''}"\n`;
+          csvContent = 'Record Type,ID,Name,Email,Phone,Role,Company,Location,Status\n';
+          clientCompaniesForReport.forEach((client: any) => {
+            csvContent += `"Company","${client.clientCode || client.id || ''}","${client.brandName || client.incorporatedName || ''}","${client.email || ''}","${client.phone || ''}","","${client.location || ''}","${client.currentStatus || ''}"\n`;
+          });
+          clientPortalUsersForReport.forEach((user: any) => {
+            const company = clientCompaniesForReport.find(
+              (client: any) => client.id === user.clientCompanyId,
+            );
+            const companyLabel = company
+              ? [company.brandName || company.incorporatedName, company.location].filter(Boolean).join(" · ")
+              : "";
+            csvContent += `"Portal User","${user.employeeId || user.id || ''}","${user.name || ''}","${user.email || ''}","${user.phone || ''}","${formatEmployeeStatusLabel(user.role)}","${companyLabel}","${user.isActive === false ? 'Inactive' : 'Active'}"\n`;
           });
         }
       }
@@ -6235,8 +6299,11 @@ export default function AdminDashboard() {
                     Revenue Mapping
                   </Button>
                   <Button
-                    className="bg-purple-800 text-white px-4 py-2 rounded text-sm opacity-60 cursor-not-allowed"
-                    disabled
+                    className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                    onClick={() => {
+                      setEditingIncentiveMapping(null);
+                      setIsIncentiveMappingModalOpen(true);
+                    }}
                     data-testid="button-incentive-mapping"
                   >
                     Incentive Mapping
@@ -6523,6 +6590,8 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              {renderIncentiveDataSection()}
             </div>
 
             {/* Right Sidebar - Quarterly/Yearly Metrics */}
@@ -6612,12 +6681,7 @@ export default function AdminDashboard() {
       }
     };
 
-    const getRoleDisplayName = (role: string) => {
-      if (role === 'team_leader') return 'Team Leader';
-      if (role === 'recruiter') return 'Talent Advisor';
-      if (role === 'client') return 'Client';
-      return role;
-    };
+    const getRoleDisplayName = (role: string) => formatEmployeeStatusLabel(role);
 
     return (
       <div className="flex h-full overflow-hidden">
@@ -6723,13 +6787,25 @@ export default function AdminDashboard() {
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{getRoleDisplayName(emp.role || 'N/A')}</td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
                               {(() => {
-                                const isLoggedIn = activeEmployeeIds.has(emp.id);
+                                const isOnHold = (emp.accountStatus || 'active') === 'hold';
+                                const isOnline = activeEmployeeIds.has(emp.id);
+                                if (isOnHold) {
+                                  return (
+                                    <span className="px-2 py-1 rounded text-xs bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+                                      On-Hold
+                                    </span>
+                                  );
+                                }
+                                if (isOnline) {
+                                  return (
+                                    <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                      Active
+                                    </span>
+                                  );
+                                }
                                 return (
-                                  <span className={`px-2 py-1 rounded text-xs ${isLoggedIn
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                    }`}>
-                                    {isLoggedIn ? 'Active' : 'In-Active'}
+                                  <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                    Offline
                                   </span>
                                 );
                               })()}
@@ -6749,6 +6825,31 @@ export default function AdminDashboard() {
                                     <Edit2 className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
+                                  {(emp.accountStatus || 'active') === 'hold' ? (
+                                    <DropdownMenuItem
+                                      onClick={() => resumeEmployeeMutation.mutate(emp.id)}
+                                      disabled={resumeEmployeeMutation.isPending || emp.role === 'admin'}
+                                    >
+                                      <RotateCcw className="mr-2 h-4 w-4" />
+                                      Resume User
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setUserToHold({
+                                          id: emp.id,
+                                          name: emp.name,
+                                          email: emp.email,
+                                        });
+                                        setIsHoldUserModalOpen(true);
+                                      }}
+                                      disabled={emp.role === 'admin'}
+                                      className="text-amber-700 dark:text-amber-400"
+                                    >
+                                      <PauseCircle className="mr-2 h-4 w-4" />
+                                      Hold User
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuItem
                                     onClick={() => {
                                       setUserToDelete({ id: emp.id, name: emp.name });
@@ -7625,9 +7726,12 @@ export default function AdminDashboard() {
                     Revenue Mapping
                   </Button>
                   <Button
-                    className="bg-purple-800 text-white px-4 py-2 rounded text-sm opacity-60 cursor-not-allowed"
-                    disabled
-                    data-testid="button-incentive-mapping"
+                    className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                    onClick={() => {
+                      setEditingIncentiveMapping(null);
+                      setIsIncentiveMappingModalOpen(true);
+                    }}
+                    data-testid="button-incentive-mapping-alt"
                   >
                     Incentive Mapping
                   </Button>
@@ -7912,6 +8016,8 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              {renderIncentiveDataSection()}
             </div>
 
             {/* Right Sidebar - Quarterly/Yearly Metrics */}
@@ -8012,7 +8118,7 @@ export default function AdminDashboard() {
         );
       case 'report':
         return (
-          <div className="px-6 py-6 h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+          <div className="admin-reports-page px-6 py-6 h-full flex flex-col bg-gray-50 dark:bg-gray-900">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Reports & Analytics</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate and download comprehensive reports for teams, requirements, and general data</p>
@@ -8575,11 +8681,11 @@ export default function AdminDashboard() {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
                             <div className="text-xs font-medium text-blue-700 dark:text-blue-400">1st Submission</div>
-                            <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
+                            <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">{adminSpeedMetrics.timeToFirstSubmission} <span className="text-xs">days</span></div>
                           </div>
                           <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
                             <div className="text-xs font-medium text-blue-700 dark:text-blue-400">Time to Fill</div>
-                            <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
+                            <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">{adminSpeedMetrics.timeToFill} <span className="text-xs">days</span></div>
                           </div>
                         </div>
                       </div>
@@ -8590,11 +8696,11 @@ export default function AdminDashboard() {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
                             <div className="text-xs font-medium text-green-700 dark:text-green-400">Submission Rate</div>
-                            <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
+                            <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">{adminQualityMetrics.submissionToShortList}<span className="text-xs">%</span></div>
                           </div>
                           <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
                             <div className="text-xs font-medium text-green-700 dark:text-green-400">Offer Rate</div>
-                            <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
+                            <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">{adminQualityMetrics.interviewToOffer}<span className="text-xs">%</span></div>
                           </div>
                         </div>
                       </div>
@@ -8605,11 +8711,11 @@ export default function AdminDashboard() {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
                             <div className="text-xs font-medium text-red-700 dark:text-red-400">Client NPS</div>
-                            <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">+0</div>
+                            <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">+{adminImpactMetrics.clientNps}</div>
                           </div>
                           <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
                             <div className="text-xs font-medium text-red-700 dark:text-red-400">Retention Rate</div>
-                            <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">0<span className="text-xs">%</span></div>
+                            <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">{adminImpactMetrics.firstYearRetentionRate}<span className="text-xs">%</span></div>
                           </div>
                         </div>
                       </div>
@@ -10403,6 +10509,15 @@ export default function AdminDashboard() {
         editingRevenueMapping={editingRevenueMapping}
       />
 
+      <IncentiveMappingModal
+        isOpen={isIncentiveMappingModalOpen}
+        onClose={() => {
+          setIsIncentiveMappingModalOpen(false);
+          setEditingIncentiveMapping(null);
+        }}
+        editingIncentiveMapping={editingIncentiveMapping}
+      />
+
       {/* Performance Chart Modal */}
       <PerformanceChartModal
         isOpen={isPerformanceChartModalOpen}
@@ -10650,6 +10765,21 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      <HoldUserModal
+        isOpen={isHoldUserModalOpen}
+        userName={userToHold?.name || ""}
+        userEmail={userToHold?.email || ""}
+        isSubmitting={holdEmployeeMutation.isPending}
+        onClose={() => {
+          setIsHoldUserModalOpen(false);
+          setUserToHold(null);
+        }}
+        onConfirm={(payload) => {
+          if (!userToHold) return;
+          holdEmployeeMutation.mutate({ id: userToHold.id, payload });
+        }}
+      />
+
       {/* Password Protected Delete Dialog for User Management */}
       <Dialog open={isPasswordDialogOpen} onOpenChange={handlePasswordDialogOpenChange} data-testid="dialog-password-delete">
         <DialogContent className="max-w-md" data-testid="dialog-password-confirm">
@@ -10730,7 +10860,7 @@ export default function AdminDashboard() {
         }}
         editData={
           editingUser &&
-          ["client", "client_admin", "Client", "Client Admin"].includes(
+          ["client", "client_admin", "client_member", "Client", "Client Admin", "Client Member"].includes(
             String(editingUser.role || ""),
           )
             ? editingUser
@@ -13016,7 +13146,7 @@ export default function AdminDashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Clients</SelectItem>
-                    {(clients as any[]).map((client: any) => (
+                    {masterDataClients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.brandName || client.incorporatedName || "Unknown"}
                       </SelectItem>
@@ -13031,7 +13161,7 @@ export default function AdminDashboard() {
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">Time to 1st Submission</h3>
                 <div className="flex items-end space-x-3 mb-2">
-                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-3xl font-bold text-blue-900">{adminSpeedMetrics.timeToFirstSubmission}</span>
                   <span className="text-sm text-blue-700 mb-1">days</span>
                   <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                 </div>
@@ -13040,7 +13170,7 @@ export default function AdminDashboard() {
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Interview</h3>
                 <div className="flex items-end space-x-3 mb-2">
-                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-3xl font-bold text-blue-900">{adminSpeedMetrics.timeToInterview}</span>
                   <span className="text-sm text-blue-700 mb-1">days</span>
                   <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                 </div>
@@ -13049,7 +13179,7 @@ export default function AdminDashboard() {
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Offer</h3>
                 <div className="flex items-end space-x-3 mb-2">
-                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-3xl font-bold text-blue-900">{adminSpeedMetrics.timeToOffer}</span>
                   <span className="text-sm text-blue-700 mb-1">days</span>
                   <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                 </div>
@@ -13058,7 +13188,7 @@ export default function AdminDashboard() {
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Fill</h3>
                 <div className="flex items-end space-x-3 mb-2">
-                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-3xl font-bold text-blue-900">{adminSpeedMetrics.timeToFill}</span>
                   <span className="text-sm text-blue-700 mb-1">days</span>
                   <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
                 </div>
@@ -13072,7 +13202,7 @@ export default function AdminDashboard() {
                 <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                   <h3 className="text-sm font-medium text-green-700 mb-2">Submission to Short List %</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-3xl font-bold text-green-800">{adminQualityMetrics.submissionToShortList}</span>
                     <span className="text-sm text-green-700 mb-1">%</span>
                     <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                   </div>
@@ -13081,7 +13211,7 @@ export default function AdminDashboard() {
                 <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                   <h3 className="text-sm font-medium text-green-700 mb-2">Interview to Offer %</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-3xl font-bold text-green-800">{adminQualityMetrics.interviewToOffer}</span>
                     <span className="text-sm text-green-700 mb-1">%</span>
                     <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                   </div>
@@ -13090,7 +13220,7 @@ export default function AdminDashboard() {
                 <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                   <h3 className="text-sm font-medium text-green-700 mb-2">Offer Acceptance %</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-3xl font-bold text-green-800">{adminQualityMetrics.offerAcceptance}</span>
                     <span className="text-sm text-green-700 mb-1">%</span>
                     <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                   </div>
@@ -13099,7 +13229,7 @@ export default function AdminDashboard() {
                 <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                   <h3 className="text-sm font-medium text-green-700 mb-2">Early Attrition %</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-3xl font-bold text-green-800">{adminQualityMetrics.earlyAttrition}</span>
                     <span className="text-sm text-green-700 mb-1">%</span>
                     <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
                   </div>
@@ -13113,25 +13243,25 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                   <h3 className="text-sm font-medium text-red-700 mb-2">Speed to Hire value</h3>
-                  <div className="text-3xl font-bold text-red-600">0</div>
+                  <div className="text-3xl font-bold text-red-600">{adminImpactMetrics.speedToHire || adminSpeedMetrics.timeToFill}</div>
                   <div className="text-sm text-gray-600 mt-1">Days faster*</div>
                 </div>
 
                 <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                   <h3 className="text-sm font-medium text-red-700 mb-2">Revenue Impact Of Delay</h3>
-                  <div className="text-3xl font-bold text-red-600">0</div>
+                  <div className="text-3xl font-bold text-red-600">{adminImpactMetrics.revenueImpactOfDelay}</div>
                   <div className="text-sm text-gray-600 mt-1">Lost per Role*</div>
                 </div>
 
                 <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                   <h3 className="text-sm font-medium text-purple-700 mb-2">Client NPS</h3>
-                  <div className="text-3xl font-bold text-purple-600">+0</div>
+                  <div className="text-3xl font-bold text-purple-600">+{adminImpactMetrics.clientNps}</div>
                   <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                 </div>
 
                 <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                   <h3 className="text-sm font-medium text-purple-700 mb-2">Candidate NPS</h3>
-                  <div className="text-3xl font-bold text-purple-600">+0</div>
+                  <div className="text-3xl font-bold text-purple-600">+{adminImpactMetrics.candidateNps}</div>
                   <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                 </div>
               </div>
@@ -13139,7 +13269,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-4 gap-4">
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 relative">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">Feedback Turn Around</h3>
-                  <div className="text-3xl font-bold text-yellow-600 mb-1">{impactMetricsQuery.data?.[0]?.feedbackTurnAround || 0}</div>
+                  <div className="text-3xl font-bold text-yellow-600 mb-1">{adminImpactMetrics.feedbackTurnAround}</div>
                   {isEditingFeedbackModal ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -13176,7 +13306,7 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <>
-                      <div className="text-xs text-gray-500">days (Avg. {impactMetricsQuery.data?.[0]?.feedbackTurnAroundAvgDays || 5} days)*</div>
+                      <div className="text-xs text-gray-500">days (Avg. {adminImpactMetrics.feedbackTurnAroundAvgDays || 5} days)*</div>
                       <Button
                         size="icon"
                         variant="ghost"
@@ -13192,19 +13322,19 @@ export default function AdminDashboard() {
 
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">First Year Retention Rate</h3>
-                  <div className="text-3xl font-bold text-yellow-600">0</div>
+                  <div className="text-3xl font-bold text-yellow-600">{adminImpactMetrics.firstYearRetentionRate}</div>
                   <div className="text-sm text-gray-600 mt-1">%</div>
                 </div>
 
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">Fulfillment Rate</h3>
-                  <div className="text-3xl font-bold text-yellow-600">0</div>
+                  <div className="text-3xl font-bold text-yellow-600">{adminImpactMetrics.fulfillmentRate}</div>
                   <div className="text-sm text-gray-600 mt-1">%</div>
                 </div>
 
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">Revenue Recovered</h3>
-                  <div className="text-3xl font-bold text-yellow-600">0 <span className="text-2xl">L</span></div>
+                  <div className="text-3xl font-bold text-yellow-600">{adminImpactMetrics.revenueRecovered} <span className="text-2xl">L</span></div>
                   <div className="text-sm text-gray-600 mt-1">Gained per hire*</div>
                 </div>
               </div>

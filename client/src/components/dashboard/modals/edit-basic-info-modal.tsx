@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_DIALOG_OVERLAY_CLASSES,
   CANDIDATE_MOBILE_DIALOG_CLASSES,
 } from '@/lib/candidate-ui-preferences';
 import { cn } from '@/lib/utils';
@@ -129,6 +130,7 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        overlayClassName={CANDIDATE_DIALOG_OVERLAY_CLASSES}
         className={cn(
           "max-w-2xl rounded-2xl lg:rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]",
           CANDIDATE_MOBILE_DIALOG_CLASSES,

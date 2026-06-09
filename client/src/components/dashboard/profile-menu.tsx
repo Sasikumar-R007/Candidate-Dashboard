@@ -146,9 +146,9 @@ export default function ProfileMenu({
 
         <DropdownMenuTrigger asChild>
 
-          <button className="flex items-center gap-0 lg:gap-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full p-0.5 lg:pl-1.5 lg:pr-5 lg:py-1 shadow-sm hover:shadow-md transition-all active:scale-[0.98] outline-none group text-left">
+          <button className="flex items-center gap-0 lg:gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full p-0.5 lg:pl-1 lg:pr-3 lg:py-0.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] outline-none group text-left">
 
-            <Avatar className="w-9 h-9 lg:w-10 lg:h-10 border-2 border-white dark:border-gray-700 shadow-sm transition-transform group-hover:scale-105">
+            <Avatar className="w-8 h-8 lg:w-9 lg:h-9 border-2 border-white dark:border-gray-700 shadow-sm transition-transform group-hover:scale-105">
 
               <AvatarImage src={profilePicture} className="object-cover" />
 
@@ -164,7 +164,7 @@ export default function ProfileMenu({
 
             <div className="hidden lg:flex flex-col">
 
-              <span className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+              <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
 
                 {name || "Loading..."}
 

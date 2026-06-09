@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { AuthProvider } from "@/contexts/auth-context";
+import AccountHoldOverlay from "@/components/account-hold-overlay";
 import AuthenticatedNavigationGuard from "@/components/authenticated-navigation-guard";
 import { ProtectedRoute } from "@/components/protected-route";
 import ErrorBoundary from "@/components/error-boundary";
@@ -166,6 +167,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <OperationalDataSync />
         <AuthProvider>
+          <AccountHoldOverlay />
           <AuthenticatedNavigationGuard />
           <ThemeProvider>
             <TooltipProvider>

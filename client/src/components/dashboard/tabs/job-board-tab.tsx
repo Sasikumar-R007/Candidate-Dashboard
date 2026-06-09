@@ -343,7 +343,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
 
   return (
     <>
-    <div className="flex bg-gray-50 dark:bg-gray-900 h-full min-h-0 overflow-hidden font-inter text-gray-900">
+    <div className="flex bg-gray-50 dark:bg-gray-900 h-full min-h-0 font-inter text-gray-900">
       {mobileFiltersOpen && (
         <button
           type="button"
@@ -353,23 +353,31 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
         />
       )}
       {/* Left Session: Sidebar with Filters */}
-      <div 
+      <div
         className={cn(
-          "relative flex flex-col border-r border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-500 ease-in-out scrollbar-hide shrink-0 z-20",
+          "relative shrink-0 overflow-visible transition-all duration-500 ease-in-out",
           "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-[60] max-lg:w-[min(100vw-2rem,320px)] max-lg:shadow-2xl max-lg:transition-transform",
           mobileFiltersOpen ? "max-lg:translate-x-0 max-lg:flex" : "max-lg:-translate-x-full max-lg:hidden",
-          "lg:flex",
+          "lg:z-30",
           isSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[320px]"
         )}
       >
-        {/* Toggle Button - desktop only */}
-        <button 
+        {/* Toggle Button - desktop only; sits on sidebar edge above main panel */}
+        <button
+          type="button"
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className={`hidden lg:flex absolute -right-4 top-10 w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-full items-center justify-center z-30 shadow-xl hover:scale-110 transition-all active:scale-95 group text-white border-2 border-white dark:border-gray-900`}
+          className="hidden lg:flex absolute -right-3.5 top-10 z-50 h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-white shadow-lg transition-all hover:scale-105 active:scale-95 dark:border-gray-900 dark:bg-blue-500"
+          aria-label={isSidebarCollapsed ? "Expand filters" : "Collapse filters"}
         >
-          {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
 
+        <div
+          className={cn(
+            "flex h-full flex-col border-r border-gray-100 bg-white scrollbar-hide dark:border-gray-700 dark:bg-gray-800",
+            "max-lg:flex lg:flex",
+          )}
+        >
         <div className={cn(
           "flex flex-col h-full px-4 py-6 sm:px-6 sm:py-10 overflow-y-auto scrollbar-hide transition-all duration-300 max-lg:opacity-100 max-lg:visible",
           isSidebarCollapsed ? "lg:opacity-0 lg:invisible" : "lg:opacity-100 lg:visible"
@@ -596,11 +604,12 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
             </div>
           </div>
         )}
+        </div>
       </div>
 
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 min-w-0">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col h-full overflow-hidden bg-white dark:bg-gray-900">
         {/* Top Header Bar */}
         <div className="min-h-[4.5rem] shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 relative z-40">
            <Button
@@ -722,7 +731,14 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
               <div 
                 key={job.id}
                 onClick={() => openJobDetails(job)}
-                className={`relative cursor-pointer transition-all duration-300 ${JB_RADIUS} border ${selectedJob?.id === job.id ? 'bg-white border-blue-400 shadow-md ring-1 ring-blue-100' : 'bg-white border-gray-200 hover:border-blue-200 hover:shadow-sm'}`}
+                className={cn(
+                  "relative cursor-pointer transition-all duration-200",
+                  JB_RADIUS,
+                  "border",
+                  selectedJob?.id === job.id
+                    ? "border-blue-600 bg-blue-100"
+                    : "border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50/30",
+                )}
               >
                 <div className="p-3.5">
                   <div className="flex gap-4 mb-4">
@@ -869,9 +885,9 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                             <DollarSign size={14} className="text-amber-500" />
                             <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">{selectedJob.salary}</span>
                          </div>
-                         <div className="flex items-center gap-2">
-                            <Clock size={14} className="text-blue-400" />
-                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">Posted {selectedJob.postedDays}</span>
+                         <div className="flex items-center gap-1.5">
+                            <Clock size={12} className="text-blue-400 shrink-0" />
+                            <span className="text-[10px] font-medium text-gray-400">Posted {selectedJob.postedDays}</span>
                          </div>
                       </div>
 
@@ -880,7 +896,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                          {selectedJob.market && <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none rounded-lg px-3 py-1 text-[9px] font-bold uppercase tracking-widest">{selectedJob.market}</Badge>}
                          {selectedJob.field && <Badge variant="secondary" className="bg-indigo-50 text-indigo-600 border-none rounded-lg px-3 py-1 text-[9px] font-bold uppercase tracking-widest">{selectedJob.field}</Badge>}
                          {selectedJob.companyType && <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none rounded-lg px-3 py-1 text-[9px] font-bold uppercase tracking-widest">{selectedJob.companyType}</Badge>}
-                         {selectedJob.noOfPositions && <Badge variant="secondary" className="bg-orange-50 text-orange-600 border-none rounded-lg px-3 py-1 text-[9px] font-bold uppercase tracking-widest">Open Positions: {selectedJob.noOfPositions}</Badge>}
+                         {selectedJob.noOfPositions && <Badge variant="secondary" className="bg-orange-50 text-orange-600 border-none rounded-md px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal">No. of positions: {selectedJob.noOfPositions}</Badge>}
                       </div>
 
                       {/* Content Sections */}
@@ -988,12 +1004,12 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                 <div className="shrink-0 z-20 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
                   <div className="px-4 sm:px-8 py-4 flex flex-col gap-3">
                     <div className="flex flex-row flex-wrap items-center justify-between gap-2 min-h-[2rem] w-full">
-                      <div className={`flex items-center gap-2 bg-blue-50 text-blue-800 px-3 py-1.5 ${JB_RADIUS} border border-blue-100 text-sm font-medium whitespace-nowrap`}>
-                        <Users size={16} className="text-blue-700 shrink-0" />
+                      <div className={`flex items-center gap-1.5 bg-blue-50 text-blue-800 px-2.5 py-1 ${JB_RADIUS} border border-blue-100 text-xs font-medium whitespace-nowrap`}>
+                        <Users size={14} className="text-blue-700 shrink-0" />
                         <span>{selectedJob.applicationCount || 0} applied</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm font-medium text-gray-600 whitespace-nowrap">
-                        <Clock size={16} className="text-gray-500 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-[12px] font-medium text-gray-500 whitespace-nowrap">
+                        <Clock size={12} className="text-gray-400 shrink-0" />
                         <span>Posted {selectedJob.postedDays}</span>
                       </div>
                     </div>

@@ -881,6 +881,16 @@ const initialFilters: FilterState = {
   selectedRequirementId: undefined,
 };
 
+/** Source Resume field styling — small radius, distinct shades for inputs vs dropdowns */
+const SR_INPUT =
+  "border border-gray-300 bg-slate-50 rounded-[4px] text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-400";
+const SR_INPUT_COMPACT = `${SR_INPUT} px-2 py-1.5`;
+const SR_INPUT_STANDARD = `${SR_INPUT} px-3 py-2`;
+const SR_DROPDOWN_TRIGGER =
+  "w-full justify-between bg-slate-100 border border-slate-300 rounded-[4px] h-10 font-normal text-gray-700 hover:bg-slate-200/70 relative";
+const SR_SELECT_TRIGGER =
+  "w-full bg-slate-100 border border-slate-300 rounded-[4px] h-10 focus:ring-1 focus:ring-purple-500 focus:ring-offset-0";
+
 // Filterable Dropdown Component
 interface FilterableDropdownProps {
   value: string;
@@ -930,7 +940,7 @@ function FilterableDropdown({ value, onChange, options, placeholder, icon }: Fil
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50 relative"
+          className={`${SR_DROPDOWN_TRIGGER} font-normal`}
           onClick={(e) => {
             // Don't open if clicking on the X button
             if ((e.target as HTMLElement).closest('.clear-filter-button')) {
@@ -2378,38 +2388,100 @@ const SourceResume = () => {
         currentPage * candidatesPerPage
       );
 
-  // Recommended candidates - show different candidates from main database, not search results
+  // Recommended candidates — scored against requirement / filters / search context
   const recommendedCandidates = useMemo(() => {
-    if (selectedCandidate) {
-      // When a candidate is selected, show similar candidates from ALL candidates (not search results)
-      return allDisplayCandidates
-        .filter(c => c.id !== selectedCandidate.id)
-        .filter(c => {
-          // Exclude candidates that are already in search results
-          const isInSearchResults = displayCandidates.some(dc => dc.id === c.id);
-          if (isInSearchResults) return false;
-          
-          // Show candidates with similar skills or experience
-          const hasCommonSkills = c.skills.some(skill => 
-            selectedCandidate.skills.some(selectedSkill => 
-              skill.toLowerCase().includes(selectedSkill.toLowerCase()) ||
-              selectedSkill.toLowerCase().includes(skill.toLowerCase())
-            )
-          );
-          const similarExperience = Math.abs(c.experience - selectedCandidate.experience) <= 2;
-          return hasCommonSkills || similarExperience;
-        })
-        .slice(0, 5);
-    } else {
-      // When no candidate is selected, show random candidates from ALL candidates (not search results)
-      return allDisplayCandidates
-        .filter(c => {
-          // Exclude candidates that are already in search results
-          return !displayCandidates.some(dc => dc.id === c.id);
-        })
-        .slice(0, 5);
+    const searchResultIds = new Set(displayCandidates.map((c) => c.id));
+    const activeRequirement = filters.selectedRequirementId
+      ? requirements.find((r: any) => r.id === filters.selectedRequirementId)
+      : undefined;
+
+    const scored = allDisplayCandidates
+      .filter((c) => !searchResultIds.has(c.id))
+      .map((candidate) => {
+        let score = 0;
+
+        if (activeRequirement) {
+          score += calculateRequirementMatch(candidate, activeRequirement) * 0.5;
+        }
+
+        if (filters.keywords.length > 0) {
+          const searchText = getCandidateSearchText(candidate);
+          const kwMatches = filters.keywords.filter((kw) =>
+            searchText.includes(kw.toLowerCase()),
+          ).length;
+          score += (kwMatches / filters.keywords.length) * 35;
+        }
+
+        if (filters.specificSkills.length > 0) {
+          const skMatches = filters.specificSkills.filter((sk) =>
+            candidate.skills.some((s) => s.toLowerCase().includes(sk.toLowerCase())),
+          ).length;
+          score += (skMatches / filters.specificSkills.length) * 25;
+        }
+
+        if (filters.role?.trim()) {
+          score +=
+            calculateSimilarity(candidate.title.toLowerCase(), filters.role.toLowerCase()) * 15;
+        }
+
+        if (filters.location?.trim()) {
+          const loc = filters.location.toLowerCase();
+          if (
+            candidate.location.toLowerCase().includes(loc) ||
+            candidate.preferredLocation.toLowerCase().includes(loc)
+          ) {
+            score += 10;
+          }
+        }
+
+        if (selectedCandidate && selectedCandidate.id !== candidate.id) {
+          const commonSkills = candidate.skills.filter((s) =>
+            selectedCandidate.skills.some(
+              (ss) => ss.toLowerCase() === s.toLowerCase(),
+            ),
+          ).length;
+          score += Math.min(15, commonSkills * 4);
+        }
+
+        return { candidate, score };
+      })
+      .filter((x) => x.score > 12)
+      .sort((a, b) => b.score - a.score);
+
+    const top = scored.slice(0, 5).map((x) => x.candidate);
+    if (top.length > 0) return top;
+
+    return allDisplayCandidates.filter((c) => !searchResultIds.has(c.id)).slice(0, 5);
+  }, [
+    allDisplayCandidates,
+    displayCandidates,
+    filters.selectedRequirementId,
+    filters.keywords,
+    filters.specificSkills,
+    filters.role,
+    filters.location,
+    requirements,
+    selectedCandidate,
+  ]);
+
+  const hasActiveSearchCriteria = useMemo(
+    () =>
+      Boolean(
+        debouncedSearchQuery.trim() ||
+          resultsSearchQuery.trim() ||
+          filters.keywords.length > 0 ||
+          filters.specificSkills.length > 0,
+      ),
+    [debouncedSearchQuery, resultsSearchQuery, filters.keywords, filters.specificSkills],
+  );
+
+  const candidatesToRender = useMemo(() => {
+    if (!selectedCandidate) return paginatedCandidates;
+    if (paginatedCandidates.some((c) => c.id === selectedCandidate.id)) {
+      return paginatedCandidates;
     }
-  }, [selectedCandidate, allDisplayCandidates, displayCandidates]);
+    return [selectedCandidate, ...paginatedCandidates];
+  }, [selectedCandidate, paginatedCandidates]);
 
   // Store current values in refs to avoid dependency issues
   const filtersRef = useRef(filters);
@@ -2607,6 +2679,20 @@ const SourceResume = () => {
 
   const selectedCandidateRef = useRef<HTMLDivElement>(null);
 
+  const handleRecommendedCandidateClick = async (candidate: CandidateDisplay) => {
+    void apiRequest('POST', `/api/recruiter/candidates/${candidate.id}/view`, {})
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
+      })
+      .catch(() => undefined);
+
+    setSelectedCandidate(candidate);
+    setTimeout(() => {
+      selectedCandidateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
   const handleCandidateClick = async (candidate: CandidateDisplay) => {
     // Update last viewed timestamp (non-blocking; do not interrupt card selection)
     void apiRequest('POST', `/api/recruiter/candidates/${candidate.id}/view`, {})
@@ -2769,7 +2855,7 @@ const SourceResume = () => {
   // Results View
   if (view === 'results') {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="source-resume-page flex h-screen bg-gray-50">
         {/* Left Sidebar - Filters (Static) */}
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -2801,7 +2887,7 @@ const SourceResume = () => {
                   }
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={SR_SELECT_TRIGGER}>
                   <SelectValue placeholder="Select requirement for AI matching" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2855,7 +2941,7 @@ const SourceResume = () => {
                       handleKeywordAdd(keywordInput.trim());
                     }
                   }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm"
+                  className={`w-full ${SR_INPUT_STANDARD} pr-8`}
                 />
                 {keywordInput && (
                   <X
@@ -2914,7 +3000,7 @@ const SourceResume = () => {
                         experience: [parseInt(e.target.value) || 0, filters.experience[1]],
                       })
                     }
-                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                    className={`w-full ${SR_INPUT_COMPACT} pr-7`}
                   />
                   {filters.experience[0] !== 0 && (
                     <X
@@ -2936,7 +3022,7 @@ const SourceResume = () => {
                         experience: [filters.experience[0], parseInt(e.target.value) || 15],
                       })
                     }
-                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                    className={`w-full ${SR_INPUT_COMPACT} pr-7`}
                   />
                   {filters.experience[1] !== 15 && (
                     <X
@@ -2960,7 +3046,7 @@ const SourceResume = () => {
                     placeholder="Min"
                     value={filters.ctcMin}
                     onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                    className={`w-full ${SR_INPUT_COMPACT} pr-7`}
                   />
                   {filters.ctcMin && (
                     <X
@@ -2976,7 +3062,7 @@ const SourceResume = () => {
                     placeholder="Max"
                     value={filters.ctcMax}
                     onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                    className={`w-full ${SR_INPUT_COMPACT} pr-7`}
                   />
                   {filters.ctcMax && (
                     <X
@@ -3251,7 +3337,7 @@ const SourceResume = () => {
                   }}
                   onFocus={() => setShowSearchSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
-                  className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className={`w-full pl-9 pr-3 py-1.5 text-sm ${SR_INPUT_STANDARD}`}
                   placeholder="Enter the skills, company, designation..."
                 />
                 {/* AI Suggestions Dropdown */}
@@ -3496,7 +3582,7 @@ const SourceResume = () => {
                     </div>
                   </div>
                 )}
-                {paginatedCandidates.map((candidate) => (
+                {candidatesToRender.map((candidate) => (
                   <div
                     key={candidate.id}
                     ref={selectedCandidate?.id === candidate.id ? selectedCandidateRef : null}
@@ -3542,25 +3628,29 @@ const SourceResume = () => {
                                 </span>
                               )}
                               {/* Relevance Score Badge */}
-                              {'relevanceScore' in candidate && candidate.relevanceScore > 0 && (
+                              {hasActiveSearchCriteria &&
+                                'relevanceScore' in candidate &&
+                                candidate.relevanceScore > 0 && (
                                 <span 
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                                     candidate.relevanceScore >= 80 
                                       ? 'bg-green-100 text-green-800' 
                                       : candidate.relevanceScore >= 60 
                                       ? 'bg-yellow-100 text-yellow-800' 
                                       : 'bg-gray-100 text-gray-800'
                                   }`}
-                                  title="Relevance Score"
+                                  title="Search Match — how well this profile matches your keywords, skills, and search query"
                                 >
                                   {candidate.relevanceScore}% Match
                                 </span>
                               )}
-                              {/* Requirement Match Badge */}
-                              {'matchPercentage' in candidate && candidate.matchPercentage !== undefined && candidate.matchPercentage > 0 && (
+                              {filters.selectedRequirementId &&
+                                'matchPercentage' in candidate &&
+                                candidate.matchPercentage !== undefined &&
+                                candidate.matchPercentage > 0 && (
                                 <span 
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800`}
-                                  title="Requirement Match Score"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
+                                  title="Req Fit — how well this profile fits the selected requirement (AI Match Mode)"
                                 >
                                   {candidate.matchPercentage}% Fit
                                 </span>
@@ -3908,17 +3998,25 @@ const SourceResume = () => {
             <h2 className="text-xl font-bold text-gray-900">Recommended candidates</h2>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {recommendedCandidates.map((candidate) => (
+            {recommendedCandidates.length === 0 ? (
+              <p className="text-sm text-gray-500 px-1">
+                No suggestions yet — run a search or select a requirement to see related profiles.
+              </p>
+            ) : (
+            recommendedCandidates.map((candidate) => (
               <div
                 key={candidate.id}
-                className="bg-gray-50 rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                className={`bg-gray-50 rounded-[4px] border p-4 cursor-pointer hover:shadow-md transition-shadow ${
+                  selectedCandidate?.id === candidate.id
+                    ? 'border-blue-500 ring-1 ring-blue-300'
+                    : 'border-gray-200'
+                }`}
                 onClick={(e) => {
-                  // Don't handle card click if clicking on a button or link
                   const target = e.target as HTMLElement;
                   if (target.tagName === 'BUTTON' || target.closest('button') || target.tagName === 'A' || target.closest('a')) {
-                    return; // Let the button/link handle its own click
+                    return;
                   }
-                  handleCandidateClick(candidate);
+                  handleRecommendedCandidateClick(candidate);
                 }}
               >
                 <div className="flex gap-3 mb-3">
@@ -3993,7 +4091,8 @@ const SourceResume = () => {
                   last seen: {candidate.lastSeen || 'Never'}
                 </p>
               </div>
-            ))}
+            ))
+            )}
           </div>
         </div>
 
@@ -4026,7 +4125,7 @@ const SourceResume = () => {
 
   // Search Form View
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="source-resume-page flex h-screen bg-gray-50">
       {/* Main Content Area - Scrollable */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -4115,7 +4214,7 @@ const SourceResume = () => {
                     handleKeywordAdd(keywordInput.trim());
                   }
                 }}
-                className="w-full max-w-md border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className={`w-full max-w-md ${SR_INPUT_STANDARD} pr-10 border`}
                 placeholder="Enter the skills,company,designation...."
               />
             </div>
@@ -4169,7 +4268,7 @@ const SourceResume = () => {
                         handleExcludeKeywordAdd(excludeKeywordInput.trim());
                       }
                     }}
-                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
                     placeholder="Enter keywords to exclude..."
                   />
                   {excludeKeywordInput && (
@@ -4211,7 +4310,7 @@ const SourceResume = () => {
                         handleSpecificSkillAdd(specificSkillInput.trim());
                       }
                     }}
-                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
                     placeholder="Enter specific skills (must have all)..."
                   />
                   {specificSkillInput && (
@@ -4246,7 +4345,7 @@ const SourceResume = () => {
                         experience: [parseInt(e.target.value) || 0, filters.experience[1]],
                       })
                     }
-                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
                   />
                   {filters.experience[0] !== 0 && (
                     <X
@@ -4268,7 +4367,7 @@ const SourceResume = () => {
                         experience: [filters.experience[0], parseInt(e.target.value) || 15],
                       })
                     }
-                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
                   />
                   {filters.experience[1] !== 15 && (
                     <X
@@ -4293,7 +4392,7 @@ const SourceResume = () => {
                     placeholder="Min"
                     value={filters.ctcMin}
                     onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
-                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
                   />
                   {filters.ctcMin && (
                     <X
@@ -4309,7 +4408,7 @@ const SourceResume = () => {
                     placeholder="Max"
                     value={filters.ctcMax}
                     onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
-                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
                   />
                   {filters.ctcMax && (
                     <X
@@ -4462,7 +4561,7 @@ const SourceResume = () => {
                           handleExcludeCompanyAdd(excludeCompanyInput.trim());
                         }
                       }}
-                      className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
                       placeholder="Enter company names to exclude..."
                     />
                     {excludeCompanyInput && (
@@ -4545,7 +4644,7 @@ const SourceResume = () => {
                           handleAddDegree(addDegreeInput.trim());
                         }
                       }}
-                      className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
                       placeholder="Enter degree or certificate name..."
                     />
                     {addDegreeInput && (

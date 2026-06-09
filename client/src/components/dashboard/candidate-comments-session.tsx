@@ -43,7 +43,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useEmployeeAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
-import { getPipelineStageBadgeClass } from "@/lib/pipeline-session-utils";
+import {
+  getPipelineStageBadgeClass,
+  isTerminalRejectedStatus,
+  parseTerminalOutcome,
+} from "@/lib/pipeline-session-utils";
 
 const BTN_RADIUS = "rounded-[6px]";
 
@@ -710,11 +714,27 @@ export function CandidateCommentsSession({
     return groups;
   }, [displayComments]);
 
-  const pipelineStatus = (app?.status || fallbackApplicant?.currentStatus || "").toLowerCase();
-  const isRejected =
-    pipelineStatus === "rejected" ||
-    pipelineStatus.includes("screened out") ||
-    pipelineStatus === "withdrawn";
+  const isRejected = useMemo(() => {
+    if (isTerminalRejectedStatus(app?.status, app?.statusNote)) return true;
+    const pipelineStatus = (
+      app?.status ||
+      fallbackApplicant?.currentStatus ||
+      ""
+    ).toLowerCase();
+    if (
+      pipelineStatus === "rejected" ||
+      pipelineStatus.includes("screened out") ||
+      pipelineStatus === "withdrawn" ||
+      pipelineStatus.includes("offer drop")
+    ) {
+      return true;
+    }
+    if (parseTerminalOutcome(app?.status, app?.statusNote).kind) return true;
+    if (clientRejectionReason) return true;
+    return displayComments.some((c) =>
+      isClientRejectionComment(c.body, c.authorRole),
+    );
+  }, [app?.status, app?.statusNote, fallbackApplicant?.currentStatus, clientRejectionReason, displayComments]);
   const posterName = employee?.name || viewerName;
 
   const builtInClientRejectMutation = useMutation({
@@ -861,7 +881,19 @@ export function CandidateCommentsSession({
 
   const commentsPanelHeaderRight = effectiveClientReject ? (
     isRejected ? (
-      <span className="text-xs font-medium text-red-600">Rejected</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled
+        className={cn(
+          "h-8 cursor-default border-red-200 bg-red-50 text-xs text-red-600 opacity-100",
+          BTN_RADIUS,
+        )}
+        data-testid="button-candidate-rejected"
+      >
+        Rejected
+      </Button>
     ) : effectiveClientReject.canReject ? (
       showRejectForm ? (
         <Button

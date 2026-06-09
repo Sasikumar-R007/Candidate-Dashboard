@@ -42,6 +42,43 @@ export function normalizePipelineDisplayStatus(
   return DISPLAY_BY_KEY[key] ?? "Resume Review";
 }
 
+/** Withdrawn, screened out, client-rejected, and other terminal outcomes. */
+export function isTerminalRejectedStatus(
+  rawStatus?: string | null,
+  statusNote?: string | null,
+): boolean {
+  const lower = (rawStatus || "").trim().toLowerCase();
+  const note = statusNote || "";
+
+  if (
+    note.includes("[[TERMINAL:WITHDRAW]]") ||
+    note.includes("[[TERMINAL:CLIENT_REJECT]]") ||
+    /\[\[REJECT_STAGE:/.test(note) ||
+    /^rejected by client:/im.test(note)
+  ) {
+    return true;
+  }
+
+  return (
+    lower.includes("reject") ||
+    lower.includes("screened out") ||
+    lower === "withdrawn" ||
+    lower === "offer drop" ||
+    lower === "declined"
+  );
+}
+
+/** Effective kanban column label from raw application status + status note. */
+export function resolvePipelineGroupingStatus(
+  rawStatus?: string | null,
+  statusNote?: string | null,
+): string {
+  if (isTerminalRejectedStatus(rawStatus, statusNote)) {
+    return DISPLAY_BY_KEY.rejected;
+  }
+  return normalizePipelineDisplayStatus(rawStatus);
+}
+
 export function resolvePipelineStageKey(
   rawStatus: string | null | undefined,
 ): PipelineStageKey {

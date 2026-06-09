@@ -17,6 +17,7 @@ import { Plus, Trash2, GraduationCap, Star, BookOpen, Globe } from 'lucide-react
 import type { Profile } from '@shared/schema';
 import {
   CANDIDATE_DESKTOP_DIALOG_CLASSES,
+  CANDIDATE_DIALOG_OVERLAY_CLASSES,
   CANDIDATE_MOBILE_DIALOG_CLASSES,
 } from '@/lib/candidate-ui-preferences';
 import { cn } from '@/lib/utils';
@@ -131,6 +132,7 @@ export default function EditStrengthsModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        overlayClassName={CANDIDATE_DIALOG_OVERLAY_CLASSES}
         className={cn(
           "max-w-4xl rounded-2xl lg:rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-2xl p-0 overflow-hidden flex flex-col max-h-[95vh]",
           CANDIDATE_MOBILE_DIALOG_CLASSES,

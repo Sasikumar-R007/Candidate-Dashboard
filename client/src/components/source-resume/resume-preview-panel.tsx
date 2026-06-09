@@ -105,18 +105,6 @@ export function ResumePreviewPanel({ resumeFile, candidateName }: ResumePreviewP
           title="Resume Preview"
           onError={() => setLoadState("unavailable")}
         />
-        <div className="absolute right-4 top-4 z-10">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={openResume}
-            className="bg-white/90 shadow-md backdrop-blur-sm hover:bg-white"
-            title="Open resume in new tab"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
     );
   }
@@ -130,11 +118,6 @@ export function ResumePreviewPanel({ resumeFile, candidateName }: ResumePreviewP
           className="max-h-full max-w-full object-contain"
           onError={() => setLoadState("unavailable")}
         />
-        <div className="absolute right-4 top-4 z-10">
-          <Button type="button" variant="ghost" size="icon" onClick={openResume} className="bg-white/90 shadow-md">
-            <Download className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
     );
   }

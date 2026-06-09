@@ -108,6 +108,11 @@ export default function Dashboard() {
     if (showTaggedConsentModal || showPlatformConsentModal) setChatOpen(false);
   }, [showTaggedConsentModal, showPlatformConsentModal]);
 
+  useEffect(() => {
+    document.body.classList.add("candidate-portal");
+    return () => document.body.classList.remove("candidate-portal");
+  }, []);
+
   // Navigation Guard: Redirect to onboarding if not completed
   useEffect(() => {
     // DISABLE REDIRECT FOR TESTING - Let's see if we can stay on the page

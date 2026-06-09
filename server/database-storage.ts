@@ -38,6 +38,8 @@ import {
   type InsertTargetMappings,
   type RevenueMapping,
   type InsertRevenueMapping,
+  type IncentiveMapping,
+  type InsertIncentiveMapping,
   type InsertCashOutflow,
   type CashOutflow,
   type RecruiterJob,
@@ -79,6 +81,7 @@ import {
   impactMetrics,
   targetMappings,
   revenueMappings,
+  incentiveMappings,
   recruiterJobs,
   recruiterCommands,
   meetings,
@@ -143,6 +146,12 @@ function normalizeEmployee(emp: any): Employee {
       emp.can_see_salary_details !== undefined
         ? emp.can_see_salary_details
         : emp.canSeeSalaryDetails,
+    accountStatus: emp.account_status || emp.accountStatus || "active",
+    holdMessage: emp.hold_message ?? emp.holdMessage ?? null,
+    holdUntil: emp.hold_until ?? emp.holdUntil ?? null,
+    heldAt: emp.held_at ?? emp.heldAt ?? null,
+    heldByEmployeeId: emp.held_by_employee_id ?? emp.heldByEmployeeId ?? null,
+    logoutScheduledAt: emp.logout_scheduled_at ?? emp.logoutScheduledAt ?? null,
   } as Employee;
 }
 
@@ -844,7 +853,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db.execute(sql`
         SELECT *
         FROM employees 
-        WHERE is_active = true
+        WHERE is_active = true OR COALESCE(account_status, 'active') = 'hold'
         ORDER BY created_at DESC
       `);
       return result.rows.map(normalizeEmployee);
@@ -1767,6 +1776,58 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRevenueMapping(id: string): Promise<boolean> {
     const result = await db.delete(revenueMappings).where(eq(revenueMappings.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async createIncentiveMapping(
+    mapping: InsertIncentiveMapping & { createdAt?: string },
+  ): Promise<IncentiveMapping> {
+    const [row] = await db
+      .insert(incentiveMappings)
+      .values({
+        ...mapping,
+        createdAt: mapping.createdAt || new Date().toISOString(),
+      } as InsertIncentiveMapping & { createdAt: string })
+      .returning();
+    return row;
+  }
+
+  async getAllIncentiveMappings(): Promise<IncentiveMapping[]> {
+    return await db
+      .select()
+      .from(incentiveMappings)
+      .orderBy(desc(incentiveMappings.createdAt));
+  }
+
+  async getIncentiveMappingById(id: string): Promise<IncentiveMapping | undefined> {
+    const [row] = await db.select().from(incentiveMappings).where(eq(incentiveMappings.id, id));
+    return row || undefined;
+  }
+
+  async getIncentiveMappingByRevenueMappingId(
+    revenueMappingId: string,
+  ): Promise<IncentiveMapping | undefined> {
+    const [row] = await db
+      .select()
+      .from(incentiveMappings)
+      .where(eq(incentiveMappings.revenueMappingId, revenueMappingId));
+    return row || undefined;
+  }
+
+  async updateIncentiveMapping(
+    id: string,
+    updates: Partial<IncentiveMapping>,
+  ): Promise<IncentiveMapping | undefined> {
+    const [row] = await db
+      .update(incentiveMappings)
+      .set(updates)
+      .where(eq(incentiveMappings.id, id))
+      .returning();
+    return row || undefined;
+  }
+
+  async deleteIncentiveMapping(id: string): Promise<boolean> {
+    const result = await db.delete(incentiveMappings).where(eq(incentiveMappings.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 

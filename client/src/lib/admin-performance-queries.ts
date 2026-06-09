@@ -5,6 +5,8 @@ import { invalidateOperationalQueries } from "@/lib/query-config";
 export function invalidateAdminPerformanceQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue-mappings"] });
   queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue-mapping-closure-candidates"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/admin/incentive-mappings"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/admin/incentive-mapping-candidates"] });
   queryClient.invalidateQueries({ queryKey: ["/api/admin/target-mappings"] });
   queryClient.invalidateQueries({ queryKey: ["/api/admin/team-performance"] });
   queryClient.invalidateQueries({ queryKey: ["/api/admin/closures-list"] });
@@ -39,4 +41,8 @@ export function invalidateRevenueMappingQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["/api/client/closures"] });
   queryClient.invalidateQueries({ queryKey: ["/api/client/speed-metrics"] });
   void invalidateOperationalQueries(queryClient, { refetchType: "active" });
+}
+
+export function invalidateIncentiveMappingQueries(queryClient: QueryClient) {
+  invalidateAdminPerformanceQueries(queryClient);
 }

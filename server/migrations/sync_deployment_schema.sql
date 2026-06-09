@@ -202,6 +202,33 @@ ALTER TABLE revenue_mappings
   ADD COLUMN IF NOT EXISTS in_revenue_data boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS payment_date text;
 
+CREATE TABLE IF NOT EXISTS incentive_mappings (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+  revenue_mapping_id varchar NOT NULL,
+  candidate_name text,
+  team_lead_id varchar NOT NULL,
+  team_lead_name text NOT NULL,
+  talent_advisor_id varchar NOT NULL,
+  talent_advisor_name text NOT NULL,
+  quarter text NOT NULL,
+  year integer NOT NULL,
+  tl_target_amount integer NOT NULL DEFAULT 0,
+  ta_target_amount integer NOT NULL DEFAULT 0,
+  tl_revenue_amount real NOT NULL DEFAULT 0,
+  ta_revenue_amount real NOT NULL DEFAULT 0,
+  tl_achieved_amount integer NOT NULL DEFAULT 0,
+  ta_achieved_amount integer NOT NULL DEFAULT 0,
+  tl_remaining_target integer NOT NULL DEFAULT 0,
+  ta_remaining_target integer NOT NULL DEFAULT 0,
+  tl_incentive_amount real NOT NULL,
+  ta_incentive_amount real NOT NULL,
+  bd_incentive_amount real NOT NULL,
+  created_at text NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS incentive_mappings_revenue_mapping_id_idx
+  ON incentive_mappings (revenue_mapping_id);
+
 -- Existing admin revenue rows (non-zero revenue/incentive) count as Revenue Data
 UPDATE revenue_mappings
 SET in_revenue_data = true
@@ -237,3 +264,11 @@ BEGIN
       ADD COLUMN IF NOT EXISTS managed_at text;
   END IF;
 END $$;
+
+-- ========== Employee account hold (User Management) ==========
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS account_status text NOT NULL DEFAULT 'active';
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS hold_message text;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS hold_until text;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS held_at text;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS held_by_employee_id varchar;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS logout_scheduled_at text;

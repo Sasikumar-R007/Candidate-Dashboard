@@ -4,6 +4,7 @@ import {
   MutationCache,
   keepPreviousData,
 } from "@tanstack/react-query";
+import { getMessageFromApiPayload } from "./api-error-message";
 import { scheduleOperationalInvalidation } from "./query-config";
 
 // API base URL - uses environment variable in production, localhost in development
@@ -14,7 +15,11 @@ const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const message =
+      getMessageFromApiPayload(text) ||
+      res.statusText ||
+      "Request failed. Please try again.";
+    throw new Error(message);
   }
 }
 

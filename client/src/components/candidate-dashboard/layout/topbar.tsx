@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import {
   Bell,
@@ -19,10 +20,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useCandidateAuth } from "@/contexts/auth-context";
+import { useCandidateAuth, useAuth } from "@/contexts/auth-context";
 import { useProfile } from "@/hooks/use-profile";
 import { Input } from "@/components/ui/input";
 import NotificationCenter from "./notification-center";
+import { SignOutDialog } from "@/components/ui/sign-out-dialog";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TopbarProps {
   onMenuClick?: () => void;
@@ -32,6 +37,45 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const [location] = useLocation();
   const candidate = useCandidateAuth();
   const { data: profile } = useProfile();
+  const { logout } = useAuth();
+  const { toast } = useToast();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/auth/candidate-logout", {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out.",
+      });
+      window.location.href = "/";
+    },
+    onError: () => {
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
+      });
+      window.location.href = "/";
+    },
+  });
+
+  const handleLogout = () => {
+    setShowSignOutDialog(true);
+  };
+
+  const confirmLogout = () => {
+    logoutMutation.mutate();
+    setShowSignOutDialog(false);
+  };
 
   const getPageTitle = (path: string) => {
     const parts = path.split('/');
@@ -124,13 +168,24 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="mx-2 my-2" />
-            <DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-xl h-10 px-3 font-bold text-xs">
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-xl h-10 px-3 font-bold text-xs"
+              onClick={handleLogout}
+            >
               <LogOut className="mr-3 h-4 w-4" />
               <span>Terminate Session</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <SignOutDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
+        onConfirm={confirmLogout}
+        userName={candidate?.fullName || candidate?.email}
+        isLoading={logoutMutation.isPending}
+      />
     </header>
   );
 }

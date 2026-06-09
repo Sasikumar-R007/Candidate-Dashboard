@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,13 +50,16 @@ import {
   CLIENT_PIPELINE_STAGE_ORDER,
   buildPipelineSessionList,
   groupCandidatesByPipelineStage,
+  isTerminalRejectedStatus,
   mapClientPipelineCandidate,
   isPipelineApplicationSessionId,
+  resolvePipelineGroupingStatus,
 } from '@/lib/pipeline-session-utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
 import { queryPresets } from '@/lib/query-config';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
+import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 import ClientAgreementFirstLoginModal from '@/components/client-dashboard/client-agreement-first-login-modal';
 import { ClientSharedProfilesModal } from '@/components/dashboard/modals/client-shared-profiles-modal';
 import { logConsent } from '@/lib/consent-log';
@@ -77,6 +80,7 @@ import {
   type ClientRequirementRoleRow,
 } from "@/components/client-dashboard/client-requirements-role-mobile-cards";
 import { ClientSettingsTab } from "@/components/client-dashboard/client-settings-tab";
+import { ClientMetricsReportDocument } from "@/components/client-dashboard/client-metrics-report-document";
 import { ClientRequirementAssignModal } from "@/components/client-dashboard/client-requirement-assign-modal";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
 import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
@@ -85,6 +89,7 @@ export default function ClientDashboard() {
   const { logout } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const [showProfileNotLinkedSignOutDialog, setShowProfileNotLinkedSignOutDialog] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('overview');
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [sharedProfilesOpen, setSharedProfilesOpen] = useState(false);
@@ -163,6 +168,7 @@ export default function ClientDashboard() {
     quality: true,
     impact: true
   });
+  const [isMetricsReportActive, setIsMetricsReportActive] = useState(false);
 
   // Helper function to get initials from name
   const getInitials = (name: string): string => {
@@ -225,7 +231,9 @@ export default function ClientDashboard() {
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('period', metricsPeriod);
-      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsPeriod !== 'overall') {
+        params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      }
       if (metricsRoleFilter !== 'all') {
         params.append('role', metricsRoleFilter);
       }
@@ -239,7 +247,9 @@ export default function ClientDashboard() {
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('period', metricsPeriod);
-      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsPeriod !== 'overall') {
+        params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      }
       if (metricsRoleFilter !== 'all') {
         params.append('role', metricsRoleFilter);
       }
@@ -253,7 +263,9 @@ export default function ClientDashboard() {
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('period', metricsPeriod);
-      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsPeriod !== 'overall') {
+        params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      }
       if (metricsRoleFilter !== 'all') {
         params.append('role', metricsRoleFilter);
       }
@@ -273,7 +285,9 @@ export default function ClientDashboard() {
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('period', metricsPeriod);
-      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsPeriod !== 'overall') {
+        params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      }
       if (metricsRoleFilter !== 'all') {
         params.append('role', metricsRoleFilter);
       }
@@ -287,7 +301,9 @@ export default function ClientDashboard() {
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('period', metricsPeriod);
-      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsPeriod !== 'overall') {
+        params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      }
       if (metricsRoleFilter !== 'all') {
         params.append('role', metricsRoleFilter);
       }
@@ -524,6 +540,42 @@ export default function ClientDashboard() {
     }
   });
 
+  const profileNotLinkedLogoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/auth/employee-logout", {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out.",
+      });
+      window.location.href = "/";
+    },
+    onError: () => {
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
+      });
+      window.location.href = "/";
+    },
+  });
+
+  const handleProfileNotLinkedSignOut = () => {
+    setShowProfileNotLinkedSignOutDialog(true);
+  };
+
+  const confirmProfileNotLinkedSignOut = () => {
+    profileNotLinkedLogoutMutation.mutate();
+    setShowProfileNotLinkedSignOutDialog(false);
+  };
+
   // Filter pipeline data by period and selected roles
   const parseJdFromFile = async (file: File) => {
     setUploadedFile(file);
@@ -657,9 +709,18 @@ export default function ClientDashboard() {
     return filtered;
   }, [mergedPipelineData, pipelinePeriod, pipelineDate, selectedRole, allRolesData, sampleRoles]);
 
-  const groupedPipeline = useMemo(
-    () => groupCandidatesByPipelineStage(filteredPipelineData),
+  const pipelineForGrouping = useMemo(
+    () =>
+      filteredPipelineData.map((c) => ({
+        ...c,
+        currentStatus: resolvePipelineGroupingStatus(c.status, c.statusNote),
+      })),
     [filteredPipelineData],
+  );
+
+  const groupedPipeline = useMemo(
+    () => groupCandidatesByPipelineStage(pipelineForGrouping),
+    [pipelineForGrouping],
   );
 
   const clientPipelineSessionList = useMemo(
@@ -716,6 +777,62 @@ export default function ClientDashboard() {
 
   const speedTrendData = Array.isArray(speedChartData) ? speedChartData : [];
   const qualityTrendData = Array.isArray(qualityChartData) ? qualityChartData : [];
+
+  const metricsRoleLabel = useMemo(() => {
+    if (metricsRoleFilter === 'all') return 'All roles';
+    const role = (Array.isArray(allRolesData) ? allRolesData : []).find(
+      (r: any) => (r.id || r.roleId) === metricsRoleFilter,
+    );
+    return role?.position || role?.role || resolveClientRoleDisplayId(role) || 'Selected role';
+  }, [metricsRoleFilter, allRolesData]);
+
+  const metricsCardPeriodLabel = useMemo(() => {
+    if (metricsPeriod === 'overall') return 'All time (overall)';
+    if (metricsPeriod === 'daily') return format(metricsDate, 'MMMM d, yyyy');
+    if (metricsPeriod === 'weekly') {
+      const weekStart = new Date(metricsDate);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      return `Week of ${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
+    }
+    return format(metricsDate, 'MMMM yyyy');
+  }, [metricsPeriod, metricsDate]);
+
+  const chartBasisLabel = `Last 6 months · monthly rollup · ${metricsRoleLabel}`;
+
+  const metricsReportMeta = useMemo(
+    () => ({
+      companyName: (clientProfile as { company?: string })?.company || "Company",
+      clientName: userName,
+      clientEmail: (clientProfile as { email?: string })?.email || employee?.email,
+      userRole: isClientAdmin ? "Client Admin" : "Client Member",
+      department: (clientProfile as { department?: string | null })?.department ?? null,
+      employeeId:
+        (clientProfile as { employeeId?: string })?.employeeId ||
+        employee?.employeeId ||
+        null,
+      generatedAt: format(new Date(), "MMMM d, yyyy · h:mm a"),
+      recordPeriod: metricsCardPeriodLabel,
+      periodType:
+        metricsPeriod === "overall"
+          ? "Overall"
+          : metricsPeriod.charAt(0).toUpperCase() + metricsPeriod.slice(1),
+      roleFilter: metricsRoleLabel,
+      chartBasisLabel,
+    }),
+    [
+      clientProfile,
+      userName,
+      employee?.email,
+      employee?.employeeId,
+      isClientAdmin,
+      metricsCardPeriodLabel,
+      metricsPeriod,
+      metricsRoleLabel,
+      chartBasisLabel,
+    ],
+  );
 
   // Show all roles in dashboard (user requested to show all, not just 2)
   const rolesData = useMemo(() => {
@@ -1352,7 +1469,7 @@ export default function ClientDashboard() {
               if (!sessionApplicationId) return;
               setSessionApplicantSnapshot((prev) =>
                 prev && prev.id === sessionApplicationId
-                  ? { ...prev, currentStatus: "Screened Out" }
+                  ? { ...prev, currentStatus: "Rejected" }
                   : prev,
               );
               queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
@@ -1389,10 +1506,8 @@ export default function ClientDashboard() {
           getSubtitle: (c: any) => `TA: ${c.talentAdvisorName || "N/A"}`,
           getAppliedTimestamp: (c: any) =>
             calculateDaysAgo(c.appliedDate || c.updatedAt),
-          isRejectedCandidate: (c: any) => {
-            const s = (c.currentStatus || c.status || "").toLowerCase();
-            return s.includes("reject") || s.includes("screened out");
-          },
+          isRejectedCandidate: (c: any) =>
+            isTerminalRejectedStatus(c.status, c.statusNote),
           shouldSkipCandidate: (c: any) =>
             Boolean(c.id && String(c.id).startsWith("sample-")),
           pipelineView,
@@ -1453,10 +1568,15 @@ export default function ClientDashboard() {
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
               <div
                 id="metrics-print-area"
-                className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gray-50 p-4 md:space-y-6 md:p-6"
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gray-50 p-4 md:space-y-6 md:p-6 print:overflow-visible print:bg-white"
               >
-                <div className="flex flex-col gap-3 print:mb-8 md:flex-row md:items-center md:justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 md:text-xl print:text-2xl">Speed Metrics</h2>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 md:text-xl print:text-2xl">Speed Metrics</h2>
+                    <p className="mt-0.5 text-xs text-gray-500 md:text-sm print:text-sm">
+                      Based on: {metricsCardPeriodLabel} · {metricsRoleLabel}
+                    </p>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2 print:hidden md:gap-3">
                     <Select value={metricsRoleFilter} onValueChange={setMetricsRoleFilter}>
                       <SelectTrigger className="h-9 w-full min-w-[7rem] sm:w-32">
@@ -1536,6 +1656,7 @@ export default function ClientDashboard() {
                         <SelectItem value="daily">Daily</SelectItem>
                         <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="overall">Overall</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1583,7 +1704,10 @@ export default function ClientDashboard() {
                 {/* Speed Metrics Trend — below cards on mobile */}
                 <div className="space-y-3 print:hidden md:hidden" data-metric-section="speed-trend-mobile">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
+                      <p className="text-xs text-gray-500">{chartBasisLabel}</p>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -1614,7 +1738,12 @@ export default function ClientDashboard() {
 
                 {/* Quality Metrics */}
                 <div className={`${!printMetrics.quality ? 'print:hidden' : ''}`} data-metric-section="quality">
-                  <h2 className="mb-3 text-lg font-semibold text-gray-900 md:mb-4 md:text-xl">Quality Metrics</h2>
+                  <div className="mb-3 md:mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900 md:text-xl">Quality Metrics</h2>
+                    <p className="mt-0.5 text-xs text-gray-500 md:text-sm print:text-sm">
+                      Based on: {metricsCardPeriodLabel} · {metricsRoleLabel}
+                    </p>
+                  </div>
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
                     <div className="rounded-lg border border-green-200 bg-green-100 p-3 md:p-4">
                       <h3 className="mb-2 text-xs font-medium text-green-700 md:text-sm">Submission to Short List %</h3>
@@ -1657,7 +1786,10 @@ export default function ClientDashboard() {
                 {/* Quality Metrics Trend — below cards on mobile */}
                 <div className="mb-6 space-y-3 print:hidden md:hidden" data-metric-section="quality-trend-mobile">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
+                      <p className="text-xs text-gray-500">{chartBasisLabel}</p>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -1688,7 +1820,12 @@ export default function ClientDashboard() {
 
                 {/* Impact Metrics */}
                 <div className={`${!printMetrics.impact ? 'print:hidden' : ''}`} data-metric-section="impact">
-                  <h2 className="mb-3 text-lg font-semibold text-gray-900 md:mb-4 md:text-xl">Impact Metrics</h2>
+                  <div className="mb-3 md:mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900 md:text-xl">Impact Metrics</h2>
+                    <p className="mt-0.5 text-xs text-gray-500 md:text-sm print:text-sm">
+                      Based on: {metricsCardPeriodLabel} · {metricsRoleLabel}
+                    </p>
+                  </div>
                   <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
                     <div className="rounded-lg border border-red-200 bg-red-50 p-3 md:p-4">
                       <h3 className="mb-2 text-xs font-medium text-red-700 md:text-sm">Speed to Hire value</h3>
@@ -1801,13 +1938,16 @@ export default function ClientDashboard() {
               <div className="w-full shrink-0 space-y-4 overflow-y-auto border-t border-gray-200 bg-white p-4 md:w-80 md:border-l md:border-t-0 md:p-6 md:space-y-6 print:hidden">
                 {/* Speed Metrics Chart - desktop sidebar only */}
                 <div className="hidden space-y-4 md:block">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
+                      <p className="mt-0.5 text-xs leading-snug text-gray-500">{chartBasisLabel}</p>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-gray-500 hover:text-gray-800"
+                      className="h-8 w-8 shrink-0 text-gray-500 hover:text-gray-800"
                       onClick={() => setExpandedChart("speed")}
                       title="Open full view"
                     >
@@ -1875,13 +2015,16 @@ export default function ClientDashboard() {
 
                 {/* Quality Metrics Chart - desktop sidebar only */}
                 <div className="hidden space-y-4 md:block">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
+                      <p className="mt-0.5 text-xs leading-snug text-gray-500">{chartBasisLabel}</p>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-gray-500 hover:text-gray-800"
+                      className="h-8 w-8 shrink-0 text-gray-500 hover:text-gray-800"
                       onClick={() => setExpandedChart("quality")}
                       title="Open full view"
                     >
@@ -2124,6 +2267,28 @@ export default function ClientDashboard() {
     });
   };
 
+  const handleReportReadyToPrint = useCallback(() => {
+    const cleanupPrint = () => {
+      document.body.classList.remove("client-metrics-print");
+      window.removeEventListener("afterprint", cleanupPrint);
+      setIsMetricsReportActive(false);
+      setPrintMetrics({
+        speed: true,
+        quality: true,
+        impact: true,
+      });
+      setSelectedMetrics({
+        speed: false,
+        quality: false,
+        impact: false,
+      });
+    };
+
+    window.addEventListener("afterprint", cleanupPrint);
+    document.body.classList.add("client-metrics-print");
+    window.print();
+  }, []);
+
   const handleDownloadPDF = () => {
     const hasSelection = selectedMetrics.speed || selectedMetrics.quality || selectedMetrics.impact;
 
@@ -2139,32 +2304,18 @@ export default function ClientDashboard() {
     setPrintMetrics({
       speed: selectedMetrics.speed,
       quality: selectedMetrics.quality,
-      impact: selectedMetrics.impact
+      impact: selectedMetrics.impact,
     });
 
     setIsDownloadModalOpen(false);
 
     toast({
-      title: "Download Confirmation",
-      description: "Your metrics will be downloaded as a PDF file. Use your browser's print dialog to save as PDF.",
+      title: "Preparing report",
+      description: "Building your metrics document with charts. The print dialog will open shortly.",
       className: "bg-blue-50 border-blue-200 text-blue-800",
     });
 
-    setTimeout(() => {
-      window.print();
-
-      setPrintMetrics({
-        speed: true,
-        quality: true,
-        impact: true
-      });
-
-      setSelectedMetrics({
-        speed: false,
-        quality: false,
-        impact: false
-      });
-    }, 500);
+    setIsMetricsReportActive(true);
   };
 
   // Profile not linked - show access restricted message
@@ -2193,7 +2344,7 @@ export default function ClientDashboard() {
                 <Button 
                   variant="outline" 
                   className="w-full text-gray-600 hover:text-red-600 hover:bg-red-50"
-                  onClick={() => logout()}
+                  onClick={handleProfileNotLinkedSignOut}
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Sign Out
@@ -2202,6 +2353,13 @@ export default function ClientDashboard() {
             </CardContent>
           </Card>
         </div>
+        <SignOutDialog
+          open={showProfileNotLinkedSignOutDialog}
+          onOpenChange={setShowProfileNotLinkedSignOutDialog}
+          onConfirm={confirmProfileNotLinkedSignOut}
+          userName={(clientProfile as any).email}
+          isLoading={profileNotLinkedLogoutMutation.isPending}
+        />
       </div>
     );
   }
@@ -2239,6 +2397,18 @@ export default function ClientDashboard() {
         activeTab={normalizeClientPortalTab(sidebarTab)}
         items={clientMobileNavItems}
         onTabChange={handleSidebarTabChange}
+      />
+
+      <ClientMetricsReportDocument
+        active={isMetricsReportActive}
+        onReadyToPrint={handleReportReadyToPrint}
+        printMetrics={printMetrics}
+        speedMetrics={speedMetrics}
+        qualityMetrics={qualityMetrics}
+        impactMetrics={firstImpactMetrics}
+        speedTrendData={speedTrendData}
+        qualityTrendData={qualityTrendData}
+        meta={metricsReportMeta}
       />
 
       {/* Roles Modal */}

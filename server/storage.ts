@@ -33,6 +33,8 @@ import {
   type InsertTargetMappings,
   type RevenueMapping,
   type InsertRevenueMapping,
+  type IncentiveMapping,
+  type InsertIncentiveMapping,
   type CashOutflow,
   type InsertCashOutflow,
   type RecruiterJob,
@@ -233,6 +235,14 @@ export interface IStorage {
   getRevenueMappingById(id: string): Promise<RevenueMapping | undefined>;
   updateRevenueMapping(id: string, updates: Partial<RevenueMapping>): Promise<RevenueMapping | undefined>;
   deleteRevenueMapping(id: string): Promise<boolean>;
+
+  // Incentive Mapping methods
+  createIncentiveMapping(mapping: InsertIncentiveMapping & { createdAt?: string }): Promise<IncentiveMapping>;
+  getAllIncentiveMappings(): Promise<IncentiveMapping[]>;
+  getIncentiveMappingById(id: string): Promise<IncentiveMapping | undefined>;
+  getIncentiveMappingByRevenueMappingId(revenueMappingId: string): Promise<IncentiveMapping | undefined>;
+  updateIncentiveMapping(id: string, updates: Partial<IncentiveMapping>): Promise<IncentiveMapping | undefined>;
+  deleteIncentiveMapping(id: string): Promise<boolean>;
   
   // Cash Outflow methods
   createCashOutflow(outflow: InsertCashOutflow): Promise<CashOutflow>;
@@ -1172,7 +1182,9 @@ export class MemStorage implements IStorage {
   }
 
   async getAllEmployees(): Promise<Employee[]> {
-    return Array.from(this.employees.values()).filter(emp => emp.isActive);
+    return Array.from(this.employees.values()).filter(
+      (emp) => emp.isActive || (emp.accountStatus || "active") === "hold",
+    );
   }
 
   async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined> {

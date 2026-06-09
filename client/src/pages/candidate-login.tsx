@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
+import { formatApiErrorMessage } from "@/lib/api-error-message";
 import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit, Briefcase, Target, Rocket, Shield, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
@@ -35,7 +36,7 @@ export default function CandidateLogin() {
   const [isLogin, setIsLogin] = useState(true);
   const [showOTP, setShowOTP] = useState(false);
   const [, setLocation] = useLocation();
-  const { setUser } = useAuth();
+  const { setUser, verifySession } = useAuth();
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const {
@@ -82,14 +83,16 @@ export default function CandidateLogin() {
         return responseData;
       }
 
-      // For other non-ok responses, throw error
       if (!res.ok) {
-        throw new Error(`${res.status}: ${JSON.stringify(responseData)}`);
+        const message =
+          (typeof responseData?.message === "string" && responseData.message) ||
+          (res.status === 401 ? "Invalid email or password." : "Login failed. Please try again.");
+        throw new Error(message);
       }
 
       return responseData;
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       if (response.requiresVerification) {
         setCurrentEmail(response.email);
         setShowOTP(true);
@@ -106,20 +109,29 @@ export default function CandidateLogin() {
           data: response.candidate
         });
 
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        });
+        const sessionOk = await verifySession();
+        if (!sessionOk) {
+          toast({
+            title: "Connection Issue",
+            description: "Logged in, but the server could not confirm your session. If pages fail to load, wait a moment and refresh.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Login Successful",
+            description: "Welcome back!",
+          });
+        }
 
         setTimeout(() => {
           if (response.candidate.registrationStage === 'completed') { setLocation('/candidate'); } else { setLocation('/candidate/upload-resume'); }
         }, 100);
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid credentials",
+        description: formatApiErrorMessage(error, "Invalid email or password."),
         variant: "destructive"
       });
     }
@@ -141,10 +153,10 @@ export default function CandidateLogin() {
         description: `Your candidate ID is ${response.candidateId}. Please check your email for the verification code.`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Registration Failed",
-        description: error.message || "Registration failed",
+        description: formatApiErrorMessage(error, "Registration failed. Please try again."),
         variant: "destructive"
       });
     }
@@ -162,10 +174,10 @@ export default function CandidateLogin() {
         description: "A new verification code has been sent to your email",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Failed to Resend",
-        description: error.message || "Please try again later",
+        description: formatApiErrorMessage(error, "Please try again later."),
         variant: "destructive"
       });
     }
@@ -194,10 +206,10 @@ export default function CandidateLogin() {
         }, 100);
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Verification Failed",
-        description: error.message || "Invalid or expired OTP",
+        description: formatApiErrorMessage(error, "Invalid or expired verification code."),
         variant: "destructive"
       });
     }

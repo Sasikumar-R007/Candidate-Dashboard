@@ -774,10 +774,35 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              JD File *
-            </Label>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Job Description
+              </Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Provide JD text, upload a document, or both — at least one is required.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="jdText" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                JD Text
+              </Label>
+              <Textarea
+                id="jdText"
+                value={jdText}
+                onChange={(e) => setJdText(e.target.value)}
+                placeholder="Paste or type the job description here..."
+                rows={5}
+                className="resize-y bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700"
+                data-testid="textarea-jd-text"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                JD Document
+              </Label>
             {jdFilePreviewUrl ? (
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
                 <div className="flex items-center justify-between">
@@ -820,6 +845,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 </label>
               </div>
             )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
