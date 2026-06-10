@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -228,8 +229,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, initialEmail = ""
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-500">New Password</Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
@@ -239,8 +239,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, initialEmail = ""
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-500">Confirm New Password</Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"

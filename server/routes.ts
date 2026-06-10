@@ -12545,9 +12545,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all target mappings
-      const allTargetMappings = await db.select().from(targetMappings);
+      const allTargetMappings = await safeSelectTargetMappings();
 
-      const allRevenueMappings = await db.select().from(revenueMappings);
+      const allRevenueMappings = await safeSelectRevenueMappings();
       const revenueDataMappings = allRevenueMappings.filter(
         (rm) => rm.inRevenueData,
       );

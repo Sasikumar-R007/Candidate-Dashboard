@@ -20,6 +20,7 @@ import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader
 import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-credentials-modal';
 import AddUserModal from '@/components/dashboard/modals/add-user-modal';
 import HoldUserModal, { type HoldUserPayload } from '@/components/dashboard/modals/hold-user-modal';
+import { UserHoldRowTooltip } from '@/components/dashboard/user-hold-row-tooltip';
 import { runAdminHoldCountdown } from '@/lib/admin-hold-countdown';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
@@ -6779,15 +6780,20 @@ export default function AdminDashboard() {
                           <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No users found.</td>
                         </tr>
                       ) : (
-                        userManagementEmployees.map((emp: any) => (
-                          <tr key={emp.id} className="border-b border-gray-100 dark:border-gray-800">
+                        userManagementEmployees.map((emp: any) => {
+                          const isOnHold = (emp.accountStatus || 'active') === 'hold';
+                          const row = (
+                          <tr
+                            className={`border-b border-gray-100 dark:border-gray-800 ${
+                              isOnHold ? 'cursor-help bg-amber-50/40 hover:bg-amber-50/70 dark:bg-amber-950/20 dark:hover:bg-amber-950/30' : ''
+                            }`}
+                          >
                             <td className="py-3 px-3 text-gray-900 dark:text-white">{emp.employeeId || 'N/A'}</td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{emp.name || 'N/A'}</td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{emp.email || 'N/A'}</td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{getRoleDisplayName(emp.role || 'N/A')}</td>
                             <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
                               {(() => {
-                                const isOnHold = (emp.accountStatus || 'active') === 'hold';
                                 const isOnline = activeEmployeeIds.has(emp.id);
                                 if (isOnHold) {
                                   return (
@@ -6864,7 +6870,14 @@ export default function AdminDashboard() {
                               </DropdownMenu>
                             </td>
                           </tr>
-                        ))
+                          );
+
+                          return (
+                            <UserHoldRowTooltip key={emp.id} employee={emp}>
+                              {row}
+                            </UserHoldRowTooltip>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
