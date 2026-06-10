@@ -7,6 +7,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import {
+  ensureAdminCriticalSchema,
   ensureCriticalPipelineColumns,
   ensureDeploymentSchema,
   ensureRequirementManagementColumns,
@@ -212,6 +213,13 @@ async function registerSessionMiddleware() {
     log("Critical pipeline columns verified.", "db");
   } catch (error) {
     console.error("Failed to ensure critical pipeline columns:", error);
+  }
+
+  try {
+    await ensureAdminCriticalSchema();
+    log("Admin critical schema verified.", "db");
+  } catch (error) {
+    console.error("Failed to ensure admin critical schema:", error);
   }
 
   try {

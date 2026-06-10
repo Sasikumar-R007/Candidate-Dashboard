@@ -2261,6 +2261,63 @@ async function safeSelectResumeSubmissionsForRecruiters(recruiterIds: string[]):
   }
 }
 
+async function safeSelectAllRequirementAssignments(): Promise<any[]> {
+  try {
+    const { requirementAssignments } = await import("@shared/schema");
+    return await db.select().from(requirementAssignments);
+  } catch (error) {
+    console.warn("[admin] requirement_assignments unavailable:", error);
+    return [];
+  }
+}
+
+async function safeSelectAllResumeSubmissions(): Promise<any[]> {
+  try {
+    const { resumeSubmissions } = await import("@shared/schema");
+    return await db.select().from(resumeSubmissions);
+  } catch (error) {
+    console.warn("[admin] resume_submissions unavailable:", error);
+    return [];
+  }
+}
+
+async function safeSelectActiveRequirements(): Promise<any[]> {
+  try {
+    const { requirements } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    return await db.select().from(requirements).where(eq(requirements.isArchived, false));
+  } catch (error) {
+    console.warn("[admin] requirements is_archived filter unavailable:", error);
+    try {
+      const { requirements } = await import("@shared/schema");
+      return await db.select().from(requirements);
+    } catch (fallbackError) {
+      console.warn("[admin] requirements table unavailable:", fallbackError);
+      return [];
+    }
+  }
+}
+
+async function safeSelectTargetMappings(): Promise<any[]> {
+  try {
+    const { targetMappings } = await import("@shared/schema");
+    return await db.select().from(targetMappings);
+  } catch (error) {
+    console.warn("[admin] target_mappings unavailable:", error);
+    return [];
+  }
+}
+
+async function safeSelectRevenueMappings(): Promise<any[]> {
+  try {
+    const { revenueMappings } = await import("@shared/schema");
+    return await db.select().from(revenueMappings);
+  } catch (error) {
+    console.warn("[admin] revenue_mappings unavailable:", error);
+    return [];
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log('[DEBUG] Registering all routes...');
   // Initialize Passport for Google OAuth
@@ -9491,18 +9548,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import getResumeTarget for calculations
       const { getResumeTarget } = await import("@shared/constants");
 
-      // Import schema tables
-      const { requirements, resumeSubmissions, jobApplications } = await import("@shared/schema");
-
       // Get all active (non-archived) requirements created on or before the selected date
-      const allRequirements = await db.select().from(requirements)
-        .where(eq(requirements.isArchived, false));
+      const allRequirements = await safeSelectActiveRequirements();
 
       // Use typed employee records (camelCase) for reliable team / tenure lookups
       const allEmployees = await storage.getAllEmployees();
 
-      const { requirementAssignments } = await import("@shared/schema");
-      const allAssignments = await db.select().from(requirementAssignments);
+      const allAssignments = await safeSelectAllRequirementAssignments();
 
       let filteredRequirements = allRequirements.filter(req => {
         const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
@@ -9550,7 +9602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalRequirements = filteredRequirements.length;
 
       // Get all resume submissions up to the selected date
-      const allSubmissions = await db.select().from(resumeSubmissions);
+      const allSubmissions = await safeSelectAllResumeSubmissions();
 
       // Filter submissions by date
       const filteredSubmissions = allSubmissions.filter(sub => {
@@ -12441,8 +12493,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Performance Data - Returns team member performance metrics
   app.get("/api/admin/team-performance", requireAdminAuth, async (req, res) => {
     try {
-      const { targetMappings, revenueMappings } = await import("@shared/schema");
-
       const formatDisplayDate = (dateStr: string | null | undefined): string => {
         if (!dateStr?.trim()) return "N/A";
         const parsed = new Date(dateStr);
@@ -12812,12 +12862,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/revenue-analysis", requireAdminAuth, async (req, res) => {
     try {
       const { teamId, dateFrom, dateTo, period = "monthly" } = req.query;
-      const { revenueMappings } = await import("@shared/schema");
 
       const allEmployees = await storage.getAllEmployees();
       const recruiterRoles = new Set(["recruiter", "talent_advisor", "ta"]);
 
-      let allRevenueMappings = (await db.select().from(revenueMappings)).filter(
+      let allRevenueMappings = (await safeSelectRevenueMappings()).filter(
         (rm) => rm.inRevenueData,
       );
 
@@ -14913,15 +14962,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Support both applications and submissions
       let applications = await storage.getAllJobApplications();
-      const { resumeSubmissions } = await import("@shared/schema");
-      let submissions = await db.select().from(resumeSubmissions);
+      let submissions = await safeSelectAllResumeSubmissions();
 
       // Get all employees, requirements, and recruiter jobs for filtering
       const allEmployees = await storage.getAllEmployees();
       const allRequirements = await storage.getRequirements();
       const allRecruiterJobs = await storage.getAllRecruiterJobs();
-      const { requirementAssignments } = await import("@shared/schema");
-      const allAssignments = await db.select().from(requirementAssignments);
+      const allAssignments = await safeSelectAllRequirementAssignments();
 
       // If TA filter is specified, filter to that specific TA
       if (taFilter && taFilter !== 'all') {

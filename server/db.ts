@@ -429,7 +429,111 @@ export async function ensureCriticalPipelineColumns() {
 
   await pool.query(`
     ALTER TABLE revenue_mappings
-    ADD COLUMN IF NOT EXISTS payment_date text
+    ADD COLUMN IF NOT EXISTS payment_date text,
+    ADD COLUMN IF NOT EXISTS in_revenue_data boolean NOT NULL DEFAULT false
+  `);
+}
+
+/** Admin dashboard tables/columns — run before routes (Render demo DB often lags schema). */
+export async function ensureAdminCriticalSchema() {
+  await pool.query(`
+    ALTER TABLE employees
+    ADD COLUMN IF NOT EXISTS account_status text NOT NULL DEFAULT 'active',
+    ADD COLUMN IF NOT EXISTS hold_message text,
+    ADD COLUMN IF NOT EXISTS hold_until text,
+    ADD COLUMN IF NOT EXISTS held_at text,
+    ADD COLUMN IF NOT EXISTS held_by_employee_id varchar,
+    ADD COLUMN IF NOT EXISTS logout_scheduled_at text
+  `);
+
+  await pool.query(`
+    ALTER TABLE requirements
+    ADD COLUMN IF NOT EXISTS talent_advisor_id varchar(255),
+    ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false,
+    ADD COLUMN IF NOT EXISTS no_of_positions integer NOT NULL DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS split_requirement boolean NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS source_type text,
+    ADD COLUMN IF NOT EXISTS source_details text,
+    ADD COLUMN IF NOT EXISTS management_status text NOT NULL DEFAULT 'active',
+    ADD COLUMN IF NOT EXISTS management_reason text,
+    ADD COLUMN IF NOT EXISTS managed_at text,
+    ADD COLUMN IF NOT EXISTS assigned_client_member_id varchar(255),
+    ADD COLUMN IF NOT EXISTS jd_file text,
+    ADD COLUMN IF NOT EXISTS jd_text text
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS requirement_assignments (
+      id varchar(255) PRIMARY KEY DEFAULT gen_random_uuid(),
+      requirement_id varchar(255) NOT NULL,
+      recruiter_id varchar(255) NOT NULL,
+      recruiter_name text NOT NULL,
+      team_lead_id varchar(255),
+      team_lead_name text,
+      assigned_date text NOT NULL,
+      due_date text,
+      status text NOT NULL DEFAULT 'active',
+      created_at text NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS resume_submissions (
+      id varchar(255) PRIMARY KEY DEFAULT gen_random_uuid(),
+      requirement_id varchar(255) NOT NULL,
+      assignment_id varchar(255),
+      recruiter_id varchar(255) NOT NULL,
+      recruiter_name text NOT NULL,
+      candidate_id varchar(255),
+      candidate_name text NOT NULL,
+      candidate_email text,
+      submitted_at text NOT NULL,
+      status text NOT NULL DEFAULT 'submitted',
+      notes text,
+      created_at text NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS incentive_mappings (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+      revenue_mapping_id varchar NOT NULL,
+      candidate_name text,
+      team_lead_id varchar NOT NULL,
+      team_lead_name text NOT NULL,
+      talent_advisor_id varchar NOT NULL,
+      talent_advisor_name text NOT NULL,
+      quarter text NOT NULL,
+      year integer NOT NULL,
+      tl_target_amount integer NOT NULL DEFAULT 0,
+      ta_target_amount integer NOT NULL DEFAULT 0,
+      tl_revenue_amount real NOT NULL DEFAULT 0,
+      ta_revenue_amount real NOT NULL DEFAULT 0,
+      tl_achieved_amount integer NOT NULL DEFAULT 0,
+      ta_achieved_amount integer NOT NULL DEFAULT 0,
+      tl_remaining_target integer NOT NULL DEFAULT 0,
+      ta_remaining_target integer NOT NULL DEFAULT 0,
+      tl_incentive_amount real NOT NULL,
+      ta_incentive_amount real NOT NULL,
+      bd_incentive_amount real NOT NULL,
+      created_at text NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS incentive_mappings_revenue_mapping_id_idx
+    ON incentive_mappings (revenue_mapping_id)
+  `);
+
+  await pool.query(`
+    UPDATE revenue_mappings
+    SET in_revenue_data = true
+    WHERE in_revenue_data = false
+      AND (
+        COALESCE(revenue, 0) > 0
+        OR COALESCE(incentive, 0) > 0
+        OR COALESCE(percentage, 0) > 0
+      )
   `);
 }
 

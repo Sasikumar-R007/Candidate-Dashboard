@@ -858,8 +858,19 @@ export class DatabaseStorage implements IStorage {
       `);
       return result.rows.map(normalizeEmployee);
     } catch (error) {
-      console.error('Database error in getAllEmployees:', error);
-      throw error;
+      console.warn('getAllEmployees primary query failed, using fallback:', error);
+      try {
+        const fallback = await db.execute(sql`
+          SELECT *
+          FROM employees
+          WHERE is_active = true
+          ORDER BY created_at DESC
+        `);
+        return fallback.rows.map(normalizeEmployee);
+      } catch (fallbackError) {
+        console.error('Database error in getAllEmployees:', fallbackError);
+        throw fallbackError;
+      }
     }
   }
 
@@ -1424,7 +1435,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllTargetMappings(): Promise<TargetMappings[]> {
-    return await db.select().from(targetMappings).orderBy(desc(targetMappings.createdAt));
+    try {
+      return await db.select().from(targetMappings).orderBy(desc(targetMappings.createdAt));
+    } catch (error) {
+      console.warn("[storage] target_mappings unavailable:", error);
+      return [];
+    }
   }
 
   async updateTargetMapping(id: string, updates: Partial<InsertTargetMappings>): Promise<TargetMappings | undefined> {
@@ -1723,15 +1739,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllRevenueMappings(): Promise<RevenueMapping[]> {
-    return await db.select().from(revenueMappings).orderBy(desc(revenueMappings.createdAt));
+    try {
+      return await db.select().from(revenueMappings).orderBy(desc(revenueMappings.createdAt));
+    } catch (error) {
+      console.warn("[storage] revenue_mappings unavailable:", error);
+      return [];
+    }
   }
 
   async getRevenueDataMappings(): Promise<RevenueMapping[]> {
-    return await db
-      .select()
-      .from(revenueMappings)
-      .where(eq(revenueMappings.inRevenueData, true))
-      .orderBy(desc(revenueMappings.createdAt));
+    try {
+      return await db
+        .select()
+        .from(revenueMappings)
+        .where(eq(revenueMappings.inRevenueData, true))
+        .orderBy(desc(revenueMappings.createdAt));
+    } catch (error) {
+      console.warn("[storage] revenue_data mappings unavailable:", error);
+      try {
+        return await db.select().from(revenueMappings).orderBy(desc(revenueMappings.createdAt));
+      } catch {
+        return [];
+      }
+    }
   }
 
   async getClosureReportMappings(): Promise<RevenueMapping[]> {
@@ -1793,10 +1823,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllIncentiveMappings(): Promise<IncentiveMapping[]> {
-    return await db
-      .select()
-      .from(incentiveMappings)
-      .orderBy(desc(incentiveMappings.createdAt));
+    try {
+      return await db
+        .select()
+        .from(incentiveMappings)
+        .orderBy(desc(incentiveMappings.createdAt));
+    } catch (error) {
+      console.warn("[storage] incentive_mappings unavailable:", error);
+      return [];
+    }
   }
 
   async getIncentiveMappingById(id: string): Promise<IncentiveMapping | undefined> {
