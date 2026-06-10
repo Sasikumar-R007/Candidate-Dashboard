@@ -149,7 +149,7 @@ export default function ClientDashboard() {
   const [isParsingJd, setIsParsingJd] = useState(false);
   const [isJdPreviewModalOpen, setIsJdPreviewModalOpen] = useState(false);
   const [jdPosition, setJdPosition] = useState('');
-  const [jdNoOfPositions, setJdNoOfPositions] = useState(1);
+  const [jdPositionsInput, setJdPositionsInput] = useState('1');
   const [pipelineView, setPipelineView] = useState<'board' | 'candidate-session'>('board');
   const [sessionApplicationId, setSessionApplicationId] = useState<string | null>(null);
   const [sessionApplicantSnapshot, setSessionApplicantSnapshot] =
@@ -222,7 +222,7 @@ export default function ClientDashboard() {
   const [editKnowledgeOnly, setEditKnowledgeOnly] = useState('');
   const [editSpecialInstructions, setEditSpecialInstructions] = useState('');
   const [editJdPosition, setEditJdPosition] = useState('');
-  const [editNoOfPositions, setEditNoOfPositions] = useState(1);
+  const [editPositionsInput, setEditPositionsInput] = useState('1');
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   // Fetch metrics data from API - with filters
@@ -631,30 +631,46 @@ export default function ClientDashboard() {
     setKnowledgeOnly('');
     setSpecialInstructions('');
     setJdPosition('');
-    setJdNoOfPositions(1);
+    setJdPositionsInput('1');
     if (jdFileInputRef.current) {
       jdFileInputRef.current.value = '';
     }
   };
 
-  const isJdFormReady = useMemo(() => {
-    return (
-      !!jdPosition.trim() &&
-      jdNoOfPositions >= 1 &&
-      !!primarySkills.trim() &&
-      !!secondarySkills.trim() &&
-      !!knowledgeOnly.trim() &&
-      !!specialInstructions.trim() &&
-      (!!uploadedFile || !!jdText.trim())
-    );
-  }, [jdPosition, jdNoOfPositions, primarySkills, secondarySkills, knowledgeOnly, specialInstructions, uploadedFile, jdText]);
+  const getJdUploadValidationErrors = () => {
+    const errors: string[] = [];
+    if (!jdPosition.trim()) errors.push('Position/Role is required');
+    const positions = parseInt(jdPositionsInput, 10);
+    if (!jdPositionsInput.trim() || !Number.isFinite(positions) || positions < 1) {
+      errors.push('No. of Positions must be at least 1');
+    }
+    if (!primarySkills.trim()) errors.push('Primary Skills is required');
+    if (!secondarySkills.trim()) errors.push('Secondary Skills is required');
+    if (!knowledgeOnly.trim()) errors.push('Knowledge Only is required');
+    if (!specialInstructions.trim()) errors.push('Special Instructions is required');
+    if (!uploadedFile && !jdText.trim()) errors.push('Upload a JD file or enter JD text');
+    return errors;
+  };
+
+  const handleJdPositionsChange = (value: string) => {
+    setJdPositionsInput(value.replace(/[^\d]/g, ''));
+  };
+
+  const handleJdPositionsBlur = () => {
+    if (!jdPositionsInput.trim() || Number(jdPositionsInput) < 1) {
+      setJdPositionsInput('1');
+    }
+  };
 
   const openJdPreviewIfValid = () => {
-    if (!isJdFormReady) {
+    const validationErrors = getJdUploadValidationErrors();
+    if (validationErrors.length > 0) {
       toast({
-        title: "Required fields missing",
-        description: "Please complete Position, No. of Positions, skills, special instructions, and JD file/text.",
-        variant: "destructive"
+        title: "Please complete the form",
+        description:
+          validationErrors.slice(0, 3).join(' · ') +
+          (validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : ''),
+        variant: "destructive",
       });
       return;
     }
@@ -1040,8 +1056,7 @@ export default function ClientDashboard() {
                     </Button>
                     <Button
                       onClick={openJdPreviewIfValid}
-                      disabled={!isJdFormReady}
-                      className="h-9 flex-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none md:px-6"
+                      className="h-9 flex-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 sm:flex-none md:px-6"
                     >
                       Submit
                     </Button>
@@ -1149,11 +1164,13 @@ export default function ClientDashboard() {
                         No. of Positions <span className="text-red-500">*</span>
                       </label>
                       <Input
-                        type="number"
-                        min={1}
-                        value={jdNoOfPositions}
-                        onChange={(e) => setJdNoOfPositions(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                        type="text"
+                        inputMode="numeric"
+                        value={jdPositionsInput}
+                        onChange={(e) => handleJdPositionsChange(e.target.value)}
+                        onBlur={handleJdPositionsBlur}
+                        placeholder="1"
+                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </div>
                   </div>
@@ -1250,7 +1267,7 @@ export default function ClientDashboard() {
                     const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId);
                     setSelectedRoleForEdit(fullRole || role);
                     setEditJdPosition(fullRole?.role || role?.role || "");
-                    setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
+                    setEditPositionsInput(String(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1)));
                     setEditJdText(fullRole?.jdText || role?.jdText || "");
                     setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || "");
                     setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || "");
@@ -1408,7 +1425,7 @@ export default function ClientDashboard() {
                                           const fullRole = (allRolesData as any[]).find(r => r.roleId === role.roleId);
                                           setSelectedRoleForEdit(fullRole || role);
                                           setEditJdPosition(fullRole?.role || role?.role || '');
-                                          setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
+                                          setEditPositionsInput(String(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1)));
                                           setEditJdText(fullRole?.jdText || role?.jdText || '');
                                           setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || '');
                                           setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || '');
@@ -2440,7 +2457,7 @@ export default function ClientDashboard() {
                 const fullRole = (allRolesData as any[]).find((r) => r.roleId === role.roleId);
                 setSelectedRoleForEdit(fullRole || role);
                 setEditJdPosition(fullRole?.role || role?.role || "");
-                setEditNoOfPositions(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1));
+                setEditPositionsInput(String(Math.max(1, Number(fullRole?.noOfPositions ?? role?.noOfPositions ?? 1) || 1)));
                 setEditJdText(fullRole?.jdText || role?.jdText || "");
                 setEditPrimarySkills(fullRole?.primarySkills || role?.primarySkills || "");
                 setEditSecondarySkills(fullRole?.secondarySkills || role?.secondarySkills || "");
@@ -2535,7 +2552,7 @@ export default function ClientDashboard() {
                               setSelectedRoleForEdit(role);
                               // Initialize edit form with current values
                               setEditJdPosition(role?.role || '');
-                              setEditNoOfPositions(Math.max(1, Number(role?.noOfPositions ?? 1) || 1));
+                              setEditPositionsInput(String(Math.max(1, Number(role?.noOfPositions ?? 1) || 1)));
                               setEditJdText(role?.jdText || '');
                               setEditPrimarySkills(role?.primarySkills || '');
                               setEditSecondarySkills(role?.secondarySkills || '');
@@ -2785,11 +2802,14 @@ export default function ClientDashboard() {
             <Button
               onClick={async () => {
                 try {
-                  if (!isJdFormReady) {
+                  const validationErrors = getJdUploadValidationErrors();
+                  if (validationErrors.length > 0) {
                     toast({
-                      title: "Validation Error",
-                      description: "Please fill all required JD fields before submitting.",
-                      variant: "destructive"
+                      title: "Please complete the form",
+                      description:
+                        validationErrors.slice(0, 3).join(' · ') +
+                        (validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : ''),
+                      variant: "destructive",
                     });
                     return;
                   }
@@ -2811,7 +2831,7 @@ export default function ClientDashboard() {
                     jdText: jdText || null,
                     jdFile: jdFileUrl,
                     position: jdPosition,
-                    noOfPositions: jdNoOfPositions,
+                    noOfPositions: parseInt(jdPositionsInput, 10) || 1,
                     primarySkills,
                     secondarySkills,
                     knowledgeOnly,
@@ -3033,7 +3053,7 @@ export default function ClientDashboard() {
           setEditKnowledgeOnly('');
           setEditSpecialInstructions('');
           setEditJdPosition('');
-          setEditNoOfPositions(1);
+          setEditPositionsInput('1');
         }
       }}>
         <DialogContent className={`${CLIENT_MOBILE_DIALOG_CLASS} md:max-w-3xl`}>
@@ -3068,11 +3088,17 @@ export default function ClientDashboard() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">No. of Positions</label>
                   <Input
-                    type="number"
-                    min={1}
-                    value={editNoOfPositions}
-                    onChange={(e) => setEditNoOfPositions(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                    className="bg-white border-gray-300 rounded-md"
+                    type="text"
+                    inputMode="numeric"
+                    value={editPositionsInput}
+                    onChange={(e) => setEditPositionsInput(e.target.value.replace(/[^\d]/g, ''))}
+                    onBlur={() => {
+                      if (!editPositionsInput.trim() || Number(editPositionsInput) < 1) {
+                        setEditPositionsInput('1');
+                      }
+                    }}
+                    placeholder="1"
+                    className="bg-white border-gray-300 rounded-md [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                 </div>
 
@@ -3209,7 +3235,7 @@ export default function ClientDashboard() {
                   // Update requirement
                   const response = await apiRequest('PATCH', `/api/client/requirements/${selectedRoleForEdit.roleId}`, {
                     position: editJdPosition || selectedRoleForEdit.role,
-                    noOfPositions: editNoOfPositions || selectedRoleForEdit.noOfPositions || 1,
+                    noOfPositions: parseInt(editPositionsInput, 10) || selectedRoleForEdit.noOfPositions || 1,
                     jdText: editJdText || selectedRoleForEdit.jdText || null,
                     jdFile: jdFileUrl,
                     primarySkills: editPrimarySkills || selectedRoleForEdit.primarySkills || null,

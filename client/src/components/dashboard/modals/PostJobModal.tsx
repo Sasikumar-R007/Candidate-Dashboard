@@ -147,26 +147,27 @@ export default function PostJobModal({
   const hasRequiredText = (value: unknown) =>
     value !== undefined && value !== null && String(value).trim() !== "";
 
-  const isFormValid = useMemo(() => {
-    const requiredTextFields = [
-      "companyName",
-      "role",
-      "experience",
-      "location",
-      "salaryPackage",
-      "aboutCompany",
-      "roleDefinitions",
-      "keyResponsibility",
-    ] as const;
+  const requiredTextFields = [
+    { key: "companyName" as const, label: "Company Name" },
+    { key: "role" as const, label: "Role" },
+    { key: "experience" as const, label: "Experience" },
+    { key: "location" as const, label: "Location" },
+    { key: "salaryPackage" as const, label: "Salary Package" },
+    { key: "aboutCompany" as const, label: "About Company" },
+    { key: "roleDefinitions" as const, label: "Role Definitions" },
+    { key: "keyResponsibility" as const, label: "Key Responsibilities" },
+  ];
 
-    const textFieldsValid = requiredTextFields.every((field) =>
-      hasRequiredText(formData[field]),
-    );
-    const primarySkillsValid = getFilteredSkills(formData.primarySkills).length > 0;
-    const secondarySkillsValid = getFilteredSkills(formData.secondarySkills).length > 0;
+  const handlePositionsChange = (value: string) => {
+    const sanitized = value.replace(/[^\d]/g, "");
+    setFormData({ ...formData, noOfPositions: sanitized });
+  };
 
-    return textFieldsValid && primarySkillsValid && secondarySkillsValid;
-  }, [formData]);
+  const handlePositionsBlur = () => {
+    if (!formData.noOfPositions?.trim() || Number(formData.noOfPositions) < 1) {
+      setFormData({ ...formData, noOfPositions: "1" });
+    }
+  };
 
   const postJobMutation = useMutation({
     mutationFn: async (jobData: any) => {
@@ -239,6 +240,36 @@ export default function PostJobModal({
   );
 
   const requiresRequirementLink = Boolean(linkableRequirements?.length) && !formData.id;
+
+  const getPostJobValidationErrors = (): string[] => {
+    const errors: string[] = [];
+
+    if (requiresRequirementLink) {
+      if (!selectedClientCompany) errors.push("Select a Client");
+      if (!selectedRoleId) errors.push("Select a Role ID");
+      if (!formData.requirementId?.trim()) errors.push("Select a Requirement to link");
+    }
+
+    for (const { key, label } of requiredTextFields) {
+      if (!hasRequiredText(formData[key])) {
+        errors.push(`${label} is required`);
+      }
+    }
+
+    const positions = parseInt(formData.noOfPositions, 10);
+    if (!formData.noOfPositions?.trim() || !Number.isFinite(positions) || positions < 1) {
+      errors.push("No. of Positions must be at least 1");
+    }
+
+    if (getFilteredSkills(formData.primarySkills).length === 0) {
+      errors.push("Add at least one Primary Skill");
+    }
+    if (getFilteredSkills(formData.secondarySkills).length === 0) {
+      errors.push("Add at least one Secondary Skill");
+    }
+
+    return errors;
+  };
 
   const applyRequirementSelection = (requirementId: string) => {
     const requirement = postableRequirements.find((r) => r.id === requirementId);
@@ -439,25 +470,20 @@ const deriveLocationType = (workMode: string): string => {
   };
 
   const handlePostJob = () => {
-    if (requiresRequirementLink && !formData.requirementId?.trim()) {
-      setFormError("Please select a requirement to link this job posting.");
-      return;
-    }
-    if (requiresRequirementLink && !selectedClientCompany) {
-      setFormError("Please select a client.");
-      return;
-    }
-    if (requiresRequirementLink && !selectedRoleId) {
-      setFormError("Please select a Role ID.");
+    const validationErrors = getPostJobValidationErrors();
+    if (validationErrors.length > 0) {
+      setFormError(validationErrors.join("\n"));
+      toast({
+        title: "Please complete the form",
+        description:
+          validationErrors.slice(0, 3).join(" · ") +
+          (validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : ""),
+        variant: "destructive",
+      });
       return;
     }
 
-    if (!isFormValid) {
-      setFormError(
-        "Please fill out all required fields, including at least one primary and one secondary skill.",
-      );
-      return;
-    }
+    setFormError("");
 
     const expRange = parseExperience(formData.experience);
     const salaryRange = parseSalary(formData.salaryPackage);
@@ -595,7 +621,7 @@ const deriveLocationType = (workMode: string): string => {
               
               {/* Error message */}
               {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm whitespace-pre-line">
                   {formError}
                 </div>
               )}
@@ -854,11 +880,12 @@ const deriveLocationType = (workMode: string): string => {
                     <Hash size={16} />
                   </div>
                   <Input
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputMode="numeric"
                     value={formData.noOfPositions}
-                    onChange={(e) => setFormData({...formData, noOfPositions: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                    onChange={(e) => handlePositionsChange(e.target.value)}
+                    onBlur={handlePositionsBlur}
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     placeholder="No of Positions"
                     data-testid="input-positions"
                   />
@@ -884,8 +911,7 @@ const deriveLocationType = (workMode: string): string => {
                     <TrendingUp size={16} />
                   </div>
                   <Input
-                    type="number"
-                    min="0"
+                    type="text"
                     value={formData.experience}
                     onChange={(e) => setFormData({...formData, experience: e.target.value})}
                     className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
@@ -1257,7 +1283,7 @@ const deriveLocationType = (workMode: string): string => {
                 <Button 
                   className="flex-1 bg-blue-600 text-white rounded-[4px] disabled:bg-gray-300 disabled:text-gray-500"
                   onClick={handlePostJob}
-                  disabled={!isFormValid || postJobMutation.isPending}
+                  disabled={postJobMutation.isPending}
                   data-testid="button-post-job"
                 >
                   {postJobMutation.isPending ? (
@@ -1428,7 +1454,7 @@ const deriveLocationType = (workMode: string): string => {
                   setIsPreviewModalOpen(false);
                   handlePostJob();
                 }}
-                disabled={!isFormValid || postJobMutation.isPending}
+                disabled={postJobMutation.isPending}
               >
                 {postJobMutation.isPending ? (
                   <>
