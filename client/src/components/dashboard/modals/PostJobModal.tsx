@@ -16,6 +16,7 @@ import {
   resolveDisplayRoleId,
   resolveRequirementDisplayId,
 } from '@shared/requirement-jd-extras';
+import { cn } from '@/lib/utils';
 
 interface JobFormData {
   id?: string | number;
@@ -85,6 +86,7 @@ export default function PostJobModal({
   const [selectedClientCompany, setSelectedClientCompany] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [isPostingInfoOpen, setIsPostingInfoOpen] = useState(false);
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const closeDropdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const infoHoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -241,35 +243,51 @@ export default function PostJobModal({
 
   const requiresRequirementLink = Boolean(linkableRequirements?.length) && !formData.id;
 
-  const getPostJobValidationErrors = (): string[] => {
-    const errors: string[] = [];
+  const getInvalidPostJobFields = (): Set<string> => {
+    const invalid = new Set<string>();
 
     if (requiresRequirementLink) {
-      if (!selectedClientCompany) errors.push("Select a Client");
-      if (!selectedRoleId) errors.push("Select a Role ID");
-      if (!formData.requirementId?.trim()) errors.push("Select a Requirement to link");
+      if (!selectedClientCompany) invalid.add("linkClient");
+      if (!selectedRoleId) invalid.add("linkRoleId");
+      if (!formData.requirementId?.trim()) invalid.add("linkRequirement");
     }
 
-    for (const { key, label } of requiredTextFields) {
+    for (const { key } of requiredTextFields) {
       if (!hasRequiredText(formData[key])) {
-        errors.push(`${label} is required`);
+        invalid.add(key);
       }
     }
 
     const positions = parseInt(formData.noOfPositions, 10);
     if (!formData.noOfPositions?.trim() || !Number.isFinite(positions) || positions < 1) {
-      errors.push("No. of Positions must be at least 1");
+      invalid.add("noOfPositions");
     }
 
     if (getFilteredSkills(formData.primarySkills).length === 0) {
-      errors.push("Add at least one Primary Skill");
+      invalid.add("primarySkills");
     }
     if (getFilteredSkills(formData.secondarySkills).length === 0) {
-      errors.push("Add at least one Secondary Skill");
+      invalid.add("secondarySkills");
     }
 
-    return errors;
+    return invalid;
   };
+
+  const fieldBorder = (field: string, baseClass: string) =>
+    cn(
+      baseClass,
+      invalidFields.has(field) &&
+        "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500",
+    );
+
+  useEffect(() => {
+    if (invalidFields.size === 0) return;
+    const currentInvalid = getInvalidPostJobFields();
+    setInvalidFields((prev) => {
+      const next = new Set(Array.from(prev).filter((field) => currentInvalid.has(field)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [formData, selectedClientCompany, selectedRoleId, requiresRequirementLink]);
 
   const applyRequirementSelection = (requirementId: string) => {
     const requirement = postableRequirements.find((r) => r.id === requirementId);
@@ -284,6 +302,7 @@ export default function PostJobModal({
       requirementId,
     });
     setFormError("");
+    setInvalidFields(new Set());
   };
 
   const handleRequirementSelect = (requirementId: string) => {
@@ -331,6 +350,7 @@ export default function PostJobModal({
       companyLogo: ''
     });
     setLogoPreview(null);
+    setInvalidFields(new Set());
   };
 
   const parseExperience = (exp: string): { min: number | null; max: number | null } => {
@@ -470,19 +490,17 @@ const deriveLocationType = (workMode: string): string => {
   };
 
   const handlePostJob = () => {
-    const validationErrors = getPostJobValidationErrors();
-    if (validationErrors.length > 0) {
-      setFormError(validationErrors.join("\n"));
+    const invalid = getInvalidPostJobFields();
+    if (invalid.size > 0) {
+      setInvalidFields(invalid);
       toast({
-        title: "Please complete the form",
-        description:
-          validationErrors.slice(0, 3).join(" · ") +
-          (validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : ""),
+        title: "Please complete the highlighted fields",
         variant: "destructive",
       });
       return;
     }
 
+    setInvalidFields(new Set());
     setFormError("");
 
     const expRange = parseExperience(formData.experience);
@@ -619,11 +637,8 @@ const deriveLocationType = (workMode: string): string => {
               {/* Required fields notice */}
               <div className="text-sm text-red-500 mb-4">* Required fields</div>
               
-              {/* Error message */}
               {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm whitespace-pre-line">
-                  {formError}
-                </div>
+                <p className="text-sm text-red-600">{formError}</p>
               )}
 
               {requiresRequirementLink && (
@@ -683,7 +698,10 @@ const deriveLocationType = (workMode: string): string => {
                       }}
                     >
                       <SelectTrigger
-                        className="bg-slate-100 border-slate-300 h-10 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0"
+                        className={fieldBorder(
+                          "linkClient",
+                          "bg-slate-100 border-slate-300 h-10 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0",
+                        )}
                         data-testid="select-post-job-client"
                       >
                         <SelectValue placeholder="Select Client" />
@@ -715,7 +733,10 @@ const deriveLocationType = (workMode: string): string => {
                       disabled={!selectedClientCompany}
                     >
                       <SelectTrigger
-                        className="bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0"
+                        className={fieldBorder(
+                          "linkRoleId",
+                          "bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0",
+                        )}
                         data-testid="select-post-job-role-id"
                       >
                         <SelectValue placeholder="Select Role ID" />
@@ -747,7 +768,10 @@ const deriveLocationType = (workMode: string): string => {
                       disabled={!selectedRoleId}
                     >
                       <SelectTrigger
-                        className="bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0"
+                        className={fieldBorder(
+                          "linkRequirement",
+                          "bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0",
+                        )}
                         data-testid="select-linked-requirement"
                       >
                         <SelectValue placeholder="Select Requirement" />
@@ -782,7 +806,10 @@ const deriveLocationType = (workMode: string): string => {
                 <Input
                   value={formData.companyName}
                   onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                  className={fieldBorder(
+                    "companyName",
+                    "pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400",
+                  )}
                   placeholder="Company Name *"
                   data-testid="input-company-name"
                 />
@@ -885,7 +912,10 @@ const deriveLocationType = (workMode: string): string => {
                     value={formData.noOfPositions}
                     onChange={(e) => handlePositionsChange(e.target.value)}
                     onBlur={handlePositionsBlur}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className={fieldBorder(
+                      "noOfPositions",
+                      "pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                    )}
                     placeholder="No of Positions"
                     data-testid="input-positions"
                   />
@@ -901,7 +931,10 @@ const deriveLocationType = (workMode: string): string => {
                   <Input
                     value={formData.role}
                     onChange={(e) => setFormData({...formData, role: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                    className={fieldBorder(
+                      "role",
+                      "pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400",
+                    )}
                     placeholder="Role *"
                     data-testid="input-role"
                   />
@@ -914,7 +947,10 @@ const deriveLocationType = (workMode: string): string => {
                     type="text"
                     value={formData.experience}
                     onChange={(e) => setFormData({...formData, experience: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                    className={fieldBorder(
+                      "experience",
+                      "pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400",
+                    )}
                     placeholder="Experience (in years) *"
                     data-testid="input-experience"
                   />
@@ -932,7 +968,10 @@ const deriveLocationType = (workMode: string): string => {
                     onFocus={() => openDropdown('location')}
                     onBlur={scheduleCloseDropdown}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                    className={fieldBorder(
+                      "location",
+                      "pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400",
+                    )}
                     placeholder="Location *"
                     data-testid="input-location"
                   />
@@ -1008,7 +1047,10 @@ const deriveLocationType = (workMode: string): string => {
                         salaryPackage: sanitizeSalaryInput(e.target.value),
                       })
                     }
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                    className={fieldBorder(
+                      "salaryPackage",
+                      "pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400",
+                    )}
                     placeholder="Salary Package in LPA* e.g. 15"
                     data-testid="input-salary"
                   />
@@ -1020,7 +1062,10 @@ const deriveLocationType = (workMode: string): string => {
                 <textarea
                   value={formData.aboutCompany}
                   onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-16 placeholder:text-gray-400"
+                  className={fieldBorder(
+                    "aboutCompany",
+                    "w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-16 placeholder:text-gray-400",
+                  )}
                   placeholder="About Company * (max 1000 characters)"
                   data-testid="textarea-about-company"
                   maxLength={1000}
@@ -1035,7 +1080,10 @@ const deriveLocationType = (workMode: string): string => {
                 <textarea
                   value={formData.roleDefinitions}
                   onChange={(e) => setFormData({...formData, roleDefinitions: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-16 placeholder:text-gray-400"
+                  className={fieldBorder(
+                    "roleDefinitions",
+                    "w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-16 placeholder:text-gray-400",
+                  )}
                   placeholder="Role Definitions * (max 1500 characters)"
                   data-testid="textarea-role-definitions"
                   maxLength={1500}
@@ -1050,7 +1098,10 @@ const deriveLocationType = (workMode: string): string => {
                 <textarea
                   value={formData.keyResponsibility}
                   onChange={(e) => setFormData({...formData, keyResponsibility: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-20 placeholder:text-gray-400"
+                  className={fieldBorder(
+                    "keyResponsibility",
+                    "w-full bg-gray-50 border rounded-sm p-3 min-h-[140px] text-sm resize-none pr-20 placeholder:text-gray-400",
+                  )}
                   placeholder="Key Responsibilities * (Enter as bullet points or sentences)"
                   data-testid="textarea-key-responsibility"
                   maxLength={2000}
@@ -1065,7 +1116,12 @@ const deriveLocationType = (workMode: string): string => {
                 <Label className="text-sm font-bold text-gray-900 block mb-2">Add Skills</Label>
                 
                 {/* Primary Skills */}
-                <div className="space-y-3">
+                <div
+                  className={cn(
+                    "space-y-3 rounded-md",
+                    invalidFields.has("primarySkills") && "border border-red-500 ring-1 ring-red-500 p-2",
+                  )}
+                >
                   <Label className="text-xs text-gray-500 font-medium block">
                     Primary Skills <span className="text-red-500">*</span>
                   </Label>
@@ -1119,7 +1175,12 @@ const deriveLocationType = (workMode: string): string => {
                 </div>
 
                 {/* Secondary Skills */}
-                <div className="space-y-3">
+                <div
+                  className={cn(
+                    "space-y-3 rounded-md",
+                    invalidFields.has("secondarySkills") && "border border-red-500 ring-1 ring-red-500 p-2",
+                  )}
+                >
                   <Label className="text-xs text-gray-500 font-medium block">
                     Secondary Skills <span className="text-red-500">*</span>
                   </Label>

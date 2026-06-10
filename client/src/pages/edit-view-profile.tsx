@@ -799,7 +799,7 @@ function ProfilePictureModal({ open, onOpenChange, profile }: { open: boolean; o
 
   const handleRemove = async () => {
     try {
-      await updateProfile.mutateAsync({ profilePicture: '' });
+      await updateProfile.mutateAsync({ profilePicture: null });
       toast({
         title: "Profile Picture Removed",
         description: "Your profile picture has been removed.",

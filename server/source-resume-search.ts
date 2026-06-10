@@ -4,7 +4,7 @@
 // Server-side indexed search with skill normalization,
 // semantic matching, and advanced scoring
 
-import { candidates } from "@shared/schema";
+import { candidates, profiles } from "@shared/schema";
 import { sql, and, or, ilike, desc, asc, not } from "drizzle-orm";
 
 // ============================================
@@ -126,6 +126,18 @@ export function parseAndNormalizeSkills(skillsString: string): string[] {
 
 function hasTextFilter(value: unknown) {
   return typeof value === 'string' && value.trim() !== '' && value.trim().toLowerCase() !== 'any';
+}
+
+function getFilterValues(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => String(entry).trim())
+      .filter((entry) => entry !== '' && entry.toLowerCase() !== 'any');
+  }
+  if (hasTextFilter(value)) {
+    return [String(value).trim()];
+  }
+  return [];
 }
 
 function buildSearchableTextCondition(term: string) {
@@ -722,25 +734,56 @@ export function buildSearchQuery(filters: any) {
     }
   }
   
-  // Location filter
-  if (hasTextFilter(filters.location)) {
-    conditions.push(ilike(candidates.location, `%${filters.location}%`));
-  }
-  
-  // Role filter
-  if (hasTextFilter(filters.role)) {
+  // Location filter — match any selected location
+  const locationValues = getFilterValues(filters.location);
+  if (locationValues.length > 0) {
     conditions.push(
-      or(
-        ilike(candidates.designation, `%${filters.role}%`),
-        ilike(candidates.currentRole, `%${filters.role}%`),
-        ilike(candidates.position, `%${filters.role}%`)
-      )
+      or(...locationValues.map((location) => ilike(candidates.location, `%${location}%`))),
     );
   }
-  
-  // Company filter
-  if (hasTextFilter(filters.company)) {
-    conditions.push(ilike(candidates.company, `%${filters.company}%`));
+
+  // Preferred location filter — stored on profiles, linked by candidate_id or email
+  const preferredLocationValues = getFilterValues(filters.preferredLocation);
+  if (preferredLocationValues.length > 0) {
+    conditions.push(
+      or(
+        ...preferredLocationValues.map(
+          (location) =>
+            sql`EXISTS (
+              SELECT 1 FROM ${profiles}
+              WHERE (
+                ${profiles.candidateId} = ${candidates.candidateId}
+                OR lower(${profiles.email}) = lower(${candidates.email})
+              )
+              AND ${profiles.preferredLocation} ILIKE ${`%${location}%`}
+            )`,
+        ),
+      ),
+    );
+  }
+
+  // Role filter — match any selected role
+  const roleValues = getFilterValues(filters.role);
+  if (roleValues.length > 0) {
+    conditions.push(
+      or(
+        ...roleValues.map((role) =>
+          or(
+            ilike(candidates.designation, `%${role}%`),
+            ilike(candidates.currentRole, `%${role}%`),
+            ilike(candidates.position, `%${role}%`),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Company filter — match any selected company
+  const companyValues = getFilterValues(filters.company);
+  if (companyValues.length > 0) {
+    conditions.push(
+      or(...companyValues.map((company) => ilike(candidates.company, `%${company}%`))),
+    );
   }
   
   // Education filter

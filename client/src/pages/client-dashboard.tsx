@@ -22,6 +22,7 @@ import {
   CLIENT_MOBILE_DIALOG_WIDE_CLASS,
   resolveClientRoleDisplayId,
 } from "@/lib/client-role-display";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +34,6 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 import ClientMainSidebar from '@/components/dashboard/client-main-sidebar';
-import AddCandidateModal from '@/components/dashboard/modals/add-candidate-modal';
 import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
@@ -150,6 +150,7 @@ export default function ClientDashboard() {
   const [isJdPreviewModalOpen, setIsJdPreviewModalOpen] = useState(false);
   const [jdPosition, setJdPosition] = useState('');
   const [jdPositionsInput, setJdPositionsInput] = useState('1');
+  const [jdInvalidFields, setJdInvalidFields] = useState<Set<string>>(new Set());
   const [pipelineView, setPipelineView] = useState<'board' | 'candidate-session'>('board');
   const [sessionApplicationId, setSessionApplicationId] = useState<string | null>(null);
   const [sessionApplicantSnapshot, setSessionApplicantSnapshot] =
@@ -632,24 +633,63 @@ export default function ClientDashboard() {
     setSpecialInstructions('');
     setJdPosition('');
     setJdPositionsInput('1');
+    setJdInvalidFields(new Set());
     if (jdFileInputRef.current) {
       jdFileInputRef.current.value = '';
     }
   };
 
-  const getJdUploadValidationErrors = () => {
-    const errors: string[] = [];
-    if (!jdPosition.trim()) errors.push('Position/Role is required');
+  const getJdInvalidFields = useCallback(() => {
+    const invalid = new Set<string>();
+    if (!jdPosition.trim()) invalid.add('position');
     const positions = parseInt(jdPositionsInput, 10);
     if (!jdPositionsInput.trim() || !Number.isFinite(positions) || positions < 1) {
-      errors.push('No. of Positions must be at least 1');
+      invalid.add('positions');
     }
-    if (!primarySkills.trim()) errors.push('Primary Skills is required');
-    if (!secondarySkills.trim()) errors.push('Secondary Skills is required');
-    if (!knowledgeOnly.trim()) errors.push('Knowledge Only is required');
-    if (!specialInstructions.trim()) errors.push('Special Instructions is required');
-    if (!uploadedFile && !jdText.trim()) errors.push('Upload a JD file or enter JD text');
-    return errors;
+    if (!primarySkills.trim()) invalid.add('primarySkills');
+    if (!secondarySkills.trim()) invalid.add('secondarySkills');
+    if (!knowledgeOnly.trim()) invalid.add('knowledgeOnly');
+    if (!specialInstructions.trim()) invalid.add('specialInstructions');
+    if (!uploadedFile && !jdText.trim()) invalid.add('jdContent');
+    return invalid;
+  }, [
+    jdPosition,
+    jdPositionsInput,
+    primarySkills,
+    secondarySkills,
+    knowledgeOnly,
+    specialInstructions,
+    uploadedFile,
+    jdText,
+  ]);
+
+  const jdFieldBorder = (field: string, baseClass: string) =>
+    cn(
+      baseClass,
+      jdInvalidFields.has(field) && 'border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500',
+    );
+
+  useEffect(() => {
+    if (jdInvalidFields.size === 0) return;
+    const currentInvalid = getJdInvalidFields();
+    setJdInvalidFields((prev) => {
+      const next = new Set(Array.from(prev).filter((field) => currentInvalid.has(field)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [getJdInvalidFields, jdInvalidFields.size]);
+
+  const validateJdUploadForm = () => {
+    const invalid = getJdInvalidFields();
+    if (invalid.size > 0) {
+      setJdInvalidFields(invalid);
+      toast({
+        title: 'Please complete the highlighted fields',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    setJdInvalidFields(new Set());
+    return true;
   };
 
   const handleJdPositionsChange = (value: string) => {
@@ -663,17 +703,7 @@ export default function ClientDashboard() {
   };
 
   const openJdPreviewIfValid = () => {
-    const validationErrors = getJdUploadValidationErrors();
-    if (validationErrors.length > 0) {
-      toast({
-        title: "Please complete the form",
-        description:
-          validationErrors.slice(0, 3).join(' · ') +
-          (validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : ''),
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!validateJdUploadForm()) return;
     setIsJdPreviewModalOpen(true);
   };
 
@@ -1008,13 +1038,6 @@ export default function ClientDashboard() {
           <div className="h-full overflow-y-auto">
             <SimpleClientHeader {...clientHeaderProps} />
             <div className="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
-              {!isClientAdmin && (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  View-only access. Contact your Client Admin to create or update requirements.
-                </p>
-              )}
-
-              {isClientAdmin && (
               <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
                 <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6 md:py-4">
                   <div className="flex items-center justify-between gap-2 md:contents">
@@ -1030,8 +1053,10 @@ export default function ClientDashboard() {
                             <Info className="h-4 w-4" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-[240px] text-xs">
-                          Upload a JD file (PDF or DOCX) and role details will be fetched automatically.
+                        <TooltipContent side="bottom" className="max-w-[260px] text-xs">
+                          {isClientAdmin
+                            ? "Upload a JD file (PDF or DOCX) and role details will be fetched automatically. Assign team members after submit."
+                            : "Upload a JD file (PDF or DOCX). Submitted requirements are assigned to you automatically."}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -1094,7 +1119,10 @@ export default function ClientDashboard() {
                             await parseJdFromFile(file);
                           }
                         }}
-                        className="relative flex h-full min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 md:min-h-[200px] md:p-8"
+                        className={jdFieldBorder(
+                          'jdContent',
+                          'relative flex h-full min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 md:min-h-[200px] md:p-8',
+                        )}
                       >
                         {isParsingJd && (
                           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 backdrop-blur-[2px]">
@@ -1124,7 +1152,10 @@ export default function ClientDashboard() {
                     {/* JD Text Area - Right Side */}
                     <div
                       onClick={() => setIsJdModalOpen(true)}
-                      className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 md:min-h-[200px] md:p-8"
+                      className={jdFieldBorder(
+                        'jdContent',
+                        'flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30 md:min-h-[200px] md:p-8',
+                      )}
                     >
                       {jdText ? (
                         <>
@@ -1156,7 +1187,10 @@ export default function ClientDashboard() {
                         value={jdPosition}
                         onChange={(e) => setJdPosition(e.target.value)}
                         placeholder="e.g., Senior Software Engineer"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                        className={jdFieldBorder(
+                          'position',
+                          'bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400',
+                        )}
                       />
                     </div>
                     <div>
@@ -1170,7 +1204,10 @@ export default function ClientDashboard() {
                         onChange={(e) => handleJdPositionsChange(e.target.value)}
                         onBlur={handleJdPositionsBlur}
                         placeholder="1"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className={jdFieldBorder(
+                          'positions',
+                          'bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+                        )}
                       />
                     </div>
                   </div>
@@ -1182,7 +1219,10 @@ export default function ClientDashboard() {
                         value={primarySkills}
                         onChange={(e) => setPrimarySkills(e.target.value)}
                         placeholder="e.g., React, Node.js, TypeScript"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                        className={jdFieldBorder(
+                          'primarySkills',
+                          'bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400',
+                        )}
                       />
                     </div>
                     <div>
@@ -1191,7 +1231,10 @@ export default function ClientDashboard() {
                         value={secondarySkills}
                         onChange={(e) => setSecondarySkills(e.target.value)}
                         placeholder="e.g., MongoDB, AWS, Docker"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                        className={jdFieldBorder(
+                          'secondarySkills',
+                          'bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400',
+                        )}
                       />
                     </div>
                     <div>
@@ -1200,7 +1243,10 @@ export default function ClientDashboard() {
                         value={knowledgeOnly}
                         onChange={(e) => setKnowledgeOnly(e.target.value)}
                         placeholder="e.g., Agile, Scrum, DevOps"
-                        className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                        className={jdFieldBorder(
+                          'knowledgeOnly',
+                          'bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400',
+                        )}
                       />
                     </div>
                   </div>
@@ -1211,12 +1257,14 @@ export default function ClientDashboard() {
                       value={specialInstructions}
                       onChange={(e) => setSpecialInstructions(e.target.value)}
                       placeholder="Enter special instructions..."
-                      className="bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 min-h-[100px] placeholder:text-gray-400"
+                      className={jdFieldBorder(
+                        'specialInstructions',
+                        'bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 min-h-[100px] placeholder:text-gray-400',
+                      )}
                     />
                   </div>
                 </div>
               </div>
-              )}
 
               {/* Requirements / JD */}
               <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -2802,17 +2850,7 @@ export default function ClientDashboard() {
             <Button
               onClick={async () => {
                 try {
-                  const validationErrors = getJdUploadValidationErrors();
-                  if (validationErrors.length > 0) {
-                    toast({
-                      title: "Please complete the form",
-                      description:
-                        validationErrors.slice(0, 3).join(' · ') +
-                        (validationErrors.length > 3 ? ` (+${validationErrors.length - 3} more)` : ''),
-                      variant: "destructive",
-                    });
-                    return;
-                  }
+                  if (!validateJdUploadForm()) return;
 
                   let jdFileUrl = null;
 
@@ -2839,9 +2877,14 @@ export default function ClientDashboard() {
                   });
 
                   if (response.ok) {
+                    const result = await response.json().catch(() => ({}));
                     toast({
                       title: "JD Submitted",
-                      description: "Your job description has been submitted successfully.",
+                      description:
+                        result.message ||
+                        (isClientAdmin
+                          ? "Your job description has been submitted successfully."
+                          : "Your job description has been submitted and assigned to you."),
                     });
                     setIsJdPreviewModalOpen(false);
                     // Reset form

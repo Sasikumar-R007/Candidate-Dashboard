@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import bcrypt from "bcrypt";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { storage } from "./storage";
@@ -676,10 +677,12 @@ export async function acceptClientMemberInvite(
         .limit(1)
     )[0]?.name;
 
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   if (existingInactive) {
     await storage.updateEmployee(existingInactive.id, {
       name: invite.name,
-      password,
+      password: hashedPassword,
       isActive: true,
       clientDepartmentId:
         invite.clientDepartmentId || existingInactive.client_department_id,

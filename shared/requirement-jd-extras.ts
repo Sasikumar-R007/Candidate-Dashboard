@@ -176,12 +176,29 @@ export function resolveDisplayRoleId(
       if (displayRoleId && STR_ROLE_ID_PATTERN.test(String(displayRoleId))) {
         return String(displayRoleId);
       }
+      const displayRequirementId = parsed.displayRequirementId;
+      if (
+        displayRequirementId &&
+        STR_ROLE_ID_PATTERN.test(String(displayRequirementId))
+      ) {
+        return String(displayRequirementId);
+      }
     } catch {
       // ignore invalid JSON
     }
   }
 
-  if (id) return id;
+  if (typeof requirement === "object" && requirement) {
+    const streq = extractStreqId(requirement);
+    if (streq) return streq;
+  }
+
+  if (id) {
+    if (UUID_LIKE_PATTERN.test(id) || id.length > 20) {
+      return "N/A";
+    }
+    return id;
+  }
   return "N/A";
 }
 

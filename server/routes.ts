@@ -13,6 +13,7 @@ import {
   enrichRequirementWithJdExtras,
   extractStreqId,
   mergeDisplayRequirementIdInSourceDetails,
+  mergeDisplayRoleIdInSourceDetails,
   parseRequirementJdExtras,
   resolveDisplayRoleId,
 } from "@shared/requirement-jd-extras";
@@ -194,6 +195,7 @@ import {
   CLIENT_ADMIN_ROLE,
   isClientPortalRole,
   isClientAdminRole,
+  isClientMemberRole,
 } from "@shared/client-roles";
 import {
   resolveClientCompanyForEmployee,
@@ -4070,7 +4072,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         candidateUpdates.education = req.body.education;
         profileUpdates.education = req.body.education;
       }
-      if (req.body.profilePicture !== undefined) candidateUpdates.profilePicture = req.body.profilePicture;
+      if (req.body.profilePicture !== undefined) {
+        candidateUpdates.profilePicture =
+          req.body.profilePicture === "" || req.body.profilePicture === null
+            ? null
+            : req.body.profilePicture;
+      }
       if (req.body.bannerImage !== undefined) candidateUpdates.bannerImage = req.body.bannerImage;
       if (req.body.resumeFile !== undefined) candidateUpdates.resumeFile = req.body.resumeFile;
       if (req.body.resumeText !== undefined) candidateUpdates.resumeText = req.body.resumeText;
@@ -6504,7 +6511,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updates.email !== undefined) employeeUpdates.email = updates.email;
       if (updates.department !== undefined) employeeUpdates.department = updates.department;
       if (updates.bannerImage !== undefined) employeeUpdates.bannerImage = updates.bannerImage;
-      if (updates.profilePicture !== undefined) employeeUpdates.profilePicture = updates.profilePicture;
+      if (updates.profilePicture !== undefined) {
+        employeeUpdates.profilePicture =
+          updates.profilePicture === "" || updates.profilePicture === null
+            ? null
+            : updates.profilePicture;
+      }
 
       const updatedEmployee = await storage.updateEmployee(employee.id, employeeUpdates);
 
@@ -7117,7 +7129,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: updates.name !== undefined ? updates.name : employee.name,
         phone: updates.phone !== undefined ? updates.phone : employee.phone,
         bannerImage: updates.bannerImage !== undefined ? updates.bannerImage : employee.bannerImage,
-        profilePicture: updates.profilePicture !== undefined ? updates.profilePicture : employee.profilePicture,
+        profilePicture:
+          updates.profilePicture !== undefined
+            ? updates.profilePicture === "" || updates.profilePicture === null
+              ? null
+              : updates.profilePicture
+            : employee.profilePicture,
         department: updates.department !== undefined ? updates.department : employee.department
       });
 
@@ -7564,7 +7581,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updates.email) employeeUpdates.email = updates.email;
       if (updates.department) employeeUpdates.department = updates.department;
       if (updates.bannerImage !== undefined) employeeUpdates.bannerImage = updates.bannerImage;
-      if (updates.profilePicture !== undefined) employeeUpdates.profilePicture = updates.profilePicture;
+      if (updates.profilePicture !== undefined) {
+        employeeUpdates.profilePicture =
+          updates.profilePicture === "" || updates.profilePicture === null
+            ? null
+            : updates.profilePicture;
+      }
 
       // Update employee record in database
       const updatedEmployee = await storage.updateEmployee(employee.id, employeeUpdates);
@@ -16191,6 +16213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startDate: z.string().optional(),
         referral: z.string().optional(),
         currentStatus: z.string().optional(),
+        logo: z.string().optional(),
       });
 
       const validatedData = updateSchema.parse(req.body);
@@ -16821,6 +16844,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      const streqDisplayMap = buildStreqDisplayMap(clientJDs);
+
       // Transform requirements for client view
       const rolesData = await Promise.all(clientJDs.map(async (req) => {
         // Count profiles shared for this requirement
@@ -16842,10 +16867,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (req.status === 'completed' || req.status === 'closed') status = 'Closed';
         else if (req.status === 'open' || req.status === 'in_progress') status = 'Active';
 
-        const displayRoleId = resolveDisplayRoleId({
+        let displayRoleId = resolveDisplayRoleId({
           id: req.id,
           sourceDetails: req.sourceDetails ?? null,
         });
+        if (!displayRoleId || displayRoleId === "N/A") {
+          displayRoleId = streqDisplayMap.get(req.id) ?? "N/A";
+        }
 
         return {
           id: req.id, // Include id field for filtering
@@ -18055,8 +18083,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Upload JD File — Client Admin only
-  app.post("/api/client/upload-jd-file", requireClientAdminAuth, upload.single('jdFile'), async (req, res) => {
+  // Client Upload JD File — Client Admin and Client Member
+  app.post("/api/client/upload-jd-file", requireClientAuth, upload.single('jdFile'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -18109,7 +18137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client Parse JD - Extract information from JD file or text
   // Client Parse JD - Extract information from JD file or text
-  app.post("/api/client/parse-jd", requireClientAdminAuth, (req, res, next) => {
+  app.post("/api/client/parse-jd", requireClientAuth, (req, res, next) => {
     // Check if it's a file upload or JSON
     const contentType = req.headers['content-type'] || '';
     if (contentType.includes('multipart/form-data')) {
@@ -18199,8 +18227,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Submit JD — Client Admin only
-  app.post("/api/client/submit-jd", requireClientAdminAuth, async (req, res) => {
+  // Client Submit JD — Client Admin (manual assign) or Client Member (auto-assign to self)
+  app.post("/api/client/submit-jd", requireClientAuth, async (req, res) => {
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
       if (!employee) {
@@ -18209,6 +18237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
+      const isMemberUpload = isClientMemberRole(employee.role);
 
       const {
         jdText,
@@ -18223,15 +18252,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const positionsCount = Math.max(1, parseInt(String(noOfPositions ?? 1), 10) || 1);
 
-      // Validate that at least JD text or file is provided
       if (!jdText && !jdFile) {
         return res.status(400).json({ message: "Job description (text or file) is required" });
       }
 
-      // Extract position from JD text if not provided
       let extractedPosition = position;
       if (!extractedPosition && jdText) {
-        // Try to extract position from JD text (look for common patterns)
         const positionPatterns = [
           /(?:position|role|job title|title)[\s:]+([A-Za-z\s&]+)/i,
           /(?:looking for|seeking|hiring)[\s:]+([A-Za-z\s&]+)/i,
@@ -18246,46 +18272,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // If still no position, use default
       if (!extractedPosition) {
         extractedPosition = 'Position from JD';
       }
 
-      // Generate Role ID in format STR25001 (STR + year + sequential number)
-      const currentYear = new Date().getFullYear().toString().slice(-2); // Last 2 digits of year
-      const allRequirements = await storage.getRequirements();
-      const yearRequirements = allRequirements.filter((req: any) => {
-        // Check if requirement ID matches STR + year + 3 digits pattern
-        return req.id && /^STR\d{5}$/.test(req.id) && req.id.startsWith(`STR${currentYear}`);
-      });
+      const { generateNextRequirementRoleId } = await import("./requirement-role-id");
+      let roleId = await generateNextRequirementRoleId(storage);
 
-      // Find the maximum number to avoid duplicates
-      let maxNumber = 0;
-      yearRequirements.forEach((req: any) => {
-        const numStr = req.id.substring(5); // Get the 3-digit number part
-        const num = parseInt(numStr, 10);
-        if (!isNaN(num) && num > maxNumber) {
-          maxNumber = num;
-        }
-      });
-
-      const nextNumber = String(maxNumber + 1).padStart(3, '0');
-      let roleId = `STR${currentYear}${nextNumber}`;
-
-      // Double-check if ID already exists (race condition protection)
-      let attempts = 0;
-      while (allRequirements.find((r: any) => r.id === roleId) && attempts < 10) {
-        maxNumber++;
-        const nextNum = String(maxNumber + 1).padStart(3, '0');
-        roleId = `STR${currentYear}${nextNum}`;
-        attempts++;
-      }
-
-      if (attempts >= 10) {
-        return res.status(500).json({ message: "Failed to generate unique role ID. Please try again." });
-      }
-
-      const sourceDetails = buildClientJdSourceDetails({
+      const baseSourceDetails = buildClientJdSourceDetails({
         jdText: jdText || null,
         jdFile: jdFile || null,
         primarySkills: primarySkills || null,
@@ -18294,87 +18288,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
         specialInstructions: specialInstructions || null,
         submittedBy: employee.email,
       });
+      const sourceDetails = mergeDisplayRoleIdInSourceDetails(
+        baseSourceDetails,
+        roleId,
+      );
 
-      // Create requirement from JD with Role ID as the requirement ID
-      // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
-      console.log('Creating requirement with company:', companyName, 'SPOC:', employee.name, 'Role ID:', roleId);
+      const createPayload = {
+        position: extractedPosition,
+        noOfPositions: positionsCount,
+        criticality: 'Medium' as const,
+        toughness: 'Medium' as const,
+        company: companyName,
+        spoc: employee.name,
+        talentAdvisor: null,
+        talentAdvisorId: null,
+        teamLead: null,
+        status: 'open' as const,
+        isArchived: false,
+        createdAt: new Date().toISOString(),
+        jdFile: jdFile || null,
+        jdText: jdText || null,
+        sourceType: "client_jd" as const,
+        sourceDetails,
+        ...(isMemberUpload ? { assignedClientMemberId: employee.id } : {}),
+      };
 
-      try {
-        const requirement = await storage.createRequirement({
-          id: roleId, // Use Role ID as requirement ID (STR25001 format)
-          position: extractedPosition,
-          noOfPositions: positionsCount,
-          criticality: 'Medium', // Default, can be updated by admin
-          toughness: 'Medium', // Default, can be updated by admin
-          company: companyName,
-          spoc: employee.name,
-          talentAdvisor: null, // Will be assigned by team lead
-          talentAdvisorId: null,
-          teamLead: null, // Will be assigned by admin
-          status: 'open',
-          isArchived: false,
-          createdAt: new Date().toISOString(),
-          jdFile: jdFile || null,
-          jdText: jdText || null,
-          sourceType: "client_jd",
-          sourceDetails,
+      console.log(
+        'Creating requirement with company:',
+        companyName,
+        'SPOC:',
+        employee.name,
+        'Role ID:',
+        roleId,
+        isMemberUpload ? `(auto-assigned to member ${employee.id})` : '',
+      );
+
+      const createWithRoleId = async (id: string) =>
+        storage.createRequirement({
+          id,
+          ...createPayload,
+          sourceDetails: mergeDisplayRoleIdInSourceDetails(
+            baseSourceDetails,
+            id,
+          ),
         });
 
+      try {
+        const requirement = await createWithRoleId(roleId);
         console.log('Requirement created successfully:', requirement.id, requirement.company);
 
         res.json({
           success: true,
-          message: "Job description submitted successfully",
+          message: isMemberUpload
+            ? "Job description submitted and assigned to you"
+            : "Job description submitted successfully",
           requirement: {
             id: requirement.id,
             position: requirement.position,
-            company: requirement.company
+            company: requirement.company,
+            assignedClientMemberId: requirement.assignedClientMemberId ?? null,
           }
         });
       } catch (createError: any) {
         console.error('Create requirement error:', createError);
-        console.error('Error details:', {
-          message: createError.message,
-          code: createError.code,
-          detail: createError.detail,
-          constraint: createError.constraint
-        });
 
-        // Check if it's a duplicate key error
         if (createError.message && createError.message.includes('duplicate key')) {
-          // Try with next available ID
-          maxNumber++;
-          const nextNum = String(maxNumber + 1).padStart(3, '0');
-          const newRoleId = `STR${currentYear}${nextNum}`;
-
           try {
-            const requirement = await storage.createRequirement({
-              id: newRoleId,
-              position: extractedPosition,
-              noOfPositions: positionsCount,
-              criticality: 'Medium',
-              toughness: 'Medium',
-              company: companyName,
-              spoc: employee.name,
-              talentAdvisor: null,
-              talentAdvisorId: null,
-              teamLead: null,
-              status: 'open',
-              isArchived: false,
-              createdAt: new Date().toISOString(),
-              jdFile: jdFile || null,
-              jdText: jdText || null,
-              sourceType: "client_jd",
-              sourceDetails,
-            });
-
+            roleId = await generateNextRequirementRoleId(storage);
+            const requirement = await createWithRoleId(roleId);
             res.json({
               success: true,
-              message: "Job description submitted successfully",
+              message: isMemberUpload
+                ? "Job description submitted and assigned to you"
+                : "Job description submitted successfully",
               requirement: {
                 id: requirement.id,
                 position: requirement.position,
-                company: requirement.company
+                company: requirement.company,
+                assignedClientMemberId: requirement.assignedClientMemberId ?? null,
               }
             });
           } catch (retryError: any) {

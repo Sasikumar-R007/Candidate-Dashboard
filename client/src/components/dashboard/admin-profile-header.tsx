@@ -29,6 +29,7 @@ export default function AdminProfileHeader({ profile, onProfileUpdate }: AdminPr
   const [currentProfile, setCurrentProfile] = useState(profile);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [isRemovingProfile, setIsRemovingProfile] = useState(false);
   
   const { isDarkMode, toggleTheme } = useTheme();
   const { toast } = useToast();
@@ -133,6 +134,39 @@ export default function AdminProfileHeader({ profile, onProfileUpdate }: AdminPr
       });
     } finally {
       setIsUploadingProfile(false);
+    }
+  };
+
+  const handleProfileRemove = async () => {
+    setIsRemovingProfile(true);
+    try {
+      const profileResponse = await fetch("/api/admin/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profilePicture: null }),
+      });
+
+      if (!profileResponse.ok) {
+        throw new Error("Remove failed");
+      }
+
+      const updatedProfile = await profileResponse.json();
+      setCurrentProfile(updatedProfile);
+      onProfileUpdate?.(updatedProfile);
+      setShowProfileModal(false);
+      toast({
+        title: "Success",
+        description: "Profile picture removed. Default avatar is now in use.",
+      });
+    } catch (error) {
+      console.error("Profile remove failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove profile picture",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRemovingProfile(false);
     }
   };
 
@@ -323,9 +357,12 @@ export default function AdminProfileHeader({ profile, onProfileUpdate }: AdminPr
         open={showProfileModal}
         onOpenChange={setShowProfileModal}
         onUpload={handleProfileUpload}
+        onRemove={handleProfileRemove}
+        canRemove={Boolean(currentProfile.profilePicture)}
         title="Change Profile Picture"
         accept="image/*"
         isUploading={isUploadingProfile}
+        isRemoving={isRemovingProfile}
       />
     </div>
   );

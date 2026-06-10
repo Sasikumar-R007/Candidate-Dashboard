@@ -25,6 +25,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import EmployeeDetailsModal from "@/components/dashboard/modals/employee-details-modal";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { format } from "date-fns";
+import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -32,7 +33,9 @@ type ProfileType = 'resume' | 'employee' | 'client';
 function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpenChange: (open: boolean) => void; client: ClientData }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     brandName: client?.brandName || '',
     incorporatedName: client?.incorporatedName || '',
@@ -50,10 +53,13 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
     source: client?.source || '',
     startDate: client?.startDate || '',
     currentStatus: (client as any)?.currentStatus || 'active',
+    logo: client?.logo || '',
   });
 
   useEffect(() => {
     if (client) {
+      setLogoFile(null);
+      setLogoPreview(resolveUploadAssetUrl(client.logo, "uploads") || null);
       setFormData({
         brandName: client.brandName || '',
         incorporatedName: client.incorporatedName || '',
@@ -71,12 +77,13 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
         source: client.source || '',
         startDate: client.startDate || '',
         currentStatus: (client as any).currentStatus || 'active',
+        logo: client.logo || '',
       });
     }
   }, [client]);
 
   const updateClientMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: typeof formData & { logo?: string }) => {
       const response = await apiRequest('PUT', `/api/admin/clients/${client.id}`, {
         brandName: data.brandName,
         incorporatedName: data.incorporatedName,
@@ -94,6 +101,7 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
         source: data.source,
         startDate: data.startDate,
         currentStatus: data.currentStatus,
+        logo: data.logo,
       });
       return response.json();
     },
@@ -114,7 +122,7 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
     },
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.brandName || !formData.email) {
       toast({
         title: "Validation Error",
@@ -123,7 +131,33 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
       });
       return;
     }
-    updateClientMutation.mutate(formData);
+
+    let logoUrl = formData.logo;
+    if (logoFile) {
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("logo", logoFile);
+        const uploadResponse = await fetch(createApiUrl("/api/admin/upload-logo"), {
+          method: "POST",
+          credentials: "include",
+          body: uploadFormData,
+        });
+        if (!uploadResponse.ok) {
+          throw new Error("Logo upload failed");
+        }
+        const uploadData = await uploadResponse.json();
+        logoUrl = uploadData.url;
+      } catch {
+        toast({
+          title: "Logo upload failed",
+          description: "Could not upload the company logo. Other details were not saved.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    updateClientMutation.mutate({ ...formData, logo: logoUrl });
   };
 
   if (!client || !client.id) {
@@ -262,6 +296,51 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
                   <SelectItem value="churned">Churned</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div className="space-y-2 pt-2">
+            <Label>Company Logo</Label>
+            <div className="flex flex-wrap items-center gap-4">
+              {logoPreview ? (
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <img src={logoPreview} alt="Company logo preview" className="h-full w-full object-contain" />
+                </div>
+              ) : (
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400">
+                  No logo
+                </div>
+              )}
+              <div className="min-w-[200px] flex-1 space-y-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  className="bg-gray-50"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setLogoFile(file);
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setLogoPreview(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                {logoPreview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLogoFile(null);
+                      setLogoPreview(null);
+                      setFormData((prev) => ({ ...prev, logo: "" }));
+                    }}
+                  >
+                    Remove logo
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -509,6 +588,7 @@ interface ClientData {
   paymentTerms?: string;
   startDate?: string;
   currentStatus?: string;
+  logo?: string;
 }
 
 export default function MasterDatabase() {
@@ -715,6 +795,7 @@ export default function MasterDatabase() {
         paymentTerms: client.paymentTerms,
         startDate: client.startDate,
         currentStatus: client.currentStatus,
+        logo: client.logo,
       }));
   }, [clientsRaw]);
 

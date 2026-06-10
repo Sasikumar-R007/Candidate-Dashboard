@@ -27,3 +27,6 @@ yarn-error.log*
 # Uploads
 uploads/
 *.pdf
+
+# Local archive of unused docs/assets (move off-machine separately)
+_archive-unused-files/

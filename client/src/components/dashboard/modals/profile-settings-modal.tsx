@@ -51,6 +51,7 @@ export function ProfileSettingsModal({
   );
   const [profileData, setProfileData] = useState<any>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isRemovingProfile, setIsRemovingProfile] = useState(false);
   const [isSavingSystemSettings, setIsSavingSystemSettings] = useState(false);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
@@ -167,8 +168,28 @@ export function ProfileSettingsModal({
     reader.readAsDataURL(file);
   };
 
+  const syncProfileContext = (updatedProfile: any) => {
+    if (user) {
+      setUser({
+        ...user,
+        data: {
+          ...(user as any).data,
+          name: updatedProfile?.name ?? (user as any).data?.name,
+          phone: updatedProfile?.phone ?? (user as any).data?.phone,
+          department: updatedProfile?.department ?? (user as any).data?.department,
+          profilePicture: updatedProfile?.profilePicture ?? null,
+          bannerImage: updatedProfile?.bannerImage ?? (user as any).data?.bannerImage,
+        },
+      });
+    }
+    window.dispatchEvent(new CustomEvent("profile-updated"));
+    if (isClientPortalRole(employee?.role)) {
+      void queryClient.invalidateQueries({ queryKey: ["/api/client/profile"] });
+    }
+  };
+
   const uploadProfileImage = async () => {
-    if (!selectedProfileFile) return profileData?.profilePicture || null;
+    if (!selectedProfileFile) return profileData?.profilePicture ?? null;
     const uploadForm = new FormData();
     uploadForm.append("file", selectedProfileFile);
     const response = await apiFileUpload(uploadEndpoint, uploadForm);
@@ -203,26 +224,10 @@ export function ProfileSettingsModal({
         department: updatedProfile?.department || prev.department,
         joiningDate: updatedProfile?.joiningDate || prev.joiningDate,
       }));
-      setProfilePreview(updatedProfile?.profilePicture || uploadedProfilePicture || null);
+      setProfilePreview(resolveProfilePictureUrl(updatedProfile?.profilePicture) || null);
       setSelectedProfileFile(null);
       setIsEditingProfile(false);
-      if (user) {
-        setUser({
-          ...user,
-          data: {
-            ...(user as any).data,
-            name: updatedProfile?.name ?? (user as any).data?.name,
-            phone: updatedProfile?.phone ?? (user as any).data?.phone,
-            department: updatedProfile?.department ?? (user as any).data?.department,
-            profilePicture: updatedProfile?.profilePicture ?? (user as any).data?.profilePicture,
-            bannerImage: updatedProfile?.bannerImage ?? (user as any).data?.bannerImage,
-          },
-        });
-      }
-      window.dispatchEvent(new CustomEvent("profile-updated"));
-      if (isClientPortalRole(employee?.role)) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/client/profile"] });
-      }
+      syncProfileContext(updatedProfile);
       toast({
         title: "Success",
         description: "Profile updated successfully.",
@@ -236,6 +241,40 @@ export function ProfileSettingsModal({
       });
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleRemoveProfilePicture = async () => {
+    if (!endpoint) return;
+
+    if (selectedProfileFile) {
+      setSelectedProfileFile(null);
+      setProfilePreview(resolveProfilePictureUrl(profileData?.profilePicture) || null);
+      return;
+    }
+
+    if (!resolveProfilePictureUrl(profileData?.profilePicture)) return;
+
+    setIsRemovingProfile(true);
+    try {
+      const response = await apiRequest("PATCH", endpoint, { profilePicture: null });
+      const updatedProfile = await response.json();
+      setProfileData(updatedProfile);
+      setProfilePreview(null);
+      syncProfileContext(updatedProfile);
+      toast({
+        title: "Profile photo removed",
+        description: "Your default profile avatar is now in use.",
+      });
+    } catch (error) {
+      console.error("Remove profile picture error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove profile photo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRemovingProfile(false);
     }
   };
 
@@ -268,10 +307,9 @@ export function ProfileSettingsModal({
     }
   };
 
-  const profileImage =
-    profilePreview ||
-    resolveProfilePictureUrl(profileData?.profilePicture) ||
-    null;
+  const savedProfileImage = resolveProfilePictureUrl(profileData?.profilePicture);
+  const profileImage = profilePreview || savedProfileImage || null;
+  const canRemoveProfilePhoto = Boolean(selectedProfileFile || savedProfileImage);
   const displayRole = formatEmployeeRoleDisplay(formData.role, { employeeRole: employee?.role });
   const showProfileId = shouldShowEmployeeProfileId(employee?.role ?? formData.role, formData.employeeId);
 
@@ -332,6 +370,19 @@ export function ProfileSettingsModal({
                   onChange={(event) => handleProfileFileChange(event.target.files?.[0])}
                 />
               </div>
+
+              {canRemoveProfilePhoto ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveProfilePicture}
+                  disabled={isRemovingProfile || isSavingProfile}
+                  className="mt-3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  {isRemovingProfile ? "Removing..." : "Remove photo"}
+                </Button>
+              ) : null}
 
               <div className="mt-5 space-y-2">
                 <h3 className="text-lg font-semibold text-slate-900">{formData.name || "User"}</h3>
@@ -450,7 +501,7 @@ export function ProfileSettingsModal({
                       onClick={() => {
                         setIsEditingProfile(false);
                         setSelectedProfileFile(null);
-                        setProfilePreview(profileData?.profilePicture || null);
+                        setProfilePreview(resolveProfilePictureUrl(profileData?.profilePicture) || null);
                         setFormData((prev) => ({
                           ...prev,
                           name: profileData?.name || employee?.name || candidate?.fullName || "",

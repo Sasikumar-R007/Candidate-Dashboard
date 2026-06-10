@@ -33,6 +33,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(profile);
+  const [isRemovingProfile, setIsRemovingProfile] = useState(false);
   const employee = useEmployeeAuth();
   
   const { isDarkMode, toggleTheme } = useTheme();
@@ -88,6 +89,23 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
       setShowProfileModal(false);
     } catch (error) {
       console.error('Profile upload failed:', error);
+    }
+  };
+
+  const handleProfileRemove = async () => {
+    setIsRemovingProfile(true);
+    try {
+      const response = await apiRequest("PATCH", "/api/team-leader/profile", { profilePicture: null });
+      if (!response.ok) {
+        throw new Error("Remove failed");
+      }
+      const updatedProfile = await response.json();
+      setCurrentProfile(updatedProfile);
+      setShowProfileModal(false);
+    } catch (error) {
+      console.error("Profile remove failed:", error);
+    } finally {
+      setIsRemovingProfile(false);
     }
   };
 
@@ -251,9 +269,12 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
         open={showProfileModal}
         onOpenChange={setShowProfileModal}
         onUpload={handleProfileUpload}
+        onRemove={handleProfileRemove}
+        canRemove={Boolean(currentProfile?.profilePicture)}
         title="Upload Profile Picture"
         accept="image/*"
         isUploading={false}
+        isRemoving={isRemovingProfile}
       />
 
       <ProfileSettingsModal

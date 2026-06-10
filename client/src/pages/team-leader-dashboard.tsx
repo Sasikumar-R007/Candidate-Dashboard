@@ -11,7 +11,6 @@ import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-descri
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
-import EditActiveJobModal from '@/components/dashboard/modals/edit-active-job-modal';
 import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

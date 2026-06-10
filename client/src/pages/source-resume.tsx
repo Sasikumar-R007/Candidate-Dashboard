@@ -808,11 +808,11 @@ interface FilterState {
   experience: [number, number];
   ctcMin: string;
   ctcMax: string;
-  location: string;
-  role: string;
+  location: string[];
+  role: string[];
   noticePeriod: string;
-  preferredLocation: string;
-  company: string;
+  preferredLocation: string[];
+  company: string[];
   excludedCompanies: string[];
   educationUG: string;
   educationPG: string;
@@ -847,8 +847,8 @@ interface RecentSearch {
   id: string;
   keywords: string[];
   experience: [number, number];
-  location: string;
-  role: string;
+  location: string | string[];
+  role: string | string[];
   noticePeriod: string;
   timestamp: number;
 }
@@ -862,11 +862,11 @@ const initialFilters: FilterState = {
   experience: [0, 15],
   ctcMin: "",
   ctcMax: "",
-  location: "",
-  role: "",
+  location: [],
+  role: [],
   noticePeriod: "",
-  preferredLocation: "",
-  company: "",
+  preferredLocation: [],
+  company: [],
   excludedCompanies: [],
   educationUG: "",
   educationPG: "",
@@ -890,6 +890,29 @@ const SR_DROPDOWN_TRIGGER =
   "w-full justify-between bg-slate-100 border border-slate-300 rounded-[4px] h-10 font-normal text-gray-700 hover:bg-slate-200/70 relative";
 const SR_SELECT_TRIGGER =
   "w-full bg-slate-100 border border-slate-300 rounded-[4px] h-10 focus:ring-1 focus:ring-purple-500 focus:ring-offset-0";
+
+const BOOLEAN_SEARCH_PLACEHOLDER =
+  "e.g. (Java OR Python) AND React NOT manager";
+
+function normalizeFilterValues(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => v.trim()).filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function matchAnyTextFilter(
+  candidateText: string,
+  filterValues: string | string[],
+): boolean {
+  const values = normalizeFilterValues(filterValues);
+  if (values.length === 0) return true;
+  const lowerCandidate = candidateText.toLowerCase();
+  return values.some((value) => lowerCandidate.includes(value.toLowerCase()));
+}
 
 // Filterable Dropdown Component
 interface FilterableDropdownProps {
@@ -1020,6 +1043,172 @@ function FilterableDropdown({ value, onChange, options, placeholder, icon }: Fil
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+interface MultiFilterableDropdownProps {
+  values: string[];
+  onChange: (values: string[]) => void;
+  options: { value: string; label: string }[] | string[];
+  placeholder: string;
+  icon?: React.ReactNode;
+}
+
+function MultiFilterableDropdown({
+  values,
+  onChange,
+  options,
+  placeholder,
+  icon,
+}: MultiFilterableDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+
+  const optionsList = options.map((opt) =>
+    typeof opt === "string" ? { value: opt, label: opt } : opt,
+  );
+
+  const selectedLabel =
+    values.length === 0
+      ? placeholder
+      : values.length === 1
+        ? values[0]
+        : `${values.length} selected`;
+
+  const handleSelect = (selectedValue: string) => {
+    if (values.includes(selectedValue)) {
+      onChange(values.filter((v) => v !== selectedValue));
+    } else {
+      onChange([...values, selectedValue]);
+    }
+    setInputValue("");
+  };
+
+  const filteredOptions = inputValue.trim()
+    ? optionsList.filter(
+        (opt) =>
+          opt.label.toLowerCase().includes(inputValue.toLowerCase()) ||
+          opt.value.toLowerCase().includes(inputValue.toLowerCase()),
+      )
+    : optionsList;
+
+  const hasExactMatch = filteredOptions.some(
+    (opt) =>
+      opt.value.toLowerCase() === inputValue.trim().toLowerCase() ||
+      opt.label.toLowerCase() === inputValue.trim().toLowerCase(),
+  );
+  const showCustomOption = inputValue.trim() && !hasExactMatch;
+
+  return (
+    <div className="space-y-2">
+      <Popover
+        open={open}
+        onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) setInputValue("");
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={`${SR_DROPDOWN_TRIGGER} font-normal`}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest(".clear-filter-button")) {
+                return;
+              }
+              e.preventDefault();
+              setOpen(true);
+              setInputValue("");
+            }}
+          >
+            <span className="flex items-center gap-2 flex-1 min-w-0">
+              {icon && <span className="text-purple-600 flex-shrink-0">{icon}</span>}
+              <span className="truncate">{selectedLabel}</span>
+            </span>
+            {values.length > 0 && (
+              <X
+                className="clear-filter-button ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer z-10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange([]);
+                  setOpen(false);
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder={`Search or type ${placeholder.toLowerCase()}...`}
+              value={inputValue}
+              onValueChange={setInputValue}
+            />
+            <CommandList>
+              {showCustomOption && (
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={() => handleSelect(inputValue.trim())}
+                    className="text-blue-600 font-medium"
+                  >
+                    <Check className="mr-2 h-4 w-4 opacity-0" />
+                    Use "{inputValue.trim()}"
+                  </CommandItem>
+                </CommandGroup>
+              )}
+              {filteredOptions.length > 0 ? (
+                <CommandGroup>
+                  {filteredOptions.map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      value={option.value}
+                      onSelect={() => handleSelect(option.value)}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          values.includes(option.value) ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      {option.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : (
+                !showCustomOption && (
+                  <CommandEmpty>
+                    No results found. Type to add a custom value.
+                  </CommandEmpty>
+                )
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {values.length > 1 && (
+        <div className="flex flex-wrap gap-1">
+          {values.map((value) => (
+            <span
+              key={value}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-800"
+            >
+              {value}
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-purple-600"
+                onClick={() => onChange(values.filter((v) => v !== value))}
+              />
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1671,8 +1860,8 @@ const SourceResume = () => {
       ...filters,
       keywords: search.keywords,
       experience: search.experience,
-      location: search.location,
-      role: search.role,
+      location: normalizeFilterValues(search.location),
+      role: normalizeFilterValues(search.role),
       noticePeriod: search.noticePeriod,
     });
     toast({
@@ -1915,32 +2104,24 @@ const SourceResume = () => {
         return false;
       }
 
-      // Location filter - with fuzzy matching for better accuracy
-      if (filters.location && filters.location.trim() !== "") {
-        const locationMatch = fuzzyMatch(candidate.location.toLowerCase(), filters.location.toLowerCase(), 0.8) ||
-                             candidate.location.toLowerCase().includes(filters.location.toLowerCase());
-        if (!locationMatch) return false;
+      // Location filter — match any selected location
+      if (normalizeFilterValues(filters.location).length > 0) {
+        if (!matchAnyTextFilter(candidate.location, filters.location)) return false;
       }
 
-      // Preferred Location filter - with fuzzy matching
-      if (filters.preferredLocation && filters.preferredLocation.trim() !== "") {
-        const prefLocationMatch = fuzzyMatch(candidate.preferredLocation.toLowerCase(), filters.preferredLocation.toLowerCase(), 0.8) ||
-                                 candidate.preferredLocation.toLowerCase().includes(filters.preferredLocation.toLowerCase());
-        if (!prefLocationMatch) return false;
+      // Preferred Location filter — match any selected location
+      if (normalizeFilterValues(filters.preferredLocation).length > 0) {
+        if (!matchAnyTextFilter(candidate.preferredLocation, filters.preferredLocation)) return false;
       }
 
-      // Role filter - with fuzzy matching for partial matches
-      if (filters.role && filters.role.trim() !== "") {
-        const roleMatch = fuzzyMatch(candidate.title.toLowerCase(), filters.role.toLowerCase(), 0.75) ||
-                         candidate.title.toLowerCase().includes(filters.role.toLowerCase());
-        if (!roleMatch) return false;
+      // Role filter — match any selected role
+      if (normalizeFilterValues(filters.role).length > 0) {
+        if (!matchAnyTextFilter(candidate.title, filters.role)) return false;
       }
 
-      // Company filter - with fuzzy matching
-      if (filters.company && filters.company.trim() !== "") {
-        const companyMatch = fuzzyMatch(candidate.currentCompany.toLowerCase(), filters.company.toLowerCase(), 0.8) ||
-                            candidate.currentCompany.toLowerCase().includes(filters.company.toLowerCase());
-        if (!companyMatch) return false;
+      // Company filter — match any selected company
+      if (normalizeFilterValues(filters.company).length > 0) {
+        if (!matchAnyTextFilter(candidate.currentCompany, filters.company)) return false;
       }
 
       // Notice period filter - exact/partial matching
@@ -2072,8 +2253,13 @@ const SourceResume = () => {
     }
     
     // Title similarity (if role filter is set)
-    if (filters.role && filters.role.trim() !== "") {
-      const titleSimilarity = calculateSimilarity(candidate.title.toLowerCase(), filters.role.toLowerCase());
+    const roleFilters = normalizeFilterValues(filters.role);
+    if (roleFilters.length > 0) {
+      const titleSimilarity = Math.max(
+        ...roleFilters.map((role) =>
+          calculateSimilarity(candidate.title.toLowerCase(), role.toLowerCase()),
+        ),
+      );
       score += titleSimilarity * 100 * 0.1; // 10% weight
     }
     
@@ -2419,17 +2605,24 @@ const SourceResume = () => {
           score += (skMatches / filters.specificSkills.length) * 25;
         }
 
-        if (filters.role?.trim()) {
+        const roleFilters = normalizeFilterValues(filters.role);
+        if (roleFilters.length > 0) {
           score +=
-            calculateSimilarity(candidate.title.toLowerCase(), filters.role.toLowerCase()) * 15;
+            Math.max(
+              ...roleFilters.map((role) =>
+                calculateSimilarity(candidate.title.toLowerCase(), role.toLowerCase()),
+              ),
+            ) * 15;
         }
 
-        if (filters.location?.trim()) {
-          const loc = filters.location.toLowerCase();
-          if (
-            candidate.location.toLowerCase().includes(loc) ||
-            candidate.preferredLocation.toLowerCase().includes(loc)
-          ) {
+        const locationFilters = normalizeFilterValues(filters.location);
+        if (locationFilters.length > 0) {
+          const matchesLocation = locationFilters.some(
+            (loc) =>
+              candidate.location.toLowerCase().includes(loc.toLowerCase()) ||
+              candidate.preferredLocation.toLowerCase().includes(loc.toLowerCase()),
+          );
+          if (matchesLocation) {
             score += 10;
           }
         }
@@ -2469,10 +2662,11 @@ const SourceResume = () => {
       Boolean(
         debouncedSearchQuery.trim() ||
           resultsSearchQuery.trim() ||
+          (filters.booleanMode && filters.searchQuery.trim()) ||
           filters.keywords.length > 0 ||
           filters.specificSkills.length > 0,
       ),
-    [debouncedSearchQuery, resultsSearchQuery, filters.keywords, filters.specificSkills],
+    [debouncedSearchQuery, resultsSearchQuery, filters.booleanMode, filters.searchQuery, filters.keywords, filters.specificSkills],
   );
 
   const candidatesToRender = useMemo(() => {
@@ -2512,7 +2706,12 @@ const SourceResume = () => {
     try {
       const currentFilters = filtersRef.current;
       const currentSortOption = sortOptionRef.current;
-      const currentSearchQuery = debouncedSearchQueryRef.current || resultsSearchQueryRef.current;
+      const currentSearchQuery =
+        debouncedSearchQueryRef.current ||
+        resultsSearchQueryRef.current ||
+        (currentFilters.booleanMode && currentFilters.searchQuery.trim()
+          ? currentFilters.searchQuery.trim()
+          : "");
       
       const searchParams = {
         searchQuery: currentSearchQuery,
@@ -2648,9 +2847,13 @@ const SourceResume = () => {
       showWith: filters.showWith,
       selectedRequirementId: filters.selectedRequirementId,
       booleanMode: filters.booleanMode,
+      searchQuery: filters.searchQuery,
     });
 
-    const currentSearchQuery = debouncedSearchQuery || resultsSearchQuery;
+    const currentSearchQuery =
+      debouncedSearchQuery ||
+      resultsSearchQuery ||
+      (filters.booleanMode && filters.searchQuery.trim() ? filters.searchQuery.trim() : "");
     const currentSortOption = sortOption;
 
     // Only trigger if something actually changed
@@ -2932,26 +3135,47 @@ const SourceResume = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Type skill and press Enter (e.g., Python, Java)"
-                  value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
+                  placeholder={
+                    filters.booleanMode
+                      ? BOOLEAN_SEARCH_PLACEHOLDER
+                      : "Type skill and press Enter (e.g., Python, Java)"
+                  }
+                  value={filters.booleanMode ? filters.searchQuery : keywordInput}
+                  onChange={(e) => {
+                    if (filters.booleanMode) {
+                      setFilters({ ...filters, searchQuery: e.target.value });
+                    } else {
+                      setKeywordInput(e.target.value);
+                    }
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && keywordInput.trim()) {
+                    if (e.key === "Enter") {
                       e.preventDefault();
-                      handleKeywordAdd(keywordInput.trim());
+                      if (filters.booleanMode) {
+                        return;
+                      }
+                      if (keywordInput.trim()) {
+                        handleKeywordAdd(keywordInput.trim());
+                      }
                     }
                   }}
                   className={`w-full ${SR_INPUT_STANDARD} pr-8`}
                 />
-                {keywordInput && (
+                {(filters.booleanMode ? filters.searchQuery : keywordInput) && (
                   <X
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                    onClick={() => setKeywordInput("")}
+                    onClick={() => {
+                      if (filters.booleanMode) {
+                        setFilters({ ...filters, searchQuery: "" });
+                      } else {
+                        setKeywordInput("");
+                      }
+                    }}
                   />
                 )}
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
-                {filters.keywords.map((keyword) => (
+                {!filters.booleanMode && filters.keywords.map((keyword) => (
                   <span
                     key={keyword}
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -2975,11 +3199,25 @@ const SourceResume = () => {
                 <input
                   type="checkbox"
                   checked={filters.booleanMode}
-                  onChange={(e) => setFilters({ ...filters, booleanMode: e.target.checked })}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setFilters({
+                      ...filters,
+                      booleanMode: enabled,
+                      searchQuery: enabled ? filters.searchQuery : "",
+                      keywords: enabled ? [] : filters.keywords,
+                    });
+                    if (!enabled) setKeywordInput("");
+                  }}
                   className="rounded"
                 />
                 <span className="text-sm text-gray-600">Boolean search</span>
               </div>
+              {filters.booleanMode && (
+                <p className="text-xs text-gray-500">
+                  Use AND, OR, NOT and parentheses — e.g. (Java OR Python) AND React NOT manager
+                </p>
+              )}
             </div>
 
             {/* Experience */}
@@ -3079,9 +3317,9 @@ const SourceResume = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Designation
               </label>
-              <FilterableDropdown
-                value={filters.role}
-                onChange={(value) => setFilters({ ...filters, role: value })}
+              <MultiFilterableDropdown
+                values={filters.role}
+                onChange={(values) => setFilters({ ...filters, role: values })}
                 options={allRoles}
                 placeholder="All roles"
               />
@@ -3105,11 +3343,11 @@ const SourceResume = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Company
               </label>
-              <FilterableDropdown
-                value={filters.company}
-                onChange={(value) => setFilters({ ...filters, company: value })}
+              <MultiFilterableDropdown
+                values={filters.company}
+                onChange={(values) => setFilters({ ...filters, company: values })}
                 options={allCompanies}
-                placeholder="All Location"
+                placeholder="All companies"
               />
             </div>
 
@@ -3118,11 +3356,11 @@ const SourceResume = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Location
               </label>
-              <FilterableDropdown
-                value={filters.location}
-                onChange={(value) => setFilters({ ...filters, location: value })}
+              <MultiFilterableDropdown
+                values={filters.location}
+                onChange={(values) => setFilters({ ...filters, location: values })}
                 options={locations.map(l => l.label)}
-                placeholder="All Location"
+                placeholder="All locations"
               />
             </div>
 
@@ -3131,9 +3369,9 @@ const SourceResume = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Preferred Location
               </label>
-              <FilterableDropdown
-                value={filters.preferredLocation}
-                onChange={(value) => setFilters({ ...filters, preferredLocation: value })}
+              <MultiFilterableDropdown
+                values={filters.preferredLocation}
+                onChange={(values) => setFilters({ ...filters, preferredLocation: values })}
                 options={locations.map(l => l.label)}
                 placeholder="Any location"
               />
@@ -3338,7 +3576,11 @@ const SourceResume = () => {
                   onFocus={() => setShowSearchSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
                   className={`w-full pl-9 pr-3 py-1.5 text-sm ${SR_INPUT_STANDARD}`}
-                  placeholder="Enter the skills, company, designation..."
+                  placeholder={
+                    filters.booleanMode
+                      ? BOOLEAN_SEARCH_PLACEHOLDER
+                      : "Enter the skills, company, designation..."
+                  }
                 />
                 {/* AI Suggestions Dropdown */}
                 {showSearchSuggestions && searchSuggestions.length > 0 && (
@@ -3399,7 +3641,7 @@ const SourceResume = () => {
                   {searchResults?.pagination?.totalCount || displayCandidates.length} {(searchResults?.pagination?.totalCount || displayCandidates.length) === 1 ? 'Candidate' : 'Candidates'} Found
                 </span>
                 {/* Active Filter Chips */}
-                {(filters.keywords.length > 0 || filters.location || filters.role || filters.experience[0] > 0 || filters.experience[1] < 15) && (
+                {(filters.keywords.length > 0 || filters.location.length > 0 || filters.role.length > 0 || filters.searchQuery.trim() || filters.experience[0] > 0 || filters.experience[1] < 15) && (
                   <div className="flex items-center gap-1 flex-wrap">
                     {filters.keywords.slice(0, 3).map((keyword) => (
                       <span
@@ -4153,7 +4395,16 @@ const SourceResume = () => {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Boolean search</span>
                 <button
-                  onClick={() => setFilters({ ...filters, booleanMode: !filters.booleanMode })}
+                  onClick={() => {
+                    const enabled = !filters.booleanMode;
+                    setFilters({
+                      ...filters,
+                      booleanMode: enabled,
+                      searchQuery: enabled ? filters.searchQuery : "",
+                      keywords: enabled ? [] : filters.keywords,
+                    });
+                    if (!enabled) setKeywordInput("");
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     filters.booleanMode ? "bg-purple-600" : "bg-gray-300"
                   }`}
@@ -4168,14 +4419,13 @@ const SourceResume = () => {
             </div>
 
             {/* Selected Keywords */}
-            {filters.keywords.length > 0 && (
+            {!filters.booleanMode && filters.keywords.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {filters.keywords.map((keyword) => (
                   <span
                     key={keyword}
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
                   >
-                    <Star className="w-3 h-3" />
                     {keyword}
                     <button
                       onClick={() => handleKeywordRemove(keyword)}
@@ -4189,42 +4439,53 @@ const SourceResume = () => {
             )}
 
             {/* Suggested Keywords */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {suggestedKeywords.slice(0, 6).map((skill) => (
-                <button
-                  key={skill}
-                  onClick={() => handleSkillAdd(skill)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
-                >
-                  <Star className="w-3 h-3" />
-                  {skill}
-                </button>
-              ))}
-            </div>
+            {!filters.booleanMode && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {suggestedKeywords.slice(0, 6).map((skill) => (
+                  <button
+                    key={skill}
+                    onClick={() => handleSkillAdd(skill)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    {skill}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Search Input */}
             <div className="relative mb-2">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
+                value={filters.booleanMode ? filters.searchQuery : keywordInput}
+                onChange={(e) => {
+                  if (filters.booleanMode) {
+                    setFilters({ ...filters, searchQuery: e.target.value });
+                  } else {
+                    setKeywordInput(e.target.value);
+                  }
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && keywordInput.trim()) {
+                  if (e.key === "Enter" && !filters.booleanMode && keywordInput.trim()) {
                     handleKeywordAdd(keywordInput.trim());
                   }
                 }}
-                className={`w-full max-w-md ${SR_INPUT_STANDARD} pr-10 border`}
-                placeholder="Enter the skills,company,designation...."
+                className={`w-full max-w-md ${SR_INPUT_STANDARD} border`}
+                placeholder={
+                  filters.booleanMode
+                    ? BOOLEAN_SEARCH_PLACEHOLDER
+                    : "Enter skills, company, designation..."
+                }
               />
             </div>
 
-            {/* AI Suggestions Link */}
+            {filters.booleanMode && (
+              <p className="text-xs text-gray-500 mb-2">
+                Use AND, OR, NOT and parentheses — e.g. (Java OR Python) AND React NOT manager
+              </p>
+            )}
+
             <div className="flex items-center gap-4 mt-3">
-              <button className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
-                <Lightbulb className="w-4 h-4" />
-                AI Suggestions
-              </button>
               <button 
                 onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
                 className="text-sm text-blue-600 hover:text-blue-700"
@@ -4426,11 +4687,11 @@ const SourceResume = () => {
                 <MapPin className="w-4 h-4 text-purple-600" />
                 Location
               </label>
-              <FilterableDropdown
-                value={filters.location}
-                onChange={(value) => setFilters({ ...filters, location: value })}
+              <MultiFilterableDropdown
+                values={filters.location}
+                onChange={(values) => setFilters({ ...filters, location: values })}
                 options={locations.map(l => l.label)}
-                placeholder="All Location"
+                placeholder="All locations"
                 icon={<MapPin className="w-4 h-4" />}
               />
             </div>
@@ -4447,9 +4708,9 @@ const SourceResume = () => {
                   <User className="w-4 h-4 text-purple-600" />
                   Role
                 </label>
-                <FilterableDropdown
-                  value={filters.role}
-                  onChange={(value) => setFilters({ ...filters, role: value })}
+                <MultiFilterableDropdown
+                  values={filters.role}
+                  onChange={(values) => setFilters({ ...filters, role: values })}
                   options={allRoles}
                   placeholder="All roles"
                   icon={<Briefcase className="w-4 h-4" />}
@@ -4462,9 +4723,9 @@ const SourceResume = () => {
                   <MapPin className="w-4 h-4 text-purple-600" />
                   Preferred Location
                 </label>
-                <FilterableDropdown
-                  value={filters.preferredLocation}
-                  onChange={(value) => setFilters({ ...filters, preferredLocation: value })}
+                <MultiFilterableDropdown
+                  values={filters.preferredLocation}
+                  onChange={(values) => setFilters({ ...filters, preferredLocation: values })}
                   options={locations.map(l => l.label)}
                   placeholder="Any location"
                   icon={<MapPin className="w-4 h-4" />}
@@ -4477,11 +4738,11 @@ const SourceResume = () => {
                   <Building className="w-4 h-4 text-purple-600" />
                   Company
                 </label>
-                <FilterableDropdown
-                  value={filters.company}
-                  onChange={(value) => setFilters({ ...filters, company: value })}
+                <MultiFilterableDropdown
+                  values={filters.company}
+                  onChange={(values) => setFilters({ ...filters, company: values })}
                   options={allCompanies}
-                  placeholder="XYZ company"
+                  placeholder="All companies"
                   icon={<Building className="w-4 h-4" />}
                 />
               </div>
@@ -4772,7 +5033,6 @@ const SourceResume = () => {
                             key={keyword}
                             className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
                           >
-                            <Star className="w-2 h-2" />
                             {keyword}
                           </span>
                         ))}
@@ -4793,24 +5053,28 @@ const SourceResume = () => {
                   </div>
 
                   {/* Location */}
-                  {search.location && (
+                  {normalizeFilterValues(search.location).length > 0 && (
                     <div>
                       <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-1">
                         <MapPin className="w-3 h-3 text-purple-600" />
                         Location
                       </label>
-                      <p className="text-xs text-gray-600">{search.location}</p>
+                      <p className="text-xs text-gray-600">
+                        {normalizeFilterValues(search.location).join(", ")}
+                      </p>
                     </div>
                   )}
 
                   {/* Role */}
-                  {search.role && (
+                  {normalizeFilterValues(search.role).length > 0 && (
                     <div>
                       <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-1">
                         <User className="w-3 h-3 text-purple-600" />
                         Role
                       </label>
-                      <p className="text-xs text-gray-600">{search.role}</p>
+                      <p className="text-xs text-gray-600">
+                        {normalizeFilterValues(search.role).join(", ")}
+                      </p>
                     </div>
                   )}
 

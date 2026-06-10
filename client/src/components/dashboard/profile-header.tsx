@@ -46,6 +46,15 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
     }
   };
 
+  const handleProfileRemove = async () => {
+    try {
+      await updateProfile.mutateAsync({ profilePicture: null });
+      setShowProfileModal(false);
+    } catch (error) {
+      console.error("Profile removal failed:", error);
+    }
+  };
+
   const handleDeleteBanner = async () => {
     try {
       await updateProfile.mutateAsync({ bannerImage: null });
@@ -213,9 +222,12 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
         open={showProfileModal}
         onOpenChange={setShowProfileModal}
         onUpload={handleProfileUpload}
+        onRemove={handleProfileRemove}
+        canRemove={Boolean(profile.profilePicture)}
         title="Upload Profile Picture"
         accept="image/*"
         isUploading={uploadProfilePic.isPending}
+        isRemoving={updateProfile.isPending}
       />
 
       <EditProfileModal

@@ -11,9 +11,13 @@ interface FileUploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpload: (file: File) => void;
+  onRemove?: () => void;
   title: string;
   accept?: string;
   isUploading?: boolean;
+  isRemoving?: boolean;
+  canRemove?: boolean;
+  removeLabel?: string;
 }
 
 export default function FileUploadModal({
@@ -106,21 +110,35 @@ export default function FileUploadModal({
           )}
         </div>
         
-        <div className="flex gap-3 justify-end mt-6">
-          <Button 
-            variant="outline" 
-            onClick={handleClose}
-            disabled={isUploading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUpload}
-            disabled={!selectedFile || isUploading}
-            className="bg-secondary-blue hover:bg-blue-600"
-          >
-            {isUploading ? 'Uploading...' : 'Upload'}
-          </Button>
+        <div className="flex flex-col gap-3 mt-6">
+          {canRemove && onRemove ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onRemove}
+              disabled={isUploading || isRemoving}
+              className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              {isRemoving ? "Removing..." : removeLabel}
+            </Button>
+          ) : null}
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isUploading || isRemoving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpload}
+              disabled={!selectedFile || isUploading || isRemoving}
+              className="bg-secondary-blue hover:bg-blue-600"
+            >
+              {isUploading ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
