@@ -63,6 +63,7 @@ import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 import ClientAgreementFirstLoginModal from '@/components/client-dashboard/client-agreement-first-login-modal';
 import { ClientSharedProfilesModal } from '@/components/dashboard/modals/client-shared-profiles-modal';
 import { logConsent } from '@/lib/consent-log';
+import { resolveJdFileUrl } from '@/lib/resolve-upload-url';
 import {
   CandidateCommentsSession,
   type CandidateCommentsSessionApplicant,
@@ -2990,14 +2991,16 @@ export default function ClientDashboard() {
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">Job Description</h4>
 
                     {/* JD File Preview */}
-                    {selectedRoleForView.jdFile && (
+                    {selectedRoleForView.jdFile && (() => {
+                      const storedJdUrl = resolveJdFileUrl(selectedRoleForView.jdFile);
+                      return (
                       <div className="mb-4">
                         <label className="text-xs font-medium text-gray-600 mb-2 block">JD Document</label>
                         <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                          {selectedRoleForView.jdFile.toLowerCase().endsWith('.pdf') ? (
+                          {selectedRoleForView.jdFile.toLowerCase().endsWith('.pdf') && storedJdUrl ? (
                             <div className="border border-gray-300 rounded-lg overflow-hidden">
                               <iframe
-                                src={selectedRoleForView.jdFile}
+                                src={storedJdUrl}
                                 className="w-full h-[500px]"
                                 title="JD PDF Preview"
                               />
@@ -3008,8 +3011,9 @@ export default function ClientDashboard() {
                                 <p className="text-sm font-medium text-gray-900 mb-1">Document File</p>
                                 <p className="text-sm text-gray-600">{selectedRoleForView.jdFile.split('/').pop()}</p>
                               </div>
+                              {storedJdUrl && (
                               <a
-                                href={selectedRoleForView.jdFile}
+                                href={storedJdUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
@@ -3017,11 +3021,13 @@ export default function ClientDashboard() {
                                 <ExternalLink className="h-4 w-4" />
                                 Open Document
                               </a>
+                              )}
                             </div>
                           )}
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {/* JD Text Content */}
                     {selectedRoleForView.jdText && (

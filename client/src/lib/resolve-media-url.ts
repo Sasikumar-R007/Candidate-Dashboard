@@ -1,8 +1,13 @@
-import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
+import {
+  resolveChatFileUrl,
+  resolveJdFileUrl,
+  resolveLogoFileUrl,
+  resolveUploadAssetUrl,
+} from "@/lib/resolve-upload-url";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
-export { resolveUploadAssetUrl };
+export { resolveUploadAssetUrl, resolveJdFileUrl, resolveLogoFileUrl, resolveChatFileUrl };
 
 /** Resolve profile picture / avatar URLs from API (including DB-backed /api/profile-media). */
 export function resolveProfilePictureUrl(url?: string | null): string | null {

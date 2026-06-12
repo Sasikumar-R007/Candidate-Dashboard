@@ -1,22 +1,11 @@
 import { cn } from "@/lib/utils";
+import { resolveLogoFileUrl } from "@/lib/resolve-upload-url";
 
 const STR_ROLE_ID_PATTERN = /^STR\d{5}$/;
 
 export function resolveAssetUrl(url?: string | null): string | null {
   if (!url?.trim()) return null;
-  const trimmed = url.trim();
-  if (
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("blob:") ||
-    trimmed.startsWith("data:")
-  ) {
-    return trimmed;
-  }
-  if (trimmed.startsWith("/")) {
-    return `${window.location.origin}${trimmed}`;
-  }
-  return `${window.location.origin}/${trimmed.replace(/^\//, "")}`;
+  return resolveLogoFileUrl(url.trim());
 }
 
 type CompanyBrandAvatarProps = {

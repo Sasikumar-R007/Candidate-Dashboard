@@ -19,6 +19,7 @@ import {
   CANDIDATE_MOBILE_DIALOG_CLASSES,
 } from "@/lib/candidate-ui-preferences";
 import { cn } from "@/lib/utils";
+import { resolveJdFileUrl as resolveStoredJdFileUrl } from "@/lib/resolve-upload-url";
 
 export type JobDescriptionDetailsData = {
   id?: string;
@@ -55,18 +56,8 @@ type JobDescriptionDetailsModalProps = {
 
 function resolveJdFileUrl(jdFile?: string | null): string | null {
   if (!jdFile?.trim()) return null;
-  const trimmed = jdFile.trim();
-  if (
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("blob:")
-  ) {
-    return trimmed;
-  }
-  if (trimmed.startsWith("/")) {
-    return `${window.location.origin}${trimmed}`;
-  }
-  return `${window.location.origin}/${trimmed.replace(/^\//, "")}`;
+  if (jdFile.trim().startsWith("blob:")) return jdFile.trim();
+  return resolveStoredJdFileUrl(jdFile);
 }
 
 function splitSkillTokens(value?: string | null): string[] {

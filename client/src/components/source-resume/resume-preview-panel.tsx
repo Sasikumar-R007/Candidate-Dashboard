@@ -70,8 +70,11 @@ export function ResumePreviewPanel({ resumeFile, candidateName }: ResumePreviewP
         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Resume not available</p>
         <p className="mt-2 max-w-sm text-sm text-gray-500 dark:text-gray-400">
           {candidateName
-            ? `We could not load the resume for ${candidateName}. It may be missing on the server or still processing.`
-            : "The resume file could not be loaded from the server."}
+            ? `We could not open the resume for ${candidateName}. If this profile was added before our latest update, the file may need to be uploaded again.`
+            : "We could not open this resume. If it was uploaded before our latest update, please upload the file again."}
+        </p>
+        <p className="mt-2 max-w-sm text-xs text-gray-400 dark:text-gray-500">
+          New uploads are stored securely and should preview without issues.
         </p>
         <Button
           type="button"

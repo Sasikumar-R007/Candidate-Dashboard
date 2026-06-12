@@ -9,7 +9,7 @@ const s3 = new S3Client({
   },
 });
 
-function sanitizeResumeFileName(fileName: string): string {
+export function sanitizeFileName(fileName: string): string {
   return fileName.replace(/[[\]#?%\\]/g, "_");
 }
 
@@ -22,12 +22,13 @@ function buildR2PublicUrl(key: string): string {
   return `${base}/${encodedKey}`;
 }
 
-export async function uploadToR2(
+export async function uploadToR2Folder(
   fileBuffer: Buffer,
   fileName: string,
   fileType: string,
+  folder: string,
 ): Promise<string> {
-  const key = `resumes/${Date.now()}-${sanitizeResumeFileName(fileName)}`;
+  const key = `${folder}/${Date.now()}-${sanitizeFileName(fileName)}`;
 
   await s3.send(
     new PutObjectCommand({
@@ -42,12 +43,21 @@ export async function uploadToR2(
   return buildR2PublicUrl(key);
 }
 
-export async function getR2ResumeByFileName(
+export async function uploadToR2(
+  fileBuffer: Buffer,
+  fileName: string,
+  fileType: string,
+): Promise<string> {
+  return uploadToR2Folder(fileBuffer, fileName, fileType, "resumes");
+}
+
+export async function getR2FileByFolderAndName(
+  folder: string,
   fileName: string,
 ): Promise<{ body: Buffer; contentType: string } | null> {
   const keyCandidates = [
-    `resumes/${fileName}`,
-    `resumes/${encodeURIComponent(fileName)}`,
+    `${folder}/${fileName}`,
+    `${folder}/${encodeURIComponent(fileName)}`,
   ];
   const seen = new Set<string>();
   for (const key of keyCandidates) {
@@ -57,6 +67,12 @@ export async function getR2ResumeByFileName(
     if (object) return object;
   }
   return null;
+}
+
+export async function getR2ResumeByFileName(
+  fileName: string,
+): Promise<{ body: Buffer; contentType: string } | null> {
+  return getR2FileByFolderAndName("resumes", fileName);
 }
 
 export async function getR2Object(

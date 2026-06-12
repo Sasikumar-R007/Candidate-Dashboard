@@ -8,40 +8,148 @@ function getApiBaseUrl(): string {
   return API_BASE_URL.replace(/\/+$/, "");
 }
 
-function extractResumeFileName(url: string): string | null {
-  const match = url.match(/\/resumes\/([^/?#]+)$/i);
-  if (!match?.[1]) return null;
+function decodeFileNameSegment(segment: string): string {
   try {
-    return decodeURIComponent(match[1]);
+    return decodeURIComponent(segment);
   } catch {
-    return match[1];
+    return segment;
   }
 }
 
-function isExternalResumeStorageUrl(url: string): boolean {
-  if (url.includes("/api/files/resumes/")) return false;
-  if (!/\/resumes\/[^/?#]+$/i.test(url)) return false;
-  if (/\.r2\.dev\b/i.test(url) || /r2\.cloudflarestorage\.com/i.test(url)) return true;
-  const apiBase = getApiBaseUrl();
-  if (apiBase && url.startsWith(`${apiBase}/uploads/resumes/`)) return true;
-  if (url.includes("/uploads/resumes/")) return true;
-  return false;
-}
-
-/** R2 blocks cross-origin iframe embedding — always serve previews via the API. */
-function toResumeApiPreviewUrl(storedUrl: string): string | null {
-  const apiBase = getApiBaseUrl();
-  if (!apiBase) {
-    if (import.meta.env.PROD && /\.r2\.dev\b/i.test(storedUrl)) {
-      console.error(
-        "[resume] VITE_API_URL is not set. Resume iframe preview will fail. Add VITE_API_URL to Vercel env.",
-      );
+function extractFileNameFromPatterns(url: string, patterns: RegExp[]): string | null {
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match?.[1]) {
+      return decodeFileNameSegment(match[1]);
     }
-    return null;
   }
-  const fileName = extractResumeFileName(storedUrl);
+  return null;
+}
+
+function toStoredFileApiUrl(
+  storedUrl: string,
+  apiFolder: "resumes" | "jds" | "logos" | "chat",
+  legacyPatterns: RegExp[],
+): string | null {
+  const apiBase = getApiBaseUrl();
+  if (!apiBase) return null;
+  if (storedUrl.includes(`/api/files/${apiFolder}/`)) {
+    return storedUrl;
+  }
+
+  const r2Patterns = [new RegExp(`/${apiFolder}/([^/?#]+)$`, "i")];
+  const fileName =
+    extractFileNameFromPatterns(storedUrl, [...r2Patterns, ...legacyPatterns]) ??
+    null;
   if (!fileName) return null;
-  return `${apiBase}/api/files/resumes/${encodeURIComponent(fileName)}`;
+  return `${apiBase}/api/files/${apiFolder}/${encodeURIComponent(fileName)}`;
+}
+
+function shouldProxyStoredUrl(url: string, apiFolder: string, legacyPatterns: RegExp[]): boolean {
+  if (url.includes(`/api/files/${apiFolder}/`)) return false;
+  if (/\.r2\.dev\b/i.test(url) || /r2\.cloudflarestorage\.com/i.test(url)) {
+    return new RegExp(`/${apiFolder}/[^/?#]+`, "i").test(url);
+  }
+  return legacyPatterns.some((pattern) => pattern.test(url));
+}
+
+/** R2 blocks cross-origin iframe embedding — serve via the API in production. */
+export function resolveJdFileUrl(filePath?: string | null): string | null {
+  if (!filePath?.trim()) return null;
+  const url = filePath.trim();
+  const legacyPatterns = [
+    /\/uploads\/chat\/([^/?#]+)$/i,
+    /\/uploads\/([^/?#]+)$/i,
+  ];
+
+  if (url.startsWith("blob:")) return url;
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (shouldProxyStoredUrl(url, "jds", legacyPatterns)) {
+      return toStoredFileApiUrl(url, "jds", legacyPatterns) ?? url;
+    }
+    return url;
+  }
+
+  if (url.startsWith("/api/files/jds/")) {
+    return `${getApiBaseUrl()}${url}`;
+  }
+
+  let normalized = url;
+  if (!normalized.startsWith("/")) {
+    normalized = normalized.startsWith("uploads/") ? `/${normalized}` : `/uploads/${normalized}`;
+  }
+
+  const fileName = extractFileNameFromPatterns(normalized, [
+    /\/uploads\/chat\/([^/?#]+)$/i,
+    /\/uploads\/([^/?#]+)$/i,
+  ]);
+  const apiBase = getApiBaseUrl();
+  if (fileName && apiBase) {
+    return `${apiBase}/api/files/jds/${encodeURIComponent(fileName)}`;
+  }
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
+export function resolveLogoFileUrl(filePath?: string | null): string | null {
+  if (!filePath?.trim()) return null;
+  const url = filePath.trim();
+  if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+  const legacyPatterns = [/\/uploads\/([^/?#]+)$/i];
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (shouldProxyStoredUrl(url, "logos", legacyPatterns)) {
+      return toStoredFileApiUrl(url, "logos", legacyPatterns) ?? url;
+    }
+    return url;
+  }
+
+  if (url.startsWith("/api/files/logos/")) {
+    return `${getApiBaseUrl()}${url}`;
+  }
+
+  let normalized = url;
+  if (!normalized.startsWith("/")) {
+    normalized = normalized.startsWith("uploads/") ? `/${normalized}` : `/uploads/${normalized}`;
+  }
+
+  const fileName = extractFileNameFromPatterns(normalized, [/\/uploads\/([^/?#]+)$/i]);
+  const apiBase = getApiBaseUrl();
+  if (fileName && apiBase) {
+    return `${apiBase}/api/files/logos/${encodeURIComponent(fileName)}`;
+  }
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
+export function resolveChatFileUrl(filePath?: string | null): string | null {
+  if (!filePath?.trim()) return null;
+  const url = filePath.trim();
+  const legacyPatterns = [/\/uploads\/chat\/([^/?#]+)$/i];
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (shouldProxyStoredUrl(url, "chat", legacyPatterns)) {
+      return toStoredFileApiUrl(url, "chat", legacyPatterns) ?? url;
+    }
+    return url;
+  }
+
+  if (url.startsWith("/api/files/chat/")) {
+    return `${getApiBaseUrl()}${url}`;
+  }
+
+  let normalized = url;
+  if (!normalized.startsWith("/")) {
+    normalized = normalized.startsWith("uploads/")
+      ? `/${normalized}`
+      : `/uploads/chat/${normalized}`;
+  }
+
+  const fileName = extractFileNameFromPatterns(normalized, [/\/uploads\/chat\/([^/?#]+)$/i]);
+  const apiBase = getApiBaseUrl();
+  if (fileName && apiBase) {
+    return `${apiBase}/api/files/chat/${encodeURIComponent(fileName)}`;
+  }
+  return apiBase ? `${apiBase}${normalized}` : normalized;
 }
 
 /**
@@ -57,8 +165,17 @@ export function resolveUploadAssetUrl(
   if (!url) return null;
 
   if (url.startsWith("http://") || url.startsWith("https://")) {
-    if (isExternalResumeStorageUrl(url)) {
-      return toResumeApiPreviewUrl(url) ?? url;
+    const legacyResumePatterns = [
+      /\/uploads\/resumes\/([^/?#]+)$/i,
+      /\/resumes\/([^/?#]+)$/i,
+    ];
+    if (shouldProxyStoredUrl(url, "resumes", legacyResumePatterns)) {
+      const apiBase = getApiBaseUrl();
+      if (!apiBase) return url;
+      const fileName = extractFileNameFromPatterns(url, legacyResumePatterns);
+      if (fileName) {
+        return `${apiBase}/api/files/resumes/${encodeURIComponent(fileName)}`;
+      }
     }
     return url;
   }

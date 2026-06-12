@@ -25,7 +25,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import EmployeeDetailsModal from "@/components/dashboard/modals/employee-details-modal";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { format } from "date-fns";
-import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
+import { resolveLogoFileUrl, resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
+import { ResumePreviewPanel } from "@/components/source-resume/resume-preview-panel";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -59,7 +60,7 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
   useEffect(() => {
     if (client) {
       setLogoFile(null);
-      setLogoPreview(resolveUploadAssetUrl(client.logo, "uploads") || null);
+      setLogoPreview(resolveLogoFileUrl(client.logo) || null);
       setFormData({
         brandName: client.brandName || '',
         incorporatedName: client.incorporatedName || '',
@@ -2113,104 +2114,10 @@ export default function MasterDatabase() {
               <div className="bg-gray-100 dark:bg-gray-900 rounded-md flex flex-col relative overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '800px' }}>
                   {selectedResume && 'resumeFile' in selectedResume && selectedResume.resumeFile ? (
                     <>
-                      {(() => {
-                        const resumeUrl = resolveUploadAssetUrl(
-                          selectedResume.resumeFile,
-                          "uploads/resumes",
-                        );
-                        if (!resumeUrl) {
-                          return (
-                            <div className="flex h-full items-center justify-center text-sm text-gray-500">
-                              Resume preview unavailable
-                            </div>
-                          );
-                        }
-
-                        const lowerUrl = resumeUrl.toLowerCase();
-                        // Check file extension from URL (handle URLs with query params)
-                        const urlWithoutQuery = lowerUrl.split('?')[0];
-                        const isPdf = urlWithoutQuery.endsWith('.pdf');
-                        const isDocx = urlWithoutQuery.endsWith('.docx');
-                        const isDoc = urlWithoutQuery.endsWith('.doc') && !isDocx;
-                        const isImage = urlWithoutQuery.endsWith('.jpg') || urlWithoutQuery.endsWith('.jpeg') || urlWithoutQuery.endsWith('.png');
-                        
-                        if (isPdf) {
-                          return (
-                            <iframe
-                              key={resumeUrl}
-                              src={resumeUrl}
-                              className="w-full h-full border-0"
-                              title="Resume Preview"
-                              data-testid="resume-iframe"
-                              onError={(e) => {
-                                console.error('Resume iframe error:', e);
-                                // Fallback to download
-                              }}
-                            />
-                          );
-                        } else if (isImage) {
-                          // Display images directly
-                          return (
-                            <img
-                              src={resumeUrl}
-                              alt="Resume"
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                console.error('Resume image error:', e);
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          );
-                        } else if (isDocx || isDoc) {
-                          // Word documents can't be displayed directly in browser
-                          return (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                              <div className="text-center space-y-4 p-8 max-w-md">
-                                <FileText className="h-16 w-16 mx-auto text-gray-400" />
-                                <div>
-                                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                                    Word Document
-                                  </p>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                                    Word documents cannot be previewed in the browser. Please download the file to view it.
-                                  </p>
-                                  <Button
-                                    onClick={handleDownloadResume}
-                                    className="bg-blue-600 text-white hover:bg-blue-700"
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download Resume
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        } else {
-                          // Try to display as image (fallback for other file types)
-                          return (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                              <div className="text-center space-y-4 p-8 max-w-md">
-                                <FileText className="h-16 w-16 mx-auto text-gray-400" />
-                                <div>
-                                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                                    Resume File
-                                  </p>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                                    This file type cannot be previewed. Please download to view.
-                                  </p>
-                                  <Button
-                                    onClick={handleDownloadResume}
-                                    className="bg-blue-600 text-white hover:bg-blue-700"
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download Resume
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-                      })()}
+                      <ResumePreviewPanel
+                        resumeFile={selectedResume.resumeFile}
+                        candidateName={selectedResume.name}
+                      />
                       {/* Download Button */}
                       <div className="absolute top-4 right-4 z-10">
                         <Button

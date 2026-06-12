@@ -230,6 +230,7 @@ import {
   fetchProfileMediaRecord,
 } from "./profile-media";
 import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
+import { storeR2FolderFile, getR2FileByFolderAndName } from "./r2-file-storage";
 import { getR2ResumeByFileName } from "./utils/r2Upload";
 
 // Ensure uploads directory exists
@@ -5154,11 +5155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Only image files are allowed for logos" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      const fileUrl = await storeR2FolderFile(req.file, "logos", req);
 
       res.json({ url: fileUrl });
     } catch (error) {
@@ -5212,7 +5209,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const uploadsRoot = path.join(process.cwd(), "uploads");
   const resumeFilesRoot = path.join(uploadsRoot, "resumes");
 
-  const setResumeFileResponseHeaders = (req: Request, res: Response, safeName: string, contentType: string) => {
+  const chatFilesRoot = path.join(uploadsRoot, "chat");
+
+  const setStoredFileResponseHeaders = (req: Request, res: Response, safeName: string, contentType: string) => {
     applyCorsHeaders(req, res);
     res.setHeader("Content-Type", contentType);
     res.setHeader("Content-Disposition", `inline; filename="${safeName.replace(/"/g, "")}"`);
@@ -5223,6 +5222,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     );
   };
 
+  const serveStoredFile = async (
+    req: Request,
+    res: Response,
+    safeName: string,
+    localCandidates: string[],
+    r2Folder: string,
+    notFoundMessage: string,
+  ) => {
+    for (const filePath of localCandidates) {
+      if (fs.existsSync(filePath)) {
+        setStoredFileResponseHeaders(req, res, safeName, "application/octet-stream");
+        return res.sendFile(path.resolve(filePath));
+      }
+    }
+
+    if (process.env.NODE_ENV === "production" && process.env.R2_BUCKET) {
+      const r2Object = await getR2FileByFolderAndName(r2Folder, safeName);
+      if (r2Object) {
+        setStoredFileResponseHeaders(req, res, safeName, r2Object.contentType);
+        return res.send(r2Object.body);
+      }
+    }
+
+    applyCorsHeaders(req, res);
+    return res.status(404).json({ message: notFoundMessage });
+  };
+
   /** Serve resume PDFs via API (works when frontend is on a different host than the backend). */
   app.get("/api/files/resumes/:filename", async (req, res) => {
     try {
@@ -5230,35 +5256,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!safeName) {
         return res.status(400).json({ message: "Invalid filename" });
       }
-      const candidates = [
-        path.join(resumeFilesRoot, safeName),
-        path.join(uploadsRoot, safeName),
-        path.join(uploadsRoot, "resumes", safeName),
-      ];
-      for (const filePath of candidates) {
-        if (fs.existsSync(filePath)) {
-          setResumeFileResponseHeaders(req, res, safeName, "application/octet-stream");
-          return res.sendFile(path.resolve(filePath));
-        }
-      }
-
-      if (process.env.NODE_ENV === "production" && process.env.R2_BUCKET) {
-        const r2Object = await getR2ResumeByFileName(safeName);
-        if (r2Object) {
-          setResumeFileResponseHeaders(req, res, safeName, r2Object.contentType);
-          return res.send(r2Object.body);
-        }
-      }
-
-      applyCorsHeaders(req, res);
-      return res.status(404).json({
-        message:
-          "Resume file not found on the server. It may have been uploaded before the last deploy, or storage is not persistent on this host — please re-upload the resume.",
-      });
+      return serveStoredFile(
+        req,
+        res,
+        safeName,
+        [
+          path.join(resumeFilesRoot, safeName),
+          path.join(uploadsRoot, safeName),
+          path.join(uploadsRoot, "resumes", safeName),
+        ],
+        "resumes",
+        "This resume file is no longer available. It may have been uploaded before cloud storage was enabled. Please upload the resume again for this candidate.",
+      );
     } catch (error) {
       console.error("Serve resume file error:", error);
       applyCorsHeaders(req, res);
       return res.status(500).json({ message: "Failed to load resume file" });
+    }
+  });
+
+  app.get("/api/files/jds/:filename", async (req, res) => {
+    try {
+      const safeName = path.basename(decodeURIComponent(req.params.filename || ""));
+      if (!safeName) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      return serveStoredFile(
+        req,
+        res,
+        safeName,
+        [
+          path.join(uploadsRoot, safeName),
+          path.join(chatFilesRoot, safeName),
+        ],
+        "jds",
+        "This job description file is no longer available. Please upload the JD again.",
+      );
+    } catch (error) {
+      console.error("Serve JD file error:", error);
+      applyCorsHeaders(req, res);
+      return res.status(500).json({ message: "Failed to load JD file" });
+    }
+  });
+
+  app.get("/api/files/logos/:filename", async (req, res) => {
+    try {
+      const safeName = path.basename(decodeURIComponent(req.params.filename || ""));
+      if (!safeName) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      return serveStoredFile(
+        req,
+        res,
+        safeName,
+        [path.join(uploadsRoot, safeName)],
+        "logos",
+        "This company logo is no longer available. Please upload the logo again.",
+      );
+    } catch (error) {
+      console.error("Serve logo file error:", error);
+      applyCorsHeaders(req, res);
+      return res.status(500).json({ message: "Failed to load logo file" });
+    }
+  });
+
+  app.get("/api/files/chat/:filename", async (req, res) => {
+    try {
+      const safeName = path.basename(decodeURIComponent(req.params.filename || ""));
+      if (!safeName) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      return serveStoredFile(
+        req,
+        res,
+        safeName,
+        [path.join(chatFilesRoot, safeName)],
+        "chat",
+        "This chat attachment is no longer available.",
+      );
+    } catch (error) {
+      console.error("Serve chat file error:", error);
+      applyCorsHeaders(req, res);
+      return res.status(500).json({ message: "Failed to load chat attachment" });
     }
   });
 
@@ -7309,11 +7388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const url = `${baseUrl}/uploads/chat/${req.file.filename}`;
+      const url = await storeR2FolderFile(req.file, "jds", req, "uploads/chat");
       res.json({ url, filename: req.file.filename });
     } catch (error) {
       console.error('JD file upload error:', error);
@@ -18179,11 +18254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      const url = await storeR2FolderFile(req.file, "jds", req);
       res.json({ url, filename: req.file.filename });
     } catch (error) {
       console.error('JD file upload error:', error);
@@ -19054,7 +19125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      const fileUrl = `/uploads/chat/${req.file.filename}`;
+      const fileUrl = await storeR2FolderFile(req.file, "chat", req, "uploads/chat");
 
       let fileType = 'file';
       if (req.file.mimetype.startsWith('image/')) {
