@@ -33,7 +33,7 @@ export default function CandidateResumeUpload() {
   const [editableName, setEditableName] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, endSignOut, isSigningOut } = useAuth();
   const queryClient = useQueryClient();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
@@ -76,15 +76,16 @@ export default function CandidateResumeUpload() {
   };
 
   const confirmLogout = async () => {
+    beginSignOut();
     try {
       await logout();
-      setShowSignOutDialog(false);
       setLocation("/");
       toast({
         title: "Logged out",
         description: "You have been signed out successfully.",
       });
     } catch (error) {
+      endSignOut();
       toast({
         title: "Logout failed",
         variant: "destructive",
@@ -397,6 +398,7 @@ export default function CandidateResumeUpload() {
         onOpenChange={setShowSignOutDialog}
         onConfirm={confirmLogout}
         userName={profile?.email}
+        isLoading={isSigningOut}
       />
     </div>
   );

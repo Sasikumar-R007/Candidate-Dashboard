@@ -20,7 +20,7 @@ export default function AdminSidebar({ activeTab, onTabChange, hasUnreadNudges =
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
   const employee = useEmployeeAuth();
 
   const menuItems = [
@@ -70,8 +70,8 @@ export default function AdminSidebar({ activeTab, onTabChange, hasUnreadNudges =
   };
 
   const confirmLogout = () => {
+    beginSignOut();
     logoutMutation.mutate();
-    setShowSignOutDialog(false);
   };
 
   const handleTabClick = (tabId: string) => {
@@ -204,7 +204,7 @@ export default function AdminSidebar({ activeTab, onTabChange, hasUnreadNudges =
         onOpenChange={setShowSignOutDialog}
         onConfirm={confirmLogout}
         userName={employee?.name}
-        isLoading={logoutMutation.isPending}
+        isLoading={logoutMutation.isPending || isSigningOut}
       />
     </>
   );

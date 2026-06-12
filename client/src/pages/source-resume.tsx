@@ -40,6 +40,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { broadcastDashboardEvent } from "@/lib/dashboard-sync";
 import { useAuth } from "@/contexts/auth-context";
 import type { Employee } from "@shared/schema";
+import { formatEducationDisplay, extractPrimaryInstitution } from "@shared/education-format";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1339,7 +1340,11 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTi
     location: dbCandidate.location || 'Not Available',
     preferredLocation: dbCandidate.preferredLocation || dbCandidate.location || 'Not Available',
     experience: experienceNum,
-    education: dbCandidate.education || dbCandidate.highestQualification || 'Not Available',
+    education: formatEducationDisplay(
+      dbCandidate.education,
+      dbCandidate.highestQualification,
+      dbCandidate.collegeName,
+    ),
     currentCompany: dbCandidate.company || 'Not Available',
     email: dbCandidate.email,
     phone: dbCandidate.phone || '',
@@ -1348,7 +1353,10 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTi
     summary: `Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.`,
     profilePic: dbCandidate.profilePicture || '',
     noticePeriod: dbCandidate.noticePeriod || 'Not Available',
-    university: dbCandidate.collegeName || 'Not Available',
+    university:
+      dbCandidate.collegeName ||
+      extractPrimaryInstitution(dbCandidate.education) ||
+      'Not Available',
     saved: false,
     pedigreeLevel: dbCandidate.pedigreeLevel || '',
     companyLevel: dbCandidate.companyLevel || '',

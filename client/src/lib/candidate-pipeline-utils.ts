@@ -104,7 +104,7 @@ export function getApplicationNudgeDisplayState(
   };
 }
 
-/** Under 24h shows hours; otherwise calendar date (e.g. 12-April). */
+/** Relative time: minutes (<1h), hours (<24h), days (<7d), then calendar date. */
 export function formatJobAppliedDate(dateInput?: string | Date | null): string {
   if (!dateInput) return "—";
   const applied = dateInput instanceof Date ? dateInput : new Date(dateInput);
@@ -114,13 +114,19 @@ export function formatJobAppliedDate(dateInput?: string | Date | null): string {
   const diffMs = now.getTime() - applied.getTime();
   if (diffMs < 0) return formatJobAppliedCalendarDate(applied);
 
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes < 60) {
+    return `${Math.max(1, diffMinutes)}m`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) {
-    if (diffHours < 1) {
-      const mins = Math.max(1, Math.floor(diffMs / (1000 * 60)));
-      return `${mins}h`;
-    }
     return `${diffHours}h`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) {
+    return `${diffDays}d`;
   }
 
   return formatJobAppliedCalendarDate(applied);

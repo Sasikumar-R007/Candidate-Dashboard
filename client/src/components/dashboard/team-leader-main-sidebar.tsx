@@ -20,7 +20,7 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
 
   const menuItems = [
     { id: 'dashboard', label: 'Team', icon: Users },
@@ -72,8 +72,8 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
   };
 
   const confirmLogout = () => {
+    beginSignOut();
     logoutMutation.mutate();
-    setShowSignOutDialog(false);
   };
 
   const handleTabClick = (tabId: string) => {
@@ -242,7 +242,7 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
       onOpenChange={setShowSignOutDialog}
       onConfirm={confirmLogout}
       userName={undefined}
-      isLoading={logoutMutation.isPending}
+      isLoading={logoutMutation.isPending || isSigningOut}
     />
     </>
   );

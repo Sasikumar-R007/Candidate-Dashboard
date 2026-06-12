@@ -1,5 +1,6 @@
 import { parseResumeWithAI, refineCandidateData } from './ai-resume-parser';
-import { normalizeParsedEducation, normalizeParsedSkills } from './parsed-field-format';
+import { normalizeParsedSkills } from './parsed-field-format';
+import { normalizeParsedEducation, extractPrimaryInstitution } from '@shared/education-format';
 import mammoth from 'mammoth';
 import fs from 'fs';
 
@@ -109,7 +110,12 @@ function mapAiParsedToResume(aiParsed: any, rawText: string): ParsedResume {
     company: aiParsed.company || null,
     education,
     highestQualification: aiParsed.degree_level || aiParsed.highestQualification || null,
-    collegeName: aiParsed.college || aiParsed.university || null,
+    collegeName:
+      aiParsed.college ||
+      aiParsed.university ||
+      extractPrimaryInstitution(aiParsed.education) ||
+      extractPrimaryInstitution(education) ||
+      null,
     course: aiParsed.course || null,
     linkedinUrl: aiParsed.linkedin_url || aiParsed.linkedinUrl || null,
     portfolioUrl: aiParsed.portfolio_url || aiParsed.portfolioUrl || null,

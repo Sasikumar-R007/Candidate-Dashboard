@@ -17,7 +17,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
   const candidate = useCandidateAuth();
 
   const { data: candidateNudges = [] } = useQuery<any[]>({
@@ -70,8 +70,8 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   };
 
   const confirmLogout = () => {
+    beginSignOut();
     logoutMutation.mutate();
-    setShowSignOutDialog(false);
   };
 
   return (
@@ -192,7 +192,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         onOpenChange={setShowSignOutDialog}
         onConfirm={confirmLogout}
         userName={candidate?.fullName}
-        isLoading={logoutMutation.isPending}
+        isLoading={logoutMutation.isPending || isSigningOut}
       />
     </>
   );

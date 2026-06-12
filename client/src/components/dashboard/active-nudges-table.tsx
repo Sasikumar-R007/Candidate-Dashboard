@@ -28,6 +28,7 @@ import {
   isOfferStageStatus,
 } from "@shared/nudge-timing";
 import { canUserUpdateNudge } from "@shared/nudge-escalation-access";
+import { isClientAdminRole } from "@shared/client-roles";
 import {
   STATUS_UPDATED_PIPELINE_MESSAGE,
   buildNudgeUpdateMessage,
@@ -93,7 +94,12 @@ const formatRemainingWorkingTime = (elapsedHours: number, totalHours: number) =>
 };
 
 
-export default function ActiveNudgesTable() {
+type ActiveNudgesTableProps = {
+  /** When employee.role lags profile, client dashboard can pass resolved admin flag. */
+  isClientAdmin?: boolean;
+};
+
+export default function ActiveNudgesTable({ isClientAdmin: isClientAdminProp }: ActiveNudgesTableProps = {}) {
   const { toast } = useToast();
   const employee = useEmployeeAuth();
   const queryClient = useQueryClient();
@@ -266,6 +272,12 @@ export default function ActiveNudgesTable() {
                         <Badge className="bg-green-100 text-green-700 border-0 shadow-none pointer-events-none font-bold text-[10px]" title={nudge.message || "Responded to candidate"}>
                           Responded
                         </Badge>
+                      ) : nudge.isFinalClientAdminStage && nudge.viewerIsClientAdmin ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 border-0 shadow-none pointer-events-none font-bold text-[10px]">
+                          Ready for you
+                        </Badge>
+                      ) : nudge.isFinalClientAdminStage ? (
+                        <span className="text-[11px] font-semibold text-slate-500">With Client Admin</span>
                       ) : nudge.isEscalated ? (
                         <div className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 w-fit border border-red-100">
                           Escalated

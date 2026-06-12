@@ -37,7 +37,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const [location] = useLocation();
   const candidate = useCandidateAuth();
   const { data: profile } = useProfile();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
   const { toast } = useToast();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
@@ -73,8 +73,8 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   };
 
   const confirmLogout = () => {
+    beginSignOut();
     logoutMutation.mutate();
-    setShowSignOutDialog(false);
   };
 
   const getPageTitle = (path: string) => {
@@ -184,7 +184,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         onOpenChange={setShowSignOutDialog}
         onConfirm={confirmLogout}
         userName={candidate?.fullName || candidate?.email}
-        isLoading={logoutMutation.isPending}
+        isLoading={logoutMutation.isPending || isSigningOut}
       />
     </header>
   );

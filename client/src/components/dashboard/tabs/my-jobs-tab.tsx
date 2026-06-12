@@ -165,7 +165,9 @@ export default function MyJobsTab({
   const jobsPerPage = 3;
   const isBelowLg = useIsBelowLg();
   
-  const { data: jobApplications = [], isLoading } = useJobApplications();
+  const { data: jobApplications = [], isLoading } = useJobApplications({
+    refetchInterval: 15_000,
+  });
   const { data: candidateNudges = [] } = useQuery<any[]>({
     queryKey: ['/api/candidate/nudges'],
     refetchInterval: 20_000,

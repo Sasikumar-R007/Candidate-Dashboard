@@ -11,6 +11,7 @@ export const NUDGE_ESCALATION_WORKING_HOURS = {
   toTeamLeader: 6,
   toAdmin: 12,
   toClient: 18,
+  toClientAdmin: 24,
 } as const;
 
 /** Working hours for offer-stage applications. */
@@ -18,6 +19,7 @@ export const NUDGE_OFFER_ESCALATION_WORKING_HOURS = {
   toTeamLeader: 3,
   toAdmin: 6,
   toClient: 9,
+  toClientAdmin: 12,
 } as const;
 
 /** Candidate re-nudge cooldown after last nudge (wall-clock hours). */
@@ -39,11 +41,15 @@ export function escalationTargetWorkingHours(
   if (isOffer) {
     if (level === "recruiter") return NUDGE_OFFER_ESCALATION_WORKING_HOURS.toTeamLeader;
     if (level === "team_leader") return NUDGE_OFFER_ESCALATION_WORKING_HOURS.toAdmin;
-    return NUDGE_OFFER_ESCALATION_WORKING_HOURS.toClient;
+    if (level === "admin") return NUDGE_OFFER_ESCALATION_WORKING_HOURS.toClient;
+    if (level === "client") return NUDGE_OFFER_ESCALATION_WORKING_HOURS.toClientAdmin;
+    return NUDGE_OFFER_ESCALATION_WORKING_HOURS.toClientAdmin;
   }
   if (level === "recruiter") return NUDGE_ESCALATION_WORKING_HOURS.toTeamLeader;
   if (level === "team_leader") return NUDGE_ESCALATION_WORKING_HOURS.toAdmin;
-  return NUDGE_ESCALATION_WORKING_HOURS.toClient;
+  if (level === "admin") return NUDGE_ESCALATION_WORKING_HOURS.toClient;
+  if (level === "client") return NUDGE_ESCALATION_WORKING_HOURS.toClientAdmin;
+  return NUDGE_ESCALATION_WORKING_HOURS.toClientAdmin;
 }
 
 export function candidateNudgeCooldownHours(status: string | null | undefined): number | null {

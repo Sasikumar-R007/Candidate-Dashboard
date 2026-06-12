@@ -102,7 +102,7 @@ export default function AdminTopHeader({
   const [profileModalView, setProfileModalView] = useState<"profile" | "settings">("profile");
   const [profileData, setProfileData] = useState<any>(null);
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
   const employee = useEmployeeAuth();
   const queryClient = useQueryClient();
   const dismissedStorageKey = getDismissedNotificationsKey(employee?.id);
@@ -619,8 +619,8 @@ export default function AdminTopHeader({
   };
 
   const confirmLogout = () => {
+    beginSignOut();
     logoutMutation.mutate();
-    setShowSignOutDialog(false);
   };
 
   const handleProfileSettings = () => {
@@ -810,7 +810,7 @@ export default function AdminTopHeader({
         onOpenChange={setShowSignOutDialog}
         onConfirm={confirmLogout}
         userName={userName}
-        isLoading={logoutMutation.isPending}
+        isLoading={logoutMutation.isPending || isSigningOut}
       />
       
       <ProfileSettingsModal

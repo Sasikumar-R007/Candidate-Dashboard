@@ -106,7 +106,7 @@ export default function SimpleClientHeader({
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [profileImgError, setProfileImgError] = useState(false);
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
   const employee = useEmployeeAuth();
   const queryClient = useQueryClient();
   const dismissedStorageKey = getDismissedNotificationsKey(employee?.id);
@@ -341,8 +341,8 @@ export default function SimpleClientHeader({
   };
 
   const confirmLogout = () => {
+    beginSignOut();
     logoutMutation.mutate();
-    setShowSignOutDialog(false);
   };
 
   const handleProfileSettings = () => {
@@ -559,7 +559,7 @@ export default function SimpleClientHeader({
         onOpenChange={setShowSignOutDialog}
         onConfirm={confirmLogout}
         userName={userName}
-        isLoading={logoutMutation.isPending}
+        isLoading={logoutMutation.isPending || isSigningOut}
       />
       
     </div>

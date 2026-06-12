@@ -86,7 +86,7 @@ import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-sett
 import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
 
 export default function ClientDashboard() {
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [showProfileNotLinkedSignOutDialog, setShowProfileNotLinkedSignOutDialog] = useState(false);
@@ -573,8 +573,8 @@ export default function ClientDashboard() {
   };
 
   const confirmProfileNotLinkedSignOut = () => {
+    beginSignOut();
     profileNotLinkedLogoutMutation.mutate();
-    setShowProfileNotLinkedSignOutDialog(false);
   };
 
   // Filter pipeline data by period and selected roles
@@ -1018,7 +1018,7 @@ export default function ClientDashboard() {
               </div>
 
               {/* Nudge Escalation Table */}
-              <ActiveNudgesTable />
+              <ActiveNudgesTable isClientAdmin={isClientAdmin} />
 
               {isClientAdmin && (
                 <div className="mt-6 md:hidden">
@@ -2423,7 +2423,7 @@ export default function ClientDashboard() {
           onOpenChange={setShowProfileNotLinkedSignOutDialog}
           onConfirm={confirmProfileNotLinkedSignOut}
           userName={(clientProfile as any).email}
-          isLoading={profileNotLinkedLogoutMutation.isPending}
+          isLoading={profileNotLinkedLogoutMutation.isPending || isSigningOut}
         />
       </div>
     );

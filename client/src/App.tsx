@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { AuthProvider } from "@/contexts/auth-context";
 import AccountHoldOverlay from "@/components/account-hold-overlay";
+import SigningOutOverlay from "@/components/signing-out-overlay";
 import AuthenticatedNavigationGuard from "@/components/authenticated-navigation-guard";
 import { ProtectedRoute } from "@/components/protected-route";
 import ErrorBoundary from "@/components/error-boundary";
@@ -168,6 +169,7 @@ function App() {
         <OperationalDataSync />
         <AuthProvider>
           <AccountHoldOverlay />
+          <SigningOutOverlay />
           <AuthenticatedNavigationGuard />
           <ThemeProvider>
             <TooltipProvider>

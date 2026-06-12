@@ -149,88 +149,7 @@ function collectSkillTokens(raw: unknown, depth = 0): string[] {
   return [];
 }
 
-function formatEducationObject(obj: Record<string, unknown>): string | null {
-  const degree = pickString(obj, [
-    "degree",
-    "qualification",
-    "degree_level",
-    "course",
-    "title",
-    "name",
-  ]);
-  const field = pickString(obj, [
-    "field_of_study",
-    "field",
-    "major",
-    "specialization",
-    "branch",
-    "stream",
-  ]);
-  const institution = pickString(obj, [
-    "institution",
-    "college",
-    "university",
-    "school",
-  ]);
-  const year = pickString(obj, ["year", "graduation_year", "end_year", "passing_year"]);
-
-  const parts: string[] = [];
-  if (degree && field) {
-    parts.push(`${degree} in ${field}`);
-  } else if (degree) {
-    parts.push(degree);
-  } else if (field) {
-    parts.push(field);
-  }
-
-  if (institution) parts.push(institution);
-  if (year) parts.push(`(${year})`);
-
-  return parts.length > 0 ? parts.join(", ") : null;
-}
-
-function collectEducationEntries(raw: unknown, depth = 0): string[] {
-  if (raw == null || depth > 6) return [];
-
-  const unwrapped = depth === 0 ? unwrapJsonLike(raw) : raw;
-
-  if (typeof unwrapped === "string") {
-    const text = unwrapped.trim();
-    if (!text) return [];
-    if (text.startsWith("{") || text.startsWith("[") || text.includes("\\\"")) {
-      const reparsed = unwrapJsonLike(text, depth + 1);
-      if (reparsed !== text) return collectEducationEntries(reparsed, depth + 1);
-    }
-    const kv = extractEducationKeyValues(text);
-    if (kv) {
-      const formatted = formatEducationObject(kv);
-      if (formatted) return [formatted];
-    }
-    const plain = stripJsonDecorators(text);
-    return plain && !plain.startsWith("{") && !plain.includes("field_of_study") ? [plain] : [];
-  }
-
-  if (Array.isArray(unwrapped)) {
-    return unwrapped.flatMap((item) => collectEducationEntries(item, depth + 1));
-  }
-
-  if (typeof unwrapped === "object") {
-    const obj = unwrapped as Record<string, unknown>;
-    const formatted = formatEducationObject(obj);
-    if (formatted) return [formatted];
-
-    for (const key of Object.keys(obj)) {
-      const fromKey = collectEducationEntries(key, depth + 1);
-      if (fromKey.length > 0) return fromKey;
-    }
-
-    const values = Object.values(obj);
-    const fromValues = values.flatMap((v) => collectEducationEntries(v, depth + 1));
-    if (fromValues.length > 0) return fromValues;
-  }
-
-  return [];
-}
+export { normalizeParsedEducation } from "@shared/education-format";
 
 export function normalizeParsedSkills(raw: unknown): string | null {
   const tokens = collectSkillTokens(raw);
@@ -247,19 +166,3 @@ export function normalizeParsedSkills(raw: unknown): string | null {
   return unique.length > 0 ? unique.join(", ") : null;
 }
 
-export function normalizeParsedEducation(raw: unknown): string | null {
-  const entries = collectEducationEntries(raw);
-  const seen = new Set<string>();
-  const unique: string[] = [];
-
-  for (const entry of entries) {
-    const trimmed = entry.trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(trimmed);
-  }
-
-  return unique.length > 0 ? unique.join(" · ") : null;
-}

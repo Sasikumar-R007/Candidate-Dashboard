@@ -2,10 +2,15 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { JobApplication, InsertJobApplication } from "@shared/schema";
 
-export function useJobApplications(options?: { enabled?: boolean }) {
+export function useJobApplications(options?: {
+  enabled?: boolean;
+  refetchInterval?: number | false;
+}) {
   return useQuery<JobApplication[]>({
     queryKey: ["/api/job-applications"],
     enabled: options?.enabled ?? true,
+    refetchInterval: options?.refetchInterval,
+    refetchOnWindowFocus: true,
   });
 }
 

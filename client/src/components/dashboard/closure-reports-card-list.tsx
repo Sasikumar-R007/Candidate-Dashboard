@@ -15,6 +15,29 @@ export type ClosureReportRow = {
   joined?: string;
 };
 
+function parseClosureSortDate(dateStr?: string): number {
+  if (!dateStr || dateStr === "N/A") return 0;
+  const ddMmYyyy = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(dateStr.trim());
+  if (ddMmYyyy) {
+    const [, day, month, year] = ddMmYyyy;
+    const parsed = new Date(Number(year), Number(month) - 1, Number(day)).getTime();
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  const parsed = Date.parse(dateStr);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+export function sortClosureReportsByRecent(reports: ClosureReportRow[]): ClosureReportRow[] {
+  return [...reports].sort((a, b) => {
+    const aJoined = parseClosureSortDate(a.joinedDate || a.joined);
+    const bJoined = parseClosureSortDate(b.joinedDate || b.joined);
+    if (bJoined !== aJoined) return bJoined - aJoined;
+    const aOffered = parseClosureSortDate(a.offeredDate || a.offered);
+    const bOffered = parseClosureSortDate(b.offeredDate || b.offered);
+    return bOffered - aOffered;
+  });
+}
+
 function normalizeRow(row: ClosureReportRow) {
   return {
     id: row.id,
@@ -48,8 +71,9 @@ export function ClosureReportsCardList({
   renderActions,
   getRowClassName,
 }: ClosureReportsCardListProps) {
+  const sortedReports = sortClosureReportsByRecent(reports);
   const visibleReports =
-    typeof maxRows === "number" ? reports.slice(0, maxRows) : reports;
+    typeof maxRows === "number" ? sortedReports.slice(0, maxRows) : sortedReports;
   const colSpan = showActions ? 8 : 7;
 
   return (

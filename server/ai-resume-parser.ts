@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import { normalizeParsedEducation, normalizeParsedSkills } from './parsed-field-format';
+import { normalizeParsedSkills } from './parsed-field-format';
+import { normalizeParsedEducation } from '@shared/education-format';
 
 let openaiClient: OpenAI | null = null;
 

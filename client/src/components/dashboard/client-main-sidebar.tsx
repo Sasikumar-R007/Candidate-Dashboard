@@ -33,7 +33,7 @@ export default function ClientMainSidebar({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
 
   const menuItems = useMemo(
     () => getClientPortalNav(isClientAdmin),
@@ -74,8 +74,8 @@ export default function ClientMainSidebar({
   };
 
   const confirmLogout = () => {
+    beginSignOut();
     logoutMutation.mutate();
-    setShowSignOutDialog(false);
   };
 
   const collapse = () => {
@@ -300,7 +300,12 @@ export default function ClientMainSidebar({
         </>
       )}
 
-      <SignOutDialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog} onConfirm={confirmLogout} />
+      <SignOutDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
+        onConfirm={confirmLogout}
+        isLoading={logoutMutation.isPending || isSigningOut}
+      />
     </>
   );
 }

@@ -20,6 +20,9 @@ interface AuthContextType {
   setUser: (user: AuthUser | null) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  isSigningOut: boolean;
+  beginSignOut: () => void;
+  endSignOut: () => void;
   logout: () => Promise<void>;
   verifySession: () => Promise<boolean>;
   isVerified: boolean;
@@ -104,6 +107,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isVerified, setIsVerified] = useState(false);
   const [holdPending, setHoldPending] = useState<HoldPendingState | null>(null);
   const [accountHeldMessage, setAccountHeldMessage] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   
   // Prevent race conditions by tracking in-flight requests
   const verifyingRef = useRef<Promise<boolean> | null>(null);
@@ -273,6 +277,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => clearInterval(interval);
   }, [user, holdPending]);
 
+  const beginSignOut = useCallback(() => {
+    setIsSigningOut(true);
+  }, []);
+
+  const endSignOut = useCallback(() => {
+    setIsSigningOut(false);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await fetch(createApiUrl('/api/auth/logout'), {
@@ -300,6 +312,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser,
     isLoading,
     setIsLoading,
+    isSigningOut,
+    beginSignOut,
+    endSignOut,
     logout,
     verifySession,
     isVerified,

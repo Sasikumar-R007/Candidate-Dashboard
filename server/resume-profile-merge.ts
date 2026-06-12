@@ -1,5 +1,6 @@
 import type { Profile } from "@shared/schema";
-import { normalizeParsedEducation, normalizeParsedSkills } from "./parsed-field-format";
+import { normalizeParsedSkills } from "./parsed-field-format";
+import { normalizeParsedEducation } from "@shared/education-format";
 
 export type ResumeFieldChangeSource = "from_resume" | "retained";
 

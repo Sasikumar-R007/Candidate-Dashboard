@@ -28,8 +28,13 @@ export function SignOutDialog({
   isLoading = false,
   contentClassName,
 }: SignOutDialogProps) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (isLoading && !nextOpen) return;
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent className={contentClassName ?? "max-w-md rounded-[6px]"}>
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-2">

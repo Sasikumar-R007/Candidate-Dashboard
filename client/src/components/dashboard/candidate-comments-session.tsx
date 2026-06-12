@@ -178,6 +178,7 @@ type ApplicationComment = {
 };
 
 import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
+import { formatEducationDisplay } from "@shared/education-format";
 
 function normalizeUploadAssetUrl(
   filePath?: string | null,
@@ -477,9 +478,8 @@ function PipelineStageBadge({ status }: { status: string }) {
 
 function formatEducation(app?: SessionApplication): string | undefined {
   if (!app) return undefined;
-  const parts = [app.education, app.highestQualification, app.collegeName].filter(Boolean);
-  const unique = [...new Set(parts)];
-  return unique.length ? unique.join(" · ") : undefined;
+  const label = formatEducationDisplay(app.education, app.highestQualification, app.collegeName);
+  return label === "Not Available" ? undefined : label;
 }
 
 function getClientRejectionReason(app?: SessionApplication | null): string | null {

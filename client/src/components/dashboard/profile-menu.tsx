@@ -76,7 +76,7 @@ export default function ProfileMenu({
 
   const { toast } = useToast();
 
-  const { logout } = useAuth();
+  const { logout, beginSignOut, isSigningOut } = useAuth();
 
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
@@ -129,11 +129,8 @@ export default function ProfileMenu({
 
 
   const confirmLogout = () => {
-
+    beginSignOut();
     logoutMutation.mutate();
-
-    setShowSignOutDialog(false);
-
   };
 
 
@@ -268,7 +265,7 @@ export default function ProfileMenu({
 
         userName={name}
 
-        isLoading={logoutMutation.isPending}
+        isLoading={logoutMutation.isPending || isSigningOut}
 
         contentClassName={cn(
 

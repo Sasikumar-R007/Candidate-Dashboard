@@ -163,7 +163,8 @@ function calculateQuartersSince(joiningDate: string | Date | null | undefined): 
 
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
-import { normalizeParsedEducation, normalizeParsedSkills } from "./parsed-field-format";
+import { normalizeParsedSkills } from "./parsed-field-format";
+import { normalizeParsedEducation, extractPrimaryInstitution } from "@shared/education-format";
 import { buildResumeMergePreview } from "./resume-profile-merge";
 import {
   applicationBelongsToCandidate,
@@ -228,6 +229,7 @@ import {
   persistProfilePictureUpload,
   fetchProfileMediaRecord,
 } from "./profile-media";
+import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -463,11 +465,13 @@ async function syncActiveNudgeEscalations(): Promise<void> {
 
     let requiredLevel = "recruiter";
     if (isOfferStage) {
-      if (elapsedWorkingHours >= 9) requiredLevel = "client";
+      if (elapsedWorkingHours >= 12) requiredLevel = "client_admin";
+      else if (elapsedWorkingHours >= 9) requiredLevel = "client";
       else if (elapsedWorkingHours >= 6) requiredLevel = "admin";
       else if (elapsedWorkingHours >= 3) requiredLevel = "team_leader";
     } else {
-      if (elapsedWorkingHours >= 18) requiredLevel = "client";
+      if (elapsedWorkingHours >= 24) requiredLevel = "client_admin";
+      else if (elapsedWorkingHours >= 18) requiredLevel = "client";
       else if (elapsedWorkingHours >= 12) requiredLevel = "admin";
       else if (elapsedWorkingHours >= 6) requiredLevel = "team_leader";
     }
@@ -882,7 +886,12 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       }));
 
     const clientEscalations = allNudges
-      .filter((n) => !n.isResponded && !n.isRead && n.escalationLevel === "client")
+      .filter(
+        (n) =>
+          !n.isResponded &&
+          !n.isRead &&
+          (n.escalationLevel === "client" || n.escalationLevel === "client_admin"),
+      )
       .map((n) => ({
         id: n.id,
         line: notificationFeedLine([
@@ -992,15 +1001,19 @@ async function buildEmployeeNotificationsFeed(employee: any) {
         (n) =>
           !n.isResponded &&
           !n.isRead &&
-          (n.escalationLevel === "admin" || n.escalationLevel === "client") &&
+          (n.escalationLevel === "admin" ||
+            n.escalationLevel === "client" ||
+            n.escalationLevel === "client_admin") &&
           belongsToTeam(n.recruiterId),
       )
       .map((n) => ({
         id: n.id,
         line:
-          n.escalationLevel === "client"
-            ? notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Client"])
-            : notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Admin"]),
+          n.escalationLevel === "client_admin"
+            ? notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Client Admin"])
+            : n.escalationLevel === "client"
+              ? notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Client"])
+              : notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Admin"]),
         createdAt: toIso(n.createdAt),
         isUnread: !n.isRead,
       }));
@@ -1063,7 +1076,10 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       .filter((n) => {
         if (n.isResponded) return false;
         if (isClientAdminRole(role)) {
-          return clientNudgeInScope(n, companyName, null, applicationById);
+          return (
+            n.escalationLevel === "client_admin" &&
+            clientNudgeInScope(n, companyName, null, applicationById)
+          );
         }
         return (
           n.escalationLevel === "client" &&
@@ -2730,10 +2746,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const applicationById = new Map(allApps.map((a: any) => [a.id, a]));
 
         if (isClientAdminRole(role)) {
-          // Final escalation owner — all open nudges for the company (any escalation stage).
+          // Final escalation owner — nudges that reached Client Admin (no timer gate on update).
           activeNudges = updatedNudges.filter(
             (n) =>
               !n.isResponded &&
+              n.escalationLevel === "client_admin" &&
               clientNudgeInScope(n, companyName, null, applicationById),
           );
         } else {
@@ -2792,11 +2809,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Admin sees nudges they responded to OR nudges that escalated past admin
         logNudges = allNudges.filter(n => 
           (n.isResponded && n.escalationLevel === 'admin') || 
-          (['client'].includes(n.escalationLevel || ''))
+          (['client', 'client_admin'].includes(n.escalationLevel || ''))
         );
       } else if (isClientPortalRole(role)) {
-        // Client sees nudges they responded to
-        logNudges = allNudges.filter(n => n.isResponded && n.escalationLevel === 'client');
+        if (isClientAdminRole(role)) {
+          logNudges = allNudges.filter(n => n.isResponded && n.escalationLevel === 'client_admin');
+        } else {
+          logNudges = allNudges.filter(n => n.isResponded && n.escalationLevel === 'client');
+        }
       } else if (role === 'team_leader') {
         const allEmployees = await storage.getAllEmployees();
         const teamMemberKeys = new Set<string>();
@@ -2814,7 +2834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // In logs if responded at TL level OR escalated past TL level
           return (n.isResponded && n.escalationLevel === 'team_leader') || 
-                 (['admin', 'client'].includes(n.escalationLevel || ''));
+                 (['admin', 'client', 'client_admin'].includes(n.escalationLevel || ''));
         });
       } else {
         // Recruiter (TA)
@@ -2823,7 +2843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // In logs if responded at recruiter level OR escalated past recruiter level
           return (n.isResponded && n.escalationLevel === 'recruiter') || 
-                 (['team_leader', 'admin', 'client'].includes(n.escalationLevel || ''));
+                 (['team_leader', 'admin', 'client', 'client_admin'].includes(n.escalationLevel || ''));
         });
       }
 
@@ -4950,19 +4970,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const baseUrl =
-        process.env.NODE_ENV === "production"
-          ? process.env.BACKEND_URL || `https://${req.get("host")}`
-          : `http://${req.get("host")}`;
-      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-      const filePath = path.join(process.cwd(), "uploads", req.file.filename);
-
-      const parsedData = await parseResumeFile(filePath, req.file.mimetype);
+      const { parsePath, cleanup } = await prepareResumeParsePath(req.file);
+      let parsedData;
+      try {
+        parsedData = await parseResumeFile(parsePath, req.file.mimetype);
+      } finally {
+        await cleanup();
+      }
       if (!parsedData?.aiParsed) {
         return res.status(422).json({
           message: "Could not extract details from this resume. Try a clearer PDF or image.",
         });
       }
+
+      const fileUrl = await storeResumeFile(req.file, req);
 
       const existingProfile = await storage.getProfile(candidate.id);
       const preview = buildResumeMergePreview(
@@ -5058,12 +5079,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-      const filePath = path.join(process.cwd(), 'uploads', req.file.filename);
+      const { parsePath, cleanup } = await prepareResumeParsePath(req.file);
+      const fileUrl = await storeResumeFile(req.file, req);
 
       // 1. IMMEDIATELY update registration stage and commit file URL
       // This ensures the page transitions to 'SCANNING' state
@@ -5086,12 +5103,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process with AI in background
       (async () => {
         try {
-          console.log("File Path:", filePath);
+          console.log("File Path:", parsePath);
           console.log("File URL:", fileUrl);
           console.log(`[Background AI] Starting parse for candidate ${candidate.candidateId} (UUID: ${candidate.id})`);
           
           // CRITICAL FIX: Pass mimetype instead of fileUrl
-          const parsedData = await parseResumeFile(filePath, req.file!.mimetype);
+          const parsedData = await parseResumeFile(parsePath, req.file!.mimetype);
           
           if (parsedData && parsedData.aiParsed) {
             const existingProfile = await storage.getProfile(candidate.id);
@@ -5113,6 +5130,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (error) {
           console.error(`[Resume Background Parsing] Failed for candidate ${candidateId}:`, error);
+        } finally {
+          await cleanup();
         }
       })();
     } catch (error) {
@@ -5219,8 +5238,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve uploaded files (ephemeral on cloud hosts — prefer profile_media for avatars)
-  app.use("/uploads", express.static(uploadsRoot));
+  // Serve uploaded files locally in development only (production uses R2 public URLs)
+  if (process.env.NODE_ENV !== "production") {
+    app.use("/uploads", express.static(uploadsRoot));
+  }
 
   // Get saved jobs for candidate
   app.get("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
@@ -8744,6 +8765,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('File cleanup error:', cleanupError);
       }
 
+      if (process.env.NODE_ENV === "production" && req.file?.path && fs.existsSync(req.file.path)) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+      }
+
       res.json({
         success: true,
         data: {
@@ -8771,7 +8796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clean up file on error
       try {
-        if (req.file && fs.existsSync(req.file.path)) {
+        if (req.file?.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
       } catch (cleanupError) {
@@ -8830,11 +8855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-
-      const filePath = `${baseUrl}/uploads/resumes/${req.file.filename}`;
+      const filePath = await storeResumeFile(req.file, req);
 
       res.json({
         success: true,
@@ -14802,6 +14823,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status,
           application.id
         ).catch(err => console.error('Failed to log pipeline change:', err));
+
+        const { normalizePipelineDisplayStatus } = await import("@shared/pipeline-stages");
+        const displayStatus = normalizePipelineDisplayStatus(status);
+        const employee = session.employeeId
+          ? await storage.getEmployeeById(session.employeeId)
+          : null;
+        const responderRole = employee?.role || session.role || "recruiter";
+        const activeNudges = await storage.getActiveNudges();
+        const pendingNudges = activeNudges.filter(
+          (n) => n.applicationId === id && !n.isResponded,
+        );
+        await Promise.all(
+          pendingNudges.map((nudge) =>
+            storage.markNudgeAsResponded(
+              nudge.id,
+              `Your application status is now: ${displayStatus}`,
+              responderRole,
+            ),
+          ),
+        );
       }
 
       // Invalidate admin pipeline cache so it refreshes
@@ -15663,11 +15704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Generate file URL for the uploaded resume
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
-      const fileUrl = `${baseUrl}/uploads/resumes/${path.basename(req.file.path)}`;
+      const fileUrl = await storeResumeFile(req.file, req);
 
       res.json({
         success: true,
@@ -15755,10 +15792,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const successCount = results.filter(r => r.success).length;
       const failedCount = results.filter(r => !r.success).length;
 
-      // Generate base URL for file paths
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
-        : `http://${req.get('host')}`;
+      const storedFileUrls = await Promise.all(
+        files.map(async (file, index) => {
+          if (!results[index]?.success) {
+            if (process.env.NODE_ENV === "production" && file.path && fs.existsSync(file.path)) {
+              await fs.promises.unlink(file.path).catch(() => {});
+            }
+            return null;
+          }
+          return storeResumeFile(file, req);
+        }),
+      );
 
       res.json({
         total: results.length,
@@ -15766,7 +15810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         failedCount,
         results: results.map((r, index) => {
           if (r.success && files[index]) {
-            const fileUrl = `${baseUrl}/uploads/resumes/${path.basename(files[index].path)}`;
+            const fileUrl = storedFileUrls[index];
             return {
               fileName: r.fileName,
               success: r.success,
@@ -15843,6 +15887,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: cleanValue(location),
         company: cleanValue(company),
         education: normalizeParsedEducation(education) ?? cleanValue(education),
+        highestQualification: cleanValue(education) ? (normalizeParsedEducation(education)?.split(" · ")[0] ?? null) : null,
+        collegeName: extractPrimaryInstitution(education) ?? null,
         linkedinUrl: cleanValue(linkedinUrl),
         portfolioUrl: cleanValue(portfolioUrl),
         websiteUrl: cleanValue(websiteUrl),
@@ -15929,6 +15975,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             location: cleanValue(candidate.location),
             company: cleanValue(candidate.company),
             education: normalizeParsedEducation(candidate.education) ?? cleanValue(candidate.education),
+            highestQualification: candidate.education
+              ? (normalizeParsedEducation(candidate.education)?.split(" · ")[0] ?? null)
+              : null,
+            collegeName: extractPrimaryInstitution(candidate.education) ?? null,
             linkedinUrl: cleanValue(candidate.linkedinUrl),
             portfolioUrl: cleanValue(candidate.portfolioUrl),
             websiteUrl: cleanValue(candidate.websiteUrl),
@@ -17554,6 +17604,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         seen.add(key);
         return true;
       }).map(({ _key, ...rest }) => rest);
+
+      closureReports.sort((a, b) => {
+        const parseJoined = (row: typeof a) => {
+          const raw = row.joinedDate || row.joined;
+          if (!raw || raw === "N/A") return 0;
+          const parts = String(raw).split("-");
+          if (parts.length === 3) {
+            const [d, m, y] = parts.map(Number);
+            if (y > 100) return new Date(y, m - 1, d).getTime();
+          }
+          const t = Date.parse(String(raw));
+          return Number.isNaN(t) ? 0 : t;
+        };
+        return parseJoined(b) - parseJoined(a);
+      });
 
       res.json(closureReports);
     } catch (error) {

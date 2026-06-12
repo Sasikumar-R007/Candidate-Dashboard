@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ExternalLink, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -69,59 +69,100 @@ function resolveJdFileUrl(jdFile?: string | null): string | null {
   return `${window.location.origin}/${trimmed.replace(/^\//, "")}`;
 }
 
-function JdSkillsAndInstructions({ extras }: { extras: RequirementJdExtras }) {
-  const hasSkills = Boolean(
-    extras.primarySkills?.trim() ||
-      extras.secondarySkills?.trim() ||
-      extras.knowledgeOnly?.trim(),
+function splitSkillTokens(value?: string | null): string[] {
+  if (!value?.trim()) return [];
+  return value
+    .split(/[,;|•\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function SkillPills({ items, tone }: { items: string[]; tone: "blue" | "violet" | "amber" }) {
+  const toneClass =
+    tone === "blue"
+      ? "bg-blue-50 text-blue-800 border-blue-100 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-900"
+      : tone === "violet"
+        ? "bg-violet-50 text-violet-800 border-violet-100 dark:bg-violet-950/40 dark:text-violet-200 dark:border-violet-900"
+        : "bg-amber-50 text-amber-900 border-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900";
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <span
+          key={item}
+          className={cn(
+            "inline-flex rounded-full border px-2.5 py-1 text-xs font-medium leading-snug",
+            toneClass,
+          )}
+        >
+          {item}
+        </span>
+      ))}
+    </div>
   );
+}
+
+function JdSection({
+  title,
+  accent,
+  children,
+}: {
+  title: string;
+  accent: "indigo" | "emerald" | "amber" | "rose";
+  children: ReactNode;
+}) {
+  const accentBar =
+    accent === "indigo"
+      ? "bg-indigo-500"
+      : accent === "emerald"
+        ? "bg-emerald-500"
+        : accent === "amber"
+          ? "bg-amber-500"
+          : "bg-rose-500";
+
+  return (
+    <section className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 sm:p-5">
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className={cn("h-5 w-1 rounded-full", accentBar)} aria-hidden />
+        <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h4>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function JdSkillsAndInstructions({ extras }: { extras: RequirementJdExtras }) {
+  const primary = splitSkillTokens(extras.primarySkills);
+  const secondary = splitSkillTokens(extras.secondarySkills);
+  const knowledge = splitSkillTokens(extras.knowledgeOnly);
+  const hasSkills = primary.length > 0 || secondary.length > 0 || knowledge.length > 0;
   const hasInstructions = Boolean(extras.specialInstructions?.trim());
 
   if (!hasSkills && !hasInstructions) return null;
 
   return (
-    <div className="mt-6 space-y-5 border-t border-gray-200 pt-5 dark:border-gray-600">
-      {hasSkills && (
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">Skills</label>
-          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
-            {extras.primarySkills?.trim() && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Primary Skills
-                </p>
-                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{extras.primarySkills}</p>
-              </div>
-            )}
-            {extras.secondarySkills?.trim() && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Secondary Skills
-                </p>
-                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{extras.secondarySkills}</p>
-              </div>
-            )}
-            {extras.knowledgeOnly?.trim() && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Knowledge Only
-                </p>
-                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{extras.knowledgeOnly}</p>
-              </div>
-            )}
-          </div>
-        </div>
+    <div className="space-y-4">
+      {primary.length > 0 && (
+        <JdSection title="Primary skills" accent="indigo">
+          <SkillPills items={primary} tone="blue" />
+        </JdSection>
       )}
-
+      {secondary.length > 0 && (
+        <JdSection title="Secondary skills" accent="emerald">
+          <SkillPills items={secondary} tone="violet" />
+        </JdSection>
+      )}
+      {knowledge.length > 0 && (
+        <JdSection title="Knowledge areas" accent="amber">
+          <SkillPills items={knowledge} tone="amber" />
+        </JdSection>
+      )}
       {hasInstructions && (
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
-            Special Instructions
-          </label>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
-            <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{extras.specialInstructions}</p>
-          </div>
-        </div>
+        <JdSection title="Special instructions" accent="rose">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+            {extras.specialInstructions}
+          </p>
+        </JdSection>
       )}
     </div>
   );
@@ -131,10 +172,12 @@ function JdDocumentPanel({
   jdFile,
   jdText,
   extras,
+  variant,
 }: {
   jdFile?: string | null;
   jdText?: string | null;
   extras: RequirementJdExtras;
+  variant: "admin" | "delivery";
 }) {
   const jdFileUrl = useMemo(() => resolveJdFileUrl(jdFile), [jdFile]);
   const isPdf = jdFileUrl?.toLowerCase().includes(".pdf");
@@ -195,72 +238,97 @@ function JdDocumentPanel({
       extras.specialInstructions?.trim(),
   );
 
+  const panelClass =
+    variant === "delivery"
+      ? "rounded-2xl border border-indigo-100 bg-gradient-to-b from-indigo-50/80 via-white to-slate-50 p-4 dark:border-indigo-900/50 dark:from-indigo-950/20 dark:via-slate-900 dark:to-slate-900 sm:p-5"
+      : "rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800";
+
   return (
-    <div className="overflow-y-auto rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800 max-h-[62vh]">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Job Description Document</h3>
+    <div className={cn(panelClass, "max-h-[62vh] overflow-y-auto")}>
+      <div className="mb-5 flex items-start gap-3 border-b border-slate-200/80 pb-4 dark:border-slate-700">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+          <FileText className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
+            Job description
+          </h3>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            Role details, document preview, and required skills
+          </p>
+        </div>
+      </div>
 
       {jdFileUrl && (
         <div className="mb-4">
           {fileStatus === "checking" && (
-            <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+            <p className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800">
               Checking document availability…
             </p>
           )}
 
           {fileStatus === "available" && isPdf && iframeSrc && (
-            <div className="overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-              <iframe src={iframeSrc} className="h-[min(600px,55vh)] w-full" title="JD PDF Preview" />
-            </div>
+            <JdSection title="Document preview" accent="indigo">
+              <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
+                <iframe src={iframeSrc} className="h-[min(520px,50vh)] w-full bg-white" title="JD PDF Preview" />
+              </div>
+            </JdSection>
           )}
 
           {fileStatus === "available" && !isPdf && jdFileUrl && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
+            <JdSection title="Attached document" accent="indigo">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="mb-1 text-sm font-medium text-gray-900 dark:text-white">Document File</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{fileName}</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
+                  <p className="mt-1 text-xs text-slate-500">Opens in a new tab</p>
                 </div>
                 <a
                   href={jdFileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Open Document
+                  Open document
                 </a>
               </div>
-            </div>
+            </JdSection>
           )}
 
           {fileStatus === "unavailable" && (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-800">
-              The job description file is not available or could not be loaded. Please contact your administrator or use the JD text below if provided.
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-sm leading-relaxed text-amber-900">
+              The job description file could not be loaded. Use the text below if available, or contact your recruiter.
             </p>
           )}
         </div>
       )}
 
       {!jdFileUrl && !jdText?.trim() && !hasSkillsOrInstructions && (
-        <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-          No job description document or text has been uploaded for this requirement yet.
+        <p className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-800/50">
+          No job description has been uploaded for this role yet.
         </p>
       )}
 
       {jdText?.trim() && (
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
-            JD Text Content
-          </label>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
-            <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap font-sans text-sm text-gray-700 dark:text-gray-300">
-              {jdText}
-            </pre>
-          </div>
+        <div className="mb-4">
+          <JdSection title="Role overview" accent="emerald">
+            <div className="max-h-80 overflow-y-auto rounded-lg bg-slate-50/90 p-4 dark:bg-slate-800/60">
+              <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700 dark:text-slate-200">
+                {jdText}
+              </div>
+            </div>
+          </JdSection>
         </div>
       )}
 
       <JdSkillsAndInstructions extras={extras} />
+
+      {variant === "delivery" && hasSkillsOrInstructions && (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2 text-xs text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+          <span>Review skills and instructions before your interview or next step.</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -309,7 +377,7 @@ export default function JobDescriptionDetailsModal({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
             <div className="space-y-4">
               <div className="rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5 shadow-sm dark:border-cyan-900 dark:from-cyan-950/30 dark:to-blue-950/30">
                 <div className="flex items-center gap-3">
@@ -418,9 +486,14 @@ export default function JobDescriptionDetailsModal({
             </div>
 
             {hasDocumentSection ? (
-              <JdDocumentPanel jdFile={data.jdFile} jdText={data.jdText} extras={jdExtras} />
+              <JdDocumentPanel
+                jdFile={data.jdFile}
+                jdText={data.jdText}
+                extras={jdExtras}
+                variant={variant}
+              />
             ) : (
-              <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 dark:border-slate-600 dark:bg-slate-800/50">
                 <p className="text-center text-sm text-slate-600">
                   No job description document or text has been uploaded for this requirement yet.
                 </p>
