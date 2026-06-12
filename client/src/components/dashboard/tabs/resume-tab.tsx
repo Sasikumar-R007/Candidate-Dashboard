@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import FileUploadModal from '../modals/file-upload-modal';
 import { useSkills, useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { api } from '@/lib/api';
+import { resolveUploadAssetUrl } from '@/lib/resolve-upload-url';
 
 export default function ResumeTab() {
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -71,11 +72,28 @@ export default function ResumeTab() {
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 h-[600px] overflow-y-auto">
                 {profile?.resumeFile ? (
                   <div className="w-full h-full">
-                    <img
-                      src={profile.resumeFile}
-                      alt="Resume"
-                      className="w-full h-full rounded shadow-md object-contain"
-                    />
+                    {(() => {
+                      const resumeUrl = resolveUploadAssetUrl(profile.resumeFile, "uploads/resumes");
+                      if (!resumeUrl) {
+                        return <p className="text-sm text-gray-500">Resume preview unavailable</p>;
+                      }
+                      if (resumeUrl.toLowerCase().split("?")[0].endsWith(".pdf")) {
+                        return (
+                          <iframe
+                            src={resumeUrl}
+                            className="w-full h-full rounded border-0"
+                            title="Resume Preview"
+                          />
+                        );
+                      }
+                      return (
+                        <img
+                          src={resumeUrl}
+                          alt="Resume"
+                          className="w-full h-full rounded shadow-md object-contain"
+                        />
+                      );
+                    })()}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-full">

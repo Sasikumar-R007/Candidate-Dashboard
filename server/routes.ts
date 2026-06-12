@@ -230,7 +230,7 @@ import {
   fetchProfileMediaRecord,
 } from "./profile-media";
 import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
-import { getR2Object } from "./utils/r2Upload";
+import { getR2ResumeByFileName } from "./utils/r2Upload";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -5212,6 +5212,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const uploadsRoot = path.join(process.cwd(), "uploads");
   const resumeFilesRoot = path.join(uploadsRoot, "resumes");
 
+  const setResumeFileResponseHeaders = (req: Request, res: Response, safeName: string, contentType: string) => {
+    applyCorsHeaders(req, res);
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `inline; filename="${safeName.replace(/"/g, "")}"`);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader(
+      "Content-Security-Policy",
+      "frame-ancestors 'self' https://*.vercel.app https://staffos.io https://*.staffos.io http://localhost:* http://127.0.0.1:*",
+    );
+  };
+
   /** Serve resume PDFs via API (works when frontend is on a different host than the backend). */
   app.get("/api/files/resumes/:filename", async (req, res) => {
     try {
@@ -5226,26 +5237,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       for (const filePath of candidates) {
         if (fs.existsSync(filePath)) {
+          setResumeFileResponseHeaders(req, res, safeName, "application/octet-stream");
           return res.sendFile(path.resolve(filePath));
         }
       }
 
       if (process.env.NODE_ENV === "production" && process.env.R2_BUCKET) {
-        const r2Object = await getR2Object(`resumes/${safeName}`);
+        const r2Object = await getR2ResumeByFileName(safeName);
         if (r2Object) {
-          res.setHeader("Content-Type", r2Object.contentType);
-          res.setHeader("Content-Disposition", `inline; filename="${safeName}"`);
-          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          setResumeFileResponseHeaders(req, res, safeName, r2Object.contentType);
           return res.send(r2Object.body);
         }
       }
 
+      applyCorsHeaders(req, res);
       return res.status(404).json({
         message:
           "Resume file not found on the server. It may have been uploaded before the last deploy, or storage is not persistent on this host — please re-upload the resume.",
       });
     } catch (error) {
       console.error("Serve resume file error:", error);
+      applyCorsHeaders(req, res);
       return res.status(500).json({ message: "Failed to load resume file" });
     }
   });

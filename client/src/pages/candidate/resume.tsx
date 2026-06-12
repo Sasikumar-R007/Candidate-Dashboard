@@ -1,4 +1,5 @@
 import { useProfile, useUploadResume } from "@/hooks/use-profile";
+import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 import {
   Card,
   CardContent,
@@ -227,7 +228,13 @@ export default function ResumePage() {
 
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1 font-black text-[10px] uppercase tracking-widest h-10 border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" asChild>
-                    <a href={profile.resumeFile} target="_blank" rel="noopener noreferrer">Inspect File</a>
+                    <a
+                      href={resolveUploadAssetUrl(profile.resumeFile, "uploads/resumes") || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Inspect File
+                    </a>
                   </Button>
                   <Button variant="outline" size="icon" className="h-10 w-10 border-slate-200 text-slate-400 hover:text-indigo-600 rounded-xl shadow-sm">
                     <Download className="h-4 w-4" />

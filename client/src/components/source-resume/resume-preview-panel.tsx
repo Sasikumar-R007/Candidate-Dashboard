@@ -13,10 +13,10 @@ function getExtension(url: string): string {
 
 async function probeResumeUrl(url: string): Promise<boolean> {
   try {
-    const head = await fetch(url, { method: "HEAD", credentials: "include" });
+    const head = await fetch(url, { method: "HEAD", credentials: "omit" });
     if (head.ok) return true;
     if (head.status === 405 || head.status === 501) {
-      const get = await fetch(url, { method: "GET", credentials: "include" });
+      const get = await fetch(url, { method: "GET", credentials: "omit" });
       return get.ok;
     }
     return false;

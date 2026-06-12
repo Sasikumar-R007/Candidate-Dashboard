@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { ExternalLink, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 
 type SharedProfilesPayload = {
   requirement: { id: string; position: string | null; company: string | null };
@@ -220,7 +221,12 @@ export function ClientSharedProfilesModal({
                       <div className="flex flex-wrap gap-3 items-center text-sm">
                         <FileText className="h-4 w-4 text-gray-500" />
                         <a
-                          href={String(cand?.resumeFile || prof?.resumeFile)}
+                          href={
+                            resolveUploadAssetUrl(
+                              String(cand?.resumeFile || prof?.resumeFile),
+                              "uploads/resumes",
+                            ) || "#"
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:underline inline-flex items-center gap-1"

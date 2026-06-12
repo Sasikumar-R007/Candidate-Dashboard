@@ -1114,7 +1114,15 @@ export default function MasterDatabase() {
       return;
     }
 
-    const resumeUrl = selectedResume.resumeFile;
+    const resumeUrl = resolveUploadAssetUrl(selectedResume.resumeFile, "uploads/resumes");
+    if (!resumeUrl) {
+      toast({
+        title: "Error",
+        description: "Resume file not available",
+        variant: "destructive",
+      });
+      return;
+    }
     const link = document.createElement('a');
     link.href = resumeUrl;
     link.download = `${selectedResume.name || 'resume'}.pdf`;
@@ -2106,16 +2114,18 @@ export default function MasterDatabase() {
                   {selectedResume && 'resumeFile' in selectedResume && selectedResume.resumeFile ? (
                     <>
                       {(() => {
-                        let resumeUrl = selectedResume.resumeFile;
-                        // Fix file path - ensure it's a proper URL
-                        if (resumeUrl && !resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
-                          // If it's a relative path without leading slash, add it
-                          resumeUrl = '/' + resumeUrl;
-                        } else if (resumeUrl && resumeUrl.startsWith('uploads/')) {
-                          // If it starts with uploads/, ensure it has leading slash
-                          resumeUrl = '/' + resumeUrl;
+                        const resumeUrl = resolveUploadAssetUrl(
+                          selectedResume.resumeFile,
+                          "uploads/resumes",
+                        );
+                        if (!resumeUrl) {
+                          return (
+                            <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                              Resume preview unavailable
+                            </div>
+                          );
                         }
-                        
+
                         const lowerUrl = resumeUrl.toLowerCase();
                         // Check file extension from URL (handle URLs with query params)
                         const urlWithoutQuery = lowerUrl.split('?')[0];

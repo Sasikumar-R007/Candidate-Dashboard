@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 
 interface DatabaseCandidate {
   id: string;
@@ -98,33 +99,7 @@ export default function CandidateProfile() {
   
   const isFromDatabase = !!(candidate.candidateId || candidate.resumeFile);
   
-  // Normalize resume URL
-  let resumeUrl = candidate.resumeFile;
-  if (resumeUrl) {
-    // If it's a full URL, extract the path
-    if (resumeUrl.startsWith('http://') || resumeUrl.startsWith('https://')) {
-      try {
-        const url = new URL(resumeUrl);
-        resumeUrl = url.pathname;
-      } catch (e) {
-        // If URL parsing fails, try to extract path manually
-        const match = resumeUrl.match(/\/uploads\/.*/);
-        if (match) {
-          resumeUrl = match[0];
-        }
-      }
-    }
-    
-    // Ensure it starts with /uploads
-    if (!resumeUrl.startsWith('/uploads')) {
-      if (resumeUrl.startsWith('uploads/')) {
-        resumeUrl = '/' + resumeUrl;
-      } else if (!resumeUrl.startsWith('/')) {
-        // If it's just a filename, assume it's in uploads/resumes
-        resumeUrl = '/uploads/resumes/' + resumeUrl;
-      }
-    }
-  }
+  const resumeUrl = resolveUploadAssetUrl(candidate.resumeFile, "uploads/resumes");
   
   const lowerUrl = resumeUrl?.toLowerCase() || '';
   const urlWithoutQuery = lowerUrl.split('?')[0];
@@ -435,7 +410,7 @@ export default function CandidateProfile() {
                               Word documents cannot be previewed in the browser. Please download the file to view it.
                             </p>
                             <Button
-                              onClick={() => window.open(candidate.resumeFile, '_blank')}
+                              onClick={() => resumeUrl && window.open(resumeUrl, '_blank')}
                               className="bg-blue-600 text-white hover:bg-blue-700"
                             >
                               <Download className="h-4 w-4 mr-2" />
@@ -456,7 +431,7 @@ export default function CandidateProfile() {
                               This file type cannot be previewed. Please download to view.
                             </p>
                             <Button
-                              onClick={() => window.open(candidate.resumeFile, '_blank')}
+                              onClick={() => resumeUrl && window.open(resumeUrl, '_blank')}
                               className="bg-blue-600 text-white hover:bg-blue-700"
                             >
                               <Download className="h-4 w-4 mr-2" />

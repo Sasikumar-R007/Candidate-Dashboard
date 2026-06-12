@@ -6,6 +6,14 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 const devPort = parseInt(process.env.PORT || "5000", 10);
 
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_API_URL": JSON.stringify(
+      process.env.VITE_API_URL || process.env.BACKEND_URL || "",
+    ),
+    "import.meta.env.VITE_BACKEND_URL": JSON.stringify(
+      process.env.VITE_BACKEND_URL || process.env.BACKEND_URL || "",
+    ),
+  },
   plugins: [
     react(),
     runtimeErrorOverlay(),

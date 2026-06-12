@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { useToast } from "@/hooks/use-toast";
 import type { RecruiterJob } from "@shared/schema";
+import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 
 interface JobApplication {
   id: string;
@@ -413,11 +414,8 @@ export default function RecruiterApplicants() {
                     className="flex items-center gap-1 flex-1" 
                     onClick={() => {
                       if (candidate.resumeUrl && candidate.resumeUrl !== '#' && candidate.resumeUrl !== 'N/A') {
-                        let resumeUrl = candidate.resumeUrl;
-                        if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
-                          resumeUrl = '/' + resumeUrl;
-                        }
-                        window.open(resumeUrl, '_blank');
+                        const resumeUrl = resolveUploadAssetUrl(candidate.resumeUrl, "uploads/resumes");
+                        if (resumeUrl) window.open(resumeUrl, '_blank');
                       }
                     }}
                     disabled={!candidate.resumeUrl || candidate.resumeUrl === '#' || candidate.resumeUrl === 'N/A'}

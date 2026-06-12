@@ -9,6 +9,10 @@ const s3 = new S3Client({
   },
 });
 
+function sanitizeResumeFileName(fileName: string): string {
+  return fileName.replace(/[[\]#?%\\]/g, "_");
+}
+
 function buildR2PublicUrl(key: string): string {
   const base = (process.env.R2_PUBLIC_URL || "").trim().replace(/\/+$/, "");
   const encodedKey = key
@@ -23,7 +27,7 @@ export async function uploadToR2(
   fileName: string,
   fileType: string,
 ): Promise<string> {
-  const key = `resumes/${Date.now()}-${fileName}`;
+  const key = `resumes/${Date.now()}-${sanitizeResumeFileName(fileName)}`;
 
   await s3.send(
     new PutObjectCommand({
@@ -36,6 +40,23 @@ export async function uploadToR2(
   );
 
   return buildR2PublicUrl(key);
+}
+
+export async function getR2ResumeByFileName(
+  fileName: string,
+): Promise<{ body: Buffer; contentType: string } | null> {
+  const keyCandidates = [
+    `resumes/${fileName}`,
+    `resumes/${encodeURIComponent(fileName)}`,
+  ];
+  const seen = new Set<string>();
+  for (const key of keyCandidates) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const object = await getR2Object(key);
+    if (object) return object;
+  }
+  return null;
 }
 
 export async function getR2Object(

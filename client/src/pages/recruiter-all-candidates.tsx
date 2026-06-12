@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Mail, Phone, MapPin, Briefcase, Calendar, User, Download, Star, CheckCircle, XCircle, UserPlus, Loader2, Building } from "lucide-react";
+import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 
 interface Candidate {
   id: string;
@@ -394,11 +395,8 @@ export default function RecruiterAllCandidates() {
                     data-testid={`button-resume-${candidate.id}`}
                     onClick={() => {
                       if (candidate.resumeUrl && candidate.resumeUrl !== '#' && candidate.resumeUrl !== 'N/A') {
-                        let resumeUrl = candidate.resumeUrl;
-                        if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
-                          resumeUrl = '/' + resumeUrl;
-                        }
-                        window.open(resumeUrl, '_blank');
+                        const resumeUrl = resolveUploadAssetUrl(candidate.resumeUrl, "uploads/resumes");
+                        if (resumeUrl) window.open(resumeUrl, '_blank');
                       }
                     }}
                     disabled={!candidate.resumeUrl || candidate.resumeUrl === '#' || candidate.resumeUrl === 'N/A'}
