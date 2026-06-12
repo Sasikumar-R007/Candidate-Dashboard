@@ -13,6 +13,19 @@ export function resolveUploadAssetUrl(
   if (!url) return null;
 
   if (url.startsWith("http://") || url.startsWith("https://")) {
+    const resumeMatch = url.match(/\/resumes\/([^/?#]+)$/i);
+    if (resumeMatch?.[1] && !url.includes("/api/files/resumes/") && API_BASE_URL) {
+      const apiBase = API_BASE_URL.replace(/\/+$/, "");
+      if (!url.startsWith(`${apiBase}/api/files/`)) {
+        let fileName = resumeMatch[1];
+        try {
+          fileName = decodeURIComponent(fileName);
+        } catch {
+          // keep raw segment when malformed
+        }
+        return `${apiBase}/api/files/resumes/${encodeURIComponent(fileName)}`;
+      }
+    }
     return url;
   }
 

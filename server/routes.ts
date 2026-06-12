@@ -230,6 +230,7 @@ import {
   fetchProfileMediaRecord,
 } from "./profile-media";
 import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
+import { getR2Object } from "./utils/r2Upload";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -5212,9 +5213,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const resumeFilesRoot = path.join(uploadsRoot, "resumes");
 
   /** Serve resume PDFs via API (works when frontend is on a different host than the backend). */
-  app.get("/api/files/resumes/:filename", (req, res) => {
+  app.get("/api/files/resumes/:filename", async (req, res) => {
     try {
-      const safeName = path.basename(req.params.filename || "");
+      const safeName = path.basename(decodeURIComponent(req.params.filename || ""));
       if (!safeName) {
         return res.status(400).json({ message: "Invalid filename" });
       }
@@ -5228,6 +5229,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.sendFile(path.resolve(filePath));
         }
       }
+
+      if (process.env.NODE_ENV === "production" && process.env.R2_BUCKET) {
+        const r2Object = await getR2Object(`resumes/${safeName}`);
+        if (r2Object) {
+          res.setHeader("Content-Type", r2Object.contentType);
+          res.setHeader("Content-Disposition", `inline; filename="${safeName}"`);
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          return res.send(r2Object.body);
+        }
+      }
+
       return res.status(404).json({
         message:
           "Resume file not found on the server. It may have been uploaded before the last deploy, or storage is not persistent on this host — please re-upload the resume.",

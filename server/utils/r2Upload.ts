@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const s3 = new S3Client({
   region: "auto",
@@ -8,6 +8,15 @@ const s3 = new S3Client({
     secretAccessKey: process.env.R2_SECRET_KEY || "",
   },
 });
+
+function buildR2PublicUrl(key: string): string {
+  const base = (process.env.R2_PUBLIC_URL || "").trim().replace(/\/+$/, "");
+  const encodedKey = key
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return `${base}/${encodedKey}`;
+}
 
 export async function uploadToR2(
   fileBuffer: Buffer,
@@ -22,8 +31,36 @@ export async function uploadToR2(
       Key: key,
       Body: fileBuffer,
       ContentType: fileType,
+      ContentDisposition: "inline",
     }),
   );
 
-  return `${process.env.R2_PUBLIC_URL}/${key}`;
+  return buildR2PublicUrl(key);
+}
+
+export async function getR2Object(
+  key: string,
+): Promise<{ body: Buffer; contentType: string } | null> {
+  try {
+    const response = await s3.send(
+      new GetObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: key,
+      }),
+    );
+    if (!response.Body) {
+      return null;
+    }
+    const body = Buffer.from(await response.Body.transformToByteArray());
+    return {
+      body,
+      contentType: response.ContentType || "application/octet-stream",
+    };
+  } catch (error: unknown) {
+    const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (err.name === "NoSuchKey" || err.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
