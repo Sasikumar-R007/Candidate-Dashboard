@@ -20,6 +20,7 @@
     "fix-candidate-status": "tsx server/scripts/fix-candidate-active-status.ts",
     "migrate-profiles": "tsx server/scripts/migrate-existing-profiles.ts",
     "migrate-profile-media-r2": "tsx server/scripts/migrate-profile-media-to-r2.ts",
+    "apply-avatar-url-schema": "tsx server/scripts/apply-avatar-url-schema.ts",
     "debug-candidates": "tsx server/scripts/debug-candidate-data.ts"
   },
   "dependencies": {
