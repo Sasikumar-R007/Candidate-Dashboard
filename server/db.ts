@@ -7,6 +7,27 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+function normalizeDatabaseUrl(raw: string): string {
+  let url = raw.trim();
+  // Render users often paste Neon/psql strings with wrapping quotes — strip them.
+  if (
+    (url.startsWith('"') && url.endsWith('"')) ||
+    (url.startsWith("'") && url.endsWith("'"))
+  ) {
+    url = url.slice(1, -1).trim();
+  }
+  if (url.toLowerCase().startsWith("psql ")) {
+    url = url.slice(5).trim();
+    if (
+      (url.startsWith('"') && url.endsWith('"')) ||
+      (url.startsWith("'") && url.endsWith("'"))
+    ) {
+      url = url.slice(1, -1).trim();
+    }
+  }
+  return url;
+}
+
 if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
@@ -46,7 +67,9 @@ function ensureSslInConnectionUrl(url: string): string {
 }
 
 // Fix the DATABASE_URL if needed
-const fixedDatabaseUrl = ensureSslInConnectionUrl(fixRenderDatabaseUrl(process.env.DATABASE_URL));
+const fixedDatabaseUrl = ensureSslInConnectionUrl(
+  fixRenderDatabaseUrl(normalizeDatabaseUrl(process.env.DATABASE_URL)),
+);
 
 // Parse the DATABASE_URL to handle URL-encoded passwords properly
 function parseDatabaseUrl(url: string) {
