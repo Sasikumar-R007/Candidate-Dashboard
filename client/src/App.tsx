@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/contexts/theme-context";
 import { AuthProvider } from "@/contexts/auth-context";
 import AccountHoldOverlay from "@/components/account-hold-overlay";
 import SigningOutOverlay from "@/components/signing-out-overlay";
+import { BulkResumeImportProvider } from "@/contexts/bulk-resume-import-context";
 import AuthenticatedNavigationGuard from "@/components/authenticated-navigation-guard";
 import { ProtectedRoute } from "@/components/protected-route";
 import ErrorBoundary from "@/components/error-boundary";
@@ -168,13 +169,15 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <OperationalDataSync />
         <AuthProvider>
-          <AccountHoldOverlay />
-          <SigningOutOverlay />
-          <AuthenticatedNavigationGuard />
           <ThemeProvider>
             <TooltipProvider>
-              <Toaster />
-              <Router />
+              <BulkResumeImportProvider>
+                <AccountHoldOverlay />
+                <SigningOutOverlay />
+                <AuthenticatedNavigationGuard />
+                <Toaster />
+                <Router />
+              </BulkResumeImportProvider>
             </TooltipProvider>
           </ThemeProvider>
         </AuthProvider>

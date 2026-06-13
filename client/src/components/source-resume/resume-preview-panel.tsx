@@ -91,7 +91,7 @@ export function ResumePreviewPanel({ resumeFile, candidateName }: ResumePreviewP
 
   if (loadState === "loading") {
     return (
-      <div className="flex h-full min-h-[400px] flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex h-full min-h-0 flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         <p className="mt-3 text-sm text-gray-500">Loading resume…</p>
       </div>
@@ -100,7 +100,7 @@ export function ResumePreviewPanel({ resumeFile, candidateName }: ResumePreviewP
 
   if (isPdf) {
     return (
-      <div className="relative h-full w-full min-h-[400px]">
+      <div className="relative h-full w-full min-h-0">
         <iframe
           key={`${resumeUrl}-${retryKey}`}
           src={resumeUrl}
@@ -114,7 +114,7 @@ export function ResumePreviewPanel({ resumeFile, candidateName }: ResumePreviewP
 
   if (isImage) {
     return (
-      <div className="relative flex h-full min-h-[400px] w-full items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="relative flex h-full min-h-0 w-full items-center justify-center bg-gray-50 dark:bg-gray-900">
         <img
           src={resumeUrl}
           alt="Resume"

@@ -11,15 +11,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Filter, Search, MoreVertical, X, Download, Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowLeft, Filter, Search, MoreVertical, X, Download, Loader2, Upload, FileText, CheckCircle, XCircle, Minimize2 } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import { queryClient, apiRequest } from "@/lib/queryClient";
-
-// Helper to create API URL
-const createApiUrl = (path: string) => {
-  const apiUrl = import.meta.env.VITE_API_URL || '';
-  return `${apiUrl}${path}`;
-};
+import { createApiUrl, BULK_IMPORT_BATCH_SIZE } from "@/lib/bulk-resume-import-config";
+import { useBulkResumeImport } from "@/contexts/bulk-resume-import-context";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import EmployeeDetailsModal from "@/components/dashboard/modals/employee-details-modal";
@@ -620,40 +617,42 @@ export default function MasterDatabase() {
   const [passwordAttempts, setPasswordAttempts] = useState(0);
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   
-  // Import Resume modal state
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isBulkUpload, setIsBulkUpload] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
-  const [parsedData, setParsedData] = useState<{fullName: string | null; email: string | null; phone: string | null; designation?: string | null; experience?: string | null; skills?: string | null; location?: string | null; filePath?: string} | null>(null);
-  const [bulkParsedResults, setBulkParsedResults] = useState<Array<{fileName: string; success: boolean; data?: {fullName: string | null; email: string | null; phone: string | null; designation?: string | null; experience?: string | null; skills?: string | null; location?: string | null; filePath?: string}; error?: string}>>([]);
-  const [importStep, setImportStep] = useState<'upload' | 'confirm' | 'result'>('upload');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [singleCandidateForm, setSingleCandidateForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    designation: '',
-    experience: '',
-    skills: '',
-    location: ''
-  });
-  const [importResults, setImportResults] = useState<{total: number; successCount: number; failedCount: number; results: Array<{fileName: string; success: boolean; error?: string}>} | null>(null);
-
   const { toast } = useToast();
 
-  // Up to 30 files per drop; parsed in small batches to stay under Render/proxy ~100s limits
-  const BULK_UPLOAD_LIMIT = 30;
-  const BULK_PARSE_BATCH_SIZE = 5;
-  const BULK_IMPORT_BATCH_SIZE = 15;
-  const BULK_PARSE_BATCH_RETRIES = 2;
-  const [bulkParseProgress, setBulkParseProgress] = useState<{
-    batch: number;
-    totalBatches: number;
-    filesDone: number;
-    fileTotal: number;
-  } | null>(null);
-  const [showImportCloseConfirm, setShowImportCloseConfirm] = useState(false);
+  const {
+    isImportModalOpen,
+    setIsImportModalOpen,
+    isImportModalMinimized,
+    isBulkUpload,
+    setIsBulkUpload,
+    uploadedFile,
+    setUploadedFile,
+    bulkFiles,
+    setBulkFiles,
+    parsedData,
+    setParsedData,
+    bulkParsedResults,
+    setBulkParsedResults,
+    importStep,
+    setImportStep,
+    isProcessing,
+    setIsProcessing,
+    singleCandidateForm,
+    setSingleCandidateForm,
+    importResults,
+    setImportResults,
+    bulkParseProgress,
+    showImportCloseConfirm,
+    setShowImportCloseConfirm,
+    BULK_UPLOAD_LIMIT,
+    importModalHasUnsavedProgress,
+    handleImportModalOpenChange,
+    confirmLeaveImportModal,
+    resetImportModal,
+    runBulkParse,
+    minimizeImportModal,
+    expandImportModal,
+  } = useBulkResumeImport();
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -1143,60 +1142,6 @@ export default function MasterDatabase() {
       .slice(0, 2);
   };
 
-  const importModalHasUnsavedProgress = () => {
-    if (isProcessing) return true;
-    if (importStep === "confirm") {
-      if (isBulkUpload && bulkParsedResults.length > 0) return true;
-      if (!isBulkUpload && parsedData) return true;
-    }
-    return false;
-  };
-
-  const handleImportModalOpenChange = (open: boolean) => {
-    if (open) {
-      setIsImportModalOpen(true);
-      return;
-    }
-    if (importModalHasUnsavedProgress()) {
-      setShowImportCloseConfirm(true);
-      return;
-    }
-    setIsImportModalOpen(false);
-    resetImportModal();
-  };
-
-  const confirmLeaveImportModal = () => {
-    setShowImportCloseConfirm(false);
-    setIsImportModalOpen(false);
-    resetImportModal();
-  };
-
-  // Reset import modal state
-  const resetImportModal = () => {
-    setUploadedFile(null);
-    setBulkFiles([]);
-    setParsedData(null);
-    setBulkParsedResults([]);
-    setImportStep('upload');
-    setIsProcessing(false);
-    setSingleCandidateForm({
-      fullName: '',
-      email: '',
-      phone: '',
-      designation: '',
-      experience: '',
-      skills: '',
-      location: '',
-      company: '',
-      education: '',
-      linkedinUrl: '',
-      portfolioUrl: '',
-      websiteUrl: '',
-      currentRole: ''
-    });
-    setImportResults(null);
-  };
-
   // Handle single file drop
   const onSingleDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -1260,218 +1205,50 @@ export default function MasterDatabase() {
     }
   }, [toast]);
 
-  // Handle bulk files drop
-  const onBulkDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) {
-      toast({
-        title: "No files selected",
-        description: "Choose PDF, DOC, or DOCX resume files to upload.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const limitedFiles = acceptedFiles.slice(0, BULK_UPLOAD_LIMIT);
-    if (acceptedFiles.length > BULK_UPLOAD_LIMIT) {
-      toast({
-        title: "Too many files",
-        description: `You selected ${acceptedFiles.length} files. Only the first ${BULK_UPLOAD_LIMIT} will be processed. Upload at most ${BULK_UPLOAD_LIMIT} resumes at a time.`,
-      });
-    }
-
-    setBulkFiles(limitedFiles);
-    setIsProcessing(true);
-    const totalBatches = Math.max(1, Math.ceil(limitedFiles.length / BULK_PARSE_BATCH_SIZE));
-    setBulkParseProgress({
-      batch: 0,
-      totalBatches,
-      filesDone: 0,
-      fileTotal: limitedFiles.length,
-    });
-
-    type BulkParseRow = {
-      fileName: string;
-      success: boolean;
-      data?: {
-        fullName: string | null;
-        email: string | null;
-        phone: string | null;
-        designation?: string | null;
-        experience?: string | null;
-        skills?: string | null;
-        location?: string | null;
-        filePath?: string;
-        company?: string | null;
-        education?: string | null;
-        linkedinUrl?: string | null;
-        portfolioUrl?: string | null;
-        websiteUrl?: string | null;
-        currentRole?: string | null;
-      };
-      error?: string;
-    };
-
-    const failedBatchRows = (batch: File[], reason: string): BulkParseRow[] =>
-      batch.map((file) => ({
-        fileName: file.name,
-        success: false,
-        error: reason,
-      }));
-
-    const parseOneBatch = async (batch: File[]): Promise<BulkParseRow[]> => {
-      const formData = new FormData();
-      batch.forEach((file) => {
-        formData.append("resumes", file);
-      });
-
-      const response = await fetch(createApiUrl("/api/admin/parse-resumes-bulk"), {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      let result: { message?: string; results?: BulkParseRow[] } = {};
-      try {
-        result = await response.json();
-      } catch {
-        // non-JSON (e.g. gateway timeout HTML)
-      }
-
-      if (!response.ok || !Array.isArray(result.results)) {
-        throw new Error(
-          result.message || "Server could not parse this batch (timeout or error).",
-        );
-      }
-
-      return result.results;
-    };
-
-    try {
-      const allResults: BulkParseRow[] = [];
-      let batchFailures = 0;
-
-      for (let offset = 0; offset < limitedFiles.length; offset += BULK_PARSE_BATCH_SIZE) {
-        const batchIndex = Math.floor(offset / BULK_PARSE_BATCH_SIZE) + 1;
-        const batch = limitedFiles.slice(offset, offset + BULK_PARSE_BATCH_SIZE);
-        setBulkParseProgress({
-          batch: batchIndex,
-          totalBatches,
-          filesDone: offset,
-          fileTotal: limitedFiles.length,
-        });
-
-        let batchRows: BulkParseRow[] | null = null;
-        let lastError = "Unknown error";
-
-        for (let attempt = 0; attempt < BULK_PARSE_BATCH_RETRIES; attempt++) {
-          try {
-            batchRows = await parseOneBatch(batch);
-            break;
-          } catch (err: unknown) {
-            lastError =
-              err instanceof Error ? err.message : "Failed to parse batch";
-            if (attempt < BULK_PARSE_BATCH_RETRIES - 1) {
-              await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
-            }
-          }
-        }
-
-        if (batchRows) {
-          allResults.push(...batchRows);
-        } else {
-          batchFailures += 1;
-          allResults.push(
-            ...failedBatchRows(
-              batch,
-              lastError || `Batch ${batchIndex} failed after retries`,
-            ),
-          );
-        }
-      }
-
-      setBulkParseProgress({
-        batch: totalBatches,
-        totalBatches,
-        filesDone: limitedFiles.length,
-        fileTotal: limitedFiles.length,
-      });
-
-      if (allResults.length === 0) {
-        toast({
-          title: "Parsing failed",
-          description:
-            limitedFiles.length > 0
-              ? `None of the ${limitedFiles.length} resume(s) could be parsed. Try again with up to ${BULK_UPLOAD_LIMIT} smaller PDF/DOC files, or check that the API server and OpenAI key are configured.`
-              : "No resume files were processed. Select up to 30 files and try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setBulkParsedResults(allResults);
-      setImportStep("confirm");
-
-      const successCount = allResults.filter((r) => r.success).length;
-      const failedCount = allResults.filter((r) => !r.success).length;
-      const validCount = allResults.filter(
-        (r) => r.success && r.data?.fullName && r.data?.email,
-      ).length;
-
-      toast({
-        title: "Parsing complete",
-        description:
-          validCount > 0
-            ? `${validCount} of ${allResults.length} resume(s) are ready to import.${failedCount > 0 ? ` ${failedCount} could not be used.` : ""}`
-            : `${allResults.length} file(s) processed, but none have both a name and email. Edit the PDFs or try different files.`,
-        variant: validCount > 0 ? "default" : "destructive",
-      });
-    } catch (error: unknown) {
-      console.error("Parse bulk resumes error:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to parse resumes. Please ensure all files are valid PDF, DOC, or DOCX files and try again.";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [toast]);
-
   const singleDropzone = useDropzone({
-    onDrop: onSingleDrop,
+    onDrop: (acceptedFiles, fileRejections) => {
+      const tooManyFiles = fileRejections.some((r) =>
+        r.errors.some((e) => e.code === "too-many-files"),
+      );
+      if (tooManyFiles || acceptedFiles.length > 1) {
+        toast({
+          title: "Multiple files selected",
+          description:
+            "Single upload accepts one resume at a time. Turn on Bulk Upload for multiple files, or choose one file only.",
+        });
+      }
+      void onSingleDrop(acceptedFiles.slice(0, 1));
+    },
     accept: {
       'application/pdf': ['.pdf'],
       'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
     maxFiles: 1,
-    disabled: isProcessing
-  });
-
-  const bulkDropzone = useDropzone({
-    onDrop: (acceptedFiles, fileRejections) => {
+    disabled: isProcessing,
+    onDropRejected: (fileRejections) => {
       const tooManyFiles = fileRejections.some((r) =>
         r.errors.some((e) => e.code === "too-many-files"),
       );
       if (tooManyFiles) {
         toast({
-          title: "Too many files",
-          description: `You can upload at most ${BULK_UPLOAD_LIMIT} resumes at once. Remove extra files and try again.`,
-          variant: "destructive",
+          title: "Multiple files selected",
+          description:
+            "Single upload accepts one resume at a time. Turn on Bulk Upload for multiple files, or choose one file only.",
         });
       }
-      void onBulkDrop(acceptedFiles);
+    },
+  });
+
+  const bulkDropzone = useDropzone({
+    onDrop: (acceptedFiles) => {
+      void runBulkParse(acceptedFiles);
     },
     accept: {
       'application/pdf': ['.pdf'],
       'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
-    maxFiles: BULK_UPLOAD_LIMIT,
     disabled: isProcessing
   });
 
@@ -1637,9 +1414,9 @@ export default function MasterDatabase() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 px-6 py-4">
+      <div className="flex-shrink-0 bg-white dark:bg-gray-800 px-6 py-4">
         <div className="flex items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
             <Button
@@ -1654,8 +1431,12 @@ export default function MasterDatabase() {
           </div>
           <Button
             onClick={() => {
+              if (isProcessing || importModalHasUnsavedProgress()) {
+                expandImportModal();
+                return;
+              }
               resetImportModal();
-              setIsImportModalOpen(true);
+              expandImportModal();
             }}
             className="flex items-center gap-2"
             data-testid="button-import-resume"
@@ -1687,9 +1468,9 @@ export default function MasterDatabase() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="resume">Resume</SelectItem>
-              <SelectItem value="employee">Employee</SelectItem>
-              <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="resume">Resume ({resumeData.length})</SelectItem>
+              <SelectItem value="employee">Employee ({employeeData.length})</SelectItem>
+              <SelectItem value="client">Client ({clientData.length})</SelectItem>
             </SelectContent>
           </Select>
 
@@ -1723,10 +1504,10 @@ export default function MasterDatabase() {
       </div>
 
       {/* Main Content Area - Side by Side Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
 
         {/* Table Section */}
-        <div className={`${isResumeDrawerOpen ? 'flex-1' : 'w-full'} overflow-hidden p-6 transition-all duration-300 flex flex-col`}>
+        <div className={`${isResumeDrawerOpen ? 'flex-1 min-w-0' : 'w-full'} min-h-0 overflow-hidden p-6 transition-all duration-300 flex flex-col`}>
           <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden flex-1 flex flex-col">
             <div className="overflow-x-auto overflow-y-auto flex-1">
               <table className="w-full">
@@ -2060,9 +1841,9 @@ export default function MasterDatabase() {
           </div>
         </div>
 
-        {/* Resume Display Section - Right Side Panel */}
+        {/* Resume Display Section - Right Side Panel (fixed height, table scrolls independently) */}
         {isResumeDrawerOpen && selectedResume && (
-          <div className="w-full max-w-lg min-w-[450px] h-full border-l-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex flex-col overflow-hidden">
+          <div className="flex-shrink-0 w-full max-w-lg min-w-[450px] min-h-0 h-full border-l-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex flex-col overflow-hidden">
             {/* Header - Fixed */}
             <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
               {/* Candidate Profile Header - Redesigned */}
@@ -2108,10 +1889,9 @@ export default function MasterDatabase() {
               </div>
             </div>
 
-            {/* Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {/* Resume Display Area */}
-              <div className="bg-gray-100 dark:bg-gray-900 rounded-md flex flex-col relative overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '800px' }}>
+            {/* Resume preview — fills remaining panel height; PDF scrolls inside iframe */}
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-6">
+              <div className="flex-1 min-h-0 bg-gray-100 dark:bg-gray-900 rounded-md flex flex-col relative overflow-hidden">
                   {selectedResume && 'resumeFile' in selectedResume && selectedResume.resumeFile ? (
                     <>
                       <ResumePreviewPanel
@@ -2141,9 +1921,8 @@ export default function MasterDatabase() {
                     </div>
                   )}
                 </div>
-                
-                {/* Uploaded Date Badge - Below Resume */}
-                <div className="flex justify-center mt-4">
+
+                <div className="flex-shrink-0 flex justify-center pt-4">
                   <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
                     Uploaded: {selectedResume.uploadedDate}
                   </Badge>
@@ -2330,14 +2109,27 @@ export default function MasterDatabase() {
       </Dialog>
 
       {/* Import Resume Modal */}
-      <Dialog open={isImportModalOpen} onOpenChange={handleImportModalOpenChange}>
+      <Dialog
+        open={isImportModalOpen && !isImportModalMinimized}
+        onOpenChange={handleImportModalOpenChange}
+      >
         <DialogContent
           className="max-w-2xl max-h-[90vh] overflow-y-auto"
           data-testid="dialog-import-resume"
           onInteractOutside={(e) => {
+            if (isProcessing && isBulkUpload && importStep === "upload") {
+              e.preventDefault();
+              minimizeImportModal();
+              return;
+            }
             if (importModalHasUnsavedProgress()) e.preventDefault();
           }}
           onEscapeKeyDown={(e) => {
+            if (isProcessing && isBulkUpload && importStep === "upload") {
+              e.preventDefault();
+              minimizeImportModal();
+              return;
+            }
             if (importModalHasUnsavedProgress()) {
               e.preventDefault();
               setShowImportCloseConfirm(true);
@@ -2352,23 +2144,28 @@ export default function MasterDatabase() {
           </DialogHeader>
 
           <div className="py-4">
-            <div className="flex items-center justify-between gap-4 mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="bulk-toggle" className="text-sm font-medium">Bulk Upload</Label>
-                <span className="text-xs text-muted-foreground">(Max {BULK_UPLOAD_LIMIT} files)</span>
+            <div className="mb-6 flex items-center justify-between gap-4 border-b border-border pb-4">
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="bulk-toggle" className="text-sm font-semibold text-foreground">
+                  Bulk Upload
+                </Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {isBulkUpload
+                    ? `Upload up to ${BULK_UPLOAD_LIMIT} resumes per session`
+                    : "Single resume upload — turn on for multiple files"}
+                </p>
               </div>
-              <div className="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">
-                <Switch
-                  id="bulk-toggle"
-                  checked={isBulkUpload}
-                  onCheckedChange={(checked) => {
-                    setIsBulkUpload(checked);
-                    resetImportModal();
-                  }}
-                  disabled={importStep !== 'upload' || isProcessing}
-                  data-testid="switch-bulk-upload"
-                />
-              </div>
+              <Switch
+                id="bulk-toggle"
+                checked={isBulkUpload}
+                onCheckedChange={(checked) => {
+                  setIsBulkUpload(checked);
+                  resetImportModal();
+                }}
+                disabled={importStep !== "upload" || isProcessing}
+                data-testid="switch-bulk-upload"
+                className="shrink-0 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600 data-[state=checked]:bg-emerald-600 dark:data-[state=checked]:bg-emerald-500 [&>span]:bg-white [&>span]:shadow-md"
+              />
             </div>
 
             {/* Single Upload Mode */}
@@ -2524,8 +2321,8 @@ export default function MasterDatabase() {
                             ? ` (batch ${bulkParseProgress.batch}/${bulkParseProgress.totalBatches}, ${bulkParseProgress.filesDone}/${bulkParseProgress.fileTotal} done)`
                             : "…"}
                         </p>
-                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                          Please keep this window open until parsing finishes.
+                        <p className="text-xs text-muted-foreground">
+                          You can minimize and continue working elsewhere. The review screen opens when parsing finishes.
                         </p>
                       </div>
                     ) : (
@@ -2535,7 +2332,7 @@ export default function MasterDatabase() {
                           Drag and drop multiple resumes here, or click to browse
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Supported formats: PDF, DOC, DOCX (Max {BULK_UPLOAD_LIMIT} files)
+                          Supported formats: PDF, DOC, DOCX (first {BULK_UPLOAD_LIMIT} files parsed per session)
                         </p>
                       </>
                     )}
@@ -2634,8 +2431,26 @@ export default function MasterDatabase() {
             )}
           </div>
 
-          <DialogFooter className="flex gap-2">
-            {importStep === 'upload' && (
+          <DialogFooter className="flex flex-wrap gap-2 sm:justify-between">
+            {importStep === 'upload' && isBulkUpload && isProcessing && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => minimizeImportModal()}
+                    className="h-9 w-9 rounded-md border border-primary/25 bg-primary/5 text-primary shadow-sm hover:bg-primary/10 hover:shadow"
+                    data-testid="button-minimize-import"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Minimize</TooltipContent>
+              </Tooltip>
+            )}
+
+            {importStep === 'upload' && !(isBulkUpload && isProcessing) && (
               <Button 
                 variant="outline" 
                 onClick={() => handleImportModalOpenChange(false)}
@@ -2726,7 +2541,7 @@ export default function MasterDatabase() {
             <AlertDialogTitle>Leave import?</AlertDialogTitle>
             <AlertDialogDescription>
               {isProcessing
-                ? "Resumes are still being parsed. If you close now, progress will be lost and nothing will be imported. Please stay on this screen until parsing finishes."
+                ? "Resumes are still being parsed. Minimize the import window to keep working, or leave to discard this session."
                 : "These resumes have not been imported yet. If you close now, they will not be saved to the database. Stay on this screen and click Import when you are ready."}
             </AlertDialogDescription>
           </AlertDialogHeader>
