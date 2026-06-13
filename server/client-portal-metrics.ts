@@ -2,6 +2,7 @@ import {
   resolvePipelineStageKey,
   type PipelineStageKey,
 } from "@shared/pipeline-stages";
+import { EMPTY_IMPACT_METRICS } from "@shared/impact-metrics-defaults";
 
 const STAGE_ORDER: PipelineStageKey[] = [
   "resumeReview",
@@ -426,26 +427,16 @@ export async function getAdminClientMetricsScope(
   return { requirements, applications };
 }
 
+import { EMPTY_IMPACT_METRICS } from "@shared/impact-metrics-defaults";
+
 export function aggregateImpactMetricsRecords(records: any[]) {
-  const defaults = {
-    speedToHire: 0,
-    revenueImpactOfDelay: 0,
-    clientNps: 0,
-    candidateNps: 0,
-    feedbackTurnAround: 0,
-    feedbackTurnAroundAvgDays: 5,
-    firstYearRetentionRate: 0,
-    fulfillmentRate: 0,
-    revenueRecovered: 0,
-  };
+  if (!records.length) return { ...EMPTY_IMPACT_METRICS };
 
-  if (!records.length) return defaults;
-
-  const average = (key: keyof typeof defaults) => {
+  const average = (key: keyof typeof EMPTY_IMPACT_METRICS) => {
     const values = records
       .map((row) => Number(row?.[key]))
       .filter((value) => Number.isFinite(value));
-    if (!values.length) return defaults[key];
+    if (!values.length) return EMPTY_IMPACT_METRICS[key];
     const total = values.reduce((sum, value) => sum + value, 0);
     const avg = total / values.length;
     return key.includes("Rate") || key.includes("Nps") || key === "fulfillmentRate"

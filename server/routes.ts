@@ -234,7 +234,7 @@ import {
 } from "./profile-media";
 import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
 import { storeR2FolderFile, getR2FileByFolderAndName } from "./r2-file-storage";
-import { getR2ResumeByFileName } from "./utils/r2Upload";
+import { getR2ResumeByFileName, isR2Configured } from "./utils/r2Upload";
 import { persistCompanyLogoValue } from "./company-logo-storage";
 import { stripCandidateListFields } from "./list-payload";
 import {
@@ -5256,7 +5256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
 
-    if (process.env.NODE_ENV === "production" && process.env.R2_BUCKET) {
+    if (process.env.NODE_ENV === "production" && isR2Configured()) {
       const r2Object = await getR2FileByFolderAndName(r2Folder, safeName);
       if (r2Object) {
         setStoredFileResponseHeaders(req, res, safeName, r2Object.contentType);

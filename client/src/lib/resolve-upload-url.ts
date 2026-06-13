@@ -196,6 +196,7 @@ export function resolveUploadAssetUrl(
 
   if (url.startsWith("http://") || url.startsWith("https://")) {
     const legacyResumePatterns = [
+      /\/api\/files\/resumes\/([^/?#]+)$/i,
       /\/uploads\/resumes\/([^/?#]+)$/i,
       /\/resumes\/([^/?#]+)$/i,
     ];
@@ -206,6 +207,9 @@ export function resolveUploadAssetUrl(
       if (fileName) {
         return `${apiBase}/api/files/resumes/${encodeURIComponent(fileName)}`;
       }
+    }
+    if (url.includes("/api/files/resumes/")) {
+      return url;
     }
     return url;
   }
@@ -223,7 +227,9 @@ export function resolveUploadAssetUrl(
     else url = `/${defaultSubdir}/${url}`;
   }
 
-  const resumeMatch = url.match(/\/uploads\/resumes\/([^/?#]+)/i);
+  const resumeMatch = url.match(
+    /(?:\/api\/files\/resumes|\/uploads\/resumes|\/resumes)\/([^/?#]+)/i,
+  );
   if (resumeMatch?.[1]) {
     const apiBase = getApiBaseUrl();
     if (!apiBase) return null;

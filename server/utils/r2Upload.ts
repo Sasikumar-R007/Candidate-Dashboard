@@ -9,6 +9,17 @@ const s3 = new S3Client({
   },
 });
 
+/** All R2 env vars must be set — missing R2_PUBLIC_URL yields broken relative URLs. */
+export function isR2Configured(): boolean {
+  return Boolean(
+    process.env.R2_BUCKET?.trim() &&
+      process.env.R2_ENDPOINT?.trim() &&
+      process.env.R2_ACCESS_KEY?.trim() &&
+      process.env.R2_SECRET_KEY?.trim() &&
+      process.env.R2_PUBLIC_URL?.trim(),
+  );
+}
+
 export function sanitizeFileName(fileName: string): string {
   return fileName.replace(/[[\]#?%\\]/g, "_");
 }

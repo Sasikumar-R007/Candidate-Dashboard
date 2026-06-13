@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { type Employee, type TargetMappings } from '@shared/schema';
+import { EMPTY_IMPACT_METRICS } from '@shared/impact-metrics-defaults';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -790,15 +791,8 @@ function ImpactMetricsEditor() {
     // If no metrics exist, create one first
     if (!metrics || metrics.length === 0) {
       const defaultMetrics = {
-        speedToHire: 0,
-        revenueImpactOfDelay: 0,
-        clientNps: 0,
-        candidateNps: 0,
-        feedbackTurnAround: 0,
-        firstYearRetentionRate: 0,
-        fulfillmentRate: 0,
-        revenueRecovered: 0,
-        [field]: value, // Set the edited field
+        ...EMPTY_IMPACT_METRICS,
+        [field]: value,
       };
       await createMutation.mutateAsync(defaultMetrics);
       setEditingMetric(null);
@@ -820,16 +814,7 @@ function ImpactMetricsEditor() {
     return <div className="text-center py-8 text-gray-500">Loading metrics...</div>;
   }
 
-  const currentMetrics = metrics?.[0] || {
-    speedToHire: 0,
-    revenueImpactOfDelay: 0,
-    clientNps: 0,
-    candidateNps: 0,
-    feedbackTurnAround: 0,
-    firstYearRetentionRate: 0,
-    fulfillmentRate: 0,
-    revenueRecovered: 0,
-  };
+  const currentMetrics = metrics?.[0] || { ...EMPTY_IMPACT_METRICS };
 
   const MetricCard = ({ title, value, unit, subtitle, bgColor, borderColor, textColor, field, testId }: any) => {
     const isEditing = editingMetric === field;
@@ -2036,22 +2021,11 @@ export default function AdminDashboard() {
   );
 
   const adminImpactMetrics = useMemo(() => {
-    const defaults = {
-      speedToHire: 15,
-      revenueImpactOfDelay: 75000,
-      clientNps: 60,
-      candidateNps: 70,
-      feedbackTurnAround: 2,
-      feedbackTurnAroundAvgDays: 5,
-      firstYearRetentionRate: 90,
-      fulfillmentRate: 20,
-      revenueRecovered: 1.5,
-    };
     const records = impactMetricsQuery.data || [];
-    if (!records.length) return defaults;
-    if (records.length === 1) return { ...defaults, ...records[0] };
+    if (!records.length) return { ...EMPTY_IMPACT_METRICS };
+    if (records.length === 1) return { ...EMPTY_IMPACT_METRICS, ...records[0] };
 
-    const average = (key: string) => {
+    const average = (key: keyof typeof EMPTY_IMPACT_METRICS) => {
       const values = records
         .map((row) => Number(row?.[key]))
         .filter((value) => Number.isFinite(value));
@@ -2802,7 +2776,7 @@ export default function AdminDashboard() {
       const total = revenueData.reduce((sum, d) => sum + d.revenue, 0);
       return total / revenueData.length;
     }
-    return 230000; // Default fallback
+    return 0;
   }, [revenueAnalysis, revenueData]);
 
   // Reset Performance Data mutation
@@ -4646,7 +4620,7 @@ export default function AdminDashboard() {
 
   // Feedback Turn Around editing handlers for Client Metrics Modal
   const handleEditClickModal = () => {
-    setAvgDaysValueModal(String(adminImpactMetrics.feedbackTurnAroundAvgDays ?? 5));
+    setAvgDaysValueModal(String(adminImpactMetrics.feedbackTurnAroundAvgDays ?? 0));
     setIsEditingFeedbackModal(true);
   };
 
@@ -4662,15 +4636,8 @@ export default function AdminDashboard() {
     // If no metrics exist, create one first
     if (!metrics || metrics.length === 0) {
       const defaultMetrics = {
-        speedToHire: 15,
-        revenueImpactOfDelay: 75000,
-        clientNps: 60,
-        candidateNps: 70,
-        feedbackTurnAround: 2,
+        ...EMPTY_IMPACT_METRICS,
         feedbackTurnAroundAvgDays: value,
-        firstYearRetentionRate: 90,
-        fulfillmentRate: 20,
-        revenueRecovered: 1.5,
       };
 
       try {
@@ -13319,7 +13286,7 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <>
-                      <div className="text-xs text-gray-500">days (Avg. {adminImpactMetrics.feedbackTurnAroundAvgDays || 5} days)*</div>
+                      <div className="text-xs text-gray-500">days (Avg. {adminImpactMetrics.feedbackTurnAroundAvgDays} days)*</div>
                       <Button
                         size="icon"
                         variant="ghost"

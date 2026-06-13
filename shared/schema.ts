@@ -538,15 +538,15 @@ export const notifications = pgTable("notifications", {
 export const impactMetrics = pgTable("impact_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: text("client_id"), // Optional - can be null for global metrics
-  speedToHire: real("speed_to_hire").notNull().default(15),
-  revenueImpactOfDelay: real("revenue_impact_of_delay").notNull().default(75000),
-  clientNps: real("client_nps").notNull().default(60),
-  candidateNps: real("candidate_nps").notNull().default(70),
-  feedbackTurnAround: real("feedback_turn_around").notNull().default(2),
-  feedbackTurnAroundAvgDays: real("feedback_turn_around_avg_days").notNull().default(5),
-  firstYearRetentionRate: real("first_year_retention_rate").notNull().default(90),
-  fulfillmentRate: real("fulfillment_rate").notNull().default(20),
-  revenueRecovered: real("revenue_recovered").notNull().default(1.5),
+  speedToHire: real("speed_to_hire").notNull().default(0),
+  revenueImpactOfDelay: real("revenue_impact_of_delay").notNull().default(0),
+  clientNps: real("client_nps").notNull().default(0),
+  candidateNps: real("candidate_nps").notNull().default(0),
+  feedbackTurnAround: real("feedback_turn_around").notNull().default(0),
+  feedbackTurnAroundAvgDays: real("feedback_turn_around_avg_days").notNull().default(0),
+  firstYearRetentionRate: real("first_year_retention_rate").notNull().default(0),
+  fulfillmentRate: real("fulfillment_rate").notNull().default(0),
+  revenueRecovered: real("revenue_recovered").notNull().default(0),
 });
 
 export const clients = pgTable("clients", {

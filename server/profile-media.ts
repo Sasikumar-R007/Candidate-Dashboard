@@ -5,7 +5,7 @@ import multer from "multer";
 import { eq } from "drizzle-orm";
 import { profileMedia } from "@shared/schema";
 import { db } from "./db";
-import { uploadToR2Folder } from "./utils/r2Upload";
+import { isR2Configured, uploadToR2Folder } from "./utils/r2Upload";
 
 /** In-memory uploads for profile pictures (metadata in Postgres, bytes in R2 or legacy base64). */
 export const profileImageUpload = multer({
@@ -34,6 +34,14 @@ export function resolveUploadBaseUrl(req?: Request): string {
 
 export function buildProfileMediaUrl(mediaId: string, req?: Request): string {
   return `${resolveUploadBaseUrl(req)}/api/profile-media/${mediaId}`;
+}
+
+export function buildStoredFileServeUrl(
+  apiFolder: "resumes" | "jds" | "logos" | "chat" | "avatars",
+  filename: string,
+  req?: Request,
+): string {
+  return `${resolveUploadBaseUrl(req)}/api/files/${apiFolder}/${encodeURIComponent(filename)}`;
 }
 
 function extractR2FileName(url: string, folder: string): string | null {
@@ -74,7 +82,7 @@ export async function persistProfilePictureUpload(
   let avatarUrl: string | null = null;
   let data = buffer.toString("base64");
 
-  if (process.env.NODE_ENV === "production" && process.env.R2_BUCKET) {
+  if (process.env.NODE_ENV === "production" && isR2Configured()) {
     avatarUrl = await uploadToR2Folder(buffer, `avatar-${id}.${ext}`, mimeType, "avatars");
     data = "";
   }

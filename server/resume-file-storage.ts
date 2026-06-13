@@ -2,8 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import type { Request } from "express";
-import { resolveUploadBaseUrl } from "./profile-media";
-import { uploadToR2 } from "./utils/r2Upload";
+import { buildStoredFileServeUrl, resolveUploadBaseUrl } from "./profile-media";
+import { isR2Configured, uploadToR2 } from "./utils/r2Upload";
 
 export async function getResumeFileBuffer(file: Express.Multer.File): Promise<Buffer> {
   if (file.buffer?.length) {
@@ -28,22 +28,31 @@ function buildLocalResumeUrl(file: Express.Multer.File, req?: Request): string {
   return `${baseUrl}/uploads/${filename}`;
 }
 
+function getResumeFilename(file: Express.Multer.File): string {
+  return file.filename || path.basename(file.path || "");
+}
+
 async function removeLocalMulterFile(file: Express.Multer.File): Promise<void> {
   if (file.path && fs.existsSync(file.path)) {
     await fs.promises.unlink(file.path).catch(() => {});
   }
 }
 
-/** Persist resume and return the public URL (R2 in production, local in development). */
+/** Persist resume and return the public URL (R2 in production when configured, else API serve URL). */
 export async function storeResumeFile(
   file: Express.Multer.File,
   req?: Request,
 ): Promise<string> {
   if (process.env.NODE_ENV === "production") {
-    const buffer = await getResumeFileBuffer(file);
-    const fileUrl = await uploadToR2(buffer, file.originalname, file.mimetype);
-    await removeLocalMulterFile(file);
-    return fileUrl;
+    if (isR2Configured()) {
+      const buffer = await getResumeFileBuffer(file);
+      const fileUrl = await uploadToR2(buffer, file.originalname, file.mimetype);
+      await removeLocalMulterFile(file);
+      return fileUrl;
+    }
+
+    // No R2: keep on disk and serve via /api/files/resumes (Render ephemeral disk; configure R2 for persistence).
+    return buildStoredFileServeUrl("resumes", getResumeFilename(file), req);
   }
 
   return buildLocalResumeUrl(file, req);
