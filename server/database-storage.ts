@@ -286,6 +286,35 @@ const candidateColumnCandidates = [
   "registration_stage", "created_at", "last_viewed_at",
 ];
 
+const candidateListColumnCandidates = candidateColumnCandidates.filter(
+  (column) => column !== "resume_text",
+);
+
+const requirementListColumns = {
+  id: requirements.id,
+  position: requirements.position,
+  noOfPositions: requirements.noOfPositions,
+  splitRequirement: requirements.splitRequirement,
+  criticality: requirements.criticality,
+  toughness: requirements.toughness,
+  company: requirements.company,
+  spoc: requirements.spoc,
+  talentAdvisor: requirements.talentAdvisor,
+  talentAdvisorId: requirements.talentAdvisorId,
+  teamLead: requirements.teamLead,
+  sourceType: requirements.sourceType,
+  sourceDetails: requirements.sourceDetails,
+  status: requirements.status,
+  managementStatus: requirements.managementStatus,
+  managementReason: requirements.managementReason,
+  managedAt: requirements.managedAt,
+  completedAt: requirements.completedAt,
+  isArchived: requirements.isArchived,
+  createdAt: requirements.createdAt,
+  jdFile: requirements.jdFile,
+  assignedClientMemberId: requirements.assignedClientMemberId,
+};
+
 const clientColumnCandidates = [
   "id", "client_code", "brand_name", "incorporated_name", "gstin", "address", "location", "spoc",
   "email", "website", "linkedin", "agreement", "percentage", "category", "payment_terms",
@@ -363,9 +392,17 @@ export class DatabaseStorage implements IStorage {
     return columns;
   }
 
-  private async queryCandidates(whereClause?: ReturnType<typeof sql>, orderClause?: ReturnType<typeof sql>): Promise<Candidate[]> {
+  private async queryCandidates(
+    whereClause?: ReturnType<typeof sql>,
+    orderClause?: ReturnType<typeof sql>,
+    options?: { includeResumeText?: boolean },
+  ): Promise<Candidate[]> {
     const availableColumns = await this.getAvailableColumns("candidates");
-    const selectedColumns = candidateColumnCandidates.filter((column) => availableColumns.includes(column));
+    const columnPool =
+      options?.includeResumeText === false
+        ? candidateListColumnCandidates
+        : candidateColumnCandidates;
+    const selectedColumns = columnPool.filter((column) => availableColumns.includes(column));
 
     const result = await db.execute(sql`
       SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
@@ -692,6 +729,24 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  /** List views: same as getRequirements but omits large jd_text column. */
+  async getRequirementsForList(): Promise<Requirement[]> {
+    try {
+      return await db
+        .select(requirementListColumns)
+        .from(requirements)
+        .where(eq(requirements.isArchived, false))
+        .orderBy(desc(requirements.createdAt)) as Requirement[];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (!message.includes("is_archived")) throw error;
+      return await db
+        .select(requirementListColumns)
+        .from(requirements)
+        .orderBy(desc(requirements.createdAt)) as Requirement[];
+    }
+  }
+
   async getRequirementById(id: string): Promise<Requirement | undefined> {
     const [requirement] = await db.select().from(requirements).where(eq(requirements.id, id));
     return requirement || undefined;
@@ -995,7 +1050,8 @@ export class DatabaseStorage implements IStorage {
   async getAllCandidates(): Promise<Candidate[]> {
     return await this.queryCandidates(
       sql`COALESCE(is_active, true) = true`,
-      sql`ORDER BY created_at DESC`
+      sql`ORDER BY created_at DESC`,
+      { includeResumeText: false },
     );
   }
 

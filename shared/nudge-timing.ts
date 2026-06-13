@@ -3,18 +3,20 @@
  * Server sync: routes.ts `syncActiveNudgeEscalations`.
  */
 
+import { resolvePipelineStageKey } from "./pipeline-stages";
+
 export const NUDGE_WORKING_HOUR_START = 9;
 export const NUDGE_WORKING_HOUR_END = 18;
 
-/** Working hours from nudge creation until each escalation tier (standard pipeline). */
+/** Working hours from nudge creation until each escalation tier (3h per step). */
 export const NUDGE_ESCALATION_WORKING_HOURS = {
-  toTeamLeader: 6,
-  toAdmin: 12,
-  toClient: 18,
-  toClientAdmin: 24,
+  toTeamLeader: 3,
+  toAdmin: 6,
+  toClient: 9,
+  toClientAdmin: 12,
 } as const;
 
-/** Working hours for offer-stage applications. */
+/** Working hours for offer-stage applications (3h per step). */
 export const NUDGE_OFFER_ESCALATION_WORKING_HOURS = {
   toTeamLeader: 3,
   toAdmin: 6,
@@ -30,7 +32,11 @@ export const CANDIDATE_NUDGE_COOLDOWN_HOURS = {
 } as const;
 
 export function isOfferStageStatus(status: string | null | undefined): boolean {
-  return (status || "").toLowerCase().includes("offer");
+  const s = (status || "").toLowerCase();
+  if (s.includes("offer") || s.includes("closure") || s.includes("joined") || s.includes("hired") || s === "selected") {
+    return true;
+  }
+  return resolvePipelineStageKey(status) === "offerStage" || resolvePipelineStageKey(status) === "closure";
 }
 
 export function escalationTargetWorkingHours(

@@ -87,6 +87,7 @@ export interface IStorage {
   
   // Requirements methods
   getRequirements(): Promise<Requirement[]>;
+  getRequirementsForList(): Promise<Requirement[]>;
   getRequirementById(id: string): Promise<Requirement | undefined>;
   getRequirementsByTeamLead(teamLeadName: string): Promise<Requirement[]>;
   getRequirementsByTalentAdvisor(talentAdvisorName: string): Promise<Requirement[]>;
@@ -1044,6 +1045,12 @@ export class MemStorage implements IStorage {
     return Array.from(this.requirements.values()).filter(req => !req.isArchived);
   }
 
+  async getRequirementsForList(): Promise<Requirement[]> {
+    return Array.from(this.requirements.values())
+      .filter(req => !req.isArchived)
+      .map(({ jdText: _jdText, ...rest }) => rest as Requirement);
+  }
+
   async getRequirementById(id: string): Promise<Requirement | undefined> {
     return this.requirements.get(id);
   }
@@ -1283,7 +1290,9 @@ export class MemStorage implements IStorage {
   }
 
   async getAllCandidates(): Promise<Candidate[]> {
-    return Array.from(this.candidates.values()).filter(candidate => candidate.isActive);
+    return Array.from(this.candidates.values())
+      .filter(candidate => candidate.isActive)
+      .map(({ resumeText: _resumeText, ...rest }) => rest as Candidate);
   }
 
   async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined> {

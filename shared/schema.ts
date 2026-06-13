@@ -108,6 +108,8 @@ export const profileMedia = pgTable("profile_media", {
   id: varchar("id").primaryKey(),
   mimeType: text("mime_type").notNull(),
   data: text("data").notNull(),
+  /** R2 public URL when migrated off inline base64 storage. */
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

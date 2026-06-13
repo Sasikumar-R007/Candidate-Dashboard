@@ -4,7 +4,7 @@ import type { Request } from "express";
 import { resolveUploadBaseUrl } from "./profile-media";
 import { getR2FileByFolderAndName, uploadToR2Folder } from "./utils/r2Upload";
 
-export type R2FileFolder = "jds" | "logos" | "chat";
+export type R2FileFolder = "jds" | "logos" | "chat" | "avatars";
 
 export async function getUploadedFileBuffer(file: Express.Multer.File): Promise<Buffer> {
   if (file.buffer?.length) {

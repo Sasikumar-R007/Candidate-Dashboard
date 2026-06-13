@@ -189,3 +189,33 @@ export function createEmptyPipelineStageGroups<
     FULL_PIPELINE_STAGE_ORDER.map((key) => [key, [] as T[]]),
   ) as Record<PipelineStageKey, T[]>;
 }
+
+export function parseClosureMeta(statusNote?: string | null) {
+  const note = statusNote || "";
+  const atMatch = note.match(/\[\[CLOSURE_AT:([^\]]+)\]\]/);
+  return { closureAt: atMatch ? atMatch[1] : null };
+}
+
+const CLOSURE_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/** Closure records stay visible on TA views for 24h before archiving. */
+export function isWithinClosureGracePeriod(
+  status?: string | null,
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): boolean {
+  if ((status || "").trim().toLowerCase() !== "closure") return false;
+  const { closureAt } = parseClosureMeta(statusNote);
+  const tsSource = closureAt || updatedAt;
+  if (!tsSource) return true;
+  const ts = new Date(tsSource).getTime();
+  if (Number.isNaN(ts)) return true;
+  return Date.now() - ts < CLOSURE_GRACE_MS;
+}
+
+export function appendClosureTimestampNote(existingNote?: string | null): string {
+  const base = (existingNote || "").trim();
+  if (base.includes("[[CLOSURE_AT:")) return base;
+  const stamp = `[[CLOSURE_AT:${new Date().toISOString()}]]`;
+  return base ? `${base}\n\n${stamp}` : stamp;
+}

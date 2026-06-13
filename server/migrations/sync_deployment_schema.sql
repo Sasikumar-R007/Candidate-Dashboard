@@ -198,6 +198,9 @@ CREATE TABLE IF NOT EXISTS profile_media (
   created_at timestamp DEFAULT now()
 );
 
+ALTER TABLE profile_media
+  ADD COLUMN IF NOT EXISTS avatar_url text;
+
 ALTER TABLE revenue_mappings
   ADD COLUMN IF NOT EXISTS in_revenue_data boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS payment_date text;

@@ -1,17 +1,32 @@
-/** Maps application status to candidate pipeline column (Applied Jobs kanban). */
+import { resolvePipelineStageKey } from "@shared/pipeline-stages";
+
+/** Maps TA/recruiter application status to candidate pipeline column (Applied Jobs kanban). */
 export function mapCandidateApplicationStage(status: string | null | undefined): string {
   if (!status) return "Applied";
   const s = status.toLowerCase();
   if (s.includes("archived") || s.includes("withdrawn")) return "Archived";
-  if (s.includes("applied") || s.includes("new") || s.includes("process")) return "Applied";
-  if (s === "l1" || s === "l2" || s.includes("review")) return "In-Review";
-  if (s.includes("interview") || s === "l3" || s.includes("scheduled") || s.includes("final")) {
-    return "Interview Stage";
+
+  const stageKey = resolvePipelineStageKey(status);
+  switch (stageKey) {
+    case "shortlisted":
+    case "screening":
+      return "In-Review";
+    case "level1":
+    case "level2":
+    case "level3":
+    case "finalRound":
+      return "Interview Stage";
+    case "hrRound":
+      return "HR Round";
+    case "offerStage":
+    case "closure":
+      return "Offer";
+    case "rejected":
+      return "Screened Out";
+    case "resumeReview":
+    default:
+      return "Applied";
   }
-  if (s.includes("hr")) return "HR Round";
-  if (s.includes("offer")) return "Offer";
-  if (s.includes("reject") || s.includes("screened") || s.includes("out")) return "Screened Out";
-  return "Applied";
 }
 
 export function isCandidateRejectedStatus(status: string | null | undefined): boolean {

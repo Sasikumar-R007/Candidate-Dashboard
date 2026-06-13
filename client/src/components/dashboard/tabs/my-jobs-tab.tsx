@@ -83,20 +83,7 @@ const PIPELINE_STAGES = [
   'Screened Out'
 ];
 
-const mapStatusToStage = (status: string | null): string => {
-  if (!status) return 'Applied';
-  const s = status.toLowerCase();
-  // Archived/withdrawn applications should be shown only in Archives, never in pipeline columns.
-  if (s.includes('archived') || s.includes('withdrawn')) return 'Archived';
-  // "In Process" and "Applied" should both map to "Applied" stage for recent applications
-  if (s.includes('applied') || s.includes('new') || s.includes('process')) return 'Applied';
-  if (s === 'l1' || s === 'l2' || s.includes('review')) return 'In-Review';
-  if (s.includes('interview') || s === 'l3' || s.includes('scheduled') || s.includes('final')) return 'Interview Stage';
-  if (s.includes('hr')) return 'HR Round';
-  if (s.includes('offer')) return 'Offer';
-  if (s.includes('reject') || s.includes('screened') || s.includes('out')) return 'Screened Out';
-  return 'Applied';
-};
+const mapStatusToStage = mapCandidateApplicationStage;
 
 function calculateTimeRemaining(lastNudgedAt: Date | string | null, status: string): string | null {
   if (!lastNudgedAt) return null;

@@ -41,6 +41,12 @@ export function parseRejectedMeta(statusNote?: string | null) {
   };
 }
 
+export {
+  parseClosureMeta,
+  isWithinClosureGracePeriod,
+  appendClosureTimestampNote,
+} from "@shared/pipeline-stages";
+
 export type TerminalOutcomeKind = "withdraw" | "client_reject";
 
 export type TerminalOutcome = {

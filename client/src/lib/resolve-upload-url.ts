@@ -26,9 +26,39 @@ function extractFileNameFromPatterns(url: string, patterns: RegExp[]): string | 
   return null;
 }
 
+export function resolveAvatarFileUrl(filePath?: string | null): string | null {
+  if (!filePath?.trim()) return null;
+  const url = filePath.trim();
+  if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+  const legacyPatterns = [/\/uploads\/([^/?#]+)$/i];
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (shouldProxyStoredUrl(url, "avatars", legacyPatterns)) {
+      return toStoredFileApiUrl(url, "avatars", legacyPatterns) ?? url;
+    }
+    return url;
+  }
+
+  if (url.startsWith("/api/files/avatars/") || url.startsWith("/api/profile-media/")) {
+    return `${getApiBaseUrl()}${url}`;
+  }
+
+  let normalized = url;
+  if (!normalized.startsWith("/")) {
+    normalized = normalized.startsWith("uploads/") ? `/${normalized}` : `/uploads/${normalized}`;
+  }
+
+  const fileName = extractFileNameFromPatterns(normalized, [/\/uploads\/([^/?#]+)$/i]);
+  const apiBase = getApiBaseUrl();
+  if (fileName && apiBase) {
+    return `${apiBase}/api/files/avatars/${encodeURIComponent(fileName)}`;
+  }
+  return apiBase ? `${apiBase}${normalized}` : normalized;
+}
+
 function toStoredFileApiUrl(
   storedUrl: string,
-  apiFolder: "resumes" | "jds" | "logos" | "chat",
+  apiFolder: "resumes" | "jds" | "logos" | "chat" | "avatars",
   legacyPatterns: RegExp[],
 ): string | null {
   const apiBase = getApiBaseUrl();

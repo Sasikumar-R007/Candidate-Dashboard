@@ -44,7 +44,10 @@ import {
   groupApplicantsByPipelineStage,
   mapRecruiterApplicantDisplayStatus,
   mapRecruiterPipelineCandidate,
+  parseClosureMeta,
+  parseRejectedMeta,
   parseTerminalOutcome,
+  isWithinClosureGracePeriod,
   type TerminalOutcome,
 } from "@/lib/pipeline-session-utils";
 import { TaPipelineTab } from "@/components/dashboard/ta-pipeline-tab";
@@ -549,11 +552,15 @@ export default function RecruiterDashboard2() {
       return response;
     },
     onSuccess: () => {
-      // Remove from Applicant Overview by setting status to Closure (will be filtered out)
       if (selectedCandidateForClosure) {
-        setApplicantStatusOverrides(prev => ({
+        const closureStamp = new Date().toISOString();
+        setApplicantStatusOverrides((prev) => ({
           ...prev,
-          [selectedCandidateForClosure.id]: 'Closure'
+          [selectedCandidateForClosure.id]: "Closure",
+        }));
+        setClosureAtOverrides((prev) => ({
+          ...prev,
+          [selectedCandidateForClosure.id]: closureStamp,
         }));
       }
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
@@ -934,19 +941,10 @@ export default function RecruiterDashboard2() {
   const [applicantStatusOverrides, setApplicantStatusOverrides] = useState<{ [key: string]: string }>({});
   const [rejectedStageOverrides, setRejectedStageOverrides] = useState<{ [key: string]: string }>({});
   const [rejectedAtOverrides, setRejectedAtOverrides] = useState<{ [key: string]: string }>({});
+  const [closureAtOverrides, setClosureAtOverrides] = useState<{ [key: string]: string }>({});
   const [autoArchivedIds, setAutoArchivedIds] = useState<Set<string>>(new Set());
   // Track which applicant is currently being updated for loading state
   const [updatingApplicantId, setUpdatingApplicantId] = useState<string | null>(null);
-
-  const parseRejectedMeta = (statusNote?: string | null) => {
-    const note = statusNote || "";
-    const stageMatch = note.match(/\[\[REJECT_STAGE:([^\]]+)\]\]/);
-    const atMatch = note.match(/\[\[REJECTED_AT:([^\]]+)\]\]/);
-    return {
-      rejectedFromStage: stageMatch ? stageMatch[1] : null,
-      rejectedAt: atMatch ? atMatch[1] : null,
-    };
-  };
 
   const getPipelineCandidatesByStage = useMemo(() => {
     let effectiveApplicants = applicantData.map((a) => ({
@@ -989,7 +987,28 @@ export default function RecruiterDashboard2() {
 
     applicantData.forEach((candidate: any) => {
       const effectiveStatus = applicantStatusOverrides[candidate.id] || candidate.currentStatus;
-      if (effectiveStatus !== 'Screened Out' && effectiveStatus !== 'Rejected') return;
+
+      if (effectiveStatus === "Closure") {
+        if (autoArchivedIds.has(candidate.id)) return;
+        const meta = parseClosureMeta(candidate.statusNote);
+        const closureAtIso =
+          meta.closureAt || closureAtOverrides[candidate.id] || candidate.appliedDate;
+        if (!closureAtIso) return;
+        const closureAtTs = new Date(closureAtIso).getTime();
+        if (Number.isNaN(closureAtTs)) return;
+
+        if (now - closureAtTs >= twentyFourHoursMs) {
+          setApplicantStatusOverrides((prev) => ({ ...prev, [candidate.id]: "Archived" }));
+          setAutoArchivedIds((prev) => new Set(prev).add(candidate.id));
+          updateStatusMutation.mutate({
+            id: candidate.id,
+            status: "Archived",
+          });
+        }
+        return;
+      }
+
+      if (effectiveStatus !== "Screened Out" && effectiveStatus !== "Rejected") return;
       if (autoArchivedIds.has(candidate.id)) return;
 
       const meta = parseRejectedMeta(candidate.statusNote);
@@ -1007,7 +1026,7 @@ export default function RecruiterDashboard2() {
         });
       }
     });
-  }, [applicantData, applicantStatusOverrides, autoArchivedIds, rejectedAtOverrides, updateStatusMutation]);
+  }, [applicantData, applicantStatusOverrides, autoArchivedIds, rejectedAtOverrides, closureAtOverrides, updateStatusMutation]);
 
   const pipelineSessionList = useMemo(
     () =>
@@ -1164,6 +1183,16 @@ export default function RecruiterDashboard2() {
           currentStatus: effectiveStatus,
         });
         if (terminal.showInApplicantOverview) return true;
+        if (
+          effectiveStatus === "Closure" &&
+          isWithinClosureGracePeriod(
+            effectiveStatus,
+            a.statusNote,
+            closureAtOverrides[a.id] || a.appliedDate,
+          )
+        ) {
+          return true;
+        }
         return (
           effectiveStatus !== "Archived" &&
           effectiveStatus !== "Closure" &&

@@ -18,6 +18,7 @@ import {
   resolveDisplayRoleId,
 } from "@shared/requirement-jd-extras";
 import {
+  appendClosureTimestampNote,
   normalizePipelineDisplayStatus,
   resolvePipelineGroupingStatus,
 } from "@shared/pipeline-stages";
@@ -227,11 +228,20 @@ import { enrichRequirementsWithResumeCount } from "./requirement-resume-count";
 import {
   profileImageUpload,
   persistProfilePictureUpload,
-  fetchProfileMediaRecord,
+  fetchProfileMediaMeta,
+  fetchProfileMediaData,
+  buildAvatarServeUrl,
 } from "./profile-media";
 import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
 import { storeR2FolderFile, getR2FileByFolderAndName } from "./r2-file-storage";
 import { getR2ResumeByFileName } from "./utils/r2Upload";
+import { persistCompanyLogoValue } from "./company-logo-storage";
+import { stripCandidateListFields } from "./list-payload";
+import {
+  createPresignedUploadUrl,
+  PRESIGN_UPLOAD_FOLDERS,
+  type PresignUploadFolder,
+} from "./utils/r2Presign";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -472,10 +482,10 @@ async function syncActiveNudgeEscalations(): Promise<void> {
       else if (elapsedWorkingHours >= 6) requiredLevel = "admin";
       else if (elapsedWorkingHours >= 3) requiredLevel = "team_leader";
     } else {
-      if (elapsedWorkingHours >= 24) requiredLevel = "client_admin";
-      else if (elapsedWorkingHours >= 18) requiredLevel = "client";
-      else if (elapsedWorkingHours >= 12) requiredLevel = "admin";
-      else if (elapsedWorkingHours >= 6) requiredLevel = "team_leader";
+      if (elapsedWorkingHours >= 12) requiredLevel = "client_admin";
+      else if (elapsedWorkingHours >= 9) requiredLevel = "client";
+      else if (elapsedWorkingHours >= 6) requiredLevel = "admin";
+      else if (elapsedWorkingHours >= 3) requiredLevel = "team_leader";
     }
 
     if (nudge.escalationLevel !== requiredLevel) {
@@ -5185,14 +5195,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.send(svg);
   });
 
-  // Persistent profile images (stored in Postgres — survives Render redeploys)
+  // Persistent profile images (R2 in production; legacy base64 fallback in Postgres)
   app.get("/api/profile-media/:id", async (req, res) => {
     try {
       const id = String(req.params.id || "").trim();
       if (!/^[a-f0-9]{32}$/i.test(id)) {
         return res.status(400).json({ message: "Invalid media id" });
       }
-      const record = await fetchProfileMediaRecord(id);
+      const meta = await fetchProfileMediaMeta(id);
+      if (!meta) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+
+      if (meta.avatarUrl?.trim()) {
+        return res.redirect(302, buildAvatarServeUrl(meta.avatarUrl.trim(), req));
+      }
+
+      const record = await fetchProfileMediaData(id);
       if (!record?.data) {
         return res.status(404).json({ message: "Image not found" });
       }
@@ -5338,6 +5357,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Serve chat file error:", error);
       applyCorsHeaders(req, res);
       return res.status(500).json({ message: "Failed to load chat attachment" });
+    }
+  });
+
+  app.get("/api/files/avatars/:filename", async (req, res) => {
+    try {
+      const safeName = path.basename(decodeURIComponent(req.params.filename || ""));
+      if (!safeName) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      return serveStoredFile(
+        req,
+        res,
+        safeName,
+        [path.join(uploadsRoot, safeName)],
+        "avatars",
+        "This profile image is no longer available. Please upload the image again.",
+      );
+    } catch (error) {
+      console.error("Serve avatar file error:", error);
+      applyCorsHeaders(req, res);
+      return res.status(500).json({ message: "Failed to load profile image" });
+    }
+  });
+
+  /** Optional direct-to-R2 upload path (multer routes remain the default). */
+  app.post("/api/uploads/presign", requireEmployeeAuth, async (req, res) => {
+    try {
+      if (process.env.NODE_ENV !== "production" || !process.env.R2_BUCKET) {
+        return res.status(400).json({
+          message: "Presigned uploads are only available in production with R2 configured.",
+        });
+      }
+
+      const folder = String(req.body?.folder || "").trim() as PresignUploadFolder;
+      const fileName = String(req.body?.fileName || "").trim();
+      const contentType = String(req.body?.contentType || "application/octet-stream").trim();
+
+      if (!PRESIGN_UPLOAD_FOLDERS.includes(folder)) {
+        return res.status(400).json({ message: "Invalid upload folder" });
+      }
+      if (!fileName) {
+        return res.status(400).json({ message: "fileName is required" });
+      }
+
+      const result = await createPresignedUploadUrl(folder, fileName, contentType);
+      res.json(result);
+    } catch (error) {
+      console.error("Presign upload error:", error);
+      res.status(500).json({ message: "Failed to create presigned upload URL" });
     }
   });
 
@@ -8503,7 +8571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const roleLower = (employee.role || "").toLowerCase();
       if (roleLower === "admin" || roleLower.includes("admin")) {
-        const allRequirements = await storage.getRequirements();
+        const allRequirements = await storage.getRequirementsForList();
         const activeRequirements = allRequirements.filter(
           (req: { isArchived?: boolean | null; id?: string }) =>
             !req.isArchived && (!req.id || !/^STR\d{5}$/.test(req.id)),
@@ -9039,7 +9107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/requirements", requireAdminAuth, async (req, res) => {
     try {
-      const allRequirements = await storage.getRequirements();
+      const allRequirements = await storage.getRequirementsForList();
       // Exclude client-submitted JDs (those with STR format Role IDs)
       // Client JDs should only appear in the "JD from Client" table
       const adminRequirements = allRequirements.filter((req: any) => {
@@ -13588,7 +13656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName: company || 'Company',
         companyTagline: companyTagline || null,
         companyType: companyType || null,
-        companyLogo: companyLogo || null,
+        companyLogo: (await persistCompanyLogoValue(companyLogo)) || null,
         market: market || null,
         field: department || null,
         noOfPositions: openings ? parseInt(openings as any) : 1,
@@ -14009,7 +14077,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (reqBody.department !== undefined) updateData.field = reqBody.department;
       if (reqBody.employmentType !== undefined) updateData.employmentType = reqBody.employmentType;
       if (reqBody.openings !== undefined) updateData.noOfPositions = parseInt(reqBody.openings) || 1;
-      if (reqBody.companyLogo !== undefined) updateData.companyLogo = reqBody.companyLogo;
+      if (reqBody.companyLogo !== undefined) {
+        updateData.companyLogo = await persistCompanyLogoValue(reqBody.companyLogo);
+      }
 
       if (reqBody.experienceMin !== undefined || reqBody.experienceMax !== undefined) {
         const min = reqBody.experienceMin;
@@ -14901,8 +14971,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const previousStatus = existingApplication.status;
 
+      let effectiveStatusNote = statusNote;
+      if ((status || "").trim().toLowerCase() === "closure") {
+        effectiveStatusNote = appendClosureTimestampNote(
+          statusNote ?? existingApplication.statusNote,
+        );
+      }
+
       // Update the application status in the database
-      const application = await storage.updateJobApplicationStatus(id, status, undefined, statusNote, rejectionReason);
+      const application = await storage.updateJobApplicationStatus(
+        id,
+        status,
+        undefined,
+        effectiveStatusNote,
+        rejectionReason,
+      );
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
@@ -15095,8 +15178,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       } as InsertRevenueMapping & { createdAt: string });
 
-      // Update application status to 'Closure'
-      await storage.updateJobApplicationStatus(applicationId, 'Closure');
+      // Update application status to 'Closure' with grace-period timestamp
+      await storage.updateJobApplicationStatus(
+        applicationId,
+        "Closure",
+        undefined,
+        appendClosureTimestampNote(application.statusNote),
+      );
 
       res.status(201).json({
         message: "Closure created successfully",
@@ -15581,7 +15669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Return paginated results with metadata
       res.json({
-        candidates: paginatedCandidates.map(sc => ({
+        candidates: paginatedCandidates.map(sc => stripCandidateListFields({
           ...sc.candidate,
           relevanceScore: sc.relevanceScore,
           matchPercentage: sc.matchPercentage,
