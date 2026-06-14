@@ -88,6 +88,8 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   buildStreqDisplayMap,
   getRequirementLookupId,
+  getRequirementTaSplitMeta,
+  getRequirementSplitBadgeLabel,
   resolveRequirementDisplayId,
 } from "@shared/requirement-jd-extras";
 import {
@@ -7132,17 +7134,27 @@ export default function AdminDashboard() {
                                 <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
                                   {(() => {
                                     const splitMeta = getRequirementSplitMeta(requirement);
+                                    const taSplitMeta = getRequirementTaSplitMeta(requirement);
+                                    const splitBadge = getRequirementSplitBadgeLabel(requirement);
                                     return (
                                       <>
                                         {splitMeta?.roleId ? (
                                           <span>Role ID {splitMeta.roleId} • </span>
                                         ) : null}
                                         {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
-                                        {requirement.splitRequirement
-                                          ? splitMeta?.totalSplits
-                                            ? ` • Split ${splitMeta.splitIndex}/${splitMeta.totalSplits}`
-                                            : ' • Split'
-                                          : ''}
+                                        {splitBadge && (
+                                          <span
+                                            className={taSplitMeta ? " text-purple-700" : " text-indigo-700"}
+                                            title={splitBadge.title}
+                                          >
+                                            {` • ${splitBadge.label}`}
+                                            {taSplitMeta?.totalSplits
+                                              ? ` (${taSplitMeta.splitIndex}/${taSplitMeta.totalSplits})`
+                                              : splitMeta?.totalSplits
+                                                ? ` (${splitMeta.splitIndex}/${splitMeta.totalSplits})`
+                                                : ""}
+                                          </span>
+                                        )}
                                       </>
                                     );
                                   })()}
@@ -11114,17 +11126,27 @@ export default function AdminDashboard() {
                             <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate">
                               {(() => {
                                 const splitMeta = getRequirementSplitMeta(requirement);
+                                const taSplitMeta = getRequirementTaSplitMeta(requirement);
+                                const splitBadge = getRequirementSplitBadgeLabel(requirement);
                                 return (
                                   <>
                                     {splitMeta?.roleId ? (
                                       <span>Role ID {splitMeta.roleId} • </span>
                                     ) : null}
                                     {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
-                                    {requirement.splitRequirement
-                                      ? splitMeta?.totalSplits
-                                        ? ` • Split ${splitMeta.splitIndex}/${splitMeta.totalSplits}`
-                                        : ' • Split'
-                                      : ''}
+                                    {splitBadge && (
+                                      <span
+                                        className={taSplitMeta ? " text-purple-700" : " text-indigo-700"}
+                                        title={splitBadge.title}
+                                      >
+                                        {` • ${splitBadge.label}`}
+                                        {taSplitMeta?.totalSplits
+                                          ? ` (${taSplitMeta.splitIndex}/${taSplitMeta.totalSplits})`
+                                          : splitMeta?.totalSplits
+                                            ? ` (${splitMeta.splitIndex}/${splitMeta.totalSplits})`
+                                            : ""}
+                                      </span>
+                                    )}
                                   </>
                                 );
                               })()}

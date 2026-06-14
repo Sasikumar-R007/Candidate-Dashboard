@@ -1,6 +1,32 @@
 import type { IStorage } from "./storage";
 import { extractStreqId } from "@shared/requirement-jd-extras";
 
+/** Resolve STREQ display id consistently with client buildStreqDisplayMap. */
+export async function resolveStreqDisplayIdForRequirement(
+  storage: IStorage,
+  requirement: {
+    id: string;
+    createdAt?: string | null;
+    sourceDetails?: string | null;
+  },
+): Promise<string> {
+  const { extractStreqId, buildStreqDisplayMap } = await import(
+    "@shared/requirement-jd-extras"
+  );
+  const explicit = extractStreqId(requirement);
+  if (explicit) return explicit;
+
+  const activeReqs = await storage.getRequirements();
+  const map = buildStreqDisplayMap(
+    activeReqs.map((r) => ({
+      id: r.id,
+      createdAt: r.createdAt,
+      sourceDetails: r.sourceDetails,
+    })),
+  );
+  return map.get(requirement.id) ?? generateNextStreqId(storage);
+}
+
 /** Generate next TL requirement display id: STREQ1, STREQ2, … */
 export async function generateNextStreqId(storage: IStorage): Promise<string> {
   const allRequirements = await storage.getRequirements();
@@ -80,6 +106,36 @@ export function buildSplitRequirementSourceDetails(
       splitIndex,
       totalSplits,
       teamLead: teamLeadName,
+    },
+  });
+}
+
+/** Metadata when a TL splits one requirement across multiple TAs by position count. */
+export function buildSplitTaAssignmentSourceDetails(
+  sharedDisplayRequirementId: string,
+  parentRequirementId: string,
+  splitIndex: number,
+  totalSplits: number,
+  originalTotalPositions: number,
+  existingSourceDetails?: string | null,
+): string {
+  let base: Record<string, unknown> = {};
+  if (existingSourceDetails) {
+    try {
+      base = JSON.parse(existingSourceDetails) as Record<string, unknown>;
+    } catch {
+      base = {};
+    }
+  }
+  return JSON.stringify({
+    ...base,
+    displayRequirementId: sharedDisplayRequirementId,
+    splitTaAssignmentGroup: {
+      parentRequirementId,
+      sharedDisplayRequirementId,
+      splitIndex,
+      totalSplits,
+      originalTotalPositions,
     },
   });
 }

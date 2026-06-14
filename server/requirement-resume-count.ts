@@ -1,4 +1,4 @@
-import { getResumeTarget } from "@shared/constants";
+import { getRequirementResumeTarget } from "@shared/constants";
 import { db } from "./db";
 import { jobApplications, resumeSubmissions } from "@shared/schema";
 
@@ -10,6 +10,7 @@ export async function enrichRequirementsWithResumeCount<T extends {
   id: string;
   criticality?: string | null;
   toughness?: string | null;
+  noOfPositions?: number | null;
 }>(
   requirements: T[],
 ): Promise<
@@ -52,7 +53,7 @@ export async function enrichRequirementsWithResumeCount<T extends {
   }
 
   return requirements.map((req) => {
-    const target = getResumeTarget(req.criticality || "MEDIUM", req.toughness || "Medium");
+    const target = getRequirementResumeTarget(req);
     const delivered =
       (submissionsByReq.get(req.id) || 0) + (taggedByReq.get(req.id) || 0);
     return {

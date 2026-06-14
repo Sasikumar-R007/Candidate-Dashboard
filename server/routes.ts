@@ -5597,7 +5597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = dateParam || new Date().toISOString().split('T')[0];
 
       // Import getResumeTarget for calculations
-      const { getResumeTarget } = await import("@shared/constants");
+      const { getRequirementResumeTarget } = await import("@shared/constants");
 
       // Get filter parameter - now uses member ID instead of name for security
       const memberIdFilter = req.query.memberId as string | undefined;
@@ -5716,7 +5716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let completedRequirements = 0;
 
       for (const req of filteredRequirements) {
-        const target = getResumeTarget(req.criticality, req.toughness);
+        const target = getRequirementResumeTarget(req);
         totalResumesRequired += target;
 
         // Count resumes submitted for this requirement (cumulative up to selected date)
@@ -5744,7 +5744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let profilesRequired = 0;
         let profilesDelivered = 0;
         for (const req of filteredRecReqs) {
-          const target = getResumeTarget(req.criticality, req.toughness);
+          const target = getRequirementResumeTarget(req);
           profilesRequired += target;
           profilesDelivered += teamSubmissions.filter(s => s.requirementId === req.id).length;
           profilesDelivered += taggedApplications.filter(app => app.requirementId === req.id).length;
@@ -5817,7 +5817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = [];
 
       for (const req of filteredRequirements) {
-        const target = getResumeTarget(req.criticality, req.toughness);
+        const target = getRequirementResumeTarget(req);
         const deliveredFromSubmissions = teamSubmissions.filter(s => s.requirementId === req.id).length;
         const deliveredFromTagged = taggedApplications.filter(app => app.requirementId === req.id).length;
         const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
@@ -6381,13 +6381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recentClosedArchivedRequirements = (await storage.getArchivedRequirements())
         .filter((req: any) => {
           if (req.managementStatus !== "closed" || !req.managedAt) return false;
+          if (req.managementReason === "Split among Talent Advisors") return false;
           const closedAt = new Date(req.managedAt).getTime();
           if (Number.isNaN(closedAt) || Date.now() - closedAt > 24 * 60 * 60 * 1000) return false;
           return req.teamLead === employee.name || teamRecruiters.some(rec => rec.name === req.talentAdvisor);
         })
         .map((req: any) => ({
           ...req,
-          id: `recent-closed-${req.id}`,
+          id: `recent-closed-${req.originalId || req.id}`,
           isRecentlyClosed: true,
           assignmentStatus: "archived",
         }));
@@ -6397,7 +6398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         r.isRecentlyClosed ? r.id.replace(/^recent-closed-/, "") : r.id
       );
 
-      const { getResumeTarget: getTarget } = await import("@shared/constants");
+      const { getRequirementResumeTarget: getTarget } = await import("@shared/constants");
       const { resumeSubmissions, jobApplications: jobAppsTable } = await import("@shared/schema");
       const allSubmissionsForResume = requirementIdsForResume.length > 0
         ? (await db.select().from(resumeSubmissions)).filter((s: any) => requirementIdsForResume.includes(s.requirementId))
@@ -6442,7 +6443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const enrichedRequirements = allRequirementsForResume.map((req: any) => {
         const lookupId = req.isRecentlyClosed ? req.id.replace(/^recent-closed-/, "") : req.id;
-        const target = getTarget(req.criticality, req.toughness);
+        const target = getTarget(req);
         const delivered =
           allSubmissionsForResume.filter((s: any) => s.requirementId === lookupId).length +
           allTaggedForResume.filter((app: any) => app.requirementId === lookupId).length;
@@ -6466,9 +6467,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/team-leader/requirements/:id/assign-ta", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const { talentAdvisor, jdText } = req.body;
+      const {
+        talentAdvisor,
+        jdText,
+        splitRequirement: splitRequirementFlag,
+        splits: splitsRaw,
+      } = req.body as {
+        talentAdvisor?: string;
+        jdText?: string;
+        splitRequirement?: boolean;
+        splits?: Array<{ talentAdvisor?: string; noOfPositions?: number }>;
+      };
 
-      if (!talentAdvisor) {
+      const isSplitAssignment =
+        Boolean(splitRequirementFlag) && Array.isArray(splitsRaw) && splitsRaw.length >= 2;
+
+      if (!isSplitAssignment && !talentAdvisor) {
         return res.status(400).json({ message: "Talent Advisor is required" });
       }
 
@@ -6493,15 +6507,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get the requirement and verify it belongs to this TL's team (ID-based check)
       const requirements = await storage.getRequirements();
-      const requirement = requirements.find(r => r.id === id);
+      let requirement = requirements.find(r => r.id === id);
 
       if (!requirement) {
+        const archivedRequirements = await storage.getArchivedRequirements();
+        const splitArchived = archivedRequirements.find(
+          (req) =>
+            req.originalId === id &&
+            req.managementReason === "Split among Talent Advisors",
+        );
+        if (splitArchived) {
+          return res.status(409).json({
+            message:
+              "This requirement was already split among Talent Advisors. Refresh the page to see the split rows.",
+          });
+        }
         return res.status(404).json({ message: "Requirement not found" });
       }
 
       // Check if requirement belongs to this TL's team (ID-based)
-      // Requirement must either have talentAdvisorId belonging to this TL's team,
-      // OR be unassigned and have teamLead matching this TL's name (legacy fallback)
       const belongsToTeam = requirement.talentAdvisorId
         ? teamRecruiterIds.includes(requirement.talentAdvisorId)
         : requirement.teamLead === employee.name;
@@ -6510,7 +6534,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. This requirement is not assigned to your team." });
       }
 
-      if (!allowedTalentAdvisors.includes(talentAdvisor)) {
+      const { getRequirementTaSplitMeta, mergeDisplayRequirementIdInSourceDetails } =
+        await import("@shared/requirement-jd-extras");
+      const {
+        resolveStreqDisplayIdForRequirement,
+        buildSplitTaAssignmentSourceDetails,
+      } = await import("./requirement-role-id");
+      const { requirementAssignments, resumeSubmissions, jobApplications } =
+        await import("@shared/schema");
+
+      if (getRequirementTaSplitMeta(requirement)) {
+        return res.status(400).json({
+          message: "This requirement is already part of a TA split. Edit individual split rows instead.",
+        });
+      }
+
+      if (isSplitAssignment) {
+        if (requirement.talentAdvisorId || requirement.talentAdvisor) {
+          return res.status(400).json({
+            message:
+              "Split assignment is only available for requirements not yet assigned to a Talent Advisor. Use reassign for single-TA changes.",
+          });
+        }
+
+        const totalPositions = Math.max(1, Number(requirement.noOfPositions) || 1);
+        const normalizedSplits = splitsRaw!
+          .map((entry) => ({
+            talentAdvisor: String(entry.talentAdvisor || "").trim(),
+            noOfPositions: Math.max(1, parseInt(String(entry.noOfPositions ?? 0), 10) || 0),
+          }))
+          .filter((entry) => entry.talentAdvisor);
+
+        if (normalizedSplits.length < 2) {
+          return res.status(400).json({
+            message: "Split assignment requires at least two Talent Advisors.",
+          });
+        }
+
+        const uniqueTas = new Set(normalizedSplits.map((s) => s.talentAdvisor));
+        if (uniqueTas.size !== normalizedSplits.length) {
+          return res.status(400).json({
+            message: "Each Talent Advisor in a split must be unique.",
+          });
+        }
+
+        for (const split of normalizedSplits) {
+          if (!allowedTalentAdvisors.includes(split.talentAdvisor)) {
+            return res.status(400).json({
+              message:
+                allowedTalentAdvisors.length > 0
+                  ? `Invalid Talent Advisor "${split.talentAdvisor}". Must be one of: ${allowedTalentAdvisors.join(", ")}`
+                  : "No team members available to assign.",
+            });
+          }
+        }
+
+        const assignedPositions = normalizedSplits.reduce(
+          (sum, split) => sum + split.noOfPositions,
+          0,
+        );
+        if (assignedPositions !== totalPositions) {
+          return res.status(400).json({
+            message: `Position split must total ${totalPositions}. Currently assigned: ${assignedPositions}.`,
+          });
+        }
+
+        const [submissionCount] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(resumeSubmissions)
+          .where(eq(resumeSubmissions.requirementId, id));
+        const [taggedCount] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(jobApplications)
+          .where(
+            and(
+              eq(jobApplications.requirementId, id),
+              eq(jobApplications.source, "recruiter_tagged"),
+            ),
+          );
+        const existingDeliveries =
+          Number(submissionCount?.count || 0) + Number(taggedCount?.count || 0);
+        if (existingDeliveries > 0) {
+          return res.status(400).json({
+            message:
+              "Cannot split a requirement that already has profile deliveries. Assign to a single TA or contact admin.",
+          });
+        }
+
+        let sharedDisplayRequirementId = await resolveStreqDisplayIdForRequirement(
+          storage,
+          requirement,
+        );
+
+        const parentSourceDetails = mergeDisplayRequirementIdInSourceDetails(
+          requirement.sourceDetails,
+          sharedDisplayRequirementId,
+        );
+
+        const today = new Date().toISOString().split("T")[0];
+        const createdRequirements = [];
+
+        for (let index = 0; index < normalizedSplits.length; index++) {
+          const split = normalizedSplits[index];
+          const recruiter = teamRecruiters.find((rec) => rec.name === split.talentAdvisor);
+          if (!recruiter) {
+            return res.status(400).json({
+              message: `Could not find recruiter for ${split.talentAdvisor}`,
+            });
+          }
+
+          const splitSourceDetails = buildSplitTaAssignmentSourceDetails(
+            sharedDisplayRequirementId,
+            id,
+            index + 1,
+            normalizedSplits.length,
+            totalPositions,
+            parentSourceDetails,
+          );
+
+          const newRequirement = await storage.createRequirement({
+            position: requirement.position,
+            noOfPositions: split.noOfPositions,
+            splitRequirement: true,
+            criticality: requirement.criticality,
+            toughness: requirement.toughness,
+            company: requirement.company,
+            spoc: requirement.spoc,
+            teamLead: requirement.teamLead,
+            talentAdvisor: recruiter.name,
+            talentAdvisorId: recruiter.id,
+            sourceType: requirement.sourceType,
+            sourceDetails: splitSourceDetails,
+            jdText:
+              jdText !== undefined && jdText !== null
+                ? jdText
+                : requirement.jdText,
+            jdFile: requirement.jdFile,
+            status: requirement.status,
+            managementStatus: requirement.managementStatus,
+            assignedClientMemberId: requirement.assignedClientMemberId,
+          });
+
+          await storage.createRequirementAssignment({
+            requirementId: newRequirement.id,
+            recruiterId: recruiter.id,
+            recruiterName: recruiter.name,
+            teamLeadId: employee.id,
+            teamLeadName: employee.name,
+            assignedDate: today,
+            status: "active",
+          });
+
+          createdRequirements.push(newRequirement);
+        }
+
+        await storage.archiveRequirement(id, {
+          sourceDetails: parentSourceDetails,
+          managementReason: "Split among Talent Advisors",
+          managementStatus: "closed",
+        });
+
+        return res.json({
+          split: true,
+          sharedDisplayRequirementId,
+          requirements: createdRequirements,
+        });
+      }
+
+      if (!allowedTalentAdvisors.includes(talentAdvisor!)) {
         return res.status(400).json({
           message: allowedTalentAdvisors.length > 0
             ? "Invalid Talent Advisor. Must be one of your team members: " + allowedTalentAdvisors.join(', ')
@@ -6525,7 +6716,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if there's an existing active assignment for this requirement
-      const { requirementAssignments } = await import("@shared/schema");
       const existingAssignments = await db.select().from(requirementAssignments)
         .where(and(
           eq(requirementAssignments.requirementId, id),
@@ -6807,7 +6997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (totalRequirements > 0) {
           // Import getResumeTarget for calculations
-          const { getResumeTarget } = await import("@shared/constants");
+          const { getRequirementResumeTarget } = await import("@shared/constants");
 
           // Get all resume submissions for team TAs using database directly
           const { resumeSubmissions, jobApplications } = await import("@shared/schema");
@@ -6829,7 +7019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Calculate for each requirement
           for (const req of teamRequirements) {
-            const target = getResumeTarget(req.criticality, req.toughness);
+            const target = getRequirementResumeTarget(req);
             totalResumesRequired += target;
 
             // Get unique candidate emails delivered for this requirement
@@ -7967,7 +8157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = dateParam || new Date().toISOString().split('T')[0];
 
       // Import getResumeTarget for calculations
-      const { getResumeTarget } = await import("@shared/constants");
+      const { getRequirementResumeTarget } = await import("@shared/constants");
 
       // Get requirements assigned to this recruiter directly from requirements table
       // Filter out reassigned requirements for counts
@@ -8150,7 +8340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate metrics for requirements that existed on or before the selected date
       for (const req of filteredRequirements) {
-        const target = getResumeTarget(req.criticality, req.toughness);
+        const target = getRequirementResumeTarget(req);
         totalResumesRequired += target;
 
         // Count resumes submitted for this requirement (cumulative up to selected date)
@@ -8193,7 +8383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build requirements data for graph - group by criticality
       const requirementsByCriticality: Record<string, { delivered: number; required: number }> = {};
       for (const req of filteredRequirements) {
-        const target = getResumeTarget(req.criticality, req.toughness);
+        const target = getRequirementResumeTarget(req);
         const deliveredFromSubmissions = allSubmissions.filter(s => s.requirementId === req.id).length;
         const deliveredFromTagged = recruiterTaggedApps.filter(app => app.requirementId === req.id).length;
         const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
@@ -8733,9 +8923,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
       // Also get job applications for each requirement to calculate delivery counts
+      const { getRequirementResumeTarget } = await import("@shared/constants");
+
       const requirementsWithCounts = await Promise.all(
         activeRequirements.map(async (req) => {
           const applications = await storage.getJobApplicationsByRequirementId(req.id);
+          const deliveredCount = applications.length;
+          const resumeTarget = getRequirementResumeTarget(req);
 
           // Find assignment status for this requirement and recruiter
           const assignment = allAssignments.find(a =>
@@ -8746,7 +8940,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           return {
             ...req,
-            deliveredCount: applications.length,
+            deliveredCount,
+            resumeTarget,
+            resumeCount: `${String(Math.max(0, deliveredCount)).padStart(2, "0")}/${String(Math.max(0, resumeTarget)).padStart(2, "0")}`,
             assignmentStatus: isReassigned ? "reassigned" : (assignment?.status || "active")
           };
         })
@@ -9756,7 +9952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const team = req.query.team as string || 'overall';
 
       // Import getResumeTarget for calculations
-      const { getResumeTarget } = await import("@shared/constants");
+      const { getRequirementResumeTarget } = await import("@shared/constants");
 
       // Get all active (non-archived) requirements created on or before the selected date
       const allRequirements = await safeSelectActiveRequirements();
@@ -9855,7 +10051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let completedRequirements = 0;
 
       for (const req of filteredRequirements) {
-        const target = getResumeTarget(req.criticality, req.toughness);
+        const target = getRequirementResumeTarget(req);
         totalResumesRequired += target;
 
         // Count resumes submitted for this requirement up to selected date
@@ -12310,7 +12506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/performance-graph", requireAdminAuth, async (req, res) => {
     try {
       const { teamId, dateFrom, dateTo, period = "monthly" } = req.query;
-      const { getResumeTarget } = await import("@shared/constants");
+      const { getRequirementResumeTarget } = await import("@shared/constants");
       const { requirements, resumeSubmissions } = await import("@shared/schema");
 
       const periodType = String(period);
@@ -12475,10 +12671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!periodData[periodKey]) {
           periodData[periodKey] = { resumesA: 0, resumesB: 0 };
         }
-        periodData[periodKey].resumesB += getResumeTarget(
-          req.criticality,
-          req.toughness,
-        );
+        periodData[periodKey].resumesB += getRequirementResumeTarget(req);
       }
 
       const performanceData = Object.entries(periodData).map(([periodKey, data]) => ({

@@ -95,7 +95,7 @@ import {
 
   userActivities
 } from "@shared/schema";
-import { getResumeTarget } from "@shared/constants";
+import { getRequirementResumeTarget } from "@shared/constants";
 import { db } from "./db";
 import { eq, and, or, isNull, lt, desc, sql, count, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -802,6 +802,8 @@ export class DatabaseStorage implements IStorage {
       spoc: finalRequirement.spoc,
       talentAdvisor: finalRequirement.talentAdvisor,
       teamLead: finalRequirement.teamLead,
+      sourceType: finalRequirement.sourceType,
+      sourceDetails: finalRequirement.sourceDetails,
       status: finalRequirement.status || 'closed',
       managementStatus: finalRequirement.managementStatus || 'closed',
       managementReason: finalRequirement.managementReason || null,
@@ -2681,7 +2683,7 @@ export class DatabaseStorage implements IStorage {
     for (const assignment of assignments) {
       const [requirement] = await db.select().from(requirements).where(eq(requirements.id, assignment.requirementId));
       if (requirement) {
-        required += getResumeTarget(requirement.criticality, requirement.toughness);
+        required += getRequirementResumeTarget(requirement);
       }
     }
 
@@ -2690,7 +2692,7 @@ export class DatabaseStorage implements IStorage {
       if (req.isArchived) continue;
       const alreadyCounted = assignments.some((a) => a.requirementId === req.id);
       if (!alreadyCounted) {
-        required += getResumeTarget(req.criticality, req.toughness);
+        required += getRequirementResumeTarget(req);
       }
     }
     

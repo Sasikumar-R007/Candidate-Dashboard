@@ -28,6 +28,7 @@ import {
   getRequirementLookupId,
   resolveRequirementDisplayId,
 } from '@shared/requirement-jd-extras';
+import { getRequirementResumeTarget, RESUME_TARGET_MATRIX } from '@shared/constants';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight, Clock, Zap, AlertTriangle, Send } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -1539,18 +1540,15 @@ export default function RecruiterDashboard2() {
     return { total, highPriority, mediumPriority, lowPriority, robust, idle, deliveryPending, easy };
   }, [activeRequirements]);
 
-  // Static priority distribution - fixed counts that never change
-  const priorityDistribution: Record<string, Record<string, number>> = {
-    HIGH: { Easy: 6, Medium: 4, Tough: 2 },
-    MEDIUM: { Easy: 5, Medium: 3, Tough: 2 },
-    LOW: { Easy: 4, Medium: 3, Tough: 2 },
-  };
+  // Per-position priority distribution (reference matrix; requirement target = value × no. of positions)
+  const priorityDistribution = RESUME_TARGET_MATRIX;
 
-  // Function to get expected count based on criticality and toughness from Priority Distribution
-  const getExpectedCount = (criticality: string, toughness: string): number => {
-    const criticalityData = priorityDistribution[criticality as keyof typeof priorityDistribution];
-    return criticalityData?.[toughness as keyof typeof criticalityData] || 0;
-  };
+  const getExpectedCount = (req: {
+    criticality?: string;
+    toughness?: string;
+    noOfPositions?: number;
+    resumeTarget?: number;
+  }) => req.resumeTarget ?? getRequirementResumeTarget(req);
 
   // Calculate priority counts for sidebar (matching Admin design) - excluding reassigned
   const priorityCounts = useMemo(() => {
@@ -1580,8 +1578,8 @@ export default function RecruiterDashboard2() {
     };
 
     // Calculate pending and closed distribution
-    const pendingDistribution = activeRequirements.filter((req: any) => (req.deliveredCount || 0) < getExpectedCount(req.criticality, req.toughness)).length;
-    const closedDistribution = activeRequirements.filter((req: any) => (req.deliveredCount || 0) >= getExpectedCount(req.criticality, req.toughness) && getExpectedCount(req.criticality, req.toughness) > 0).length;
+    const pendingDistribution = activeRequirements.filter((req: any) => (req.deliveredCount || 0) < getExpectedCount(req)).length;
+    const closedDistribution = activeRequirements.filter((req: any) => (req.deliveredCount || 0) >= getExpectedCount(req) && getExpectedCount(req) > 0).length;
 
     return { counts, breakdowns, pendingDistribution, closedDistribution };
   }, [activeRequirements]);
@@ -2160,14 +2158,14 @@ export default function RecruiterDashboard2() {
     // Function to format count display as "delivered/expected"
     const getCountDisplay = (req: any): string => {
       const delivered = req.deliveredCount || 0;
-      const expected = getExpectedCount(req.criticality, req.toughness);
+      const expected = getExpectedCount(req);
       return `${delivered}/${expected}`;
     };
 
     // Function to check if count is fully completed
     const isCountComplete = (req: any): boolean => {
       const delivered = req.deliveredCount || 0;
-      const expected = getExpectedCount(req.criticality, req.toughness);
+      const expected = getExpectedCount(req);
       return delivered >= expected && expected > 0;
     };
 
@@ -2259,7 +2257,7 @@ export default function RecruiterDashboard2() {
                           ) : (
                             filteredRequirements.slice(0, 10).map((req: any, index: number) => {
                               const delivered = req.deliveredCount || 0;
-                              const expected = getExpectedCount(req.criticality, req.toughness);
+                              const expected = getExpectedCount(req);
                               const isComplete = delivered >= expected && expected > 0;
                               const isReassigned = req.assignmentStatus === "reassigned";
                               const isOnHold = req.managementStatus === 'hold';
@@ -2373,7 +2371,7 @@ export default function RecruiterDashboard2() {
                           ) : (
                             filteredRequirements.map((req: any, index: number) => {
                               const delivered = req.deliveredCount || 0;
-                              const expected = getExpectedCount(req.criticality, req.toughness);
+                              const expected = getExpectedCount(req);
                               const isComplete = delivered >= expected && expected > 0;
                               const isOnHold = req.managementStatus === 'hold';
                               const isRecentlyClosed = req.managementStatus === 'closed' && req.isRecentlyClosed;
@@ -3315,7 +3313,7 @@ export default function RecruiterDashboard2() {
                       data={recruiterRequirements.map((req: any) => ({
                         name: req.position || 'Unknown',
                         value: req.deliveredCount || 0,
-                        target: getExpectedCount(req.criticality, req.toughness)
+                        target: getExpectedCount(req)
                       }))}
                       margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                     >

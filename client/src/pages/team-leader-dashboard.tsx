@@ -32,8 +32,11 @@ import {
 import {
   buildStreqDisplayMap,
   getRequirementLookupId,
+  getRequirementTaSplitMeta,
+  getRequirementSplitBadgeLabel,
   resolveRequirementDisplayId,
 } from "@shared/requirement-jd-extras";
+import { getRequirementResumeTarget } from "@shared/constants";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -197,6 +200,10 @@ export default function TeamLeaderDashboard() {
   const [isAssignmentConfirmOpen, setIsAssignmentConfirmOpen] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   const [jdText, setJdText] = useState<string>('');
+  const [splitRequirementEnabled, setSplitRequirementEnabled] = useState(false);
+  const [taSplitRows, setTaSplitRows] = useState<
+    Array<{ talentAdvisor: string; noOfPositions: string }>
+  >([{ talentAdvisor: "", noOfPositions: "1" }, { talentAdvisor: "", noOfPositions: "1" }]);
   const [selectedJD, setSelectedJD] = useState<Requirement | null>(null);
   const [isJDPreviewModalOpen, setIsJDPreviewModalOpen] = useState(false);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
@@ -762,20 +769,29 @@ export default function TeamLeaderDashboard() {
 
   // Mutation to assign talent advisor to requirement
   const assignTalentAdvisorMutation = useMutation({
-    mutationFn: async ({ id, talentAdvisor, jdText }: { id: string; talentAdvisor: string; jdText?: string }) => {
-      const res = await apiRequest('POST', `/api/team-leader/requirements/${id}/assign-ta`, { talentAdvisor, jdText });
+    mutationFn: async (payload: {
+      id: string;
+      talentAdvisor?: string;
+      jdText?: string;
+      splitRequirement?: boolean;
+      splits?: Array<{ talentAdvisor: string; noOfPositions: number }>;
+    }) => {
+      const { id, ...body } = payload;
+      const res = await apiRequest('POST', `/api/team-leader/requirements/${id}/assign-ta`, body);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to assign Talent Advisor');
+      }
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-leader/requirements'] });
-      setIsAssignmentModalOpen(false);
-      setIsAssignmentConfirmOpen(false);
-      setSelectedRequirement(null);
-      setSelectedAssignee('');
-      setJdText('');
+      resetAssignmentModalState();
       toast({
         title: "Success",
-        description: "Talent Advisor assigned successfully!",
+        description: data?.split
+          ? `Requirement split across ${data.requirements?.length || 0} Talent Advisors.`
+          : "Talent Advisor assigned successfully!",
         className: "bg-green-50 border-green-200 text-green-800",
       });
     },
@@ -817,6 +833,12 @@ export default function TeamLeaderDashboard() {
     setIsReallocating(false);
     setSelectedAssignee(requirement.talentAdvisor || '');
     setJdText(requirement.jdText || '');
+    setSplitRequirementEnabled(false);
+    const total = Math.max(1, Number(requirement.noOfPositions) || 1);
+    setTaSplitRows([
+      { talentAdvisor: "", noOfPositions: String(Math.max(1, Math.floor(total / 2))) },
+      { talentAdvisor: "", noOfPositions: String(Math.max(1, total - Math.floor(total / 2))) },
+    ]);
     setIsAssignmentModalOpen(true);
   };
 
@@ -825,8 +847,49 @@ export default function TeamLeaderDashboard() {
     setIsReallocating(true);
     setSelectedAssignee(requirement.talentAdvisor || '');
     setJdText(requirement.jdText || '');
+    setSplitRequirementEnabled(false);
     setIsAssignmentModalOpen(true);
   };
+
+  const resetAssignmentModalState = () => {
+    setIsAssignmentModalOpen(false);
+    setIsAssignmentConfirmOpen(false);
+    setSelectedRequirement(null);
+    setSelectedAssignee('');
+    setJdText('');
+    setSplitRequirementEnabled(false);
+    setTaSplitRows([
+      { talentAdvisor: "", noOfPositions: "1" },
+      { talentAdvisor: "", noOfPositions: "1" },
+    ]);
+  };
+
+  const assignmentTotalPositions = Math.max(
+    1,
+    Number(selectedRequirement?.noOfPositions) || 1,
+  );
+
+  const assignedSplitPositions = taSplitRows.reduce(
+    (sum, row) => sum + Math.max(0, parseInt(row.noOfPositions, 10) || 0),
+    0,
+  );
+
+  const remainingSplitPositions = assignmentTotalPositions - assignedSplitPositions;
+  const splitPositionsOverLimit = assignedSplitPositions > assignmentTotalPositions;
+  const splitPositionsExcess = assignedSplitPositions - assignmentTotalPositions;
+
+  const isSplitAssignmentValid =
+    !splitPositionsOverLimit &&
+    remainingSplitPositions === 0 &&
+    taSplitRows.filter((r) => r.talentAdvisor.trim()).length >= 2;
+
+  const canUseSplitAssignment = Boolean(
+    selectedRequirement &&
+      !isReallocating &&
+      !selectedRequirement.talentAdvisorId &&
+      !selectedRequirement.talentAdvisor &&
+      !getRequirementTaSplitMeta(selectedRequirement),
+  );
 
   const isTaReassignment = Boolean(
     selectedRequirement?.talentAdvisor &&
@@ -835,18 +898,42 @@ export default function TeamLeaderDashboard() {
   );
 
   const handleRequestAssignmentConfirm = () => {
-    if (!selectedRequirement || !selectedAssignee) return;
+    if (!selectedRequirement) return;
+    if (splitRequirementEnabled) {
+      const validRows = taSplitRows.filter((row) => row.talentAdvisor.trim());
+      if (validRows.length < 2) return;
+      if (!isSplitAssignmentValid) return;
+      setIsAssignmentConfirmOpen(true);
+      return;
+    }
+    if (!selectedAssignee) return;
     setIsAssignmentConfirmOpen(true);
   };
 
   const handleConfirmAssignment = () => {
-    if (!selectedRequirement || !selectedAssignee) return;
+    if (!selectedRequirement) return;
     const lookupId = getRequirementLookupId(selectedRequirement);
-    assignTalentAdvisorMutation.mutate({
-      id: lookupId,
-      talentAdvisor: selectedAssignee,
-      jdText: jdText.trim() || undefined,
-    });
+    if (splitRequirementEnabled) {
+      const splits = taSplitRows
+        .filter((row) => row.talentAdvisor.trim())
+        .map((row) => ({
+          talentAdvisor: row.talentAdvisor.trim(),
+          noOfPositions: Math.max(1, parseInt(row.noOfPositions, 10) || 1),
+        }));
+      assignTalentAdvisorMutation.mutate({
+        id: lookupId,
+        splitRequirement: true,
+        splits,
+        jdText: jdText.trim() || undefined,
+      });
+    } else {
+      if (!selectedAssignee) return;
+      assignTalentAdvisorMutation.mutate({
+        id: lookupId,
+        talentAdvisor: selectedAssignee,
+        jdText: jdText.trim() || undefined,
+      });
+    }
     setIsAssignmentConfirmOpen(false);
   };
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
@@ -1656,6 +1743,8 @@ export default function TeamLeaderDashboard() {
                             const isOnHold = requirement.managementStatus === "hold";
                             const isRecentlyClosed = requirement.managementStatus === "closed" && requirement.isRecentlyClosed;
                             const positionCount = requirement.noOfPositions ?? 1;
+                            const taSplitMeta = getRequirementTaSplitMeta(requirement);
+                            const splitBadge = getRequirementSplitBadgeLabel(requirement);
                             return (
                             <tr 
                               key={requirement.id} 
@@ -1673,6 +1762,19 @@ export default function TeamLeaderDashboard() {
                                     </span>
                                     <p className="text-xs text-gray-500 mt-0.5 truncate">
                                       {positionCount} position{positionCount !== 1 ? 's' : ''}
+                                      {splitBadge && (
+                                        <span
+                                          className={`ml-1 font-medium ${
+                                            taSplitMeta ? "text-purple-700" : "text-indigo-700"
+                                          }`}
+                                          title={splitBadge.title}
+                                        >
+                                          • {splitBadge.label}
+                                        </span>
+                                      )}
+                                      {taSplitMeta?.totalSplits
+                                        ? ` (${taSplitMeta.splitIndex}/${taSplitMeta.totalSplits})`
+                                        : ''}
                                     </p>
                                   </div>
                                   {isRecentlyClosed && (
@@ -1872,15 +1974,16 @@ export default function TeamLeaderDashboard() {
 
         {/* Assignment Modal */}
         {isAssignmentModalOpen && selectedRequirement && (
-          <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
+          <Dialog open={isAssignmentModalOpen} onOpenChange={(open) => !open && resetAssignmentModalState()}>
+            <DialogContent className="sm:max-w-[560px] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+              <DialogHeader className="px-6 pt-6 pb-3 shrink-0 border-b border-gray-100">
                 <DialogTitle className="text-xl font-semibold text-gray-900">
                   Assign Requirement
                 </DialogTitle>
               </DialogHeader>
-              
-              <div className="space-y-4 mt-4">
+
+              <div className="flex-1 min-h-0 overflow-y-auto modal-thin-scrollbar px-6 py-4">
+              <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-4">Requirement Details:</h4>
                   <div className="space-y-2">
@@ -1888,29 +1991,174 @@ export default function TeamLeaderDashboard() {
                     <div><strong>Company:</strong> {selectedRequirement.company}</div>
                     <div><strong>Criticality:</strong> <span className="text-red-600">{selectedRequirement.criticality.toUpperCase()}-{selectedRequirement.toughness || 'Medium'}</span></div>
                     <div><strong>SPOC:</strong> {selectedRequirement.spoc}</div>
+                    <div><strong>Total positions:</strong> {assignmentTotalPositions}</div>
                   </div>
                 </div>
+
+                {canUseSplitAssignment && (
+                  <div className="flex items-center justify-between rounded-lg border border-purple-100 bg-purple-50/60 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Split requirement</p>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        Assign multiple TAs with a position count each (must total {assignmentTotalPositions}).
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSplitRequirementEnabled((prev) => !prev)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                        splitRequirementEnabled ? "bg-purple-600" : "bg-gray-300"
+                      }`}
+                      data-testid="toggle-split-requirement"
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          splitRequirementEnabled ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
                 
-                <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4">
-                  <Label htmlFor="talent-advisor" className="text-sm font-medium text-gray-800">
-                    Assign to Talent Advisor:
-                  </Label>
-                  <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                    <SelectTrigger className="mt-2 bg-white border-blue-200" data-testid="select-talent-advisor">
-                      <SelectValue placeholder="Select a Talent Advisor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {talentAdvisors.map(advisor => (
-                        <SelectItem key={advisor} value={advisor}>{advisor}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedRequirement.talentAdvisor && (
-                    <p className="mt-2 text-xs text-blue-800/80">
-                      Currently assigned: <span className="font-semibold">{selectedRequirement.talentAdvisor}</span>
-                    </p>
-                  )}
-                </div>
+                {splitRequirementEnabled && canUseSplitAssignment ? (
+                  <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-sm font-medium text-gray-900">Split among Talent Advisors</Label>
+                      <span
+                        className={`text-xs font-semibold shrink-0 ${
+                          splitPositionsOverLimit
+                            ? "text-red-700"
+                            : remainingSplitPositions === 0
+                              ? "text-green-700"
+                              : "text-amber-700"
+                        }`}
+                      >
+                        {splitPositionsOverLimit
+                          ? `${assignedSplitPositions}/${assignmentTotalPositions} — over limit`
+                          : remainingSplitPositions === 0
+                            ? "All positions assigned"
+                            : `${remainingSplitPositions} remaining`}
+                      </span>
+                    </div>
+
+                    {splitPositionsOverLimit && (
+                      <p className="text-xs font-medium text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                        Total assigned ({assignedSplitPositions}) exceeds required ({assignmentTotalPositions}) by{" "}
+                        {splitPositionsExcess}. Reduce positions before confirming.
+                      </p>
+                    )}
+
+                    {taSplitRows.map((row, index) => {
+                      const positions = Math.max(1, parseInt(row.noOfPositions, 10) || 1);
+                      const previewTarget = getRequirementResumeTarget({
+                        criticality: selectedRequirement.criticality,
+                        toughness: selectedRequirement.toughness,
+                        noOfPositions: positions,
+                      });
+                      return (
+                        <div
+                          key={index}
+                          className="rounded-md border border-violet-100 bg-white/90 p-3 shadow-sm space-y-2"
+                        >
+                          <div className="grid grid-cols-2 gap-3 items-start">
+                            <div className="min-w-0">
+                              <Label className="text-xs font-medium text-gray-700">Talent Advisor {index + 1}</Label>
+                              <Select
+                                value={row.talentAdvisor}
+                                onValueChange={(value) => {
+                                  setTaSplitRows((prev) =>
+                                    prev.map((entry, i) =>
+                                      i === index ? { ...entry, talentAdvisor: value } : entry,
+                                    ),
+                                  );
+                                }}
+                              >
+                                <SelectTrigger className="mt-1.5 h-10 w-full bg-slate-100 border-slate-300 text-gray-900">
+                                  <SelectValue placeholder="Select TA" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {talentAdvisors.map((advisor) => (
+                                    <SelectItem key={advisor} value={advisor}>
+                                      {advisor}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="min-w-0">
+                              <Label className="text-xs font-medium text-gray-700">Positions</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={assignmentTotalPositions}
+                                value={row.noOfPositions}
+                                onChange={(e) => {
+                                  setTaSplitRows((prev) =>
+                                    prev.map((entry, i) =>
+                                      i === index
+                                        ? { ...entry, noOfPositions: e.target.value }
+                                        : entry,
+                                    ),
+                                  );
+                                }}
+                                className={`mt-1.5 h-10 w-full bg-slate-100 border-slate-300 text-gray-900 ${
+                                  splitPositionsOverLimit ? "border-red-300 focus-visible:ring-red-400" : ""
+                                }`}
+                              />
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-violet-800/80">Resume target: {previewTarget}</p>
+                        </div>
+                      );
+                    })}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setTaSplitRows((prev) => [
+                            ...prev,
+                            { talentAdvisor: "", noOfPositions: "1" },
+                          ])
+                        }
+                      >
+                        + Add TA
+                      </Button>
+                      {taSplitRows.length > 2 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setTaSplitRows((prev) => prev.slice(0, -1))}
+                        >
+                          Remove last
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4">
+                    <Label htmlFor="talent-advisor" className="text-sm font-medium text-gray-800">
+                      Assign to Talent Advisor:
+                    </Label>
+                    <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                      <SelectTrigger className="mt-2 bg-white border-blue-200" data-testid="select-talent-advisor">
+                        <SelectValue placeholder="Select a Talent Advisor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {talentAdvisors.map(advisor => (
+                          <SelectItem key={advisor} value={advisor}>{advisor}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedRequirement.talentAdvisor && (
+                      <p className="mt-2 text-xs text-blue-800/80">
+                        Currently assigned: <span className="font-semibold">{selectedRequirement.talentAdvisor}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
                 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <Label htmlFor="jd-text" className="text-sm font-medium text-gray-800">
@@ -1925,18 +2173,14 @@ export default function TeamLeaderDashboard() {
                   />
                   <p className="text-xs text-slate-500 mt-1">Note: JD file will not be shared to Talent Advisor, only text.</p>
                 </div>
-                
-                <div className="flex justify-end gap-3 pt-4">
+              </div>
+              </div>
+
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-background shrink-0">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      setIsAssignmentModalOpen(false);
-                      setIsAssignmentConfirmOpen(false);
-                      setSelectedRequirement(null);
-                      setSelectedAssignee('');
-                      setJdText('');
-                    }}
+                    onClick={resetAssignmentModalState}
                     className="px-6 py-2 rounded"
                     data-testid="button-cancel-assignment"
                   >
@@ -1945,12 +2189,22 @@ export default function TeamLeaderDashboard() {
                   <Button
                     className="bg-gray-800 hover:bg-gray-900 text-white font-medium px-6 py-2 rounded"
                     onClick={handleRequestAssignmentConfirm}
-                    disabled={!selectedAssignee || assignTalentAdvisorMutation.isPending}
+                    disabled={
+                      assignTalentAdvisorMutation.isPending ||
+                      (splitRequirementEnabled
+                        ? !isSplitAssignmentValid
+                        : !selectedAssignee)
+                    }
                     data-testid="button-confirm-assignment"
                   >
-                    {assignTalentAdvisorMutation.isPending ? 'Assigning...' : isReallocating || isTaReassignment ? 'Review & Confirm' : 'Confirm Assignment'}
+                    {assignTalentAdvisorMutation.isPending
+                      ? 'Assigning...'
+                      : splitRequirementEnabled
+                        ? 'Review split assignment'
+                        : isReallocating || isTaReassignment
+                          ? 'Review & Confirm'
+                          : 'Confirm Assignment'}
                   </Button>
-                </div>
               </div>
             </DialogContent>
           </Dialog>
@@ -1960,20 +2214,57 @@ export default function TeamLeaderDashboard() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {isReallocating || isTaReassignment ? 'Confirm TA reassignment' : 'Confirm TA assignment'}
+                {splitRequirementEnabled
+                  ? 'Confirm split assignment'
+                  : isReallocating || isTaReassignment
+                    ? 'Confirm TA reassignment'
+                    : 'Confirm TA assignment'}
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm text-gray-600">
-                  <p>
-                    Assign <span className="font-semibold text-gray-900">{selectedAssignee}</span> to{' '}
-                    <span className="font-semibold text-gray-900">{selectedRequirement?.position}</span> at{' '}
-                    <span className="font-semibold text-gray-900">{selectedRequirement?.company}</span>?
-                  </p>
-                  {(isReallocating || isTaReassignment) && (
-                    <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
-                      Changing the Talent Advisor will reset all metrics and records linked to this requirement for the
-                      previous TA. The new TA will start fresh for this role.
-                    </p>
+                  {splitRequirementEnabled ? (
+                    <>
+                      <p>
+                        Split <span className="font-semibold text-gray-900">{selectedRequirement?.position}</span> at{' '}
+                        <span className="font-semibold text-gray-900">{selectedRequirement?.company}</span> across{' '}
+                        {taSplitRows.filter((r) => r.talentAdvisor.trim()).length} Talent Advisors?
+                      </p>
+                      <ul className="rounded-md border border-purple-100 bg-purple-50/50 px-3 py-2 space-y-1">
+                        {taSplitRows
+                          .filter((r) => r.talentAdvisor.trim())
+                          .map((row, idx) => (
+                            <li key={idx} className="text-gray-800">
+                              <span className="font-medium">{row.talentAdvisor}</span>
+                              {' — '}
+                              {row.noOfPositions} position{parseInt(row.noOfPositions, 10) !== 1 ? 's' : ''}
+                              {' (target '}
+                              {getRequirementResumeTarget({
+                                criticality: selectedRequirement?.criticality,
+                                toughness: selectedRequirement?.toughness,
+                                noOfPositions: parseInt(row.noOfPositions, 10) || 1,
+                              })}
+                              {' resumes)'}
+                            </li>
+                          ))}
+                      </ul>
+                      <p className="text-xs text-gray-500">
+                        Each TA will see a separate requirement row marked TA Split with the same requirement ID.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        Assign <span className="font-semibold text-gray-900">{selectedAssignee}</span> to{' '}
+                        <span className="font-semibold text-gray-900">{selectedRequirement?.position}</span> at{' '}
+                        <span className="font-semibold text-gray-900">{selectedRequirement?.company}</span>?
+                      </p>
+                      {(isReallocating || isTaReassignment) && (
+                        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                          Changing the Talent Advisor will reset all metrics and records linked to this requirement for the
+                          previous TA. The new TA will start fresh for this role.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </AlertDialogDescription>
@@ -1984,7 +2275,11 @@ export default function TeamLeaderDashboard() {
                 onClick={handleConfirmAssignment}
                 className="bg-gray-800 hover:bg-gray-900"
               >
-                {isReallocating || isTaReassignment ? 'Confirm reassignment' : 'Confirm assignment'}
+                {splitRequirementEnabled
+                  ? 'Confirm split'
+                  : isReallocating || isTaReassignment
+                    ? 'Confirm reassignment'
+                    : 'Confirm assignment'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -3604,6 +3899,8 @@ export default function TeamLeaderDashboard() {
                 <tbody>
                   {visibleRequirementsData.map((requirement: any, index) => {
                     const positionCount = requirement.noOfPositions ?? 1;
+                    const taSplitMeta = getRequirementTaSplitMeta(requirement);
+                    const splitBadge = getRequirementSplitBadgeLabel(requirement);
                     return (
                     <tr key={requirement.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
                       <td className="p-3 w-[88px] text-xs font-semibold text-slate-600 border border-gray-300 whitespace-nowrap">
@@ -3613,6 +3910,16 @@ export default function TeamLeaderDashboard() {
                         <div className="font-medium truncate" title={requirement.position}>{requirement.position}</div>
                         <p className="text-xs text-gray-500 mt-0.5 truncate">
                           {positionCount} position{positionCount !== 1 ? 's' : ''}
+                          {splitBadge && (
+                            <span
+                              className={`ml-1 font-medium ${
+                                taSplitMeta ? "text-purple-700" : "text-indigo-700"
+                              }`}
+                              title={splitBadge.title}
+                            >
+                              • {splitBadge.label}
+                            </span>
+                          )}
                         </p>
                       </td>
                       <td className="p-3 border border-gray-300">

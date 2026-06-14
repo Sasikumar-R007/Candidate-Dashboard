@@ -404,6 +404,31 @@
   background: #94a3b8;
 }
 
+/* Thin in-modal scrollbar (scroll lives inside dialog body, not on the shell) */
+.modal-thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #c4b5fd #f5f3ff;
+}
+
+.modal-thin-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-thin-scrollbar::-webkit-scrollbar-track {
+  background: #f5f3ff;
+  border-radius: 999px;
+  margin: 4px 0;
+}
+
+.modal-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 999px;
+}
+
+.modal-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a78bfa;
+}
+
 /* Pipeline session: dedicated scrollbars on the white board panel */
 .pipeline-h-scroll {
   -webkit-overflow-scrolling: touch;

@@ -55,7 +55,7 @@ import {
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { DatabaseStorage } from "./database-storage";
-import { getResumeTarget } from "@shared/constants";
+import { getRequirementResumeTarget } from "@shared/constants";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -1132,6 +1132,8 @@ export class MemStorage implements IStorage {
       spoc: finalRequirement.spoc,
       talentAdvisor: finalRequirement.talentAdvisor,
       teamLead: finalRequirement.teamLead,
+      sourceType: finalRequirement.sourceType,
+      sourceDetails: finalRequirement.sourceDetails,
       status: finalRequirement.status || "closed",
       managementStatus: finalRequirement.managementStatus || "closed",
       managementReason: finalRequirement.managementReason || null,
@@ -1832,7 +1834,7 @@ export class MemStorage implements IStorage {
     for (const assignment of assignments) {
       const requirement = this.requirements.get(assignment.requirementId);
       if (requirement) {
-        required += getResumeTarget(requirement.criticality, requirement.toughness);
+        required += getRequirementResumeTarget(requirement);
       }
     }
 
@@ -1844,7 +1846,7 @@ export class MemStorage implements IStorage {
         (assignment) => assignment.requirementId === req.id,
       );
       if (!alreadyCounted) {
-        required += getResumeTarget(req.criticality, req.toughness);
+        required += getRequirementResumeTarget(req);
       }
     }
 

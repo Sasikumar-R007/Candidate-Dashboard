@@ -4,7 +4,7 @@ import type {
   RequirementAssignment,
   ResumeSubmission,
 } from "@shared/schema";
-import { getResumeTarget } from "@shared/constants";
+import { getRequirementResumeTarget } from "@shared/constants";
 
 export type EmployeeRef = {
   id: string;
@@ -228,10 +228,10 @@ export function countUniqueDeliveriesForRequirement(
 }
 
 export function isRequirementDeliveryComplete(
-  requirement: Pick<Requirement, "criticality" | "toughness">,
+  requirement: Pick<Requirement, "criticality" | "toughness" | "noOfPositions">,
   deliveryCount: number,
 ): boolean {
-  const target = getResumeTarget(requirement.criticality, requirement.toughness);
+  const target = getRequirementResumeTarget(requirement);
   return deliveryCount >= target;
 }
 

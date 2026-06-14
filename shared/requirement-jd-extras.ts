@@ -117,6 +117,76 @@ export function resolveRequirementDisplayId(
   return "N/A";
 }
 
+export type RequirementTaSplitMeta = {
+  parentRequirementId?: string;
+  sharedDisplayRequirementId?: string;
+  splitIndex?: number;
+  totalSplits?: number;
+  originalTotalPositions?: number;
+};
+
+/** True when a requirement row was created by TL split-assignment among TAs. */
+export function getRequirementTaSplitMeta(
+  requirement: { sourceDetails?: string | null } | null | undefined,
+): RequirementTaSplitMeta | null {
+  if (!requirement?.sourceDetails?.trim()) return null;
+  try {
+    const parsed = JSON.parse(requirement.sourceDetails) as {
+      splitTaAssignmentGroup?: RequirementTaSplitMeta;
+    };
+    return parsed.splitTaAssignmentGroup ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type RequirementTlSplitMeta = {
+  roleId?: string;
+  splitIndex?: number;
+  totalSplits?: number;
+  teamLead?: string;
+};
+
+/** Admin split: one requirement duplicated across multiple Team Leaders. */
+export function getRequirementTlSplitMeta(
+  requirement: { sourceDetails?: string | null } | null | undefined,
+): RequirementTlSplitMeta | null {
+  if (!requirement?.sourceDetails?.trim()) return null;
+  try {
+    const parsed = JSON.parse(requirement.sourceDetails) as {
+      splitRequirementGroup?: RequirementTlSplitMeta;
+    };
+    return parsed.splitRequirementGroup ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getRequirementSplitBadgeLabel(requirement: {
+  splitRequirement?: boolean | null;
+  sourceDetails?: string | null;
+}): { label: string; title: string } | null {
+  if (getRequirementTaSplitMeta(requirement)) {
+    return {
+      label: "TA Split",
+      title: "Positions split among Talent Advisors by Team Leader",
+    };
+  }
+  if (getRequirementTlSplitMeta(requirement)) {
+    return {
+      label: "TL Split",
+      title: "Requirement split among Team Leaders by Admin",
+    };
+  }
+  if (requirement.splitRequirement) {
+    return {
+      label: "Split",
+      title: "Split requirement",
+    };
+  }
+  return null;
+}
+
 export function mergeDisplayRequirementIdInSourceDetails(
   existingSourceDetails: string | null | undefined,
   displayRequirementId: string | null | undefined,
