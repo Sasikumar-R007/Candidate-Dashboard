@@ -15,6 +15,7 @@ interface CandidateWelcomeEmailData {
   email: string;
   candidateId: string;
   loginUrl: string;
+  password?: string;
 }
 
 interface OTPEmailData {
@@ -139,6 +140,41 @@ Team StaffOS
 export async function sendCandidateWelcomeEmail(data: CandidateWelcomeEmailData): Promise<boolean> {
   try {
     const { client: resend, fromEmail } = await getUncachableResendClient();
+    const credentialsBlock = data.password
+      ? `
+**Your Login Details:**
+- Candidate ID: ${data.candidateId}
+- Email: ${data.email}
+- Temporary Password: ${data.password}
+- Login URL: ${data.loginUrl}
+
+Please change your password after your first login.
+`
+      : `
+**Your Profile Details:**
+- Candidate ID: ${data.candidateId}
+- Email: ${data.email}
+- Login URL: ${data.loginUrl}
+`;
+    const credentialsHtml = data.password
+      ? `
+      <div class="profile-info">
+        <h3 style="margin-top: 0;">Your Login Details:</h3>
+        <p><strong>Candidate ID:</strong> ${data.candidateId}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>Temporary Password:</strong> ${data.password}</p>
+        <p><strong>Login URL:</strong> <a href="${data.loginUrl}">${data.loginUrl}</a></p>
+        <p style="margin-bottom: 0;">Please change your password after your first login.</p>
+      </div>
+`
+      : `
+      <div class="profile-info">
+        <h3 style="margin-top: 0;">Your Profile Details:</h3>
+        <p><strong>Candidate ID:</strong> ${data.candidateId}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>Login URL:</strong> <a href="${data.loginUrl}">${data.loginUrl}</a></p>
+      </div>
+`;
 
     const emailContent = `
 Hi ${data.fullName},
@@ -147,11 +183,7 @@ Welcome to StaffOS!
 
 Your candidate account has been successfully created. We're excited to have you join our platform and help you find the perfect career opportunity.
 
-**Your Profile Details:**
-- Candidate ID: ${data.candidateId}
-- Email: ${data.email}
-- Login URL: ${data.loginUrl}
-
+${credentialsBlock}
 With StaffOS, you can:
 
 • Track all your job applications in one place
@@ -206,12 +238,7 @@ Team StaffOS
       
       <p>Your candidate account has been successfully created. We're excited to have you join our platform and help you find the perfect career opportunity.</p>
       
-      <div class="profile-info">
-        <h3 style="margin-top: 0;">Your Profile Details:</h3>
-        <p><strong>Candidate ID:</strong> ${data.candidateId}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Login URL:</strong> <a href="${data.loginUrl}">${data.loginUrl}</a></p>
-      </div>
+      ${credentialsHtml}
       
       <div class="features">
         <h3 style="margin-top: 0;">With StaffOS, you can:</h3>

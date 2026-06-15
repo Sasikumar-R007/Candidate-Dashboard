@@ -102,6 +102,11 @@ function resolveWelcomeEmailLoginUrl(): string {
   return fromEnv || "http://localhost:5173";
 }
 
+function resolveCandidateWelcomeLoginUrl(): string {
+  const base = resolveWelcomeEmailLoginUrl().replace(/\/$/, "");
+  return base.endsWith("/candidate-login") ? base : `${base}/candidate-login`;
+}
+
 /** Client Admin / Client Member sign-in page (same portal as internal employees). */
 function resolveClientPortalLoginUrl(req?: Request): string {
   const fromEnv = (process.env.FRONTEND_URL || process.env.CLIENT_FRONTEND_URL || "")
@@ -14942,14 +14947,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Candidate email is missing for this application" });
       }
 
-      const candidate = await storage.getCandidateByEmail(candidateEmail);
-      const loginUrl = resolveWelcomeEmailLoginUrl();
+      const temporaryPassword = generateClientTemporaryPassword();
+      const loginUrl = resolveCandidateWelcomeLoginUrl();
+      let candidate = await storage.getCandidateByEmail(candidateEmail);
+
+      if (candidate) {
+        candidate = await storage.updateCandidate(candidate.id, {
+          password: temporaryPassword,
+          isVerified: true,
+          isActive: true,
+        });
+      } else {
+        const candidateId = await storage.generateNextCandidateId();
+        const candidatePayload = {
+          candidateId,
+          fullName: application.candidateName || "Candidate",
+          email: candidateEmail,
+          password: temporaryPassword,
+          phone: application.candidatePhone || null,
+          ownerEmployeeId: employee.id,
+          ownerRole,
+          addedBy: employee.name,
+          pipelineStatus: "New",
+          isActive: true,
+        };
+
+        let created;
+        try {
+          created = await storage.createCandidate(candidatePayload);
+        } catch (error) {
+          if (!isMissingCandidateOwnershipColumnError(error)) {
+            throw error;
+          }
+          const { ownerEmployeeId, ownerRole: ignoredOwnerRole, ...legacyPayload } = candidatePayload;
+          created = await storage.createCandidate(legacyPayload);
+        }
+
+        candidate = await storage.updateCandidate(created.id, { isVerified: true });
+      }
+
+      if (!candidate) {
+        return res.status(500).json({ message: "Failed to provision candidate login" });
+      }
+
+      if (!application.profileId && candidate.id) {
+        await db
+          .update(jobApplications)
+          .set({ profileId: candidate.id })
+          .where(eq(jobApplications.id, application.id));
+      }
 
       const emailSent = await sendCandidateWelcomeEmail({
-        fullName: application.candidateName || candidate?.fullName || "Candidate",
+        fullName: application.candidateName || candidate.fullName || "Candidate",
         email: candidateEmail,
-        candidateId: candidate?.candidateId || "Pending",
+        candidateId: candidate.candidateId,
         loginUrl,
+        password: temporaryPassword,
       });
 
       if (!emailSent) {

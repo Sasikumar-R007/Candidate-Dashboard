@@ -488,7 +488,7 @@ export default function RecruiterDashboard2() {
     onSuccess: (_data, applicant) => {
       toast({
         title: "Invite Sent",
-        description: `Invite email has been sent to ${applicant.candidateName}.`,
+        description: `Welcome email with temporary login password sent to ${applicant.candidateName}.`,
       });
     },
     onError: (error: any) => {
@@ -3940,8 +3940,8 @@ export default function RecruiterDashboard2() {
                 <span className="font-medium text-gray-900">
                   {applicantToInvite.candidateName || 'this candidate'}
                 </span>{' '}
-                a secure link to set up their StaffOS account and complete
-                onboarding.
+                their StaffOS login URL, email, and a temporary password for first-time
+                access.
               </p>
             </div>
 
