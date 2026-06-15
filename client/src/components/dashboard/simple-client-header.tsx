@@ -304,12 +304,10 @@ export default function SimpleClientHeader({
     if (section === "newCandidates") onOpenPipeline?.();
   };
 
-  const headerUnreadCount = useMemo(() => {
-    const fromRows = visibleNotificationRows.filter((r) => r.isUnread).length;
-    const fromPortal = portalNudges.filter((n) => n.isRead !== true).length;
-    const fromFeed = employeeFeed?.unreadCount ?? 0;
-    return Math.max(fromFeed, fromRows, fromPortal);
-  }, [visibleNotificationRows, employeeFeed, feedError, portalNudges]);
+  const headerUnreadCount = useMemo(
+    () => visibleNotificationRows.filter((r) => r.isUnread).length,
+    [visibleNotificationRows],
+  );
 
   useNotificationSound(headerUnreadCount, true);
 

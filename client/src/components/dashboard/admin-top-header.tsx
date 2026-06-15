@@ -556,11 +556,10 @@ export default function AdminTopHeader({
 
   const panelRows = useMemo((): NotificationPanelRow[] => visibleRows, [visibleRows]);
 
-  const headerUnreadCount = useMemo(() => {
-    const fromRows = visibleRows.filter((r) => r.isUnread).length;
-    const fromFeed = employeeFeed?.unreadCount ?? 0;
-    return Math.max(fromFeed, fromRows);
-  }, [visibleRows, employeeFeed]);
+  const headerUnreadCount = useMemo(
+    () => visibleRows.filter((r) => r.isUnread).length,
+    [visibleRows],
+  );
 
   useNotificationSound(headerUnreadCount, isAdmin || isTL || isTA);
 

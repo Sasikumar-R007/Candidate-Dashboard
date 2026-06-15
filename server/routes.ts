@@ -1065,8 +1065,8 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       newCandidateApplied: [],
       unreadCount:
         newRequirements.filter((i) => i.isUnread).length +
-        nudges.length +
-        escalatedNudges.length +
+        nudges.filter((i) => i.isUnread).length +
+        escalatedNudges.filter((i) => i.isUnread).length +
         closures.filter((i) => i.isUnread).length,
     };
   }
@@ -1274,8 +1274,8 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       newCandidateApplied,
       unreadCount:
         newRequirements.filter((i) => i.isUnread).length +
-        nudges.length +
-        escalatedNudges.length +
+        nudges.filter((i) => i.isUnread).length +
+        escalatedNudges.filter((i) => i.isUnread).length +
         closures.filter((i) => i.isUnread).length +
         newCandidateApplied.filter((i) => i.isUnread).length,
     };
