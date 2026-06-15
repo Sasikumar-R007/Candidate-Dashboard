@@ -15896,15 +15896,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const offset = (page - 1) * pageSize;
 
+      const isInMemorySort = inMemoryScoreSorts.has(sortOption);
+      const shouldCapScoringPool = isInMemorySort && !queryConditions;
+
       let filteredCandidatesQuery = db.select(candidateListSelect).from(candidates).where(whereClause);
 
-      if (!inMemoryScoreSorts.has(sortOption)) {
+      if (!isInMemorySort) {
         filteredCandidatesQuery = filteredCandidatesQuery.orderBy(getSortOrder(sortOption));
         filteredCandidatesQuery = filteredCandidatesQuery.limit(pageSize).offset(offset);
-      } else {
+      } else if (shouldCapScoringPool) {
+        // "Single tab" default mode: keep lightweight initial pool for responsiveness.
         filteredCandidatesQuery = filteredCandidatesQuery
           .orderBy(desc(candidates.createdAt))
           .limit(SOURCE_RESUME_SCORING_POOL_LIMIT);
+      } else {
+        // Filtered search mode: score against the full filtered dataset, not only the first 50 rows.
+        filteredCandidatesQuery = filteredCandidatesQuery
+          .orderBy(desc(candidates.createdAt));
       }
 
       let candidatesList;
@@ -15921,7 +15929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw queryError;
       }
 
-      const totalCount = inMemoryScoreSorts.has(sortOption)
+      const totalCount = shouldCapScoringPool
         ? Math.min(matchedCount, SOURCE_RESUME_SCORING_POOL_LIMIT)
         : matchedCount;
 
@@ -15971,13 +15979,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const paginatedCandidates = inMemoryScoreSorts.has(sortOption)
+      const paginatedCandidates = isInMemorySort
         ? sortedCandidates.slice(offset, offset + pageSize)
         : sortedCandidates;
 
-      // Calculate analytics for the scored pool (capped), not the full database
+      // Calculate analytics for the scored pool returned by this search path.
       const analytics = calculateAnalytics(
-        (inMemoryScoreSorts.has(sortOption) ? sortedCandidates : candidatesList).map(
+        (isInMemorySort ? sortedCandidates : candidatesList).map(
           (sc) => ("candidate" in sc ? sc.candidate : sc),
         ),
       );
