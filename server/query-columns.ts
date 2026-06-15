@@ -1,0 +1,90 @@
+import { candidates, requirements } from "@shared/schema";
+
+/** Candidate list/search — omits resume_text (large). SQL WHERE may still reference resume_text. */
+export const candidateListSelect = {
+  id: candidates.id,
+  candidateId: candidates.candidateId,
+  fullName: candidates.fullName,
+  email: candidates.email,
+  password: candidates.password,
+  googleId: candidates.googleId,
+  phone: candidates.phone,
+  company: candidates.company,
+  designation: candidates.designation,
+  age: candidates.age,
+  gender: candidates.gender,
+  location: candidates.location,
+  experience: candidates.experience,
+  skills: candidates.skills,
+  profilePicture: candidates.profilePicture,
+  bannerImage: candidates.bannerImage,
+  resumeFile: candidates.resumeFile,
+  education: candidates.education,
+  currentRole: candidates.currentRole,
+  portfolioUrl: candidates.portfolioUrl,
+  websiteUrl: candidates.websiteUrl,
+  linkedinUrl: candidates.linkedinUrl,
+  pipelineStatus: candidates.pipelineStatus,
+  addedBy: candidates.addedBy,
+  assignedTo: candidates.assignedTo,
+  ctc: candidates.ctc,
+  ectc: candidates.ectc,
+  noticePeriod: candidates.noticePeriod,
+  position: candidates.position,
+  pedigreeLevel: candidates.pedigreeLevel,
+  companyLevel: candidates.companyLevel,
+  companySector: candidates.companySector,
+  productService: candidates.productService,
+  productCategory: candidates.productCategory,
+  productDomain: candidates.productDomain,
+  employmentType: candidates.employmentType,
+  ownerEmployeeId: candidates.ownerEmployeeId,
+  ownerRole: candidates.ownerRole,
+  isActive: candidates.isActive,
+  isVerified: candidates.isVerified,
+  phoneVerified: candidates.phoneVerified,
+  registrationStage: candidates.registrationStage,
+  createdAt: candidates.createdAt,
+  lastViewedAt: candidates.lastViewedAt,
+};
+
+/** Requirement list views — omits jd_text (large). */
+export const requirementListSelect = {
+  id: requirements.id,
+  position: requirements.position,
+  noOfPositions: requirements.noOfPositions,
+  splitRequirement: requirements.splitRequirement,
+  criticality: requirements.criticality,
+  toughness: requirements.toughness,
+  company: requirements.company,
+  spoc: requirements.spoc,
+  talentAdvisor: requirements.talentAdvisor,
+  talentAdvisorId: requirements.talentAdvisorId,
+  teamLead: requirements.teamLead,
+  sourceType: requirements.sourceType,
+  sourceDetails: requirements.sourceDetails,
+  status: requirements.status,
+  managementStatus: requirements.managementStatus,
+  managementReason: requirements.managementReason,
+  managedAt: requirements.managedAt,
+  completedAt: requirements.completedAt,
+  isArchived: requirements.isArchived,
+  createdAt: requirements.createdAt,
+  jdFile: requirements.jdFile,
+  assignedClientMemberId: requirements.assignedClientMemberId,
+};
+
+/** Company-scoped requirement lists (client portal) — includes jdText for in-app display. */
+export const requirementCompanyListSelect = {
+  ...requirementListSelect,
+  jdText: requirements.jdText,
+};
+
+/** Requirement fields needed for source-resume match scoring (no jd_text). */
+export const requirementSearchSelect = {
+  id: requirements.id,
+  position: requirements.position,
+  sourceDetails: requirements.sourceDetails,
+  criticality: requirements.criticality,
+  toughness: requirements.toughness,
+};

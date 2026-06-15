@@ -610,4 +610,22 @@ export async function ensurePerformanceIndexes() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_candidates_created ON candidates (created_at DESC)
   `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_job_applications_status ON job_applications (status)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_job_applications_requirement_id ON job_applications (requirement_id)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_job_applications_recruiter_job_id ON job_applications (recruiter_job_id)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_job_applications_profile_id ON job_applications (profile_id)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_job_applications_applied_date ON job_applications (applied_date DESC)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_resume_submissions_recruiter_id ON resume_submissions (recruiter_id)
+  `);
 }

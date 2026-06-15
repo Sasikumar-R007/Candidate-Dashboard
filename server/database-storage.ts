@@ -107,6 +107,7 @@ import {
   getRevenueMappingBestDate,
   getRevenueMappingRecencyTs,
 } from "./target-revenue-sync";
+import { requirementListSelect, requirementCompanyListSelect } from "./query-columns";
 
 // Helper function to convert snake_case employee object to camelCase
 function normalizeEmployee(emp: any): Employee {
@@ -290,31 +291,6 @@ const candidateListColumnCandidates = candidateColumnCandidates.filter(
   (column) => column !== "resume_text",
 );
 
-const requirementListColumns = {
-  id: requirements.id,
-  position: requirements.position,
-  noOfPositions: requirements.noOfPositions,
-  splitRequirement: requirements.splitRequirement,
-  criticality: requirements.criticality,
-  toughness: requirements.toughness,
-  company: requirements.company,
-  spoc: requirements.spoc,
-  talentAdvisor: requirements.talentAdvisor,
-  talentAdvisorId: requirements.talentAdvisorId,
-  teamLead: requirements.teamLead,
-  sourceType: requirements.sourceType,
-  sourceDetails: requirements.sourceDetails,
-  status: requirements.status,
-  managementStatus: requirements.managementStatus,
-  managementReason: requirements.managementReason,
-  managedAt: requirements.managedAt,
-  completedAt: requirements.completedAt,
-  isArchived: requirements.isArchived,
-  createdAt: requirements.createdAt,
-  jdFile: requirements.jdFile,
-  assignedClientMemberId: requirements.assignedClientMemberId,
-};
-
 const clientColumnCandidates = [
   "id", "client_code", "brand_name", "incorporated_name", "gstin", "address", "location", "spoc",
   "email", "website", "linkedin", "agreement", "percentage", "category", "payment_terms",
@@ -330,6 +306,29 @@ const jobApplicationColumnCandidates = [
   "application_current_ctc", "application_expected_ctc",
   "salary_edited_by_employee_id", "salary_edited_by_name", "salary_edited_at",
 ];
+
+/** Kanban pipeline list — omits notes, CTC, and other detail-only columns. */
+const pipelineJobApplicationColumnCandidates = [
+  "id",
+  "profile_id",
+  "recruiter_job_id",
+  "requirement_id",
+  "job_title",
+  "company",
+  "status",
+  "source",
+  "applied_date",
+  "candidate_name",
+  "candidate_email",
+  "candidate_phone",
+  "location",
+  "experience",
+  "skills",
+];
+
+const pipelineActiveStatusWhere = sql`
+  COALESCE(TRIM(LOWER(status)), '') NOT IN ('', 'archived')
+`;
 
 const recruiterJobColumnCandidates = [
   "id", "recruiter_id", "owner_employee_id", "owner_role", "company_name", "company_tagline",
@@ -430,6 +429,28 @@ export class DatabaseStorage implements IStorage {
   private async queryJobApplications(whereClause?: ReturnType<typeof sql>, orderClause?: ReturnType<typeof sql>): Promise<JobApplication[]> {
     const availableColumns = await this.getAvailableColumns("job_applications");
     const selectedColumns = jobApplicationColumnCandidates.filter((column) => availableColumns.includes(column));
+
+    const result = await db.execute(sql`
+      SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
+      FROM ${sql.raw(`"job_applications"`)}
+      ${whereClause ? sql`WHERE ${whereClause}` : sql``}
+      ${orderClause ? orderClause : sql``}
+    `);
+
+    return result.rows.map(normalizeJobApplication);
+  }
+
+  private async queryPipelineJobApplications(
+    whereClause?: ReturnType<typeof sql>,
+    orderClause?: ReturnType<typeof sql>,
+  ): Promise<JobApplication[]> {
+    const availableColumns = await this.getAvailableColumns("job_applications");
+    const selectedColumns = pipelineJobApplicationColumnCandidates.filter((column) =>
+      availableColumns.includes(column),
+    );
+    if (selectedColumns.length === 0) {
+      return [];
+    }
 
     const result = await db.execute(sql`
       SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
@@ -734,7 +755,7 @@ export class DatabaseStorage implements IStorage {
   async getRequirementsForList(): Promise<Requirement[]> {
     try {
       return await db
-        .select(requirementListColumns)
+        .select(requirementListSelect)
         .from(requirements)
         .where(eq(requirements.isArchived, false))
         .orderBy(desc(requirements.createdAt)) as Requirement[];
@@ -742,7 +763,7 @@ export class DatabaseStorage implements IStorage {
       const message = error instanceof Error ? error.message : String(error || "");
       if (!message.includes("is_archived")) throw error;
       return await db
-        .select(requirementListColumns)
+        .select(requirementListSelect)
         .from(requirements)
         .orderBy(desc(requirements.createdAt)) as Requirement[];
     }
@@ -1382,9 +1403,10 @@ export class DatabaseStorage implements IStorage {
 
   // Client-specific data methods (for client dashboard)
   async getRequirementsByCompany(companyName: string): Promise<Requirement[]> {
-    return await db.select().from(requirements).where(
-      sql`LOWER(${requirements.company}) = LOWER(${companyName})`
-    );
+    return await db
+      .select(requirementCompanyListSelect)
+      .from(requirements)
+      .where(sql`LOWER(${requirements.company}) = LOWER(${companyName})`) as Requirement[];
   }
 
   async getJobApplicationsByCompany(companyName: string): Promise<JobApplication[]> {
@@ -2099,6 +2121,99 @@ export class DatabaseStorage implements IStorage {
     return await this.queryJobApplications(undefined, sql`ORDER BY applied_date DESC`);
   }
 
+  /** Pipeline Kanban — active rows only, minimal columns (no resume_text / detail fields). */
+  async getJobApplicationsForPipeline(): Promise<JobApplication[]> {
+    return await this.queryPipelineJobApplications(
+      pipelineActiveStatusWhere,
+      sql`ORDER BY applied_date DESC`,
+    );
+  }
+
+  async getEmployeesForPipelineLookup(): Promise<
+    Array<Pick<Employee, "id" | "employeeId" | "name" | "role" | "reportingTo">>
+  > {
+    try {
+      const result = await db.execute(sql`
+        SELECT id, employee_id, name, role, reporting_to
+        FROM employees
+        WHERE is_active = true OR COALESCE(account_status, 'active') = 'hold'
+      `);
+      return result.rows.map((row: Record<string, unknown>) => ({
+        id: String(row.id),
+        employeeId: (row.employee_id ?? row.employeeId) as string | null | undefined,
+        name: String(row.name ?? ""),
+        role: String(row.role ?? ""),
+        reportingTo: (row.reporting_to ?? row.reportingTo) as string | null | undefined,
+      }));
+    } catch (error) {
+      console.warn("getEmployeesForPipelineLookup fallback:", error);
+      const all = await this.getAllEmployees();
+      return all.map((emp) => ({
+        id: emp.id,
+        employeeId: emp.employeeId,
+        name: emp.name,
+        role: emp.role,
+        reportingTo: emp.reportingTo,
+      }));
+    }
+  }
+
+  async getRecruiterJobsForPipeline(): Promise<
+    Array<
+      Pick<RecruiterJob, "id" | "recruiterId" | "requirementId" | "companyName" | "role">
+    >
+  > {
+    const result = await db.execute(sql`
+      SELECT id, recruiter_id, requirement_id, company_name, role
+      FROM recruiter_jobs
+      ORDER BY posted_date DESC NULLS LAST
+    `);
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: String(row.id),
+      recruiterId: String(row.recruiter_id ?? row.recruiterId ?? ""),
+      requirementId: (row.requirement_id ?? row.requirementId) as string | null | undefined,
+      companyName: String(row.company_name ?? row.companyName ?? ""),
+      role: String(row.role ?? ""),
+    }));
+  }
+
+  async getRequirementsForPipeline(): Promise<
+    Array<
+      Pick<Requirement, "id" | "position" | "company" | "talentAdvisorId" | "teamLead" | "isArchived">
+    >
+  > {
+    try {
+      return (await db
+        .select({
+          id: requirements.id,
+          position: requirements.position,
+          company: requirements.company,
+          talentAdvisorId: requirements.talentAdvisorId,
+          teamLead: requirements.teamLead,
+          isArchived: requirements.isArchived,
+        })
+        .from(requirements)
+        .where(eq(requirements.isArchived, false))) as Array<
+        Pick<Requirement, "id" | "position" | "company" | "talentAdvisorId" | "teamLead" | "isArchived">
+      >;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (!message.includes("is_archived")) throw error;
+      return (await db
+        .select({
+          id: requirements.id,
+          position: requirements.position,
+          company: requirements.company,
+          talentAdvisorId: requirements.talentAdvisorId,
+          teamLead: requirements.teamLead,
+          isArchived: requirements.isArchived,
+        })
+        .from(requirements)) as Array<
+        Pick<Requirement, "id" | "position" | "company" | "talentAdvisorId" | "teamLead" | "isArchived">
+      >;
+    }
+  }
+
   /** Tagged recruiter deliveries for one calendar day (avoids loading all applications). */
   async getTaggedJobApplicationsOnDate(date: string): Promise<JobApplication[]> {
     return await db
@@ -2246,26 +2361,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRequirementsByTeamLead(teamLeadName: string): Promise<Requirement[]> {
-    return await db.select().from(requirements)
+    return await db
+      .select(requirementListSelect)
+      .from(requirements)
       .where(eq(requirements.teamLead, teamLeadName))
-      .orderBy(desc(requirements.createdAt));
+      .orderBy(desc(requirements.createdAt)) as Requirement[];
   }
 
   async getRequirementsByTalentAdvisor(talentAdvisorName: string): Promise<Requirement[]> {
     try {
-      return await db.select().from(requirements)
+      return await db
+        .select(requirementListSelect)
+        .from(requirements)
         .where(and(
           eq(requirements.talentAdvisor, talentAdvisorName),
           eq(requirements.isArchived, false)
         ))
-        .orderBy(desc(requirements.createdAt));
+        .orderBy(desc(requirements.createdAt)) as Requirement[];
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error || "");
       if (!message.includes("is_archived") && !message.includes("talent_advisor")) throw error;
       try {
-        return await db.select().from(requirements)
+        return await db
+          .select(requirementListSelect)
+          .from(requirements)
           .where(eq(requirements.talentAdvisor, talentAdvisorName))
-          .orderBy(desc(requirements.createdAt));
+          .orderBy(desc(requirements.createdAt)) as Requirement[];
       } catch {
         return [];
       }
@@ -2276,26 +2397,31 @@ export class DatabaseStorage implements IStorage {
     const employee = await this.getEmployeeById(talentAdvisorId);
     const advisorName = (employee?.name || "").trim().toLowerCase();
 
-    try {
-      const rows = await db
-        .select()
-        .from(requirements)
-        .where(eq(requirements.isArchived, false))
-        .orderBy(desc(requirements.createdAt));
+    const advisorMatch = advisorName
+      ? sql`LOWER(TRIM(${requirements.talentAdvisor})) = ${advisorName}`
+      : sql`false`;
 
-      return rows.filter(
-        (req) =>
-          req.talentAdvisorId === talentAdvisorId ||
-          (!!advisorName &&
-            (req.talentAdvisor || "").trim().toLowerCase() === advisorName),
-      );
+    try {
+      return await db
+        .select(requirementListSelect)
+        .from(requirements)
+        .where(
+          and(
+            eq(requirements.isArchived, false),
+            or(eq(requirements.talentAdvisorId, talentAdvisorId), advisorMatch),
+          ),
+        )
+        .orderBy(desc(requirements.createdAt)) as Requirement[];
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error || "");
       if (!message.includes("talent_advisor_id") && !message.includes("is_archived")) {
         throw error;
       }
 
-      const rows = await db.select().from(requirements).orderBy(desc(requirements.createdAt));
+      const rows = await db
+        .select(requirementListSelect)
+        .from(requirements)
+        .orderBy(desc(requirements.createdAt)) as Requirement[];
       return rows.filter(
         (req) =>
           !req.isArchived &&

@@ -93,7 +93,7 @@ export function resolveJdFileUrl(filePath?: string | null): string | null {
     /\/uploads\/([^/?#]+)$/i,
   ];
 
-  if (url.startsWith("blob:")) return url;
+  if (url.startsWith("data:") || url.startsWith("blob:")) return null;
 
   if (/^jds\/[^/]+/i.test(url)) {
     const fileName = url.replace(/^jds\//i, "");

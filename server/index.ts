@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { createServer as createNetServer } from "node:net";
 import cors from "cors";
 import { applyCorsHeaders, corsOptions } from "./cors-config";
@@ -87,6 +88,7 @@ app.set('trust proxy', 1);
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
+app.use(compression());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 

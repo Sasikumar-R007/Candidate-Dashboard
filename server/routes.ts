@@ -226,7 +226,7 @@ import {
   computeTargetStatsFromRevenue,
   countQuartersTargetMet,
 } from "./target-revenue-sync";
-import { enrichRequirementsWithResumeCount } from "./requirement-resume-count";
+import { enrichRequirementsWithResumeCount, countJobApplicationsByRequirementIds } from "./requirement-resume-count";
 import {
   profileImageUpload,
   persistProfilePictureUpload,
@@ -240,6 +240,7 @@ import { storeR2FolderFile, getR2FileByFolderAndName } from "./r2-file-storage";
 import { getR2ResumeByFileName, isR2Configured } from "./utils/r2Upload";
 import { persistCompanyLogoValue } from "./company-logo-storage";
 import { stripCandidateListFields } from "./list-payload";
+import { candidateListSelect, requirementSearchSelect } from "./query-columns";
 import {
   createPresignedUploadUrl,
   PRESIGN_UPLOAD_FOLDERS,
@@ -2289,6 +2290,19 @@ function formatPipelineAppliedOn(value: unknown): string {
     .replace(/\//g, "-");
 }
 
+function parsePipelineSkills(skills: unknown): string[] {
+  if (!skills) return [];
+  if (typeof skills !== "string") {
+    return Array.isArray(skills) ? skills.map(String) : [];
+  }
+  try {
+    const parsed = JSON.parse(skills);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return skills.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+}
+
 function isTeamLeaderRole(role: string | null | undefined): boolean {
   const normalized = (role || "").toLowerCase().replace(/[\s-]+/g, "_");
   return normalized === "team_leader" || normalized === "teamleader" || normalized === "tl";
@@ -2320,7 +2334,16 @@ async function safeSelectResumeSubmissionsForRecruiters(recruiterIds: string[]):
   try {
     const { resumeSubmissions } = await import("@shared/schema");
     return await db
-      .select()
+      .select({
+        id: resumeSubmissions.id,
+        requirementId: resumeSubmissions.requirementId,
+        recruiterId: resumeSubmissions.recruiterId,
+        candidateId: resumeSubmissions.candidateId,
+        candidateName: resumeSubmissions.candidateName,
+        candidateEmail: resumeSubmissions.candidateEmail,
+        submittedAt: resumeSubmissions.submittedAt,
+        status: resumeSubmissions.status,
+      })
       .from(resumeSubmissions)
       .where(inArray(resumeSubmissions.recruiterId, recruiterIds));
   } catch (error) {
@@ -2342,7 +2365,18 @@ async function safeSelectAllRequirementAssignments(): Promise<any[]> {
 async function safeSelectAllResumeSubmissions(): Promise<any[]> {
   try {
     const { resumeSubmissions } = await import("@shared/schema");
-    return await db.select().from(resumeSubmissions);
+    return await db
+      .select({
+        id: resumeSubmissions.id,
+        requirementId: resumeSubmissions.requirementId,
+        recruiterId: resumeSubmissions.recruiterId,
+        candidateId: resumeSubmissions.candidateId,
+        candidateName: resumeSubmissions.candidateName,
+        candidateEmail: resumeSubmissions.candidateEmail,
+        submittedAt: resumeSubmissions.submittedAt,
+        status: resumeSubmissions.status,
+      })
+      .from(resumeSubmissions);
   } catch (error) {
     console.warn("[admin] resume_submissions unavailable:", error);
     return [];
@@ -6008,6 +6042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Team leader pipeline endpoint - fetch job applications from team members (TAs)
   app.get("/api/team-leader/pipeline", requireEmployeeAuth, async (req, res) => {
+    console.time("pipeline:team-leader");
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
@@ -6021,7 +6056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const taFilter = req.query.ta as string | undefined;
 
-      const allEmployees = await storage.getAllEmployees();
+      const allEmployees = await storage.getEmployeesForPipelineLookup();
       let teamRecruiters = getTeamLeaderRecruiters(employee, allEmployees);
       if (taFilter && taFilter !== "all") {
         teamRecruiters = teamRecruiters.filter(
@@ -6035,9 +6070,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const teamRecruiterIdsArray = Array.from(teamRecruiterIds);
 
-      const allApplications = await storage.getAllJobApplications();
+      const [
+        allApplications,
+        allRecruiterJobs,
+        allRequirements,
+        allAssignments,
+        teamResumeSubmissions,
+      ] = await Promise.all([
+        storage.getJobApplicationsForPipeline(),
+        storage.getRecruiterJobsForPipeline(),
+        storage.getRequirementsForPipeline(),
+        safeSelectActiveRequirementAssignmentsForRecruiters(teamRecruiterIdsArray),
+        safeSelectResumeSubmissionsForRecruiters(teamRecruiterIdsArray),
+      ]);
 
-      const allRecruiterJobs = await storage.getAllRecruiterJobs();
       const teamRecruiterJobIds = new Set(
         allRecruiterJobs
           .filter(
@@ -6046,11 +6092,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               teamRecruiterEmployeeIds.has(job.recruiterId),
           )
           .map((job: any) => job.id),
-      );
-
-      const allRequirements = await storage.getRequirementsForList();
-      const allAssignments = await safeSelectActiveRequirementAssignmentsForRecruiters(
-        teamRecruiterIdsArray,
       );
 
       const teamRequirementIds = new Set<string>();
@@ -6076,9 +6117,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamRequirementIds.add(req.id);
         }
       }
-
-      const teamResumeSubmissions =
-        await safeSelectResumeSubmissionsForRecruiters(teamRecruiterIdsArray);
 
       // Filter applications that belong to team recruiter jobs OR tagged to team requirements
       const finalApplications = allApplications.filter((app: any) => {
@@ -6223,17 +6261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: app.candidatePhone || null,
           location: app.location || 'N/A',
           experience: app.experience || 'N/A',
-          skills: (() => {
-            try {
-              if (!app.skills) return [];
-              if (typeof app.skills === 'string') {
-                return JSON.parse(app.skills);
-              }
-              return Array.isArray(app.skills) ? app.skills : [];
-            } catch {
-              return [];
-            }
-          })(),
+          skills: parsePipelineSkills(app.skills),
           appliedDate: app.appliedDate || null,
           appliedOn: formatPipelineAppliedOn(app.appliedDate),
           createdAt: app.appliedDate
@@ -6261,6 +6289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to fetch pipeline data",
         error: error instanceof Error ? error.message : String(error),
       });
+    } finally {
+      console.timeEnd("pipeline:team-leader");
     }
   });
 
@@ -6354,6 +6384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Team leader requirements endpoint - fetch requirements assigned to logged-in TL
   app.get("/api/team-leader/requirements", requireEmployeeAuth, async (req, res) => {
+    console.time("requirements:team-leader");
     try {
       // Get the employee from session
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -6372,7 +6403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
       );
 
-      const allReqs = await storage.getRequirements();
+      const allReqs = await storage.getRequirementsForList();
       const teamRecruiterIds = new Set(teamRecruiters.map((rec) => rec.id));
       const allRequirements = allReqs.filter((req: any) =>
         !req.isArchived && (
@@ -6443,17 +6474,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { getRequirementResumeTarget: getTarget } = await import("@shared/constants");
       const { resumeSubmissions, jobApplications: jobAppsTable } = await import("@shared/schema");
-      const allSubmissionsForResume = requirementIdsForResume.length > 0
-        ? (await db.select().from(resumeSubmissions)).filter((s: any) => requirementIdsForResume.includes(s.requirementId))
-        : [];
-      const allTaggedForResume = requirementIdsForResume.length > 0
-        ? (await db.select().from(jobAppsTable)).filter(
-            (app: any) =>
-              app.source === "recruiter_tagged" &&
-              app.requirementId &&
-              requirementIdsForResume.includes(app.requirementId)
-          )
-        : [];
+      const [allSubmissionsForResume, allTaggedForResume] = requirementIdsForResume.length > 0
+        ? await Promise.all([
+            db
+              .select({ requirementId: resumeSubmissions.requirementId })
+              .from(resumeSubmissions)
+              .where(inArray(resumeSubmissions.requirementId, requirementIdsForResume)),
+            db
+              .select({ requirementId: jobAppsTable.requirementId })
+              .from(jobAppsTable)
+              .where(
+                and(
+                  eq(jobAppsTable.source, "recruiter_tagged"),
+                  inArray(jobAppsTable.requirementId, requirementIdsForResume),
+                ),
+              ),
+          ])
+        : [[], []];
 
       const padResumeCount = (delivered: number, target: number) =>
         `${String(Math.max(0, delivered)).padStart(2, "0")}/${String(Math.max(0, target)).padStart(2, "0")}`;
@@ -6500,7 +6537,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json(enrichedRequirements);
+      console.timeEnd("requirements:team-leader");
     } catch (error) {
+      console.timeEnd("requirements:team-leader");
       console.error('Get team leader requirements error:', error);
       res.status(500).json({ message: "Internal server error", error: error instanceof Error ? error.message : String(error) });
     }
@@ -8795,6 +8834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get requirements assigned to the logged-in recruiter (Talent Advisor)
   app.get("/api/recruiter/requirements", requireEmployeeAuth, async (req, res) => {
+    console.time("requirements:recruiter");
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
@@ -8841,7 +8881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        const allReqs = await storage.getRequirements();
+        const allReqs = await storage.getRequirementsForList();
         const unassignedTLRequirements = allReqs.filter(req =>
           req.teamLead === employee.name &&
           !req.talentAdvisorId &&
@@ -8991,7 +9031,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
-      const allReqsForStreq = await storage.getRequirements();
+      const allReqsForStreq = await storage.getRequirementsForList();
       const streqDisplayMap = buildStreqDisplayMap(allReqsForStreq);
       const withStreqId = (requirement: any) => {
         const lookupId = String(requirement.id || "").startsWith("recent-closed-")
@@ -9027,6 +9067,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get recruiter requirements error:', error);
       res.status(500).json({ message: "Failed to fetch requirements" });
+    } finally {
+      console.timeEnd("requirements:recruiter");
     }
   });
 
@@ -9345,6 +9387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/admin/requirements", requireAdminAuth, async (req, res) => {
+    console.time("requirements:admin");
     try {
       const allRequirements = await storage.getRequirementsForList();
       // Exclude client-submitted JDs (those with STR format Role IDs)
@@ -9365,7 +9408,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companyLogo: req.company ? logoByCompany.get(req.company) ?? null : null,
         })),
       );
+      console.timeEnd("requirements:admin");
     } catch (error) {
+      console.timeEnd("requirements:admin");
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -14506,7 +14551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             byId.length > 0 ? byId : await storage.getRequirementsByTalentAdvisor(recruiter.name);
           reqs.forEach((req) => teamRequirementIds.add(req.id));
         }
-        const allReqs = await storage.getRequirements();
+        const allReqs = await storage.getRequirementsForList();
         allReqs
           .filter(
             (req) => req.teamLead === employee.name && !req.talentAdvisorId && !req.isArchived,
@@ -15431,19 +15476,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all job applications for Admin pipeline (view all recruiters' pipeline data)
   // Supports filtering by TL (team leader)
   app.get("/api/admin/pipeline", requireAdminAuth, async (req, res) => {
+    console.time("pipeline:admin");
     try {
       const tlFilter = req.query.tl as string | undefined; // Optional TL filter
       const taFilter = req.query.ta as string | undefined; // Optional TA filter
 
-      // Support both applications and submissions
-      let applications = await storage.getAllJobApplications();
-      let submissions = await safeSelectAllResumeSubmissions();
-
-      // Get all employees, requirements, and recruiter jobs for filtering
-      const allEmployees = await storage.getAllEmployees();
-      const allRequirements = await storage.getRequirementsForList();
-      const allRecruiterJobs = await storage.getAllRecruiterJobs();
-      const allAssignments = await safeSelectAllRequirementAssignments();
+      let [
+        applications,
+        submissions,
+        allEmployees,
+        allRequirements,
+        allRecruiterJobs,
+        allAssignments,
+      ] = await Promise.all([
+        storage.getJobApplicationsForPipeline(),
+        safeSelectAllResumeSubmissions(),
+        storage.getEmployeesForPipelineLookup(),
+        storage.getRequirementsForPipeline(),
+        storage.getRecruiterJobsForPipeline(),
+        safeSelectAllRequirementAssignments(),
+      ]);
 
       // If TA filter is specified, filter to that specific TA
       if (taFilter && taFilter !== 'all') {
@@ -15637,16 +15689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: app.candidatePhone || null,
           location: app.location || 'N/A',
           experience: app.experience || 'N/A',
-          skills: (() => {
-            if (!app.skills) return [];
-            if (typeof app.skills !== 'string') return app.skills;
-            try {
-              return JSON.parse(app.skills);
-            } catch (e) {
-              // Handle legacy plain text strings (comma-separated)
-              return app.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
-            }
-          })(),
+          skills: parsePipelineSkills(app.skills),
           appliedDate: app.appliedDate || null,
           appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
           profileId: app.profileId || null,
@@ -15667,6 +15710,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get admin pipeline error:", error);
       res.status(500).json({ message: "Failed to get pipeline data" });
+    } finally {
+      console.timeEnd("pipeline:admin");
     }
   });
 
@@ -15755,6 +15800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Server-side indexed search with pagination, sorting, and advanced scoring
 
   app.post("/api/source-resume/search", requireEmployeeAuth, async (req, res) => {
+    console.time("search:source-resume");
     try {
       const {
         searchQuery = "",
@@ -15822,7 +15868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const offset = (page - 1) * pageSize;
 
-      let filteredCandidatesQuery = db.select().from(candidates).where(whereClause);
+      let filteredCandidatesQuery = db.select(candidateListSelect).from(candidates).where(whereClause);
 
       if (!inMemoryScoreSorts.has(sortOption)) {
         filteredCandidatesQuery = filteredCandidatesQuery.orderBy(getSortOrder(sortOption));
@@ -15854,7 +15900,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get requirement if provided
       let requirement = null;
       if (requirementId) {
-        const requirementRows = await db.select().from(requirements).where(eq(requirements.id, requirementId));
+        const requirementRows = await db
+          .select(requirementSearchSelect)
+          .from(requirements)
+          .where(eq(requirements.id, requirementId));
         requirement = requirementRows[0] || null;
       }
 
@@ -15921,7 +15970,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         analytics,
       });
+      console.timeEnd("search:source-resume");
     } catch (error: any) {
+      console.timeEnd("search:source-resume");
       console.error('Source resume search error:', error);
       res.status(500).json({
         message: "Search failed",
@@ -17275,6 +17326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client Requirements - Get requirements for client's company (only client-submitted JDs with STR format)
   app.get("/api/client/requirements", requireClientAuth, async (req, res) => {
+    console.time("requirements:client");
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
       if (!employee) {
@@ -17304,8 +17356,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Client requirements found:', clientJDs.length);
 
-      // Get all job applications to count profiles shared per requirement
-      const allApplications = await storage.getAllJobApplications();
+      const applicationStatsByReq = await countJobApplicationsByRequirementIds(
+        clientJDs.map((r: { id: string }) => r.id),
+      );
 
       const allEmployeesForAssign = await storage.getAllEmployees();
       const assigneeNameById = new Map<string, string>();
@@ -17323,17 +17376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Transform requirements for client view
       const rolesData = await Promise.all(clientJDs.map(async (requirement) => {
-        // Count profiles shared for this requirement
-        const profilesShared = allApplications.filter(app => app.requirementId === requirement.id).length;
-
-        // Get last active date (most recent application date for this requirement, or requirement creation date)
-        const requirementApplications = allApplications
-          .filter(app => app.requirementId === requirement.id)
-          .sort((a, b) => new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime());
-
-        const lastActiveDate = requirementApplications.length > 0
-          ? requirementApplications[0].appliedDate
-          : requirement.createdAt;
+        const appStats = applicationStatsByReq.get(requirement.id);
+        const profilesShared = appStats?.count ?? 0;
+        const lastActiveDate = appStats?.lastAppliedDate ?? requirement.createdAt;
 
         // Determine status
         let status = 'Active';
@@ -17382,7 +17427,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       res.json(rolesData);
+      console.timeEnd("requirements:client");
     } catch (error) {
+      console.timeEnd("requirements:client");
       console.error('Get client requirements error:', error);
       res.status(500).json({ message: "Failed to get requirements" });
     }
@@ -17390,6 +17437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client Pipeline - Get pipeline data for client's company
   app.get("/api/client/pipeline", requireClientAuth, async (req, res) => {
+    console.time("pipeline:client");
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
       if (!employee) {
@@ -17431,8 +17479,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all employees and requirements for enrichment
-      const allEmployees = await storage.getAllEmployees();
-      const allRequirements = await storage.getRequirementsForList();
+      const [allEmployees, allRequirements] = await Promise.all([
+        storage.getEmployeesForPipelineLookup(),
+        storage.getRequirementsForPipeline(),
+      ]);
 
       // Transform applications to pipeline data format with TA information
       const pipelineData = applications.map((app: any) => {
@@ -17502,6 +17552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get client pipeline error:', error);
       res.status(500).json({ message: "Failed to get pipeline data" });
+    } finally {
+      console.timeEnd("pipeline:client");
     }
   });
 

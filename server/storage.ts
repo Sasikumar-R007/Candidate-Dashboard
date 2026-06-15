@@ -301,6 +301,20 @@ export interface IStorage {
   
   // Applicant methods (for job applications from job board and recruiter tags)
   getAllJobApplications(): Promise<JobApplication[]>;
+  getJobApplicationsForPipeline(): Promise<JobApplication[]>;
+  getEmployeesForPipelineLookup(): Promise<
+    Array<Pick<Employee, "id" | "employeeId" | "name" | "role" | "reportingTo">>
+  >;
+  getRecruiterJobsForPipeline(): Promise<
+    Array<
+      Pick<RecruiterJob, "id" | "recruiterId" | "requirementId" | "companyName" | "role">
+    >
+  >;
+  getRequirementsForPipeline(): Promise<
+    Array<
+      Pick<Requirement, "id" | "position" | "company" | "talentAdvisorId" | "teamLead" | "isArchived">
+    >
+  >;
   getJobApplicationById(id: string): Promise<JobApplication | undefined>;
   getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]>;
   getJobApplicationsByRequirementId(requirementId: string): Promise<JobApplication[]>;
@@ -2076,6 +2090,56 @@ export class MemStorage implements IStorage {
 
   async getActiveNudges(): Promise<Nudge[]> {
     return [];
+  }
+
+  async getJobApplicationsForPipeline(): Promise<JobApplication[]> {
+    return Array.from(this.jobApplications.values()).filter((app) => {
+      const status = String(app.status || "").trim().toLowerCase();
+      return status !== "archived" && status !== "";
+    });
+  }
+
+  async getEmployeesForPipelineLookup(): Promise<
+    Array<Pick<Employee, "id" | "employeeId" | "name" | "role" | "reportingTo">>
+  > {
+    return Array.from(this.employees.values()).map((emp) => ({
+      id: emp.id,
+      employeeId: emp.employeeId,
+      name: emp.name,
+      role: emp.role,
+      reportingTo: emp.reportingTo,
+    }));
+  }
+
+  async getRecruiterJobsForPipeline(): Promise<
+    Array<
+      Pick<RecruiterJob, "id" | "recruiterId" | "requirementId" | "companyName" | "role">
+    >
+  > {
+    return Array.from(this.recruiterJobs.values()).map((job) => ({
+      id: job.id,
+      recruiterId: job.recruiterId,
+      requirementId: job.requirementId,
+      companyName: job.companyName,
+      role: job.role,
+    }));
+  }
+
+  async getRequirementsForPipeline(): Promise<
+    Array<
+      Pick<Requirement, "id" | "position" | "company" | "talentAdvisorId" | "teamLead" | "isArchived">
+    >
+  > {
+    return Array.from(this.requirements.values())
+      .filter((req) => !req.isArchived)
+      .map((req) => ({
+        id: req.id,
+        position: req.position,
+        company: req.company,
+        talentAdvisorId: req.talentAdvisorId,
+        teamLead: req.teamLead,
+        isArchived: req.isArchived,
+      }));
   }
 }
 

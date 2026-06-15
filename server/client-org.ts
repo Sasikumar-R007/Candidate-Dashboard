@@ -410,13 +410,13 @@ export async function getJobApplicationsScopedToClientEmployee(employee: ClientA
 
   let allRecruiterJobs: any[] = [];
   try {
-    allRecruiterJobs = await storage.getAllRecruiterJobs();
+    allRecruiterJobs = await storage.getRecruiterJobsForPipeline();
   } catch {
     allRecruiterJobs = [];
   }
   const recruiterJobById = new Map(allRecruiterJobs.map((j: any) => [j.id, j]));
 
-  const allApplications = await storage.getAllJobApplications();
+  const allApplications = await storage.getJobApplicationsForPipeline();
 
   const inScope = (app: any) => {
     const reqId = (app.requirementId || "").trim();

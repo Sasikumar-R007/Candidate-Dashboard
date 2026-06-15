@@ -101,6 +101,7 @@ export function buildJdFileServeUrl(
 ): string | null {
   const trimmed = jdFileUrl?.trim();
   if (!trimmed) return null;
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return null;
   return buildStoredFileServeUrlFromStorageUrl(trimmed, "jds", req);
 }
 

@@ -56,7 +56,8 @@ type JobDescriptionDetailsModalProps = {
 
 function resolveJdFileUrl(jdFile?: string | null): string | null {
   if (!jdFile?.trim()) return null;
-  if (jdFile.trim().startsWith("blob:")) return jdFile.trim();
+  const trimmed = jdFile.trim();
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return null;
   return resolveStoredJdFileUrl(jdFile);
 }
 
@@ -171,57 +172,32 @@ function JdDocumentPanel({
   variant: "admin" | "delivery";
 }) {
   const jdFileUrl = useMemo(() => resolveJdFileUrl(jdFile), [jdFile]);
-  const isPdf = jdFileUrl?.toLowerCase().includes(".pdf");
+  const isPdf = Boolean(jdFileUrl?.toLowerCase().includes(".pdf"));
   const [fileStatus, setFileStatus] = useState<"idle" | "checking" | "available" | "unavailable">("idle");
-  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!jdFileUrl) {
       setFileStatus("idle");
-      setPreviewBlobUrl(null);
       return;
     }
 
     let cancelled = false;
-    let objectUrl: string | null = null;
     setFileStatus("checking");
-    setPreviewBlobUrl(null);
 
-    fetch(jdFileUrl, { credentials: "include" })
+    fetch(jdFileUrl, { method: "HEAD", credentials: "include" })
       .then((res) => {
-        if (!res.ok) throw new Error("JD file not found");
-        if (!isPdf) {
-          if (!cancelled) setFileStatus("available");
-          return null;
-        }
-        return res.blob();
-      })
-      .then((blob) => {
-        if (cancelled) return;
-        if (blob) {
-          objectUrl = URL.createObjectURL(blob);
-          setPreviewBlobUrl(objectUrl);
-        }
-        setFileStatus("available");
+        if (!cancelled) setFileStatus(res.ok ? "available" : "unavailable");
       })
       .catch(() => {
-        if (!cancelled) setFileStatus("unavailable");
+        if (!cancelled) setFileStatus("available");
       });
 
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [jdFileUrl, isPdf]);
-
-  useEffect(() => {
-    return () => {
-      if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
-    };
-  }, [previewBlobUrl]);
+  }, [jdFileUrl]);
 
   const fileName = jdFile?.split("/").pop() || "document";
-  const iframeSrc = previewBlobUrl || (isPdf ? null : jdFileUrl);
   const hasSkillsOrInstructions = Boolean(
     extras.primarySkills?.trim() ||
       extras.secondarySkills?.trim() ||
@@ -258,10 +234,10 @@ function JdDocumentPanel({
             </p>
           )}
 
-          {fileStatus === "available" && isPdf && iframeSrc && (
+          {fileStatus === "available" && isPdf && jdFileUrl && (
             <JdSection title="Document preview" accent="indigo">
               <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
-                <iframe src={iframeSrc} className="h-[min(520px,50vh)] w-full bg-white" title="JD PDF Preview" />
+                <iframe src={jdFileUrl} className="h-[min(520px,50vh)] w-full bg-white" title="JD PDF Preview" />
               </div>
             </JdSection>
           )}
