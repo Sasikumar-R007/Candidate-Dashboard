@@ -85,6 +85,8 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { adminCandidatesQueryOptions } from "@/lib/admin-candidates-query";
+import { useStaggeredDashboardLoad } from "@/lib/use-staggered-dashboard-load";
 import {
   buildStreqDisplayMap,
   getRequirementLookupId,
@@ -974,6 +976,7 @@ function isClientPortalEmployeeRole(role?: string | null): boolean {
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const employee = useEmployeeAuth();
+  const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
   const [, navigate] = useLocation();
   const [profileData, setProfileData] = useState<any>(null);
 
@@ -1127,11 +1130,12 @@ export default function AdminDashboard() {
   // Supports filtering by TL (team leader) and TA (team member)
   const [selectedPipelineTL, setSelectedPipelineTL] = useState<string>("all");
   const [selectedPipelineTeamMember, setSelectedPipelineTeamMember] = useState<string>("all");
-  const [pipelineAutoRefreshEnabled, setPipelineAutoRefreshEnabled] = useState<boolean>(() => getStoredAdminSetting('adminPipelineAutoRefreshEnabled', 'true') === 'true');
+  const [pipelineAutoRefreshEnabled, setPipelineAutoRefreshEnabled] = useState<boolean>(() => getStoredAdminSetting('adminPipelineAutoRefreshEnabled', 'false') === 'true');
   const [pipelineRefreshSeconds, setPipelineRefreshSeconds] = useState<string>(() => getStoredAdminSetting('adminPipelineRefreshSeconds', '10'));
   const [adminDefaultPerformancePeriod, setAdminDefaultPerformancePeriod] = useState<string>(() => getStoredAdminSetting('adminDefaultPerformancePeriod', 'monthly'));
   const { data: pipelineApplications = [], isLoading: isLoadingPipeline, refetch: refetchPipeline } = useQuery<any[]>({
     queryKey: ["/api/admin/pipeline", selectedPipelineTL, selectedPipelineTeamMember],
+    enabled: pipelineReady,
     queryFn: async () => {
       const API_BASE_URL = import.meta.env.VITE_API_URL || '';
       const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
@@ -1150,10 +1154,8 @@ export default function AdminDashboard() {
       return response.json();
     },
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
     refetchInterval: pipelineAutoRefreshEnabled ? Number(pipelineRefreshSeconds) * 1000 : false,
   });
-  // Refetch interval is handled by useQuery's refetchInterval: 10000 above
 
   useEffect(() => {
     window.localStorage.setItem('adminPipelineAutoRefreshEnabled', String(pipelineAutoRefreshEnabled));
@@ -1169,7 +1171,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const syncAdminSettings = () => {
-      setPipelineAutoRefreshEnabled(getStoredAdminSetting('adminPipelineAutoRefreshEnabled', 'true') === 'true');
+      setPipelineAutoRefreshEnabled(getStoredAdminSetting('adminPipelineAutoRefreshEnabled', 'false') === 'true');
       setPipelineRefreshSeconds(getStoredAdminSetting('adminPipelineRefreshSeconds', '10'));
       setAdminDefaultPerformancePeriod(getStoredAdminSetting('adminDefaultPerformancePeriod', 'monthly'));
     };
@@ -1750,21 +1752,20 @@ export default function AdminDashboard() {
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
-    queryKey: ['/api/admin/requirements']
+    queryKey: ['/api/admin/requirements'],
+    enabled: requirementsReady,
   });
 
   // Fetch archived requirements to check if there are any
   const { data: archivedRequirements = [], isLoading: isLoadingArchivedRequirements } = useQuery({
     queryKey: ['/api/admin/archived-requirements'],
     refetchOnMount: true,
-    refetchOnWindowFocus: true
   });
 
   // Client JDs API query
   const { data: clientJDs = [], isLoading: isLoadingClientJDs, refetch: refetchClientJDs } = useQuery({
     queryKey: ['/api/admin/client-jds'],
     refetchOnMount: true,
-    refetchOnWindowFocus: true
   });
 
 
@@ -1785,8 +1786,7 @@ export default function AdminDashboard() {
   // Fetch chat rooms for admin (direct messages with TL/TA)
   const { data: chatRoomsData, isLoading: isLoadingChatRooms, refetch: refetchChatRooms } = useQuery<{ rooms: any[] }>({
     queryKey: ['/api/chat/rooms'],
-    enabled: !!employee, // Only fetch if logged in
-    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+    enabled: !!employee,
   });
 
   // Filter chat rooms to show only direct messages (Admin-TL/TA conversations)
@@ -1808,9 +1808,7 @@ export default function AdminDashboard() {
   // Fetch active employee sessions for real-time online/offline status
   const { data: activeSessionsData } = useQuery<{ activeEmployeeIds: string[] }>({
     queryKey: ['/api/admin/active-sessions'],
-    refetchInterval: 10000, // Refresh every 10 seconds for more real-time updates
-    refetchOnWindowFocus: true, // Refresh when user returns to the tab
-    enabled: sidebarTab === 'user-management' || activeTab === 'user-management', // Only fetch when on User Management page
+    enabled: sidebarTab === 'user-management' || activeTab === 'user-management',
   });
   const activeEmployeeIds = new Set(activeSessionsData?.activeEmployeeIds || []);
 
@@ -1913,10 +1911,11 @@ export default function AdminDashboard() {
     ).length;
   }, [userManagementEmployees, activeEmployeeIds]);
 
-  // Fetch candidates from database
-  const { data: candidates = [], isLoading: isLoadingCandidates } = useQuery<any[]>({
-    queryKey: ['/api/admin/candidates']
+  // Fetch candidates from database (paginated)
+  const { data: candidatesPage, isLoading: isLoadingCandidates } = useQuery({
+    ...adminCandidatesQueryOptions(1, 20),
   });
+  const candidates = candidatesPage?.data ?? [];
 
   // Fetch clients from database
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
@@ -2049,7 +2048,6 @@ export default function AdminDashboard() {
   }, [impactMetricsQuery.data]);
   const { data: activeNudgesForIndicator = [] } = useQuery<any[]>({
     queryKey: ['/api/nudges'],
-    refetchInterval: 30_000,
   });
   const hasUnreadNudges = useMemo(
     () => hasNewAdminNudges(activeNudgesForIndicator),
@@ -2398,6 +2396,7 @@ export default function AdminDashboard() {
     revenue: string;
   }>>({
     queryKey: ['/api/admin/closures-list'],
+    enabled: closuresReady,
   });
 
   // Fetch closure reports for "All Closure Reports" modal (pipeline page)
@@ -2423,6 +2422,7 @@ export default function AdminDashboard() {
     } | null;
   }>>({
     queryKey: ['/api/admin/closures-list'],
+    enabled: closuresReady,
   });
 
   // Filter closure reports based on search
@@ -3234,7 +3234,6 @@ export default function AdminDashboard() {
   // Fetch meetings from API
   const { data: allMeetings = [], isLoading: meetingsLoading } = useQuery({
     queryKey: ['/api/admin/meetings'],
-    staleTime: 1000 * 60,
   });
 
   // Derive TL and CEO meetings from query data

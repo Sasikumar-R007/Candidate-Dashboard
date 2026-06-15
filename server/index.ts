@@ -10,6 +10,7 @@ import {
   ensureAdminCriticalSchema,
   ensureCriticalPipelineColumns,
   ensureDeploymentSchema,
+  ensurePerformanceIndexes,
   ensureRequirementManagementColumns,
   pool,
   verifyPoolConnection,
@@ -224,6 +225,7 @@ async function registerSessionMiddleware() {
 
   try {
     await ensureDeploymentSchema();
+    await ensurePerformanceIndexes();
     log("Deployment schema sync completed.", "db");
   } catch (error) {
     console.error("Failed to sync deployment schema:", error);

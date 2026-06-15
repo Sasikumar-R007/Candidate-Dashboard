@@ -595,3 +595,19 @@ export async function ensureDeploymentSchema() {
     }
   }
 }
+
+/** Hot-path indexes for candidates list, login, and search filters. */
+export async function ensurePerformanceIndexes() {
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_candidates_email ON candidates (email)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_candidates_candidate_id ON candidates (candidate_id)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_candidates_active ON candidates (is_active)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_candidates_created ON candidates (created_at DESC)
+  `);
+}

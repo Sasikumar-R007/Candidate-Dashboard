@@ -57,6 +57,12 @@ import bcrypt from "bcrypt";
 import { DatabaseStorage } from "./database-storage";
 import { getRequirementResumeTarget } from "@shared/constants";
 
+export type CandidateListFilter = {
+  ownerEmployeeId?: string;
+  ownerRole?: string;
+  legacyAddedBy?: string;
+};
+
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -112,11 +118,23 @@ export interface IStorage {
   // Candidate methods
   getCandidateById(id: string): Promise<Candidate | undefined>;
   getCandidateByEmail(email: string): Promise<Candidate | undefined>;
-  getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined>;
+  getCandidateByCandidateId(
+    candidateId: string,
+    options?: { includeResumeText?: boolean },
+  ): Promise<Candidate | undefined>;
   getCandidateByGoogleId(googleId: string): Promise<Candidate | undefined>;
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
   createCandidateWithGoogle(candidateData: { candidateId: string; fullName: string; email: string; googleId: string; profilePicture?: string; isActive: boolean; isVerified: boolean; createdAt: string }): Promise<Candidate>;
   getAllCandidates(): Promise<Candidate[]>;
+  getCandidatesPaginated(
+    page: number,
+    limit: number,
+    filter?: CandidateListFilter,
+  ): Promise<Candidate[]>;
+  countActiveCandidates(filter?: CandidateListFilter): Promise<number>;
+  countActiveCandidatesBreakdown(
+    filter?: CandidateListFilter,
+  ): Promise<{ total: number; active: number; inactive: number }>;
   updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
   deleteCandidate(id: string): Promise<boolean>;
   generateNextCandidateId(): Promise<string>;
@@ -1254,7 +1272,10 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
-  async getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined> {
+  async getCandidateByCandidateId(
+    candidateId: string,
+    _options?: { includeResumeText?: boolean },
+  ): Promise<Candidate | undefined> {
     const candidatesList = Array.from(this.candidates.values());
     for (const candidate of candidatesList) {
       if (candidate.candidateId === candidateId) {
@@ -1295,6 +1316,61 @@ export class MemStorage implements IStorage {
     return Array.from(this.candidates.values())
       .filter(candidate => candidate.isActive)
       .map(({ resumeText: _resumeText, ...rest }) => rest as Candidate);
+  }
+
+  private matchesCandidateListFilter(
+    candidate: Candidate,
+    filter?: CandidateListFilter,
+  ): boolean {
+    if (!filter?.ownerEmployeeId || !filter.ownerRole) {
+      return true;
+    }
+
+    const matchesOwnedRecord =
+      candidate.ownerEmployeeId === filter.ownerEmployeeId &&
+      candidate.ownerRole === filter.ownerRole;
+
+    if (matchesOwnedRecord) {
+      return true;
+    }
+
+    return (
+      filter.ownerRole === "recruiter" &&
+      !candidate.ownerEmployeeId &&
+      candidate.addedBy === filter.legacyAddedBy
+    );
+  }
+
+  async getCandidatesPaginated(
+    page: number,
+    limit: number,
+    filter?: CandidateListFilter,
+  ): Promise<Candidate[]> {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.max(1, limit);
+    const offset = (safePage - 1) * safeLimit;
+
+    return (await this.getAllCandidates())
+      .filter((candidate) => this.matchesCandidateListFilter(candidate, filter))
+      .slice(offset, offset + safeLimit);
+  }
+
+  async countActiveCandidates(filter?: CandidateListFilter): Promise<number> {
+    const breakdown = await this.countActiveCandidatesBreakdown(filter);
+    return breakdown.total;
+  }
+
+  async countActiveCandidatesBreakdown(
+    filter?: CandidateListFilter,
+  ): Promise<{ total: number; active: number; inactive: number }> {
+    const rows = (await this.getAllCandidates()).filter((candidate) =>
+      this.matchesCandidateListFilter(candidate, filter),
+    );
+    return {
+      total: rows.length,
+      active: rows.filter((candidate) => candidate.isActive !== false).length,
+      inactive: rows.filter((candidate) => candidate.isActive === false).length,
+    };
   }
 
   async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined> {

@@ -62,6 +62,7 @@ import { ChatDock } from '@/components/chat/chat-dock';
 import { ChatModal } from '@/components/chat/admin-chat-modal';
 import { useToast } from '@/hooks/use-toast';
 import { useEmployeeAuth } from '@/contexts/auth-context';
+import { useStaggeredDashboardLoad } from '@/lib/use-staggered-dashboard-load';
 import { PaperPlaneNudgeIcon } from '@/components/landing/paper-plane-nudge-icon';
 
 // Helper function to calculate elapsed working hours
@@ -194,6 +195,7 @@ export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const employee = useEmployeeAuth(); // Must be called before any hooks that depend on it
+  const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
 
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
@@ -370,30 +372,17 @@ export default function RecruiterDashboard2() {
   // Query for job counts
   const { data: jobCounts } = useQuery<{ total: number, active: number, closed: number, draft: number }>({
     queryKey: ['/api/recruiter/jobs/counts'],
-    refetchOnWindowFocus: true,
   });
 
   // Query for candidate counts
   const { data: candidateCounts } = useQuery<{ total: number, active: number, inactive: number }>({
     queryKey: ['/api/recruiter/candidates/counts'],
-    refetchOnWindowFocus: true,
   });
 
   // Query for all job applications
   const { data: allApplications = [], isLoading: isLoadingApplications } = useQuery<any[]>({
     queryKey: ['/api/recruiter/applications'],
-    // Refetch when this tab regains focus so a fresh tag from the Source
-    // Resume tab is reflected even without the cross-tab broadcast.
-    refetchOnWindowFocus: true,
-    // Live-poll every 30s while the dashboard is visible. The candidate
-    // registers/logs in on their own device, so we can't broadcast that
-    // event â€” polling is what flips the Onboard button to disabled
-    // (`isUsingStaffOS = true`) shortly after the candidate verifies.
-    refetchInterval: sidebarTab === "pipeline" ? 10000 : 30000,
-    refetchIntervalInBackground: false,
-    // Treat data as stale immediately so the polled refetch actually fires
-    // (the global default is `staleTime: Infinity`).
-    staleTime: 0,
+    enabled: !!employee && pipelineReady,
   });
 
   // Refresh Applicant Overview & counts the moment another tab (e.g. the
@@ -1333,8 +1322,7 @@ export default function RecruiterDashboard2() {
   // Fetch chat rooms for TA (direct messages with Admin/TL)
   const { data: chatRoomsData, isLoading: isLoadingChatRooms, refetch: refetchChatRooms } = useQuery<{ rooms: any[] }>({
     queryKey: ['/api/chat/rooms'],
-    enabled: !!employee, // Only fetch if logged in
-    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+    enabled: !!employee,
   });
 
   // Filter chat rooms to show only direct messages (Admin-TL/TA conversations)
@@ -1391,9 +1379,7 @@ export default function RecruiterDashboard2() {
   // Fetch requirements assigned to this recruiter
   const { data: recruiterRequirements = [], isLoading: isLoadingRequirements } = useQuery<any[]>({
     queryKey: ['/api/recruiter/requirements'],
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchInterval: 30000,
+    enabled: !!employee && requirementsReady,
   });
 
   const requirementsTableData = recruiterRequirements;
@@ -1447,6 +1433,7 @@ export default function RecruiterDashboard2() {
   // Fetch closure reports (revenue mappings) for this recruiter from backend
   const { data: closureReports = [], isLoading: isLoadingClosureReports } = useQuery<any[]>({
     queryKey: ['/api/recruiter/closure-reports'],
+    enabled: !!employee && closuresReady,
   });
 
   const taClosureReportsForPipeline = useMemo(
@@ -1491,7 +1478,6 @@ export default function RecruiterDashboard2() {
 
   const { data: realNudges = [], isLoading: isLoadingNudges } = useQuery<any[]>({
     queryKey: ['/api/nudges'],
-    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   const respondMutation = useMutation({

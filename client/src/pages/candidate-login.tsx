@@ -109,7 +109,7 @@ export default function CandidateLogin() {
           data: response.candidate
         });
 
-        const sessionOk = await verifySession();
+        const sessionOk = await verifySession({ force: true });
         if (!sessionOk) {
           toast({
             title: "Connection Issue",

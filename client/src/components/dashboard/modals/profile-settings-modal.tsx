@@ -67,7 +67,7 @@ export function ProfileSettingsModal({
     joiningDate: "",
   });
   const [systemSettings, setSystemSettings] = useState({
-    pipelineAutoRefreshEnabled: true,
+    pipelineAutoRefreshEnabled: false,
     pipelineRefreshSeconds: "10",
     adminDefaultPerformancePeriod: "monthly",
     employeeWelcomeMessage: "",

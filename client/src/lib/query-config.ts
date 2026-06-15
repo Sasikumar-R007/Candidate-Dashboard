@@ -1,30 +1,31 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
-/** Background refresh for pipeline, nudges, closures, notifications, etc. (ms). */
-export const OPERATIONAL_SYNC_INTERVAL_MS = 20_000;
+/** Default cache lifetime for inactive queries (ms). */
+export const DEFAULT_QUERY_GC_MS = 10 * 60_000;
+
+/** Default stale time — queries are not refetched while fresh (ms). */
+export const DEFAULT_QUERY_STALE_MS = 5 * 60_000;
 
 /**
  * Query presets — use with useQuery({ ...queryPresets.live, queryKey: [...] }).
- * Refetches happen in the background; UI keeps showing previous data (see global keepPreviousData).
+ * Data refreshes on mount, user actions, and mutation invalidation — not on a timer.
  */
 export const queryPresets = {
   /** Pipeline, nudges, closures, live lists */
   live: {
-    staleTime: 15_000,
-    refetchInterval: OPERATIONAL_SYNC_INTERVAL_MS,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    staleTime: DEFAULT_QUERY_STALE_MS,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   },
   /** Requirements, dashboards, assignments */
   standard: {
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    staleTime: DEFAULT_QUERY_STALE_MS,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   },
   /** Rarely changing reference data */
   static: {
-    staleTime: 5 * 60_000,
+    staleTime: DEFAULT_QUERY_STALE_MS,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   },

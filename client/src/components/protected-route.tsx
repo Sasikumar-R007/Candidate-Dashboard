@@ -83,7 +83,7 @@ export function ProtectedRoute({
       policy_version: "2026-05-10",
     });
     if (ok) {
-      await verifySession();
+      await verifySession({ force: true });
     } else {
       toast({
         title: "Could not save agreement",

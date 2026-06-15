@@ -37,6 +37,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  adminCandidatesQueryOptions,
+  ADMIN_CANDIDATES_MAX_LIMIT,
+} from "@/lib/admin-candidates-query";
 import { broadcastDashboardEvent } from "@/lib/dashboard-sync";
 import { useAuth } from "@/contexts/auth-context";
 import type { Employee } from "@shared/schema";
@@ -1792,10 +1796,11 @@ const SourceResume = () => {
   });
 
   // Fetch candidates for initial load (fallback for non-search views)
-  const { data: dbCandidates = [], isLoading: isLoadingCandidates } = useQuery<DatabaseCandidate[]>({
-    queryKey: ['/api/admin/candidates'],
-    enabled: view === 'search', // Only fetch all candidates in search view
+  const { data: dbCandidatesPage, isLoading: isLoadingCandidates } = useQuery({
+    ...adminCandidatesQueryOptions(1, ADMIN_CANDIDATES_MAX_LIMIT),
+    enabled: view === 'search', // Only fetch candidates in search view
   });
+  const dbCandidates = dbCandidatesPage?.data ?? [];
 
   // Fetch recruiter requirements
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery<any[]>({
@@ -2562,11 +2567,12 @@ const SourceResume = () => {
     return suggestions.slice(0, 8); // Limit to 8 suggestions
   }, [resultsSearchQuery, candidates]);
   
-  // Fetch all candidates for recommended candidates (separate from search results)
-  const { data: allCandidates = [] } = useQuery<DatabaseCandidate[]>({
-    queryKey: ['/api/admin/candidates'],
-    enabled: true, // Always fetch for recommended candidates
+  // Fetch candidates for recommended section (paginated sample)
+  const { data: allCandidatesPage } = useQuery({
+    ...adminCandidatesQueryOptions(1, ADMIN_CANDIDATES_MAX_LIMIT),
+    enabled: true,
   });
+  const allCandidates = allCandidatesPage?.data ?? [];
 
   // Convert all candidates to display format for recommended section
   const allDisplayCandidates = useMemo(() => {

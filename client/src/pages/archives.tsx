@@ -90,9 +90,6 @@ export default function Archives() {
     queryFn: () => fetchArchivedList(archivedRequirementsEndpoint),
     enabled: !!employee,
     retry: 1,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchInterval: isClientPortal ? false : 5000,
   });
 
   const archivedRequirements = allArchivedRequirements;

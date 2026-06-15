@@ -1,7 +1,11 @@
 import fs from "fs";
 import path from "path";
 import type { Request } from "express";
-import { buildStoredFileServeUrl, resolveUploadBaseUrl } from "./profile-media";
+import {
+  buildStoredFileServeUrl,
+  buildStoredFileServeUrlFromStorageUrl,
+  resolveUploadBaseUrl,
+} from "./profile-media";
 import { getR2FileByFolderAndName, isR2Configured, uploadToR2Folder } from "./utils/r2Upload";
 
 export type R2FileFolder = "jds" | "logos" | "chat" | "avatars";
@@ -51,7 +55,7 @@ export async function storeR2FolderFile(
       const buffer = await getUploadedFileBuffer(file);
       const fileUrl = await uploadToR2Folder(buffer, file.originalname, file.mimetype, folder);
       await removeLocalMulterFile(file);
-      return fileUrl;
+      return buildStoredFileServeUrlFromStorageUrl(fileUrl, folder, req);
     }
 
     return buildStoredFileServeUrl(folder, getUploadedFilename(file), req);

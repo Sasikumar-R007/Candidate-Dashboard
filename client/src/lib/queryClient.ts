@@ -5,7 +5,7 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query";
 import { getMessageFromApiPayload } from "./api-error-message";
-import { scheduleOperationalInvalidation } from "./query-config";
+import { DEFAULT_QUERY_GC_MS, DEFAULT_QUERY_STALE_MS, scheduleOperationalInvalidation } from "./query-config";
 
 // API base URL - uses environment variable in production, localhost in development
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -91,9 +91,9 @@ queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      staleTime: 30_000,
-      gcTime: 10 * 60_000,
-      refetchOnWindowFocus: true,
+      staleTime: DEFAULT_QUERY_STALE_MS,
+      gcTime: DEFAULT_QUERY_GC_MS,
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       refetchInterval: false,
       refetchIntervalInBackground: false,

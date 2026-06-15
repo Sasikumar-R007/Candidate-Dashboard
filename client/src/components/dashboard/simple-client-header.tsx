@@ -144,9 +144,6 @@ export default function SimpleClientHeader({
       const res = await apiRequest("GET", "/api/employee/notifications-feed");
       return await res.json();
     },
-    staleTime: 15_000,
-    refetchInterval: 20_000,
-    refetchOnWindowFocus: true,
     retry: 2,
   });
 

@@ -32,7 +32,6 @@ export default function RecruiterActiveJobs() {
 
   const { data: jobs = [], isPending, error } = useQuery<RecruiterJob[]>({
     queryKey: ['/api/recruiter/jobs'],
-    staleTime: 30_000,
   });
 
   const showInitialLoader = isPending && jobs.length === 0;

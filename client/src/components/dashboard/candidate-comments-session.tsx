@@ -597,7 +597,6 @@ export function CandidateCommentsSession({
         return res.json();
       },
       enabled: !!applicationId,
-      refetchInterval: 15000,
       placeholderData: (previous) => previous,
     });
 

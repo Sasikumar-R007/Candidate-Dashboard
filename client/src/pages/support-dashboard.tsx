@@ -43,7 +43,6 @@ export default function SupportDashboard() {
 
   const { data: conversations = [], isLoading: conversationsLoading, error: conversationsError } = useQuery<Conversation[]>({
     queryKey: ['/api/support/conversations'],
-    refetchInterval: 5000,
     retry: false,
   });
 
@@ -67,7 +66,6 @@ export default function SupportDashboard() {
   } | null>({
     queryKey: ['/api/support/conversations', selectedConversation, 'messages'],
     enabled: !!selectedConversation,
-    refetchInterval: 3000,
   });
 
   const replyMutation = useMutation({

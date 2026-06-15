@@ -44,7 +44,7 @@ export function buildStoredFileServeUrl(
   return `${resolveUploadBaseUrl(req)}/api/files/${apiFolder}/${encodeURIComponent(filename)}`;
 }
 
-function extractR2FileName(url: string, folder: string): string | null {
+export function extractR2FileName(url: string, folder: string): string | null {
   const match = url.match(new RegExp(`/${folder}/([^/?#]+)$`, "i"));
   if (!match?.[1]) return null;
   try {
@@ -54,13 +54,54 @@ function extractR2FileName(url: string, folder: string): string | null {
   }
 }
 
+/** Map R2 / legacy upload URLs to /api/files/* so the browser can load them with credentials. */
+export function buildStoredFileServeUrlFromStorageUrl(
+  storedUrl: string,
+  apiFolder: "resumes" | "jds" | "logos" | "chat" | "avatars",
+  req?: Request,
+): string {
+  const fileName = extractR2FileName(storedUrl, apiFolder);
+  if (fileName) {
+    return buildStoredFileServeUrl(apiFolder, fileName, req);
+  }
+
+  const legacyPatterns = [
+    new RegExp(`/uploads/chat/([^/?#]+)$`, "i"),
+    new RegExp(`/uploads/${apiFolder}/([^/?#]+)$`, "i"),
+    new RegExp(`/uploads/([^/?#]+)$`, "i"),
+  ];
+  for (const pattern of legacyPatterns) {
+    const match = storedUrl.match(pattern);
+    if (match?.[1]) {
+      try {
+        return buildStoredFileServeUrl(apiFolder, decodeURIComponent(match[1]), req);
+      } catch {
+        return buildStoredFileServeUrl(apiFolder, match[1], req);
+      }
+    }
+  }
+
+  if (storedUrl.includes(`/api/files/${apiFolder}/`)) {
+    return storedUrl.startsWith("http")
+      ? storedUrl
+      : `${resolveUploadBaseUrl(req)}${storedUrl.startsWith("/") ? "" : "/"}${storedUrl}`;
+  }
+
+  return storedUrl;
+}
+
 /** Prefer API proxy for R2 avatars (consistent with other stored files). */
 export function buildAvatarServeUrl(avatarUrl: string, req?: Request): string {
-  const fileName = extractR2FileName(avatarUrl, "avatars");
-  if (fileName) {
-    return `${resolveUploadBaseUrl(req)}/api/files/avatars/${encodeURIComponent(fileName)}`;
-  }
-  return avatarUrl;
+  return buildStoredFileServeUrlFromStorageUrl(avatarUrl, "avatars", req);
+}
+
+export function buildJdFileServeUrl(
+  jdFileUrl: string | null | undefined,
+  req?: Request,
+): string | null {
+  const trimmed = jdFileUrl?.trim();
+  if (!trimmed) return null;
+  return buildStoredFileServeUrlFromStorageUrl(trimmed, "jds", req);
 }
 
 export async function persistProfilePictureUpload(

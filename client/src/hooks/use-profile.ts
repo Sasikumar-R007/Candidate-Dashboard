@@ -11,24 +11,15 @@ export function useProfile(options?: UseProfileOptions) {
   return useQuery({
     queryKey: ['/api/profile'],
     queryFn: api.getProfile,
+    // Poll only during active resume onboarding (user is on upload flow).
     refetchInterval: (query) => {
       if (query.state.status === 'error') return false;
+      if (!options?.pollUntilOnboardingComplete) return false;
       const stage = query.state.data?.registrationStage;
-      if (options?.pollUntilOnboardingComplete) {
-        return stage !== 'completed' ? 2000 : false;
-      }
-      // Legacy: poll while resume is on server but profile may still be cached as verified
-      if (stage === 'resume_uploaded') return 3000;
-      if (stage === 'verified' || stage === 'registered') {
-        return query.state.data?.resumeFile ? 3000 : false;
-      }
-      return false;
+      return stage !== 'completed' ? 2000 : false;
     },
-    // Ensure we retry on temporary errors
     retry: true,
     retryDelay: 2000,
-    // Ensure we refetch on window focus to catch updates
-    refetchOnWindowFocus: true,
   });
 }
 

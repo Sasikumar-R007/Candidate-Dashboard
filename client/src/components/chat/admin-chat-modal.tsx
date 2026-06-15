@@ -22,8 +22,13 @@ export function ChatModal({ roomId, isOpen, onClose, onMessageSent, employeeId }
   const { data: messagesData, isLoading: isLoadingMessages, refetch: refetchMessages } = useQuery<{ messages: any[] }>({
     queryKey: [`/api/chat/rooms/${roomId}/messages`],
     enabled: !!roomId && isOpen,
-    refetchInterval: 3000, // Refresh every 3 seconds for real-time updates
   });
+
+  useEffect(() => {
+    if (isOpen && roomId) {
+      void refetchMessages();
+    }
+  }, [isOpen, roomId, refetchMessages]);
 
   const messages = messagesData?.messages || [];
 

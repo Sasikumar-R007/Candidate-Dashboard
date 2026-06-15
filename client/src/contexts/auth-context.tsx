@@ -1,6 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Employee, Candidate } from '@shared/schema';
 import { isNetworkError } from '@/lib/api-error-message';
+import {
+  clearVerifySessionCache,
+  requestVerifySession,
+  type VerifySessionResponse,
+} from '@/lib/verify-session-client';
 
 export type UserType = 'employee' | 'candidate';
 
@@ -24,7 +29,7 @@ interface AuthContextType {
   beginSignOut: () => void;
   endSignOut: () => void;
   logout: () => Promise<void>;
-  verifySession: () => Promise<boolean>;
+  verifySession: (options?: { force?: boolean }) => Promise<boolean>;
   isVerified: boolean;
   holdPending: HoldPendingState | null;
   accountHeldMessage: string | null;
@@ -36,17 +41,12 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// API base URL - uses environment variable in production, empty string (relative) in development
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// Use sessionStorage instead of localStorage for per-tab isolation
+// This prevents one user's login from affecting another user's tab
+const AUTH_STORAGE_KEY = 'auth_user';
 
-const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
-
-const VERIFY_SESSION_RETRIES = 3;
-const VERIFY_SESSION_RETRY_DELAY_MS = 1500;
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+/** Survives AuthProvider remounts (e.g. React Strict Mode) so init runs only once per tab session. */
+let authBootstrapDone = false;
 
 function readCachedAuthUser(): AuthUser | null {
   const cached = sessionStorage.getItem(AUTH_STORAGE_KEY);
@@ -60,32 +60,8 @@ function readCachedAuthUser(): AuthUser | null {
   }
 }
 
-async function fetchVerifySession(): Promise<Response> {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < VERIFY_SESSION_RETRIES; attempt++) {
-    try {
-      return await fetch(createApiUrl('/api/auth/verify-session'), {
-        credentials: 'include',
-      });
-    } catch (error) {
-      lastError = error;
-      if (!isNetworkError(error) || attempt === VERIFY_SESSION_RETRIES - 1) {
-        throw error;
-      }
-      await sleep(VERIFY_SESSION_RETRY_DELAY_MS * (attempt + 1));
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error('Session verification failed');
-}
-
-// Use sessionStorage instead of localStorage for per-tab isolation
-// This prevents one user's login from affecting another user's tab
-const AUTH_STORAGE_KEY = 'auth_user';
-
-function mapHoldPending(data: Record<string, unknown>): HoldPendingState | null {
-  const pending = data.holdPending as Record<string, unknown> | undefined;
+function mapHoldPending(data: VerifySessionResponse): HoldPendingState | null {
+  const pending = data.holdPending;
   if (!pending?.inGracePeriod) return null;
   const logoutInSeconds = Number(pending.logoutInSeconds || 0);
   if (!Number.isFinite(logoutInSeconds) || logoutInSeconds <= 0) return null;
@@ -101,6 +77,24 @@ function mapHoldPending(data: Record<string, unknown>): HoldPendingState | null 
   };
 }
 
+function applyAccountHeldState(
+  data: VerifySessionResponse,
+  setAccountHeldMessage: (message: string | null) => void,
+  setHoldPending: (state: HoldPendingState | null) => void,
+  setUser: (user: AuthUser | null) => void,
+): boolean {
+  setHoldPending(null);
+  setAccountHeldMessage(
+    String(
+      data.holdMessage ||
+        "Your account is on hold. Please contact your administrator.",
+    ),
+  );
+  setUser(null);
+  sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  return false;
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,174 +102,133 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [holdPending, setHoldPending] = useState<HoldPendingState | null>(null);
   const [accountHeldMessage, setAccountHeldMessage] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  
-  // Prevent race conditions by tracking in-flight requests
-  const verifyingRef = useRef<Promise<boolean> | null>(null);
-  const initializedRef = useRef(false);
 
-  const verifySession = useCallback(async (): Promise<boolean> => {
-    // Deduplicate concurrent verifySession calls
-    if (verifyingRef.current) {
-      return verifyingRef.current;
+  const applyVerifySessionData = useCallback((data: VerifySessionResponse): boolean => {
+    if (data.accountHeld) {
+      setIsVerified(true);
+      return applyAccountHeldState(data, setAccountHeldMessage, setHoldPending, setUser);
     }
 
-    const verifyPromise = (async (): Promise<boolean> => {
-      try {
-        const response = await fetchVerifySession();
+    if (data.authenticated && data.user) {
+      const authUser: AuthUser = {
+        type: data.userType as UserType,
+        data: data.user as Employee | Candidate,
+      };
+      setUser(authUser);
+      setIsVerified(true);
+      setAccountHeldMessage(null);
+      setHoldPending(mapHoldPending(data));
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+      return true;
+    }
 
-        if (!response.ok) {
-          setUser(null);
+    setUser(null);
+    setHoldPending(null);
+    setIsVerified(true);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    return false;
+  }, []);
+
+  const verifySession = useCallback(async (options?: { force?: boolean }): Promise<boolean> => {
+    try {
+      const data = await requestVerifySession({ force: options?.force });
+      return applyVerifySessionData(data);
+    } catch (error) {
+      console.error('Session verification failed:', error);
+
+      if (isNetworkError(error)) {
+        const cachedUser = readCachedAuthUser();
+        if (cachedUser) {
+          setUser(cachedUser);
           setIsVerified(true);
-          sessionStorage.removeItem(AUTH_STORAGE_KEY);
-          return false;
-        }
-
-        const data = await response.json();
-
-        if (data.accountHeld) {
-          setHoldPending(null);
-          setAccountHeldMessage(
-            String(
-              data.holdMessage ||
-                "Your account is on hold. Please contact your administrator.",
-            ),
-          );
-          setUser(null);
-          setIsVerified(true);
-          sessionStorage.removeItem(AUTH_STORAGE_KEY);
-          return false;
-        }
-
-        if (data.authenticated && data.user) {
-          const authUser: AuthUser = {
-            type: data.userType as UserType,
-            data: data.user
-          };
-          setUser(authUser);
-          setIsVerified(true);
-          setAccountHeldMessage(null);
-          setHoldPending(mapHoldPending(data));
-          sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
           return true;
         }
-
-        setUser(null);
-        setHoldPending(null);
-        setIsVerified(true);
-        sessionStorage.removeItem(AUTH_STORAGE_KEY);
-        return false;
-      } catch (error) {
-        console.error('Session verification failed:', error);
-
-        if (isNetworkError(error)) {
-          const cachedUser = readCachedAuthUser();
-          if (cachedUser) {
-            setUser(cachedUser);
-            setIsVerified(true);
-            return true;
-          }
-        }
-
-        setUser(null);
-        setIsVerified(true);
-        sessionStorage.removeItem(AUTH_STORAGE_KEY);
-        return false;
-      } finally {
-        verifyingRef.current = null;
       }
-    })();
 
-    verifyingRef.current = verifyPromise;
-    return verifyPromise;
+      setUser(null);
+      setIsVerified(true);
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      return false;
+    }
+  }, [applyVerifySessionData]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      setIsVerified(false);
+      setUser(null);
+
+      const forceInitialVerify = !authBootstrapDone;
+      authBootstrapDone = true;
+
+      await verifySession({ force: forceInitialVerify });
+
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    };
+
+    void initializeAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    // Only initialize once to prevent infinite loops
-    if (initializedRef.current) {
-      return;
-    }
-
-    const initializeAuth = async () => {
-      initializedRef.current = true;
-      setIsLoading(true);
-      setIsVerified(false);
-      // CRITICAL: Don't restore from sessionStorage until verified
-      // This prevents showing stale/wrong user data
-      setUser(null);
-      
-      // Always verify with backend FIRST (source of truth)
-      // This ensures:
-      // 1. Session cookies are properly validated
-      // 2. No stale data is shown
-      // 3. Multi-user scenarios work correctly
-      const isValid = await verifySession();
-      
-      // Only after backend verification, sessionStorage can be used as cache
-      // But verifySession already handles sessionStorage, so we're good
-      
-      setIsLoading(false);
-    };
-
-    initializeAuth();
-  }, []); // Remove verifySession from dependencies to prevent loops
-
-  useEffect(() => {
     if (user && isVerified) {
-      // Use sessionStorage for per-tab isolation
       sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     }
   }, [user, isVerified]);
+
+  const applyHoldCheckResult = useCallback((data: VerifySessionResponse) => {
+    if (data.accountHeld) {
+      const logoutInSeconds = Number(data.logoutInSeconds || 0);
+      if (logoutInSeconds > 0) {
+        setHoldPending({
+          holdMessage: String(
+            data.holdMessage ||
+              "Your account has been placed on hold by an administrator.",
+          ),
+          holdUntilLabel: data.holdUntilLabel
+            ? String(data.holdUntilLabel)
+            : undefined,
+          logoutInSeconds,
+        });
+      } else {
+        applyAccountHeldState(data, setAccountHeldMessage, setHoldPending, setUser);
+      }
+      return;
+    }
+
+    const pending = mapHoldPending(data);
+    if (pending) {
+      setHoldPending(pending);
+    }
+  }, []);
 
   useEffect(() => {
     if (!user || user.type !== "employee" || holdPending) {
       return;
     }
 
-    const pollHoldStatus = async () => {
-      try {
-        const response = await fetchVerifySession();
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data.accountHeld) {
-          const logoutInSeconds = Number(data.logoutInSeconds || 0);
-          if (logoutInSeconds > 0) {
-            setHoldPending({
-              holdMessage: String(
-                data.holdMessage ||
-                  "Your account has been placed on hold by an administrator.",
-              ),
-              holdUntilLabel: data.holdUntilLabel
-                ? String(data.holdUntilLabel)
-                : undefined,
-              logoutInSeconds,
-            });
-          } else {
-            setAccountHeldMessage(
-              String(
-                data.holdMessage ||
-                  "Your account is on hold. Please contact your administrator.",
-              ),
-            );
-            setUser(null);
-            sessionStorage.removeItem(AUTH_STORAGE_KEY);
-          }
-          return;
-        }
-        const pending = mapHoldPending(data);
-        if (pending) {
-          setHoldPending(pending);
-        }
-      } catch {
-        // ignore polling errors
+    const checkHoldOnVisible = () => {
+      if (document.visibilityState !== "visible") {
+        return;
       }
+
+      void requestVerifySession({ force: true })
+        .then(applyHoldCheckResult)
+        .catch(() => {
+          // ignore visibility check errors
+        });
     };
 
-    const interval = setInterval(() => {
-      void pollHoldStatus();
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [user, holdPending]);
+    document.addEventListener("visibilitychange", checkHoldOnVisible);
+    return () => document.removeEventListener("visibilitychange", checkHoldOnVisible);
+  }, [user, holdPending, applyHoldCheckResult]);
 
   const beginSignOut = useCallback(() => {
     setIsSigningOut(true);
@@ -287,23 +240,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch(createApiUrl('/api/auth/logout'), {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include'
       });
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
-      // Clear all auth state immediately
       setUser(null);
       setIsVerified(false);
       setHoldPending(null);
-      // Clear all auth-related storage
       sessionStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem(AUTH_STORAGE_KEY);
       sessionStorage.removeItem('employee');
-      // Reset initialization flag so auth re-initializes if user navigates back
-      initializedRef.current = false;
+      clearVerifySessionCache();
+      authBootstrapDone = false;
     }
   }, []);
 

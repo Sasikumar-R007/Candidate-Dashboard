@@ -24,6 +24,10 @@ import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { format } from "date-fns";
 import { resolveLogoFileUrl, resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
 import { ResumePreviewPanel } from "@/components/source-resume/resume-preview-panel";
+import {
+  adminCandidatesQueryOptions,
+  ADMIN_CANDIDATES_DEFAULT_LIMIT,
+} from "@/lib/admin-candidates-query";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -592,6 +596,7 @@ interface ClientData {
 export default function MasterDatabase() {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [candidatesPage, setCandidatesPage] = useState(1);
   const initialTab = (sessionStorage.getItem('masterDatabaseTab') as ProfileType) || 'resume';
   sessionStorage.removeItem('masterDatabaseTab');
   const [profileType, setProfileType] = useState<ProfileType>(initialTab);
@@ -664,10 +669,21 @@ export default function MasterDatabase() {
     source: ""
   });
 
-  // Fetch candidates (resumes) from API
-  const { data: candidatesRaw = [], isLoading: isLoadingCandidates } = useQuery<any[]>({
-    queryKey: ['/api/admin/candidates'],
+  // Fetch candidates (resumes) from API — paginated
+  const { data: candidatesResponse, isLoading: isLoadingCandidates } = useQuery({
+    ...adminCandidatesQueryOptions(candidatesPage, ADMIN_CANDIDATES_DEFAULT_LIMIT),
+    enabled: profileType === "resume",
   });
+  const candidatesRaw = candidatesResponse?.data ?? [];
+  const candidatesTotal = candidatesResponse?.total ?? 0;
+  const candidatesTotalPages = Math.max(
+    1,
+    Math.ceil(candidatesTotal / ADMIN_CANDIDATES_DEFAULT_LIMIT),
+  );
+
+  useEffect(() => {
+    setCandidatesPage(1);
+  }, [searchQuery, statusFilter, advancedFilters, profileType]);
 
   // Fetch employees from API
   const { data: employeesRaw = [], isLoading: isLoadingEmployees } = useQuery<any[]>({
@@ -1838,6 +1854,36 @@ export default function MasterDatabase() {
                 </tbody>
               </table>
             </div>
+            {profileType === "resume" && candidatesTotal > 0 && (
+              <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing {(candidatesPage - 1) * ADMIN_CANDIDATES_DEFAULT_LIMIT + 1}–
+                  {Math.min(candidatesPage * ADMIN_CANDIDATES_DEFAULT_LIMIT, candidatesTotal)} of{" "}
+                  {candidatesTotal}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={candidatesPage <= 1 || isLoadingCandidates}
+                    onClick={() => setCandidatesPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Page {candidatesPage} of {candidatesTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={candidatesPage >= candidatesTotalPages || isLoadingCandidates}
+                    onClick={() => setCandidatesPage((p) => Math.min(candidatesTotalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

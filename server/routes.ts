@@ -5,7 +5,8 @@ import session from "express-session";
 import fs from "fs";
 import passport from "passport";
 import { randomBytes } from "crypto";
-import { storage } from "./storage";
+import { storage, type CandidateListFilter } from "./storage";
+import { getCachedValue } from "./light-cache";
 import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, insertIncentiveMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications, passwordResets, nudges, consentLogs, profiles, candidateApplicationComments } from "@shared/schema";
 import {
   buildClientJdSourceDetails,
@@ -16,6 +17,7 @@ import {
   mergeDisplayRoleIdInSourceDetails,
   parseRequirementJdExtras,
   resolveDisplayRoleId,
+  type RequirementJdExtras,
 } from "@shared/requirement-jd-extras";
 import {
   appendClosureTimestampNote,
@@ -231,6 +233,7 @@ import {
   fetchProfileMediaMeta,
   fetchProfileMediaData,
   buildAvatarServeUrl,
+  buildJdFileServeUrl,
 } from "./profile-media";
 import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
 import { storeR2FolderFile, getR2FileByFolderAndName } from "./r2-file-storage";
@@ -860,9 +863,9 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       console.error("[notifications-feed] getAllRevenueMappings failed:", err);
       return [] as Awaited<ReturnType<typeof storage.getAllRevenueMappings>>;
     }),
-    storage.getRequirements().catch((err) => {
+    storage.getRequirementsForList().catch((err) => {
       console.error("[notifications-feed] getRequirements failed:", err);
-      return [] as Awaited<ReturnType<typeof storage.getRequirements>>;
+      return [] as Awaited<ReturnType<typeof storage.getRequirementsForList>>;
     }),
     storage.getAllJobApplications().catch((err) => {
       console.error("[notifications-feed] getAllJobApplications failed:", err);
@@ -1549,6 +1552,22 @@ async function getOwnedCandidatesForEmployee(employee: { id: string; name: strin
   });
 }
 
+function buildCandidateListFilterForEmployee(employee: {
+  id: string;
+  name: string;
+  role: string;
+}): CandidateListFilter | undefined {
+  const ownerRole = normalizeSourcingRole(employee.role);
+  if (!ownerRole) {
+    return undefined;
+  }
+  return {
+    ownerEmployeeId: employee.id,
+    ownerRole,
+    ...(ownerRole === "recruiter" ? { legacyAddedBy: employee.name } : {}),
+  };
+}
+
 function buildJobOwnershipFilter(employee: { id: string; role: string }) {
   const ownerRole = normalizeSourcingRole(employee.role);
   if (!ownerRole) {
@@ -2164,6 +2183,7 @@ async function loadCandidateJobApplications(candidate: {
 
 async function enrichCandidateApplicationsWithJd<T extends { requirementId?: string | null }>(
   applications: T[],
+  httpReq?: Request,
 ): Promise<(T & {
   jdFile?: string | null;
   jdText?: string | null;
@@ -2193,19 +2213,33 @@ async function enrichCandidateApplicationsWithJd<T extends { requirementId?: str
   );
 
   return applications.map((app) => {
-    const req = app.requirementId ? byId.get(app.requirementId) : undefined;
-    if (!req) return { ...app };
-    const jd = enrichRequirementWithJdExtras(req);
+    const requirement = app.requirementId ? byId.get(app.requirementId) : undefined;
+    if (!requirement) return { ...app };
+    const jd = enrichRequirementWithJdExtras(requirement);
+    const rawJdFile = jd.jdFile ?? requirement.jdFile ?? null;
     return {
       ...app,
-      jdFile: jd.jdFile ?? req.jdFile ?? null,
-      jdText: jd.jdText ?? req.jdText ?? null,
+      jdFile: buildJdFileServeUrl(rawJdFile, httpReq) ?? rawJdFile,
+      jdText: jd.jdText ?? requirement.jdText ?? null,
       primarySkills: jd.primarySkills ?? null,
       secondarySkills: jd.secondarySkills ?? null,
       knowledgeOnly: jd.knowledgeOnly ?? null,
       specialInstructions: jd.specialInstructions ?? null,
     };
   });
+}
+
+function enrichRequirementWithJdExtrasForApi<T extends Record<string, unknown>>(
+  httpReq: Request,
+  requirement: T,
+): T & RequirementJdExtras & { jdFile?: string | null } {
+  const enriched = enrichRequirementWithJdExtras(requirement);
+  const rawJdFile =
+    typeof enriched.jdFile === "string" ? enriched.jdFile : (requirement.jdFile as string | null | undefined);
+  return {
+    ...enriched,
+    jdFile: buildJdFileServeUrl(rawJdFile, httpReq) ?? rawJdFile ?? null,
+  };
 }
 
 /** Bulk-resolve profile pictures for pipeline cards (candidates + profiles by profileId). */
@@ -2216,16 +2250,22 @@ async function buildProfilePictureLookup(
   const uniqueIds = [...new Set(profileIds.filter(Boolean))] as string[];
   if (uniqueIds.length === 0) return lookup;
 
-  const candidatesMap = new Map<string, (typeof candidates.$inferSelect)>();
-  const profilesMap = new Map<string, (typeof profiles.$inferSelect)>();
+  const candidatesMap = new Map<string, { id: string; profilePicture: string | null }>();
+  const profilesMap = new Map<string, { id: string; profilePicture: string | null }>();
 
   try {
     const chunkSize = 100;
     for (let i = 0; i < uniqueIds.length; i += chunkSize) {
       const chunk = uniqueIds.slice(i, i + chunkSize);
-      const candidateRows = await db.select().from(candidates).where(inArray(candidates.id, chunk));
+      const candidateRows = await db
+        .select({ id: candidates.id, profilePicture: candidates.profilePicture })
+        .from(candidates)
+        .where(inArray(candidates.id, chunk));
       candidateRows.forEach((c) => candidatesMap.set(c.id, c));
-      const profileRows = await db.select().from(profiles).where(inArray(profiles.id, chunk));
+      const profileRows = await db
+        .select({ id: profiles.id, profilePicture: profiles.profilePicture })
+        .from(profiles)
+        .where(inArray(profiles.id, chunk));
       profileRows.forEach((p) => profilesMap.set(p.id, p));
     }
   } catch (error) {
@@ -2311,18 +2351,10 @@ async function safeSelectAllResumeSubmissions(): Promise<any[]> {
 
 async function safeSelectActiveRequirements(): Promise<any[]> {
   try {
-    const { requirements } = await import("@shared/schema");
-    const { eq } = await import("drizzle-orm");
-    return await db.select().from(requirements).where(eq(requirements.isArchived, false));
+    return await storage.getRequirementsForList();
   } catch (error) {
     console.warn("[admin] requirements is_archived filter unavailable:", error);
-    try {
-      const { requirements } = await import("@shared/schema");
-      return await db.select().from(requirements);
-    } catch (fallbackError) {
-      console.warn("[admin] requirements table unavailable:", fallbackError);
-      return [];
-    }
+    return [];
   }
 }
 
@@ -2450,6 +2482,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Session Verification Route - Check if user session is valid and return user data
   app.get("/api/auth/verify-session", async (req, res) => {
+    const verifyTimerLabel = `verify-session:${req.sessionID ?? "anon"}`;
+    console.time(verifyTimerLabel);
     try {
       // Check for employee session
       if (req.session.employeeId) {
@@ -2503,6 +2537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Session verification error:', error);
       return res.json({ authenticated: false });
+    } finally {
+      console.timeEnd(verifyTimerLabel);
     }
   });
 
@@ -3954,7 +3990,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const candidateId = req.session.candidateId!;
-      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      const candidate = await storage.getCandidateByCandidateId(candidateId, {
+        includeResumeText: true,
+      });
 
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
@@ -4216,7 +4254,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch fresh merged data for response
-      const finalCandidate = await storage.getCandidateByCandidateId(candidateId);
+      const finalCandidate = await storage.getCandidateByCandidateId(candidateId, {
+        includeResumeText: true,
+      });
       const finalProfileData = await storage.getProfile(candidate.id);
 
       if (!finalCandidate) {
@@ -4735,7 +4775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const baseRequirement = await storage.getRequirementById(job.requirementId);
             if (baseRequirement) {
               const splitRoleId = resolveDisplayRoleId(baseRequirement).trim().toUpperCase();
-              const allRequirements = await storage.getRequirements();
+              const allRequirements = await storage.getRequirementsForList();
               const splitRequirements = allRequirements
                 .filter(
                   (req: any) =>
@@ -4978,7 +5018,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const candidateId = req.session.candidateId!;
-      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      const candidate = await storage.getCandidateByCandidateId(candidateId, {
+        includeResumeText: true,
+      });
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
@@ -5257,7 +5299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
 
-    if (process.env.NODE_ENV === "production" && isR2Configured()) {
+    if (isR2Configured()) {
       const r2Object = await getR2FileByFolderAndName(r2Folder, safeName);
       if (r2Object) {
         setStoredFileResponseHeaders(req, res, safeName, r2Object.contentType);
@@ -6006,7 +6048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((job: any) => job.id),
       );
 
-      const allRequirements = await storage.getRequirements();
+      const allRequirements = await storage.getRequirementsForList();
       const allAssignments = await safeSelectActiveRequirementAssignmentsForRecruiters(
         teamRecruiterIdsArray,
       );
@@ -6248,7 +6290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((job) => job.id),
       );
 
-      const allRequirements = await storage.getRequirements();
+      const allRequirements = await storage.getRequirementsForList();
       const assignments = await safeSelectActiveRequirementAssignmentsForRecruiters(
         teamRecruiterIdsArray,
       );
@@ -6442,14 +6484,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }),
       );
 
-      const enrichedRequirements = allRequirementsForResume.map((req: any) => {
-        const lookupId = req.isRecentlyClosed ? req.id.replace(/^recent-closed-/, "") : req.id;
-        const target = getTarget(req);
+      const enrichedRequirements = allRequirementsForResume.map((requirement: any) => {
+        const lookupId = requirement.isRecentlyClosed ? requirement.id.replace(/^recent-closed-/, "") : requirement.id;
+        const target = getTarget(requirement);
         const delivered =
           allSubmissionsForResume.filter((s: any) => s.requirementId === lookupId).length +
           allTaggedForResume.filter((app: any) => app.requirementId === lookupId).length;
-        return enrichRequirementWithJdExtras({
-          ...req,
+        return enrichRequirementWithJdExtrasForApi(req, {
+          ...requirement,
           displayRequirementId: streqDisplayMap.get(lookupId) ?? null,
           resumeCount: padResumeCount(delivered, target),
           resumeDelivered: delivered,
@@ -6988,7 +7030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (teamMembers.length > 0) {
         // Get all requirements assigned to team TAs
-        const allRequirements = await storage.getRequirements();
+        const allRequirements = await storage.getRequirementsForList();
         const teamRequirementIds = new Set(teamMembers.map(ta => ta.id));
         const teamRequirements = allRequirements.filter(req =>
           req.talentAdvisorId && teamRequirementIds.has(req.talentAdvisorId) && !req.isArchived
@@ -8551,8 +8593,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return appDate === today && app.requirementId && recruiterRequirementIds.includes(app.requirementId);
       });
 
-      // Get all requirements for company/position lookup
-      const allRequirements = await db.select().from(requirements);
+      // Get requirements for company/position lookup (omit large jd_text)
+      const allRequirements = await storage.getRequirementsForList();
 
       // Combine and format delivered candidates
       const deliveredCandidates = [];
@@ -8951,12 +8993,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const allReqsForStreq = await storage.getRequirements();
       const streqDisplayMap = buildStreqDisplayMap(allReqsForStreq);
-      const withStreqId = (req: any) => {
-        const lookupId = String(req.id || "").startsWith("recent-closed-")
-          ? String(req.id).replace(/^recent-closed-/, "")
-          : req.id;
+      const withStreqId = (requirement: any) => {
+        const lookupId = String(requirement.id || "").startsWith("recent-closed-")
+          ? String(requirement.id).replace(/^recent-closed-/, "")
+          : requirement.id;
         return {
-          ...enrichRequirementWithJdExtras(req),
+          ...enrichRequirementWithJdExtrasForApi(req, requirement),
           displayRequirementId: streqDisplayMap.get(lookupId) ?? null,
         };
       };
@@ -9251,7 +9293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get client-submitted JDs (requirements with STR... Role ID format)
   app.get("/api/admin/client-jds", requireAdminAuth, async (req, res) => {
     try {
-      const allRequirements = await storage.getRequirements();
+      const allRequirements = await storage.getRequirementsForList();
       console.log(`Total requirements found: ${allRequirements.length}`);
       // Filter requirements that have Role ID format (STR + year + number)
       const clientJDs = allRequirements.filter((req: any) => {
@@ -9264,33 +9306,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Client JDs found: ${clientJDs.length}`);
 
       // Transform to JD table format
-      const jdData = await Promise.all(clientJDs.map(async (req: any) => {
+      const jdData = await Promise.all(clientJDs.map(async (requirement: any) => {
         // Find SPOC employee for this requirement
-        const spocName = req.spoc || 'N/A';
+        const spocName = requirement.spoc || 'N/A';
 
         // Get client code from company name
         const allClients = await storage.getAllClients();
         const clientRecord = allClients.find((c: any) =>
-          c.brandName === req.company && !c.isLoginOnly
+          c.brandName === requirement.company && !c.isLoginOnly
         );
-        const clientId = clientRecord?.clientCode || req.company;
+        const clientId = clientRecord?.clientCode || requirement.company;
 
         return {
-          id: req.id, // Role ID (STR format)
+          id: requirement.id, // Role ID (STR format)
           clientId: clientId, // Client code (e.g., STCL001)
-          company: clientRecord?.brandName || req.company || 'N/A', // Company name (brandName)
+          company: clientRecord?.brandName || requirement.company || 'N/A', // Company name (brandName)
           companyLogo: clientRecord?.logo || null,
           spocName: spocName,
-          role: req.position,
-          sharedDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
+          role: requirement.position,
+          sharedDate: requirement.createdAt ? new Date(requirement.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
           }).replace(/\//g, '-') : 'N/A',
-          requirement: enrichRequirementWithJdExtras({
-            ...req,
-            jdFile: req.jdFile || null,
-            jdText: req.jdText || null,
+          requirement: enrichRequirementWithJdExtrasForApi(req, {
+            ...requirement,
+            jdFile: requirement.jdFile || null,
+            jdText: requirement.jdText || null,
           }),
         };
       }));
@@ -10615,69 +10657,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Master Data Totals API endpoint
   app.get("/api/admin/master-data-totals", requireAdminAuth, async (req, res) => {
     try {
+      const payload = await getCachedValue("admin:master-data-totals", 60_000, async () => {
       // Use static imports instead of dynamic import to avoid production issues
-      const { candidates, cashOutflows } = await import("@shared/schema");
+      const { cashOutflows } = await import("@shared/schema");
 
       // Get counts from database with better error handling
-      let allEmployees: any[] = [];
-      let allCandidates: any[] = [];
+      let directUploads = 0;
+      let recruiterUploads = 0;
+      let headCount = 0;
       let allCashOutflows: any[] = [];
 
       try {
-        // Use raw SQL to exclude last_login_at column (which may not exist in production)
-        const employeesResult = await db.execute(sql`
-          SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-                 department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-                 father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-                 increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-                 current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-                 branch, city, reporting_to, is_active, created_at, profile_picture
+        const headCountResult = await db.execute(sql`
+          SELECT COUNT(*)::int AS head_count
           FROM employees
+          WHERE role IS NOT NULL
+            AND (
+              LOWER(role) IN ('team_leader', 'talent_advisor', 'teamlead', 'recruiter')
+            )
+            AND LOWER(role) NOT IN ('admin', 'client', 'candidate')
         `);
-        allEmployees = employeesResult.rows as any[];
+        headCount = Number((headCountResult.rows[0] as { head_count?: number })?.head_count) || 0;
       } catch (empError: any) {
-        console.error('Error fetching employees:', empError);
-        // Continue with empty array if employees query fails
+        console.error('Error fetching employee head count:', empError);
       }
 
       try {
-        allCandidates = await db.select().from(candidates);
+        const countsResult = await db.execute(sql`
+          SELECT
+            COUNT(*)::int AS total,
+            COUNT(*) FILTER (
+              WHERE added_by IS NULL
+                OR TRIM(added_by) = ''
+                OR LOWER(TRIM(added_by)) IN ('admin', 'bulk upload')
+            )::int AS direct_uploads,
+            COUNT(*) FILTER (
+              WHERE added_by IS NOT NULL
+                AND TRIM(added_by) <> ''
+                AND LOWER(TRIM(added_by)) NOT IN ('admin', 'bulk upload')
+            )::int AS recruiter_uploads
+          FROM candidates
+        `);
+        const counts = countsResult.rows[0] as {
+          total?: number;
+          direct_uploads?: number;
+          recruiter_uploads?: number;
+        };
+        directUploads = counts.direct_uploads ?? 0;
+        recruiterUploads = counts.recruiter_uploads ?? 0;
       } catch (candError: any) {
         console.error('Error fetching candidates:', candError);
-        // Continue with empty array if candidates query fails
       }
 
-      // Calculate totals
-      const resumes = allCandidates.length;
-
-      // Direct Uploads: Candidates uploaded via bulk import (addedBy is null/empty or "Admin"/"admin")
-      const directUploads = allCandidates.filter(c =>
-        !c.addedBy || c.addedBy.trim() === '' ||
-        c.addedBy.toLowerCase() === 'admin' ||
-        c.addedBy.toLowerCase() === 'bulk upload'
-      ).length;
-
-      // Recruiter Uploads: Candidates uploaded by recruiters (addedBy has a recruiter name)
-      const recruiterUploads = allCandidates.filter(c =>
-        c.addedBy &&
-        c.addedBy.trim() !== '' &&
-        c.addedBy.toLowerCase() !== 'admin' &&
-        c.addedBy.toLowerCase() !== 'bulk upload'
-      ).length;
-
-      // Head Count: Count of employees with role 'team_leader' or 'talent_advisor' (excluding admin, client, candidate)
-      const headCount = allEmployees.filter(e =>
-        e.role &&
-        (e.role.toLowerCase() === 'team_leader' ||
-          e.role.toLowerCase() === 'talent_advisor' ||
-          e.role.toLowerCase() === 'teamlead' ||
-          e.role.toLowerCase() === 'recruiter') &&
-        e.role.toLowerCase() !== 'admin' &&
-        e.role.toLowerCase() !== 'client' &&
-        e.role.toLowerCase() !== 'candidate'
-      ).length;
-
-      // RESUMES count should be the sum of DIRECT UPLOADS + RECRUITER UPLOADS
       const totalResumes = directUploads + recruiterUploads;
 
       // Calculate financial totals from cash_outflows table
@@ -10693,7 +10724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const toolsAndDatabases = allCashOutflows.reduce((sum, outflow) => sum + (outflow.toolsCost || 0), 0);
       const rentPaid = allCashOutflows.reduce((sum, outflow) => sum + (outflow.rent || 0), 0);
 
-      res.json({
+      return {
         directUploads: directUploads,
         recruiterUploads: recruiterUploads,
         resumes: totalResumes, // Sum of directUploads + recruiterUploads
@@ -10702,7 +10733,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         otherExpenses: otherExpenses,
         toolsAndDatabases: toolsAndDatabases,
         rentPaid: rentPaid
+      };
       });
+
+      res.json(payload);
     } catch (error: any) {
       console.error('Master data totals error:', error);
       console.error('Error stack:', error.stack);
@@ -14188,15 +14222,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const ownedCandidates = await getOwnedCandidatesForEmployee(employee);
-      if (!ownedCandidates) {
+      const filter = buildCandidateListFilterForEmployee(employee);
+      if (!filter) {
         return res.status(403).json({ message: "Only recruiters and team leaders can access candidate counts" });
       }
-      const counts = {
-        total: ownedCandidates.length,
-        active: ownedCandidates.filter(candidate => candidate.isActive !== false).length,
-        inactive: ownedCandidates.filter(candidate => candidate.isActive === false).length,
-      };
+
+      const counts = await storage.countActiveCandidatesBreakdown(filter);
       res.json(counts);
     } catch (error) {
       console.error("Get candidate counts error:", error);
@@ -14705,7 +14736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerRole === "team_leader" ? "tl_tagged" : "recruiter_tagged";
 
       if (ownerRole === "team_leader" && requirementId) {
-        const allRequirements = await storage.getRequirements();
+        const allRequirements = await storage.getRequirementsForList();
         const requirement = allRequirements.find((r) => r.id === requirementId);
         if (requirement?.talentAdvisorId) {
           const assignedTa = await storage.getEmployeeById(
@@ -15257,7 +15288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let teamLeadId = '';
       let teamLeadName = '';
       if (application.requirementId) {
-        const allRequirements = await storage.getRequirements();
+        const allRequirements = await storage.getRequirementsForList();
         const requirement = allRequirements.find(r => r.id === application.requirementId);
         if (requirement && requirement.teamLeadId) {
           const teamLead = await storage.getEmployeeById(requirement.teamLeadId);
@@ -15410,7 +15441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all employees, requirements, and recruiter jobs for filtering
       const allEmployees = await storage.getAllEmployees();
-      const allRequirements = await storage.getRequirements();
+      const allRequirements = await storage.getRequirementsForList();
       const allRecruiterJobs = await storage.getAllRecruiterJobs();
       const allAssignments = await safeSelectAllRequirementAssignments();
 
@@ -15679,23 +15710,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all candidates (for Master Database)
+  // Get all candidates (for Master Database) — paginated
   app.get("/api/admin/candidates", requireEmployeeAuth, async (req, res) => {
     try {
+      const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10) || 20));
+
       const employee = await storage.getEmployeeById(req.session.employeeId!);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      let candidatesList;
-      const ownedCandidates = await getOwnedCandidatesForEmployee(employee);
-      if (ownedCandidates) {
-        candidatesList = ownedCandidates;
-      } else {
-        candidatesList = await storage.getAllCandidates();
+      let filter: CandidateListFilter | undefined;
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (ownerRole) {
+        filter = buildCandidateListFilterForEmployee(employee);
       }
 
-      res.json(candidatesList || []);
+      const [data, total] = await Promise.all([
+        storage.getCandidatesPaginated(page, limit, filter),
+        storage.countActiveCandidates(filter),
+      ]);
+
+      res.json({
+        data: data || [],
+        total,
+        page,
+        limit,
+      });
     } catch (error: any) {
       console.error('Get candidates error:', error);
       console.error('Error stack:', error.stack);
@@ -15758,37 +15800,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         whereClause = eq(candidates.isActive, true);
       }
 
-      // Debug logging
-      console.log('Source Resume Search - Filters:', JSON.stringify(filters, null, 2));
-      console.log('Source Resume Search - Query conditions:', queryConditions ? 'Has conditions' : 'No conditions (showing all)');
+      const SOURCE_RESUME_SCORING_POOL_LIMIT = 50;
+      const SOURCE_RESUME_MAX_PAGE_SIZE = 50;
+      const inMemoryScoreSorts = new Set([
+        "relevance",
+        "ctc-high",
+        "ctc-low",
+        "notice-period",
+      ]);
 
-      // First, check total candidates (regardless of isActive)
-      const totalCandidatesQuery = db.select({ count: sql<number>`count(*)` })
-        .from(candidates);
-      const [totalCandidatesResult] = await totalCandidatesQuery;
-      const totalCandidates = Number(totalCandidatesResult?.count || 0);
-      console.log('Source Resume Search - Total candidates in DB (all):', totalCandidates);
-
-      // Check total active candidates
-      const totalActiveQuery = db.select({ count: sql<number>`count(*)` })
+      const [countRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
         .from(candidates)
-        .where(eq(candidates.isActive, true));
-      const [totalActiveResult] = await totalActiveQuery;
-      const totalActive = Number(totalActiveResult?.count || 0);
-      console.log('Source Resume Search - Total active candidates in DB:', totalActive);
+        .where(whereClause);
+      const matchedCount = Number(countRow?.count || 0);
 
-      // Check candidates with isActive = false or null
-      const inactiveQuery = db.select({ count: sql<number>`count(*)` })
-        .from(candidates)
-        .where(sql`${candidates.isActive} = false OR ${candidates.isActive} IS NULL`);
-      const [inactiveResult] = await inactiveQuery;
-      const inactiveCount = Number(inactiveResult?.count || 0);
-      console.log('Source Resume Search - Inactive/null candidates:', inactiveCount);
+      const page = Math.max(1, pagination.page || 1);
+      const pageSize = Math.min(
+        SOURCE_RESUME_MAX_PAGE_SIZE,
+        Math.max(1, pagination.pageSize || 10),
+      );
+      const offset = (page - 1) * pageSize;
 
       let filteredCandidatesQuery = db.select().from(candidates).where(whereClause);
 
-      if (sortOption !== 'relevance' && sortOption !== 'ctc-high' && sortOption !== 'ctc-low' && sortOption !== 'notice-period') {
+      if (!inMemoryScoreSorts.has(sortOption)) {
         filteredCandidatesQuery = filteredCandidatesQuery.orderBy(getSortOrder(sortOption));
+        filteredCandidatesQuery = filteredCandidatesQuery.limit(pageSize).offset(offset);
+      } else {
+        filteredCandidatesQuery = filteredCandidatesQuery
+          .orderBy(desc(candidates.createdAt))
+          .limit(SOURCE_RESUME_SCORING_POOL_LIMIT);
       }
 
       let candidatesList;
@@ -15799,19 +15841,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             candidateMatchesBooleanQuery(candidate, searchQuery),
           );
         }
-        console.log('Source Resume Search - Query returned', candidatesList.length, 'candidates before scoring');
       } catch (queryError: any) {
         console.error('Source Resume Search - Query execution error:', queryError);
         console.error('Source Resume Search - Error details:', queryError.message, queryError.stack);
         throw queryError;
       }
 
-      const totalCount = candidatesList.length;
-      console.log('Source Resume Search - Candidates matching filters:', totalCount);
-
-      const page = Math.max(1, pagination.page || 1);
-      const pageSize = Math.min(100, Math.max(1, pagination.pageSize || 10));
-      const offset = (page - 1) * pageSize;
+      const totalCount = inMemoryScoreSorts.has(sortOption)
+        ? Math.min(matchedCount, SOURCE_RESUME_SCORING_POOL_LIMIT)
+        : matchedCount;
 
       // Get requirement if provided
       let requirement = null;
@@ -15856,10 +15894,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const paginatedCandidates = sortedCandidates.slice(offset, offset + pageSize);
+      const paginatedCandidates = inMemoryScoreSorts.has(sortOption)
+        ? sortedCandidates.slice(offset, offset + pageSize)
+        : sortedCandidates;
 
-      // Calculate analytics for the full filtered set, not just one page
-      const analytics = calculateAnalytics(sortedCandidates.map(sc => sc.candidate));
+      // Calculate analytics for the scored pool (capped), not the full database
+      const analytics = calculateAnalytics(
+        (inMemoryScoreSorts.has(sortOption) ? sortedCandidates : candidatesList).map(
+          (sc) => ("candidate" in sc ? sc.candidate : sc),
+        ),
+      );
 
       // Return paginated results with metadata
       res.json({
@@ -15971,7 +16015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       let candidate = await storage.getCandidateById(id);
       if (!candidate) {
-        candidate = await storage.getCandidateByCandidateId(id);
+        candidate = await storage.getCandidateByCandidateId(id, { includeResumeText: true });
       }
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
@@ -17278,45 +17322,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const streqDisplayMap = buildStreqDisplayMap(clientJDs);
 
       // Transform requirements for client view
-      const rolesData = await Promise.all(clientJDs.map(async (req) => {
+      const rolesData = await Promise.all(clientJDs.map(async (requirement) => {
         // Count profiles shared for this requirement
-        const profilesShared = allApplications.filter(app => app.requirementId === req.id).length;
+        const profilesShared = allApplications.filter(app => app.requirementId === requirement.id).length;
 
         // Get last active date (most recent application date for this requirement, or requirement creation date)
         const requirementApplications = allApplications
-          .filter(app => app.requirementId === req.id)
+          .filter(app => app.requirementId === requirement.id)
           .sort((a, b) => new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime());
 
         const lastActiveDate = requirementApplications.length > 0
           ? requirementApplications[0].appliedDate
-          : req.createdAt;
+          : requirement.createdAt;
 
         // Determine status
         let status = 'Active';
-        if (req.status === 'paused') status = 'Paused';
-        else if (req.status === 'withdrawn' || req.status === 'cancelled') status = 'Withdrawn';
-        else if (req.status === 'completed' || req.status === 'closed') status = 'Closed';
-        else if (req.status === 'open' || req.status === 'in_progress') status = 'Active';
+        if (requirement.status === 'paused') status = 'Paused';
+        else if (requirement.status === 'withdrawn' || requirement.status === 'cancelled') status = 'Withdrawn';
+        else if (requirement.status === 'completed' || requirement.status === 'closed') status = 'Closed';
+        else if (requirement.status === 'open' || requirement.status === 'in_progress') status = 'Active';
 
         let displayRoleId = resolveDisplayRoleId({
-          id: req.id,
-          sourceDetails: req.sourceDetails ?? null,
+          id: requirement.id,
+          sourceDetails: requirement.sourceDetails ?? null,
         });
         if (!displayRoleId || displayRoleId === "N/A") {
-          displayRoleId = streqDisplayMap.get(req.id) ?? "N/A";
+          displayRoleId = streqDisplayMap.get(requirement.id) ?? "N/A";
         }
 
         return {
-          id: req.id, // Include id field for filtering
-          roleId: req.id,
+          id: requirement.id, // Include id field for filtering
+          roleId: requirement.id,
           displayRoleId,
-          sourceDetails: req.sourceDetails ?? null,
-          role: req.position,
-          noOfPositions: req.noOfPositions ?? 1,
-          position: req.position, // Include position field as well
-          team: req.teamLead || 'N/A',
-          recruiter: req.talentAdvisor || 'N/A',
-          sharedOn: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
+          sourceDetails: requirement.sourceDetails ?? null,
+          role: requirement.position,
+          noOfPositions: requirement.noOfPositions ?? 1,
+          position: requirement.position, // Include position field as well
+          team: requirement.teamLead || 'N/A',
+          recruiter: requirement.talentAdvisor || 'N/A',
+          sharedOn: requirement.createdAt ? new Date(requirement.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit', month: '2-digit', year: 'numeric'
           }).replace(/\//g, '-') : 'N/A',
           status,
@@ -17324,15 +17368,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastActive: lastActiveDate ? new Date(lastActiveDate).toLocaleDateString('en-GB', {
             day: '2-digit', month: '2-digit', year: 'numeric'
           }).replace(/\//g, '-') : 'N/A',
-          jdFile: req.jdFile || null,
-          jdText: req.jdText || null,
-          ...parseRequirementJdExtras(req),
-          createdAt: req.createdAt || null,
-          sharedOnRaw: req.createdAt || null,
+          jdFile: buildJdFileServeUrl(requirement.jdFile || null, req),
+          jdText: requirement.jdText || null,
+          ...parseRequirementJdExtras(requirement),
+          createdAt: requirement.createdAt || null,
+          sharedOnRaw: requirement.createdAt || null,
           lastActiveRaw: lastActiveDate || null,
-          assignedClientMemberId: req.assignedClientMemberId || null,
-          assignedMemberName: req.assignedClientMemberId
-            ? assigneeNameById.get(req.assignedClientMemberId) || null
+          assignedClientMemberId: requirement.assignedClientMemberId || null,
+          assignedMemberName: requirement.assignedClientMemberId
+            ? assigneeNameById.get(requirement.assignedClientMemberId) || null
             : null,
         };
       }));
@@ -17388,7 +17432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all employees and requirements for enrichment
       const allEmployees = await storage.getAllEmployees();
-      const allRequirements = await storage.getRequirements();
+      const allRequirements = await storage.getRequirementsForList();
 
       // Transform applications to pipeline data format with TA information
       const pipelineData = applications.map((app: any) => {
@@ -18418,14 +18462,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const skillsByProfile = new Map<string, any[]>();
 
       if (profileIds.length > 0) {
+        try {
+          const candidateLookup = await storage.getCandidatesByIds(profileIds);
+          candidateLookup.forEach((value, key) => candidatesMap.set(key, value));
+        } catch (error) {
+          console.error("Error fetching shared profile candidate data:", error);
+        }
+
         const chunkSize = 100;
         for (let i = 0; i < profileIds.length; i += chunkSize) {
           const chunk = profileIds.slice(i, i + chunkSize);
-          const candidateRows = await db.select().from(candidates).where(inArray(candidates.id, chunk));
-          candidateRows.forEach((c) => candidatesMap.set(c.id, c));
-          const profileRows = await db.select().from(profiles).where(inArray(profiles.id, chunk));
+          const profileRows = await db
+            .select({
+              id: profiles.id,
+              firstName: profiles.firstName,
+              lastName: profiles.lastName,
+              email: profiles.email,
+              phone: profiles.phone,
+              mobile: profiles.mobile,
+              title: profiles.title,
+              location: profiles.location,
+              education: profiles.education,
+              portfolio: profiles.portfolio,
+              linkedinUrl: profiles.linkedinUrl,
+              profilePicture: profiles.profilePicture,
+              resumeFile: profiles.resumeFile,
+              skills: profiles.skills,
+              highestQualification: profiles.highestQualification,
+              collegeName: profiles.collegeName,
+              totalExperience: profiles.totalExperience,
+              currentCompany: profiles.currentCompany,
+              currentRole: profiles.currentRole,
+              noticePeriod: profiles.noticePeriod,
+              salaryRange: profiles.salaryRange,
+              preferredLocation: profiles.preferredLocation,
+              currentLocation: profiles.currentLocation,
+            })
+            .from(profiles)
+            .where(inArray(profiles.id, chunk));
           profileRows.forEach((p) => profilesMap.set(p.id, p));
         }
+
         for (const pid of profileIds) {
           try {
             const sk = await storage.getSkillsByProfile(pid);

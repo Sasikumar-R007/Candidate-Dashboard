@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,7 +51,6 @@ export default function BulkResumeUpload() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const statusCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Accepted file types
   const acceptedFileTypes = {
@@ -96,9 +95,6 @@ export default function BulkResumeUpload() {
     setCurrentJobId(null);
     setShowResults(false);
     setUploadProgress(0);
-    if (statusCheckIntervalRef.current) {
-      clearInterval(statusCheckIntervalRef.current);
-    }
   };
 
   // Job status polling
@@ -111,7 +107,8 @@ export default function BulkResumeUpload() {
       return response.json();
     },
     enabled: !!currentJobId,
-    refetchInterval: 2000
+    refetchInterval: (query) =>
+      query.state.data?.job?.status === "processing" ? 2000 : false,
   });
 
   // Bulk upload mutation
@@ -146,9 +143,6 @@ export default function BulkResumeUpload() {
         description: `${data.totalFiles} files uploaded successfully. Processing started.`,
         className: "bg-green-50 border-green-200 text-green-800",
       });
-
-      // Start polling for status
-      startStatusPolling();
     },
     onError: (error) => {
       setIsUploading(false);
@@ -170,17 +164,6 @@ export default function BulkResumeUpload() {
     }
   });
 
-  const startStatusPolling = () => {
-    if (statusCheckIntervalRef.current) {
-      clearInterval(statusCheckIntervalRef.current);
-    }
-
-    statusCheckIntervalRef.current = setInterval(() => {
-      refetchJobStatus();
-    }, 2000);
-  };
-
-  // Handle upload
   const handleUpload = async () => {
     if (files.length === 0) {
       toast({
@@ -194,7 +177,6 @@ export default function BulkResumeUpload() {
     setIsUploading(true);
     setUploadProgress(0);
 
-    // Simulate upload progress
     const progressInterval = setInterval(() => {
       setUploadProgress(prev => {
         if (prev >= 90) {
@@ -223,9 +205,6 @@ export default function BulkResumeUpload() {
   // Show results when job is completed
   useEffect(() => {
     if (jobStatus?.job?.status === 'completed' || jobStatus?.job?.status === 'failed') {
-      if (statusCheckIntervalRef.current) {
-        clearInterval(statusCheckIntervalRef.current);
-      }
       setShowResults(true);
     }
   }, [jobStatus?.job?.status]);

@@ -129,8 +129,7 @@ export default function AdminTopHeader({
       if (!response.ok) throw new Error('Failed to fetch activities');
       return response.json();
     },
-    enabled: showUserDropdown, // Only fetch when dropdown is open
-    refetchInterval: 30000,
+    enabled: showUserDropdown,
   });
   
   useEffect(() => {
@@ -271,10 +270,6 @@ export default function AdminTopHeader({
       }
     },
     enabled: isAdmin || isTL || isTA,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
     retry: 1,
   });
 

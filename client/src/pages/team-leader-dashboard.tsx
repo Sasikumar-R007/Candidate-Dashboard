@@ -58,8 +58,10 @@ import { ChatModal } from '@/components/chat/admin-chat-modal';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { SearchBar } from '@/components/ui/search-bar';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
+import { useStaggeredDashboardLoad } from '@/lib/use-staggered-dashboard-load';
 import type { Requirement, Employee } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
+import { adminCandidatesQueryOptions } from '@/lib/admin-candidates-query';
 import {
   CandidateCommentsSession,
   type CandidateCommentsSessionApplicant,
@@ -164,6 +166,7 @@ export default function TeamLeaderDashboard() {
   const queryClient = useQueryClient();
   const { user, isLoading } = useAuth();
   const employee = useEmployeeAuth();
+  const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   
   // ALL useState hooks MUST be here at the top, before any conditionals
@@ -350,16 +353,13 @@ export default function TeamLeaderDashboard() {
       if (!response.ok) throw new Error('Failed to fetch daily metrics');
       return response.json();
     },
-    enabled: !!employee, // Only fetch when employee is loaded
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    staleTime: 0, // Always consider data stale to ensure fresh updates
+    enabled: !!employee,
   });
 
   // Fetch pipeline counts for the right sidebar
   const { data: pipelineCounts = {} } = useQuery<Record<string, number>>({
     queryKey: ['/api/team-leader/pipeline-counts'],
-    enabled: !!employee,
-    refetchInterval: 10000, // Refresh every 10 seconds
+    enabled: !!employee && pipelineReady,
   });
 
   const { data: meetings = [], isLoading: isLoadingMeetings, isError: isErrorMeetings } = useQuery<any[]>({
@@ -369,8 +369,7 @@ export default function TeamLeaderDashboard() {
   // Fetch chat rooms for TL (direct messages with Admin/TA)
   const { data: chatRoomsData, isLoading: isLoadingChatRooms, refetch: refetchChatRooms } = useQuery<{ rooms: any[] }>({
     queryKey: ['/api/chat/rooms'],
-    enabled: !!employee, // Only fetch if logged in
-    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+    enabled: !!employee,
   });
 
   // Filter chat rooms to show only direct messages (Admin-TL/TA conversations)
@@ -444,6 +443,7 @@ export default function TeamLeaderDashboard() {
   // Fetch pipeline data for team leader
   const { data: pipelineData = [], isLoading: isLoadingPipeline, isError: isErrorPipeline, refetch: refetchPipeline } = useQuery<any[]>({
     queryKey: ['/api/team-leader/pipeline', selectedPipelineRecruiter, pipelineDate !== null ? format(pipelineDate, 'yyyy-MM-dd') : 'all'],
+    enabled: !!employee && pipelineReady,
     queryFn: async () => {
       const API_BASE_URL = import.meta.env.VITE_API_URL || '';
       const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
@@ -458,19 +458,12 @@ export default function TeamLeaderDashboard() {
       if (!response.ok) throw new Error('Failed to fetch pipeline data');
       return response.json();
     },
-    enabled: !!employee,
-    refetchOnWindowFocus: true,
-    staleTime: 0, // Always consider data stale to ensure fresh updates
-    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   // Fetch requirements from API
   const { data: requirementsData = [], isLoading: isLoadingRequirements } = useQuery<Requirement[]>({
     queryKey: ['/api/team-leader/requirements'],
-    enabled: !!employee, // Only fetch if logged in
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000,
+    enabled: !!employee && requirementsReady,
   });
 
   const visibleRequirementsData = requirementsData as any[];
@@ -509,14 +502,12 @@ export default function TeamLeaderDashboard() {
   // Fetch closures data from API
   const { data: closureData = [], isLoading: isLoadingClosures } = useQuery<any[]>({
     queryKey: ['/api/team-leader/closures'],
+    enabled: !!employee && closuresReady,
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/team-leader/closures');
       if (!response.ok) throw new Error('Failed to fetch closures');
       return response.json();
     },
-    enabled: !!employee,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
   });
 
   const tlClosureReportsForPipeline = useMemo(
@@ -561,14 +552,11 @@ export default function TeamLeaderDashboard() {
     enabled: !!employee && employee.role === 'team_leader',
   });
 
-  const { data: tlSourcingCandidates = [] } = useQuery<any[]>({
-    queryKey: ['/api/team-leader/sourcing/candidates', employee?.id],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/candidates');
-      return await response.json();
-    },
+  const { data: tlSourcingCandidatesPage } = useQuery({
+    ...adminCandidatesQueryOptions(1, 20),
     enabled: !!employee && employee.role === 'team_leader',
   });
+  const tlSourcingCandidates = tlSourcingCandidatesPage?.data ?? [];
 
   // Fetch team performance graph data
   const { data: performanceGraphData, isLoading: isLoadingPerformanceGraph } = useQuery<{
@@ -604,22 +592,11 @@ export default function TeamLeaderDashboard() {
   );
 
   const tlOwnedCandidates = useMemo(
-    () =>
-      tlSourcingCandidates.filter(
-        (candidate: any) =>
-          (
-            candidate.ownerEmployeeId === employee?.id &&
-            candidate.ownerRole === 'team_leader'
-          ) ||
-          (
-            !candidate.ownerEmployeeId &&
-            candidate.addedBy === employee?.name
-          )
-      ),
-    [employee?.id, employee?.name, tlSourcingCandidates]
+    () => tlSourcingCandidates,
+    [tlSourcingCandidates],
   );
 
-  const tlResumeCount = tlOwnedCandidates.length;
+  const tlResumeCount = tlSourcingCandidatesPage?.total ?? tlOwnedCandidates.length;
 
   const formatSourcingDate = (value: string | Date | null | undefined) => {
     if (!value) return '-';

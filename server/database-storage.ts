@@ -99,7 +99,7 @@ import { getRequirementResumeTarget } from "@shared/constants";
 import { db } from "./db";
 import { eq, and, or, isNull, lt, desc, sql, count, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import type { IStorage } from "./storage";
+import type { IStorage, CandidateListFilter } from "./storage";
 import {
   enrichTargetMappingWithRevenue,
   formatRelativeClosureTime,
@@ -398,10 +398,9 @@ export class DatabaseStorage implements IStorage {
     options?: { includeResumeText?: boolean },
   ): Promise<Candidate[]> {
     const availableColumns = await this.getAvailableColumns("candidates");
-    const columnPool =
-      options?.includeResumeText === false
-        ? candidateListColumnCandidates
-        : candidateColumnCandidates;
+    const columnPool = options?.includeResumeText === true
+      ? candidateColumnCandidates
+      : candidateListColumnCandidates;
     const selectedColumns = columnPool.filter((column) => availableColumns.includes(column));
 
     const result = await db.execute(sql`
@@ -510,6 +509,8 @@ export class DatabaseStorage implements IStorage {
       const chunk = uniqueIds.slice(i, i + chunkSize);
       const rows = await this.queryCandidates(
         sql`${sql.raw(`"id"`)} IN (${sql.join(chunk.map((id) => sql`${id}`), sql`, `)})`,
+        undefined,
+        { includeResumeText: false },
       );
       for (const row of rows) {
         map.set(row.id, row);
@@ -977,7 +978,9 @@ export class DatabaseStorage implements IStorage {
 
   // Candidate methods
   async getCandidateById(id: string): Promise<Candidate | undefined> {
-    const [candidate] = await this.queryCandidates(sql`id = ${id}`);
+    const [candidate] = await this.queryCandidates(sql`id = ${id}`, undefined, {
+      includeResumeText: true,
+    });
     return candidate;
   }
 
@@ -986,8 +989,15 @@ export class DatabaseStorage implements IStorage {
     return candidate;
   }
 
-  async getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined> {
-    const [candidate] = await this.queryCandidates(sql`candidate_id = ${candidateId}`);
+  async getCandidateByCandidateId(
+    candidateId: string,
+    options?: { includeResumeText?: boolean },
+  ): Promise<Candidate | undefined> {
+    const [candidate] = await this.queryCandidates(
+      sql`candidate_id = ${candidateId}`,
+      undefined,
+      options?.includeResumeText ? { includeResumeText: true } : undefined,
+    );
     return candidate;
   }
 
@@ -1049,6 +1059,65 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  private buildActiveCandidateWhere(filter?: CandidateListFilter): ReturnType<typeof sql> {
+    const parts = [sql`COALESCE(is_active, true) = true`];
+
+    if (filter?.ownerEmployeeId && filter?.ownerRole) {
+      if (filter.ownerRole === "recruiter" && filter.legacyAddedBy) {
+        parts.push(sql`(
+          (owner_employee_id = ${filter.ownerEmployeeId} AND owner_role = ${filter.ownerRole})
+          OR (owner_employee_id IS NULL AND added_by = ${filter.legacyAddedBy})
+        )`);
+      } else {
+        parts.push(
+          sql`(owner_employee_id = ${filter.ownerEmployeeId} AND owner_role = ${filter.ownerRole})`,
+        );
+      }
+    }
+
+    return sql.join(parts, sql` AND `);
+  }
+
+  async getCandidatesPaginated(
+    page: number,
+    limit: number,
+    filter?: CandidateListFilter,
+  ): Promise<Candidate[]> {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.max(1, limit);
+    const offset = (safePage - 1) * safeLimit;
+
+    return this.queryCandidates(
+      this.buildActiveCandidateWhere(filter),
+      sql`ORDER BY created_at DESC, id DESC LIMIT ${safeLimit} OFFSET ${offset}`,
+      { includeResumeText: false },
+    );
+  }
+
+  async countActiveCandidates(filter?: CandidateListFilter): Promise<number> {
+    const breakdown = await this.countActiveCandidatesBreakdown(filter);
+    return breakdown.total;
+  }
+
+  async countActiveCandidatesBreakdown(
+    filter?: CandidateListFilter,
+  ): Promise<{ total: number; active: number; inactive: number }> {
+    const result = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE COALESCE(is_active, true) = true)::int AS active,
+        COUNT(*) FILTER (WHERE COALESCE(is_active, true) = false)::int AS inactive
+      FROM ${sql.raw(`"candidates"`)}
+      WHERE ${this.buildActiveCandidateWhere(filter)}
+    `);
+    const row = result.rows[0] as { total?: number; active?: number; inactive?: number } | undefined;
+    return {
+      total: row?.total ?? 0,
+      active: row?.active ?? 0,
+      inactive: row?.inactive ?? 0,
+    };
+  }
+
   async getAllCandidates(): Promise<Candidate[]> {
     return await this.queryCandidates(
       sql`COALESCE(is_active, true) = true`,
@@ -1081,12 +1150,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async generateNextCandidateId(): Promise<string> {
-    const allCandidates = await this.queryCandidates();
-    const maxNumber = allCandidates
-      .map(c => parseInt(c.candidateId.replace('STCA', '')))
-      .filter(n => !isNaN(n))
-      .reduce((max, current) => Math.max(max, current), 0);
-    
+    const result = await db.execute(sql`
+      SELECT MAX(
+        CAST(NULLIF(REGEXP_REPLACE(candidate_id, '^STCA', ''), '') AS INTEGER)
+      ) AS max_num
+      FROM candidates
+      WHERE candidate_id ~ '^STCA[0-9]+$'
+    `);
+    const maxNumber = Number((result.rows[0] as { max_num?: number | null })?.max_num) || 0;
     const nextNumber = maxNumber + 1;
     return `STCA${nextNumber.toString().padStart(3, '0')}`;
   }
@@ -1174,11 +1245,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCandidateCounts(): Promise<{total: number, active: number, inactive: number}> {
-    const allCandidates = await db.select().from(candidates);
-    const total = allCandidates.length;
-    const active = allCandidates.filter(c => c.isActive).length;
-    const inactive = allCandidates.filter(c => !c.isActive).length;
-    return { total, active, inactive };
+    const result = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE COALESCE(is_active, true) = true)::int AS active,
+        COUNT(*) FILTER (WHERE COALESCE(is_active, true) = false)::int AS inactive
+      FROM candidates
+    `);
+    const row = result.rows[0] as { total?: number; active?: number; inactive?: number } | undefined;
+    return {
+      total: row?.total ?? 0,
+      active: row?.active ?? 0,
+      inactive: row?.inactive ?? 0,
+    };
   }
 
   async createBulkUploadJob(job: InsertBulkUploadJob): Promise<BulkUploadJob> {

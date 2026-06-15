@@ -1,4 +1,5 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import path from "path";
 
 const s3 = new S3Client({
   region: "auto",
@@ -66,10 +67,18 @@ export async function getR2FileByFolderAndName(
   folder: string,
   fileName: string,
 ): Promise<{ body: Buffer; contentType: string } | null> {
-  const keyCandidates = [
-    `${folder}/${fileName}`,
-    `${folder}/${encodeURIComponent(fileName)}`,
-  ];
+  let decoded = fileName;
+  try {
+    decoded = decodeURIComponent(fileName);
+  } catch {
+    decoded = fileName;
+  }
+  const objectName = decoded.startsWith(`${folder}/`)
+    ? decoded.slice(folder.length + 1)
+    : decoded;
+  const baseName = path.basename(objectName);
+
+  const keyCandidates = [`${folder}/${objectName}`, `${folder}/${baseName}`];
   const seen = new Set<string>();
   for (const key of keyCandidates) {
     if (seen.has(key)) continue;
@@ -77,6 +86,32 @@ export async function getR2FileByFolderAndName(
     const object = await getR2Object(key);
     if (object) return object;
   }
+
+  try {
+    const response = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: process.env.R2_BUCKET,
+        Prefix: `${folder}/`,
+        MaxKeys: 1000,
+      }),
+    );
+    const match = response.Contents?.find((item) => {
+      if (!item.Key) return false;
+      const itemBase = item.Key.split("/").pop() || "";
+      return (
+        itemBase === baseName ||
+        itemBase === decoded ||
+        item.Key.endsWith(`/${baseName}`) ||
+        item.Key.endsWith(`/${decoded}`)
+      );
+    });
+    if (match?.Key) {
+      return getR2Object(match.Key);
+    }
+  } catch (error) {
+    console.error(`R2 list fallback failed for ${folder}/${baseName}:`, error);
+  }
+
   return null;
 }
 

@@ -41,8 +41,6 @@ export function CandidateNotificationBell({ onNavigateToMyJobs }: CandidateNotif
   const { data: jobApplications = [], isLoading: appsLoading } = useJobApplications();
   const { data: candidateNudges = [], isLoading: nudgesLoading } = useQuery<CandidateNudgeRow[]>({
     queryKey: ["/api/candidate/nudges"],
-    refetchInterval: 20_000,
-    refetchOnWindowFocus: true,
   });
 
   const rows = useMemo(
@@ -98,6 +96,12 @@ export function CandidateNotificationBell({ onNavigateToMyJobs }: CandidateNotif
       window.removeEventListener("scroll", updatePanelPosition, true);
     };
   }, [open, updatePanelPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    void queryClient.invalidateQueries({ queryKey: ["/api/candidate/nudges"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/job-applications"] });
+  }, [open, queryClient]);
 
   useEffect(() => {
     if (!open) return;

@@ -77,8 +77,9 @@ function toStoredFileApiUrl(
 
 function shouldProxyStoredUrl(url: string, apiFolder: string, legacyPatterns: RegExp[]): boolean {
   if (url.includes(`/api/files/${apiFolder}/`)) return false;
-  if (/\.r2\.dev\b/i.test(url) || /r2\.cloudflarestorage\.com/i.test(url)) {
-    return new RegExp(`/${apiFolder}/[^/?#]+`, "i").test(url);
+  // Proxy any remote object URL under /<folder>/… (R2 public URL, custom CDN domain, etc.)
+  if (/^https?:\/\//i.test(url) && new RegExp(`/${apiFolder}/[^/?#]+`, "i").test(url)) {
+    return true;
   }
   return legacyPatterns.some((pattern) => pattern.test(url));
 }
@@ -93,6 +94,14 @@ export function resolveJdFileUrl(filePath?: string | null): string | null {
   ];
 
   if (url.startsWith("blob:")) return url;
+
+  if (/^jds\/[^/]+/i.test(url)) {
+    const fileName = url.replace(/^jds\//i, "");
+    const apiBase = getApiBaseUrl();
+    if (apiBase && fileName) {
+      return `${apiBase}/api/files/jds/${encodeURIComponent(fileName)}`;
+    }
+  }
 
   if (url.startsWith("http://") || url.startsWith("https://")) {
     if (shouldProxyStoredUrl(url, "jds", legacyPatterns)) {

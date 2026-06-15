@@ -97,7 +97,7 @@ export default function EmployerLogin() {
       }
 
       if (result.success && result.employee) {
-        const sessionOk = await verifySession();
+        const sessionOk = await verifySession({ force: true });
         if (!sessionOk) {
           throw new Error("Session could not be verified after login. Please try again.");
         }

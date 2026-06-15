@@ -58,6 +58,7 @@ import {
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
 import { queryPresets } from '@/lib/query-config';
+import { useStaggeredDashboardLoad } from '@/lib/use-staggered-dashboard-load';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
 import { SignOutDialog } from '@/components/ui/sign-out-dialog';
 import ClientAgreementFirstLoginModal from '@/components/client-dashboard/client-agreement-first-login-modal';
@@ -87,6 +88,7 @@ import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-sett
 import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
 
 export default function ClientDashboard() {
+  const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
   const { logout, beginSignOut, isSigningOut } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -332,6 +334,7 @@ export default function ClientDashboard() {
   const { data: allRolesData, isLoading: isLoadingRoles } = useQuery({
     ...queryPresets.standard,
     queryKey: ['/api/client/requirements'],
+    enabled: requirementsReady,
     placeholderData: [],
   });
 
@@ -339,6 +342,7 @@ export default function ClientDashboard() {
   const { data: pipelineData, isLoading: isLoadingPipeline } = useQuery({
     ...queryPresets.live,
     queryKey: ['/api/client/pipeline', selectedRequirement],
+    enabled: pipelineReady,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedRequirement && selectedRequirement !== 'all') {
@@ -361,6 +365,7 @@ export default function ClientDashboard() {
   const { data: allClosureReports = [], isLoading: isLoadingClosures } = useQuery<ClosureReportRow[]>({
     ...queryPresets.live,
     queryKey: ['/api/client/closures'],
+    enabled: closuresReady,
     placeholderData: [],
   });
   const closureReportsList = Array.isArray(allClosureReports) ? allClosureReports : [];
