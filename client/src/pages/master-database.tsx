@@ -1484,7 +1484,7 @@ export default function MasterDatabase() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="resume">Resume ({resumeData.length})</SelectItem>
+              <SelectItem value="resume">Resume ({candidatesTotal})</SelectItem>
               <SelectItem value="employee">Employee ({employeeData.length})</SelectItem>
               <SelectItem value="client">Client ({clientData.length})</SelectItem>
             </SelectContent>

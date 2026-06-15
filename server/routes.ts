@@ -15874,7 +15874,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         whereClause = eq(candidates.isActive, true);
       }
 
-      const SOURCE_RESUME_SCORING_POOL_LIMIT = 50;
       const SOURCE_RESUME_MAX_PAGE_SIZE = 50;
       const inMemoryScoreSorts = new Set([
         "relevance",
@@ -15897,22 +15896,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offset = (page - 1) * pageSize;
 
       const isInMemorySort = inMemoryScoreSorts.has(sortOption);
-      const shouldCapScoringPool = isInMemorySort && !queryConditions;
 
       let filteredCandidatesQuery = db.select(candidateListSelect).from(candidates).where(whereClause);
 
       if (!isInMemorySort) {
         filteredCandidatesQuery = filteredCandidatesQuery.orderBy(getSortOrder(sortOption));
         filteredCandidatesQuery = filteredCandidatesQuery.limit(pageSize).offset(offset);
-      } else if (shouldCapScoringPool) {
-        // "Single tab" default mode: keep lightweight initial pool for responsiveness.
-        filteredCandidatesQuery = filteredCandidatesQuery
-          .orderBy(desc(candidates.createdAt))
-          .limit(SOURCE_RESUME_SCORING_POOL_LIMIT);
       } else {
-        // Filtered search mode: score against the full filtered dataset, not only the first 50 rows.
-        filteredCandidatesQuery = filteredCandidatesQuery
-          .orderBy(desc(candidates.createdAt));
+        // Score against the full SQL-filtered dataset, then paginate in memory.
+        filteredCandidatesQuery = filteredCandidatesQuery.orderBy(desc(candidates.createdAt));
       }
 
       let candidatesList;
@@ -15929,9 +15921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw queryError;
       }
 
-      const totalCount = shouldCapScoringPool
-        ? Math.min(matchedCount, SOURCE_RESUME_SCORING_POOL_LIMIT)
-        : matchedCount;
+      const totalCount = matchedCount;
 
       // Get requirement if provided
       let requirement = null;
