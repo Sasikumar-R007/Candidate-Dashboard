@@ -9403,15 +9403,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((c: { brandName: string; logo: string | null }) => [c.brandName, c.logo] as const),
       );
       res.json(
-        enriched.map((req: { company?: string }) => ({
-          ...req,
-          companyLogo: req.company ? logoByCompany.get(req.company) ?? null : null,
+        enriched.map((reqRow: { company?: string; jdFile?: string | null }) => ({
+          ...reqRow,
+          companyLogo: reqRow.company ? logoByCompany.get(reqRow.company) ?? null : null,
+          jdFile: buildJdFileServeUrl(reqRow.jdFile, req) ?? reqRow.jdFile ?? null,
         })),
       );
       console.timeEnd("requirements:admin");
     } catch (error) {
       console.timeEnd("requirements:admin");
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/requirements/:id/jd-view", requireEmployeeAuth, async (req, res) => {
+    try {
+      const lookupId = String(req.params.id || "").replace(/^recent-closed-/, "");
+      if (!lookupId) {
+        return res.status(400).json({ message: "Requirement id is required" });
+      }
+
+      const requirement = await storage.getRequirementById(lookupId);
+      if (!requirement) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      const enriched = enrichRequirementWithJdExtrasForApi(req, requirement);
+      res.json({
+        jdFile: enriched.jdFile ?? null,
+        jdText: requirement.jdText ?? null,
+        primarySkills: enriched.primarySkills ?? null,
+        secondarySkills: enriched.secondarySkills ?? null,
+        knowledgeOnly: enriched.knowledgeOnly ?? null,
+        specialInstructions: enriched.specialInstructions ?? null,
+      });
+    } catch (error) {
+      console.error("Get requirement JD view error:", error);
+      res.status(500).json({ message: "Failed to load job description" });
     }
   });
 

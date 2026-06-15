@@ -2998,11 +2998,14 @@ export default function ClientDashboard() {
                     {/* JD File Preview */}
                     {selectedRoleForView.jdFile && (() => {
                       const storedJdUrl = resolveJdFileUrl(selectedRoleForView.jdFile);
+                      const isPdfDoc = /\.pdf(\?|#|$)/i.test(
+                        `${selectedRoleForView.jdFile} ${storedJdUrl || ""}`,
+                      );
                       return (
                       <div className="mb-4">
                         <label className="text-xs font-medium text-gray-600 mb-2 block">JD Document</label>
                         <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                          {selectedRoleForView.jdFile.toLowerCase().endsWith('.pdf') && storedJdUrl ? (
+                          {isPdfDoc && storedJdUrl ? (
                             <div className="border border-gray-300 rounded-lg overflow-hidden">
                               <iframe
                                 src={storedJdUrl}

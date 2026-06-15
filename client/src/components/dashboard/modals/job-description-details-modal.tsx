@@ -21,6 +21,26 @@ import {
 import { cn } from "@/lib/utils";
 import { resolveJdFileUrl as resolveStoredJdFileUrl } from "@/lib/resolve-upload-url";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_BACKEND_URL ||
+  ""
+).trim();
+
+type JdViewPayload = {
+  jdFile?: string | null;
+  jdText?: string | null;
+  primarySkills?: string | null;
+  secondarySkills?: string | null;
+  knowledgeOnly?: string | null;
+  specialInstructions?: string | null;
+};
+
+function isPdfJd(jdFile?: string | null, jdFileUrl?: string | null): boolean {
+  const probe = `${jdFile || ""} ${jdFileUrl || ""}`.toLowerCase();
+  return /\.pdf(\?|#|$)/.test(probe);
+}
+
 export type JobDescriptionDetailsData = {
   id?: string;
   displayRequirementId?: string | null;
@@ -165,37 +185,16 @@ function JdDocumentPanel({
   jdText,
   extras,
   variant,
+  loading,
 }: {
   jdFile?: string | null;
   jdText?: string | null;
   extras: RequirementJdExtras;
   variant: "admin" | "delivery";
+  loading?: boolean;
 }) {
   const jdFileUrl = useMemo(() => resolveJdFileUrl(jdFile), [jdFile]);
-  const isPdf = Boolean(jdFileUrl?.toLowerCase().includes(".pdf"));
-  const [fileStatus, setFileStatus] = useState<"idle" | "checking" | "available" | "unavailable">("idle");
-
-  useEffect(() => {
-    if (!jdFileUrl) {
-      setFileStatus("idle");
-      return;
-    }
-
-    let cancelled = false;
-    setFileStatus("checking");
-
-    fetch(jdFileUrl, { method: "HEAD", credentials: "include" })
-      .then((res) => {
-        if (!cancelled) setFileStatus(res.ok ? "available" : "unavailable");
-      })
-      .catch(() => {
-        if (!cancelled) setFileStatus("available");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [jdFileUrl]);
+  const isPdf = isPdfJd(jdFile, jdFileUrl);
 
   const fileName = jdFile?.split("/").pop() || "document";
   const hasSkillsOrInstructions = Boolean(
@@ -226,51 +225,55 @@ function JdDocumentPanel({
         </div>
       </div>
 
-      {jdFileUrl && (
+      {loading && (
+        <p className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800">
+          Loading job description…
+        </p>
+      )}
+
+      {!loading && jdFileUrl && isPdf && (
         <div className="mb-4">
-          {fileStatus === "checking" && (
-            <p className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800">
-              Checking document availability…
-            </p>
-          )}
-
-          {fileStatus === "available" && isPdf && jdFileUrl && (
-            <JdSection title="Document preview" accent="indigo">
-              <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
-                <iframe src={jdFileUrl} className="h-[min(520px,50vh)] w-full bg-white" title="JD PDF Preview" />
-              </div>
-            </JdSection>
-          )}
-
-          {fileStatus === "available" && !isPdf && jdFileUrl && (
-            <JdSection title="Attached document" accent="indigo">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
-                  <p className="mt-1 text-xs text-slate-500">Opens in a new tab</p>
-                </div>
-                <a
-                  href={jdFileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Open document
-                </a>
-              </div>
-            </JdSection>
-          )}
-
-          {fileStatus === "unavailable" && (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-sm leading-relaxed text-amber-900">
-              The job description file could not be loaded. Use the text below if available, or contact your recruiter.
-            </p>
-          )}
+          <JdSection title="Document preview" accent="indigo">
+            <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
+              <iframe
+                src={jdFileUrl}
+                className="h-[min(520px,50vh)] w-full bg-white"
+                title="JD PDF Preview"
+              />
+            </div>
+          </JdSection>
         </div>
       )}
 
-      {!jdFileUrl && !jdText?.trim() && !hasSkillsOrInstructions && (
+      {!loading && jdFileUrl && !isPdf && (
+        <div className="mb-4">
+          <JdSection title="Attached document" accent="indigo">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
+                <p className="mt-1 text-xs text-slate-500">Opens in a new tab</p>
+              </div>
+              <a
+                href={jdFileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open document
+              </a>
+            </div>
+          </JdSection>
+        </div>
+      )}
+
+      {!loading && !jdFileUrl && jdFile?.trim() && (
+        <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-sm leading-relaxed text-amber-900">
+          The job description file reference is invalid or expired. Use the text below if available, or re-upload the JD.
+        </p>
+      )}
+
+      {!loading && !jdFileUrl && !jdText?.trim() && !hasSkillsOrInstructions && (
         <p className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-800/50">
           No job description has been uploaded for this role yet.
         </p>
@@ -307,23 +310,67 @@ export default function JobDescriptionDetailsModal({
   subtitle = "Review all JD information for this requirement.",
   variant = "delivery",
 }: JobDescriptionDetailsModalProps) {
+  const [jdView, setJdView] = useState<JdViewPayload | null>(null);
+  const [jdLoading, setJdLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !data?.id) {
+      setJdView(null);
+      setJdLoading(false);
+      return;
+    }
+
+    const lookupId = data.id.replace(/^recent-closed-/, "");
+    let cancelled = false;
+    setJdLoading(true);
+    setJdView(null);
+
+    const apiBase = API_BASE_URL.replace(/\/+$/, "");
+    fetch(`${apiBase}/api/requirements/${encodeURIComponent(lookupId)}/jd-view`, {
+      credentials: "include",
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload: JdViewPayload | null) => {
+        if (!cancelled) setJdView(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setJdView(null);
+      })
+      .finally(() => {
+        if (!cancelled) setJdLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, data?.id]);
+
   if (!data) return null;
 
-  const spocLabel = data.spocName || data.spoc || "N/A";
-  const jdExtras = parseRequirementJdExtras(data);
+  const displayJdFile = jdView?.jdFile ?? data.jdFile ?? null;
+  const displayJdText = jdView?.jdText ?? data.jdText ?? null;
+  const jdExtras = parseRequirementJdExtras({
+    ...data,
+    primarySkills: jdView?.primarySkills ?? data.primarySkills,
+    secondarySkills: jdView?.secondarySkills ?? data.secondarySkills,
+    knowledgeOnly: jdView?.knowledgeOnly ?? data.knowledgeOnly,
+    specialInstructions: jdView?.specialInstructions ?? data.specialInstructions,
+  });
   const hasDocumentSection = Boolean(
-    data.jdFile?.trim() ||
-      data.jdText?.trim() ||
+    displayJdFile?.trim() ||
+      displayJdText?.trim() ||
       jdExtras.primarySkills?.trim() ||
       jdExtras.secondarySkills?.trim() ||
       jdExtras.knowledgeOnly?.trim() ||
-      jdExtras.specialInstructions?.trim(),
+      jdExtras.specialInstructions?.trim() ||
+      jdLoading,
   );
   const displayRoleId = resolveDisplayRoleId(data);
   const displayRequirementId = resolveRequirementDisplayId(
     data,
     data.displayRequirementId ?? undefined,
   );
+  const spocLabel = data.spocName || data.spoc || "N/A";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -454,10 +501,11 @@ export default function JobDescriptionDetailsModal({
 
             {hasDocumentSection ? (
               <JdDocumentPanel
-                jdFile={data.jdFile}
-                jdText={data.jdText}
+                jdFile={displayJdFile}
+                jdText={displayJdText}
                 extras={jdExtras}
                 variant={variant}
+                loading={jdLoading}
               />
             ) : (
               <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 dark:border-slate-600 dark:bg-slate-800/50">
