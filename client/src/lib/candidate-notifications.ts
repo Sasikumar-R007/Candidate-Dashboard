@@ -54,7 +54,7 @@ export function buildCandidateNotificationRows(
       id: nudge.id,
       kind: "nudgeUpdate",
       line: `Nudge update - ${title} - ${company} - ${preview}`,
-      createdAt: nudge.respondedAt || nudge.createdAt || null,
+      createdAt: nudge.respondedAt || nudge.createdAt || new Date().toISOString(),
       isUnread: !nudge.isRead,
     });
   }
@@ -70,7 +70,7 @@ export function buildCandidateNotificationRows(
         id: app.id,
         kind: "offer",
         line: `Offer update - ${app.jobTitle} - ${app.company} - ${app.status}`,
-        createdAt: app.appliedDate ? String(app.appliedDate) : null,
+        createdAt: app.appliedDate ? String(app.appliedDate) : new Date().toISOString(),
         isUnread: false,
       });
       continue;
@@ -84,7 +84,7 @@ export function buildCandidateNotificationRows(
         id: app.id,
         kind: "statusUpdate",
         line: `Status updated - ${app.jobTitle} - ${app.company} - ${app.status}`,
-        createdAt: app.appliedDate ? String(app.appliedDate) : null,
+        createdAt: app.appliedDate ? String(app.appliedDate) : new Date().toISOString(),
         isUnread: false,
       });
     }

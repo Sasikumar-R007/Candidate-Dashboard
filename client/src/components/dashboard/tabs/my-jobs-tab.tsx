@@ -85,6 +85,20 @@ const PIPELINE_STAGES = [
 
 const mapStatusToStage = mapCandidateApplicationStage;
 
+function NudgeSendingDots() {
+  return (
+    <span className="inline-flex items-center justify-center gap-0.5" aria-label="Sending nudge">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="h-1 w-1 rounded-full bg-white animate-bounce"
+          style={{ animationDelay: `${i * 0.12}s`, animationDuration: "0.6s" }}
+        />
+      ))}
+    </span>
+  );
+}
+
 function calculateTimeRemaining(lastNudgedAt: Date | string | null, status: string): string | null {
   if (!lastNudgedAt) return null;
   const lastNudge = new Date(lastNudgedAt);
@@ -170,6 +184,17 @@ export default function MyJobsTab({
       const res = await apiRequest('POST', `/api/applications/${applicationId}/nudge`, {});
       return res.json();
     },
+    onMutate: async (applicationId) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/job-applications'] });
+      const previous = queryClient.getQueryData<JobApplication[]>(['/api/job-applications']);
+      const now = new Date().toISOString();
+      queryClient.setQueryData<JobApplication[]>(['/api/job-applications'], (old) =>
+        old?.map((app) =>
+          app.id === applicationId ? { ...app, lastNudgedAt: now as unknown as Date } : app,
+        ),
+      );
+      return { previous };
+    },
     onSuccess: (_data, applicationId) => {
       toast({
         title: "Nudge sent",
@@ -183,7 +208,10 @@ export default function MyJobsTab({
         return next;
       });
     },
-    onError: (error: Error, applicationId) => {
+    onError: (error: Error, applicationId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['/api/job-applications'], context.previous);
+      }
       toast({
         title: error.message.includes('wait') ? "Nudge on cooldown" : "Could not send nudge",
         description: error.message || "Please try again in a moment.",
@@ -595,6 +623,7 @@ export default function MyJobsTab({
   };
 
   const handleNudge = (application: JobApplication) => {
+    if (candidateNudgeCooldownHours(application.status) == null) return;
     if (nudgingApplicationIds.has(application.id) || nudgeMutation.isPending) return;
     if (timeRemainingMap[application.id]) return;
 
@@ -725,10 +754,10 @@ export default function MyJobsTab({
                       {stageApplications.map((job) => {
                         const isExpanded = !isBelowLg && expandedJobId === job.id;
                         const timeRemaining = timeRemainingMap[job.id];
-                        const isNudgeDisabled =
-                          !!timeRemaining ||
+                        const isSending =
                           nudgingApplicationIds.has(job.id) ||
                           (nudgeMutation.isPending && nudgeMutation.variables === job.id);
+                        const isNudgeDisabled = !!timeRemaining || isSending;
                         const jobNudgeUpdates = candidateNudges.filter(
                           (n) => n.applicationId === job.id && (n.isResponded || n.message),
                         );
@@ -931,12 +960,12 @@ export default function MyJobsTab({
                                               handleNudge(job);
                                             }}
                                           >
-                                            {isNudgeDisabled ? (
+                                            {isSending ? (
+                                              <NudgeSendingDots />
+                                            ) : timeRemaining ? (
                                               <span className="flex items-center gap-1.5">
                                                 <Clock className="w-3 h-3" />
-                                                {nudgingApplicationIds.has(job.id) || nudgeMutation.variables === job.id
-                                                  ? 'Sending…'
-                                                  : timeRemaining}
+                                                {timeRemaining}
                                               </span>
                                             ) : (
                                               <><Zap className="w-3.5 h-3.5" /> Nudge</>
@@ -1167,10 +1196,10 @@ export default function MyJobsTab({
         {mobileExpandedContext && (() => {
           const { job, stage } = mobileExpandedContext;
           const timeRemaining = timeRemainingMap[job.id];
-          const isNudgeDisabled =
-            !!timeRemaining ||
+          const isSending =
             nudgingApplicationIds.has(job.id) ||
             (nudgeMutation.isPending && nudgeMutation.variables === job.id);
+          const isNudgeDisabled = !!timeRemaining || isSending;
           const latestNudge = candidateNudges
             .filter((n) => n.applicationId === job.id && (n.isResponded || n.message))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
@@ -1240,12 +1269,12 @@ export default function MyJobsTab({
                         disabled={isNudgeDisabled}
                         onClick={() => handleNudge(job)}
                       >
-                        {isNudgeDisabled ? (
+                        {isSending ? (
+                          <NudgeSendingDots />
+                        ) : timeRemaining ? (
                           <span className="flex items-center justify-center gap-1">
                             <Clock className="w-3.5 h-3.5" />
-                            {nudgingApplicationIds.has(job.id) || nudgeMutation.variables === job.id
-                              ? "Sending…"
-                              : timeRemaining}
+                            {timeRemaining}
                           </span>
                         ) : (
                           <>

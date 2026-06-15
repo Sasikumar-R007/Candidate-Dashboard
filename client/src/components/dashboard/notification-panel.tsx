@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ChevronDown, X } from "lucide-react";
+import { formatEscalationRemainingLabel } from "@shared/nudge-timing";
 
 export type NotificationPanelRow = {
   key: string;
@@ -9,6 +10,8 @@ export type NotificationPanelRow = {
   createdAt?: string | null;
   isUnread?: boolean;
   nudgeId?: string;
+  escalationLevel?: string | null;
+  currentStatus?: string | null;
 };
 
 export type NotificationNavigateSection =
@@ -79,18 +82,20 @@ function formatTimeLabel(createdAt?: string | null): string {
   if (!createdAt) return "";
   const d = new Date(createdAt);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  const datePart = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timePart = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${datePart}, ${timePart}`;
 }
 
-function formatNudgeRemaining(createdAt?: string | null, totalHours = 12): string | null {
-  if (!createdAt) return null;
-  const deadline = new Date(createdAt).getTime() + totalHours * 3600000;
-  const rem = deadline - Date.now();
-  if (rem <= 0) return "Overdue";
-  const h = Math.floor(rem / 3600000);
-  const m = Math.floor((rem % 3600000) / 60000);
-  return `${h}hrs ${m}min`;
-}
+const NUDGE_TIMER_KINDS = new Set(["nudge", "escalation", "escalatedNudge"]);
 
 /** Bold only person names (employee/TA/candidate) and company names — not roles, dates, or labels. */
 function getBoldIndices(parts: string[], kind: string): Set<number> {
@@ -159,6 +164,7 @@ function NotificationCard({
   onNavigate,
   onAct,
   showDismissAlways = false,
+  now = new Date(),
 }: {
   row: NotificationPanelRow;
   section: NotificationSectionConfig;
@@ -167,15 +173,20 @@ function NotificationCard({
   onNavigate: (section: NotificationNavigateSection, row: NotificationPanelRow) => void;
   onAct?: (row: NotificationPanelRow) => void;
   showDismissAlways?: boolean;
+  now?: Date;
 }) {
   const parts = parseLineParts(row.line);
   const boldIndices = getBoldIndices(parts, row.kind);
   const timeLabel = formatTimeLabel(row.createdAt);
   const remaining =
-    section.showTimeRemaining && row.createdAt
-      ? formatNudgeRemaining(
+    section.showTimeRemaining &&
+    row.createdAt &&
+    NUDGE_TIMER_KINDS.has(row.kind)
+      ? formatEscalationRemainingLabel(
           row.createdAt,
-          row.kind === "escalation" || row.kind === "escalatedNudge" ? 18 : 6,
+          row.escalationLevel,
+          row.currentStatus,
+          now,
         )
       : null;
 
@@ -245,6 +256,7 @@ function NotificationSectionBlock({
   onNavigate,
   onAct,
   showDismissAlways,
+  now,
 }: {
   section: NotificationSectionConfig;
   rows: NotificationPanelRow[];
@@ -254,6 +266,7 @@ function NotificationSectionBlock({
   onNavigate: (section: NotificationNavigateSection, row: NotificationPanelRow) => void;
   onAct?: (row: NotificationPanelRow) => void;
   showDismissAlways?: boolean;
+  now: Date;
 }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? rows : rows.slice(0, previewLimit);
@@ -274,6 +287,8 @@ function NotificationSectionBlock({
             onDismiss={onDismiss}
             onNavigate={onNavigate}
             onAct={section.showActButton ? onAct : undefined}
+            showDismissAlways={showDismissAlways}
+            now={now}
           />
         ))}
       </div>
@@ -319,6 +334,23 @@ export default function NotificationPanel({
   showDismissAlways = false,
 }: NotificationPanelProps) {
   const [exitingKeys, setExitingKeys] = useState<Set<string>>(new Set());
+  const [now, setNow] = useState(() => new Date());
+
+  const hasNudgeTimers = useMemo(
+    () =>
+      rows.some(
+        (row) =>
+          NUDGE_TIMER_KINDS.has(row.kind) &&
+          sections.some((s) => s.showTimeRemaining && s.kinds.includes(row.kind)),
+      ),
+    [rows, sections],
+  );
+
+  useEffect(() => {
+    if (!hasNudgeTimers) return;
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, [hasNudgeTimers]);
 
   const filteredRows = useMemo(() => {
     if (activeTab === "all") return rows;
@@ -443,6 +475,7 @@ export default function NotificationPanel({
                 onNavigate={handleNavigateWithDismiss}
                 onAct={onActOnNudge ? handleAct : undefined}
                 showDismissAlways={showDismissAlways}
+                now={now}
               />
             ))}
           </div>

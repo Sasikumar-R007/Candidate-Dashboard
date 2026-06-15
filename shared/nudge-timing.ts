@@ -24,11 +24,16 @@ export const NUDGE_OFFER_ESCALATION_WORKING_HOURS = {
   toClientAdmin: 12,
 } as const;
 
-/** Candidate re-nudge cooldown after last nudge (wall-clock hours). */
+/**
+ * Candidate re-nudge cooldown (wall-clock hours) by pipeline progression:
+ * Applied → In-Review → Interview → HR Round → Offer → blocked (terminal).
+ */
 export const CANDIDATE_NUDGE_COOLDOWN_HOURS = {
-  appliedOrReview: 48,
-  interviewOrHr: 24,
-  offer: 3,
+  applied: 48,
+  inReview: 36,
+  interview: 24,
+  hrRound: 18,
+  offer: 12,
 } as const;
 
 export function isOfferStageStatus(status: string | null | undefined): boolean {
@@ -58,12 +63,110 @@ export function escalationTargetWorkingHours(
   return NUDGE_ESCALATION_WORKING_HOURS.toClientAdmin;
 }
 
+/** Returns cooldown hours, or null when nudging is blocked for this status. */
 export function candidateNudgeCooldownHours(status: string | null | undefined): number | null {
   const s = (status || "").toLowerCase();
-  if (s.includes("screened out") || s.includes("rejected") || s.includes("withdrawn")) {
+  if (s.includes("withdrawn") || s.includes("archived")) {
     return null;
   }
-  if (isOfferStageStatus(s)) return CANDIDATE_NUDGE_COOLDOWN_HOURS.offer;
-  if (s.includes("interview") || s.includes("hr")) return CANDIDATE_NUDGE_COOLDOWN_HOURS.interviewOrHr;
-  return CANDIDATE_NUDGE_COOLDOWN_HOURS.appliedOrReview;
+
+  const stageKey = resolvePipelineStageKey(status);
+
+  if (stageKey === "rejected") {
+    return null;
+  }
+  if (stageKey === "offerStage" || stageKey === "closure") {
+    return CANDIDATE_NUDGE_COOLDOWN_HOURS.offer;
+  }
+  if (stageKey === "hrRound") {
+    return CANDIDATE_NUDGE_COOLDOWN_HOURS.hrRound;
+  }
+  if (
+    stageKey === "level1" ||
+    stageKey === "level2" ||
+    stageKey === "level3" ||
+    stageKey === "finalRound"
+  ) {
+    return CANDIDATE_NUDGE_COOLDOWN_HOURS.interview;
+  }
+  if (stageKey === "shortlisted" || stageKey === "screening") {
+    return CANDIDATE_NUDGE_COOLDOWN_HOURS.inReview;
+  }
+  return CANDIDATE_NUDGE_COOLDOWN_HOURS.applied;
+}
+
+/** Mon–Fri working hours elapsed between two instants (matches server escalation sync). */
+export function calculateWorkingHoursBetween(start: Date, end: Date): number {
+  if (start >= end) return 0;
+
+  let totalMinutes = 0;
+  const current = new Date(start);
+  const endLimit = new Date(end);
+
+  while (current < endLimit) {
+    const day = current.getDay();
+    const isWorkingDay = day !== 0 && day !== 6;
+
+    if (isWorkingDay) {
+      const currentHour = current.getHours();
+      if (currentHour >= NUDGE_WORKING_HOUR_START && currentHour < NUDGE_WORKING_HOUR_END) {
+        const hourStart = new Date(current);
+        hourStart.setMinutes(0, 0, 0);
+        const hourEnd = new Date(current);
+        hourEnd.setMinutes(59, 59, 999);
+
+        const effectiveStart = current > hourStart ? current : hourStart;
+        const effectiveEnd = endLimit < hourEnd ? endLimit : hourEnd;
+
+        const diffMs = effectiveEnd.getTime() - effectiveStart.getTime();
+        if (diffMs > 0) {
+          totalMinutes += diffMs / (1000 * 60);
+        }
+      }
+    }
+
+    current.setHours(current.getHours() + 1);
+    current.setMinutes(0, 0, 0);
+  }
+
+  return totalMinutes / 60;
+}
+
+/** Remaining working time until the next escalation tier (for TA/TL/Admin/Client UI). */
+export function formatEscalationRemainingLabel(
+  createdAt: string | Date | null | undefined,
+  escalationLevel: string | null | undefined,
+  currentStatus: string | null | undefined,
+  now: Date = new Date(),
+): string | null {
+  if (!createdAt) return null;
+  const start = new Date(createdAt);
+  if (Number.isNaN(start.getTime())) return null;
+
+  const isOffer = isOfferStageStatus(currentStatus);
+  const totalTarget = escalationTargetWorkingHours(escalationLevel || "recruiter", isOffer);
+  const elapsedHours = calculateWorkingHoursBetween(start, now);
+  const remaining = totalTarget - elapsedHours;
+
+  if (remaining <= 0) return "Escalating...";
+
+  const totalMins = Math.max(0, Math.floor(remaining * 60));
+  const hours = Math.floor(totalMins / 60);
+  const minutes = totalMins % 60;
+  return `${hours}hrs ${minutes}min`;
+}
+
+/** Table-friendly label (e.g. Active Nudges "Escalates In" column). */
+export function formatEscalationRemainingTableLabel(
+  createdAt: string | Date | null | undefined,
+  escalationLevel: string | null | undefined,
+  currentStatus: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  const compact = formatEscalationRemainingLabel(createdAt, escalationLevel, currentStatus, now);
+  if (!compact) return "—";
+  if (compact === "Escalating...") return compact;
+  const match = compact.match(/^(\d+)hrs (\d+)min$/);
+  if (!match) return compact;
+  return `${match[1]} hrs ${match[2]} mins`;
 }

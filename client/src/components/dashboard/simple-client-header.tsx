@@ -20,6 +20,8 @@ type PortalNudge = {
   jobTitle?: string | null;
   createdAt?: string | Date | null;
   isRead?: boolean | null;
+  escalationLevel?: string | null;
+  currentStatus?: string | null;
 };
 
 interface SimpleClientHeaderProps {
@@ -46,6 +48,8 @@ type EmployeeNotificationItem = {
   line: string;
   createdAt?: string | null;
   isUnread?: boolean;
+  escalationLevel?: string | null;
+  currentStatus?: string | null;
 };
 
 type EmployeeNotificationFeed = {
@@ -81,6 +85,8 @@ type NotificationRow = {
   line: string;
   createdAt?: string | null;
   isUnread?: boolean;
+  escalationLevel?: string | null;
+  currentStatus?: string | null;
 };
 
 export default function SimpleClientHeader({ 
@@ -222,11 +228,13 @@ export default function SimpleClientHeader({
       line: [n.candidateName || "Candidate", n.jobTitle || "Role"].filter(Boolean).join(" - "),
       createdAt:
         n.createdAt == null
-          ? null
+          ? new Date().toISOString()
           : typeof n.createdAt === "string"
             ? n.createdAt
             : n.createdAt.toISOString(),
       isUnread: !n.isRead,
+      escalationLevel: n.escalationLevel || "client",
+      currentStatus: n.currentStatus || null,
     }));
   }, [portalNudges]);
 
@@ -264,8 +272,10 @@ export default function SimpleClientHeader({
           kind,
           id: item.id,
           line: item.line,
-          createdAt: item.createdAt,
+          createdAt: item.createdAt || new Date().toISOString(),
           isUnread: item.isUnread,
+          escalationLevel: item.escalationLevel,
+          currentStatus: item.currentStatus,
         }),
       );
     };

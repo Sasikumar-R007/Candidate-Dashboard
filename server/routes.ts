@@ -887,15 +887,24 @@ async function buildEmployeeNotificationsFeed(employee: any) {
     return isNaN(d.getTime()) ? null : d.toISOString();
   };
 
+  const nudgeFeedItem = (n: any, line: string) => ({
+    id: n.id,
+    line,
+    createdAt: toIso(n.createdAt) || new Date().toISOString(),
+    isUnread: !n.isRead,
+    escalationLevel: (n.escalationLevel || "recruiter").toLowerCase(),
+    currentStatus: n.currentStatus || null,
+  });
+
   if (isAdmin) {
     const adminNudges = allNudges
       .filter((n) => !n.isResponded && !n.isRead && n.escalationLevel === "admin")
-      .map((n) => ({
-        id: n.id,
-        line: notificationFeedLine([n.jobTitle, resolveTeamLeaderName(n.recruiterId, allEmployees)]),
-        createdAt: toIso(n.createdAt),
-        isUnread: !n.isRead,
-      }));
+      .map((n) =>
+        nudgeFeedItem(
+          n,
+          notificationFeedLine([n.jobTitle, resolveTeamLeaderName(n.recruiterId, allEmployees)]),
+        ),
+      );
 
     const clientEscalations = allNudges
       .filter(
@@ -904,16 +913,16 @@ async function buildEmployeeNotificationsFeed(employee: any) {
           !n.isRead &&
           (n.escalationLevel === "client" || n.escalationLevel === "client_admin"),
       )
-      .map((n) => ({
-        id: n.id,
-        line: notificationFeedLine([
-          n.candidateName,
-          resolveTeamLeaderName(n.recruiterId, allEmployees),
-          `Escalated to ${n.company}`,
-        ]),
-        createdAt: toIso(n.createdAt),
-        isUnread: !n.isRead,
-      }));
+      .map((n) =>
+        nudgeFeedItem(
+          n,
+          notificationFeedLine([
+            n.candidateName,
+            resolveTeamLeaderName(n.recruiterId, allEmployees),
+            `Escalated to ${n.company}`,
+          ]),
+        ),
+      );
 
     const closures = [...allRevenueMappings]
       .sort((a, b) => getRevenueMappingRecencyTs(b) - getRevenueMappingRecencyTs(a))
@@ -998,15 +1007,15 @@ async function buildEmployeeNotificationsFeed(employee: any) {
           n.escalationLevel === "team_leader" &&
           belongsToTeam(n.recruiterId),
       )
-      .map((n) => ({
-        id: n.id,
-        line: notificationFeedLine([
-          n.jobTitle,
-          allEmployees.find((e) => matchesEmployeeRef(e, n.recruiterId))?.name || "TA",
-        ]),
-        createdAt: toIso(n.createdAt),
-        isUnread: !n.isRead,
-      }));
+      .map((n) =>
+        nudgeFeedItem(
+          n,
+          notificationFeedLine([
+            n.jobTitle,
+            allEmployees.find((e) => matchesEmployeeRef(e, n.recruiterId))?.name || "TA",
+          ]),
+        ),
+      );
 
     const escalatedNudges = allNudges
       .filter(
@@ -1018,17 +1027,16 @@ async function buildEmployeeNotificationsFeed(employee: any) {
             n.escalationLevel === "client_admin") &&
           belongsToTeam(n.recruiterId),
       )
-      .map((n) => ({
-        id: n.id,
-        line:
+      .map((n) =>
+        nudgeFeedItem(
+          n,
           n.escalationLevel === "client_admin"
             ? notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Client Admin"])
             : n.escalationLevel === "client"
               ? notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Client"])
               : notificationFeedLine([n.candidateName, n.jobTitle, "Escalated to Admin"]),
-        createdAt: toIso(n.createdAt),
-        isUnread: !n.isRead,
-      }));
+        ),
+      );
 
     const closures = [...allRevenueMappings]
       .filter((rm) => rm.teamLeadId === employee.id || (rm.teamLeadName || "").toLowerCase() === (employee.name || "").toLowerCase())
@@ -1098,12 +1106,12 @@ async function buildEmployeeNotificationsFeed(employee: any) {
           clientNudgeInScope(n, companyName, memberRequirementIds, applicationById)
         );
       })
-      .map((n) => ({
-        id: n.id,
-        line: notificationFeedLine([n.candidateName || "Candidate", n.jobTitle || "Role"]),
-        createdAt: toIso(n.createdAt),
-        isUnread: !n.isRead,
-      }));
+      .map((n) =>
+        nudgeFeedItem(
+          n,
+          notificationFeedLine([n.candidateName || "Candidate", n.jobTitle || "Role"]),
+        ),
+      );
 
     let revenueClosures = [...allRevenueMappings].filter(
       (rm) => (rm.clientName || "").trim().toLowerCase() === normalizedClientCompany,
@@ -1202,12 +1210,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
           n.escalationLevel === "recruiter" &&
           matchesEmployeeRef(employee, n.recruiterId),
       )
-      .map((n) => ({
-        id: n.id,
-        line: notificationFeedLine([n.jobTitle, n.candidateName]),
-        createdAt: toIso(n.createdAt),
-        isUnread: !n.isRead,
-      }));
+      .map((n) => nudgeFeedItem(n, notificationFeedLine([n.jobTitle, n.candidateName])));
 
     const taEscalatedLevels = new Set(["team_leader", "admin", "client"]);
     const escalatedNudges = allNudges
@@ -1217,12 +1220,7 @@ async function buildEmployeeNotificationsFeed(employee: any) {
           taEscalatedLevels.has((n.escalationLevel || "").toLowerCase()) &&
           matchesEmployeeRef(employee, n.recruiterId),
       )
-      .map((n) => ({
-        id: n.id,
-        line: taEscalationFeedLine(n),
-        createdAt: toIso(n.createdAt),
-        isUnread: !n.isRead,
-      }));
+      .map((n) => nudgeFeedItem(n, taEscalationFeedLine(n)));
 
     const closures = [...allRevenueMappings]
       .filter(
@@ -4563,7 +4561,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { candidateNudgeCooldownHours } = await import("@shared/nudge-timing");
-      const cooldownHours = candidateNudgeCooldownHours(application.status) ?? 48;
+      const cooldownHours = candidateNudgeCooldownHours(application.status);
+      if (cooldownHours == null) {
+        return res.status(403).json({ message: "Nudging is not available for this application status." });
+      }
       const cooldownMs = cooldownHours * 60 * 60 * 1000;
       const cooldownThreshold = new Date(Date.now() - cooldownMs);
 

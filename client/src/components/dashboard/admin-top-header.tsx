@@ -40,6 +40,8 @@ type EmployeeNotificationItem = {
   line: string;
   createdAt: string | null;
   isUnread: boolean;
+  escalationLevel?: string | null;
+  currentStatus?: string | null;
 };
 
 type EmployeeNotificationFeed = {
@@ -516,8 +518,10 @@ export default function AdminTopHeader({
           key: `${kind}-${item.id}`,
           kind,
           line: item.line,
-          createdAt: item.createdAt,
+          createdAt: item.createdAt || new Date().toISOString(),
           isUnread: item.isUnread,
+          escalationLevel: item.escalationLevel,
+          currentStatus: item.currentStatus,
           nudgeId: includeNudgeId ? item.id : undefined,
           sort: item.createdAt ? new Date(item.createdAt).getTime() : 0,
           id: item.id,

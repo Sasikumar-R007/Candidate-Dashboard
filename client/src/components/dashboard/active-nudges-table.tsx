@@ -24,7 +24,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryPresets } from "@/lib/query-config";
 import { useEmployeeAuth } from "@/contexts/auth-context";
 import {
+  calculateWorkingHoursBetween,
   escalationTargetWorkingHours,
+  formatEscalationRemainingTableLabel,
   isOfferStageStatus,
 } from "@shared/nudge-timing";
 import { canUserUpdateNudge } from "@shared/nudge-escalation-access";
@@ -51,49 +53,6 @@ interface Nudge {
 }
 
 
-const getElapsedWorkingHours = (createdAt: string) => {
-  const start = new Date(createdAt);
-  const end = new Date();
-  if (start >= end) return 0;
-  
-  let totalMinutes = 0;
-  const current = new Date(start);
-  
-  while (current < end) {
-    const day = current.getDay();
-    if (day !== 0 && day !== 6) {
-      const hour = current.getHours();
-      if (hour >= 9 && hour < 18) {
-        const hourStart = new Date(current);
-        hourStart.setMinutes(0, 0, 0);
-        const hourEnd = new Date(current);
-        hourEnd.setMinutes(59, 59, 999);
-        
-        const effectiveStart = current > hourStart ? current : hourStart;
-        const effectiveEnd = end < hourEnd ? end : hourEnd;
-        
-        const diffMs = effectiveEnd.getTime() - effectiveStart.getTime();
-        if (diffMs > 0) {
-          totalMinutes += diffMs / (1000 * 60);
-        }
-      }
-    }
-    current.setHours(current.getHours() + 1);
-    current.setMinutes(0, 0, 0);
-  }
-  return totalMinutes / 60;
-};
-
-const formatRemainingWorkingTime = (elapsedHours: number, totalHours: number) => {
-  const remaining = totalHours - elapsedHours;
-  if (remaining <= 0) return "Escalating...";
-  const totalMins = Math.round(remaining * 60);
-  const hours = Math.floor(totalMins / 60);
-  const minutes = totalMins % 60;
-  return `${hours} hrs ${minutes} mins`;
-};
-
-
 type ActiveNudgesTableProps = {
   /** When employee.role lags profile, client dashboard can pass resolved admin flag. */
   isClientAdmin?: boolean;
@@ -109,9 +68,8 @@ export default function ActiveNudgesTable({ isClientAdmin: isClientAdminProp }: 
   const [localUpdatedNudges, setLocalUpdatedNudges] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(new Date());
 
-  // Update relative time every minute
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000);
+    const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -178,7 +136,7 @@ export default function ActiveNudgesTable({ isClientAdmin: isClientAdminProp }: 
   // Process nudges
   const processedNudges = nudges.map(nudge => {
     const isResponded = !!(nudge.isResponded || localUpdatedNudges.has(nudge.id));
-    const elapsedHours = getElapsedWorkingHours(nudge.createdAt);
+    const elapsedHours = calculateWorkingHoursBetween(new Date(nudge.createdAt), now);
     const isOffer = isOfferStageStatus(nudge.currentStatus);
     const totalTarget = escalationTargetWorkingHours(nudge.escalationLevel, isOffer);
     const isEscalated = !isResponded && elapsedHours >= totalTarget;
@@ -288,7 +246,12 @@ export default function ActiveNudgesTable({ isClientAdmin: isClientAdminProp }: 
                         </div>
                       ) : (
                         <span className="text-[12px] font-bold text-orange-600">
-                          {formatRemainingWorkingTime(nudge.elapsedHours, nudge.totalTarget)}
+                          {formatEscalationRemainingTableLabel(
+                            nudge.createdAt,
+                            nudge.escalationLevel,
+                            nudge.currentStatus,
+                            now,
+                          )}
                         </span>
                       )}
                     </td>
