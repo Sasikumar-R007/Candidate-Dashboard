@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { type Employee, type TargetMappings } from '@shared/schema';
 import { EMPTY_IMPACT_METRICS } from '@shared/impact-metrics-defaults';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
@@ -20,6 +20,8 @@ import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal
 import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
 import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-credentials-modal';
 import AddUserModal from '@/components/dashboard/modals/add-user-modal';
+import AddDataEntryModal from '@/components/dashboard/modals/add-data-entry-modal';
+import DataEntryMetricsModal from '@/components/dashboard/modals/data-entry-metrics-modal';
 import HoldUserModal, { type HoldUserPayload } from '@/components/dashboard/modals/hold-user-modal';
 import { UserHoldRowTooltip } from '@/components/dashboard/user-hold-row-tooltip';
 import { runAdminHoldCountdown } from '@/lib/admin-hold-countdown';
@@ -77,6 +79,7 @@ import {
   FileText,
   Folder,
   AlertTriangle,
+  Upload,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
@@ -122,6 +125,7 @@ import {
   groupApplicantsByPipelineStage,
   mapAdminPipelineCandidate,
 } from "@/lib/pipeline-session-utils";
+import { useOpenCommentSessionListener } from "@/lib/open-comment-session";
 import { AdminPipelineTab } from "@/components/dashboard/admin-pipeline-tab";
 import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { useEmployeeAuth } from "@/contexts/auth-context";
@@ -961,6 +965,7 @@ function formatEmployeeStatusLabel(role?: string | null): string {
     talent_advisor: "Talent Advisor",
     client: "Client",
     admin: "Administrator",
+    data_entry: "Data Entry",
   };
   if (map[normalized]) return map[normalized];
   return normalized
@@ -1252,6 +1257,7 @@ export default function AdminDashboard() {
           teamLeader: app.teamLeader || null,
           profilePicture: app.profilePicture || app.profile_picture || null,
           profileId: app.profileId || null,
+          hasUnreadComments: Boolean(app.hasUnreadComments),
         };
       });
     }
@@ -1349,6 +1355,15 @@ export default function AdminDashboard() {
     setSessionApplicationId(null);
     setSessionApplicantSnapshot(null);
   };
+
+  const openCommentSessionFromNotification = useCallback((applicationId: string) => {
+    setSidebarTab("pipeline");
+    setSessionApplicationId(applicationId);
+    setSessionApplicantSnapshot(null);
+    setPipelineView("candidate-session");
+  }, []);
+
+  useOpenCommentSessionListener(openCommentSessionFromNotification);
 
   // Revenue mapping state for editing
   const [editingRevenueMapping, setEditingRevenueMapping] = useState<any>(null);
@@ -1553,6 +1568,8 @@ export default function AdminDashboard() {
   const [isAddTeamLeaderModalNewOpen, setIsAddTeamLeaderModalNewOpen] = useState(false);
   const [isAddClientCredentialsModalOpen, setIsAddClientCredentialsModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isAddDataEntryModalOpen, setIsAddDataEntryModalOpen] = useState(false);
+  const [isDataEntryMetricsModalOpen, setIsDataEntryMetricsModalOpen] = useState(false);
   const [isPerformanceGraphModalOpen, setIsPerformanceGraphModalOpen] = useState(false);
   const [isRevenueGraphModalOpen, setIsRevenueGraphModalOpen] = useState(false);
   const [isIncrementModalOpen, setIsIncrementModalOpen] = useState(false);
@@ -1627,7 +1644,7 @@ export default function AdminDashboard() {
     incrementValue: '',
     revisedCtc: '',
   });
-  const [userManagementTab, setUserManagementTab] = useState<'all' | 'clients' | 'team_leaders' | 'talent_advisors'>('all');
+  const [userManagementTab, setUserManagementTab] = useState<'all' | 'clients' | 'team_leaders' | 'talent_advisors' | 'data_entry'>('all');
   const [userManagementSearch, setUserManagementSearch] = useState('');
 
   // Password confirmation dialog state for user deletion
@@ -1812,6 +1829,35 @@ export default function AdminDashboard() {
   });
   const activeEmployeeIds = new Set(activeSessionsData?.activeEmployeeIds || []);
 
+  const { data: dataEntryUploadStatsData } = useQuery<{
+    stats: Record<string, { totalUploaded: number; todayUploaded: number }>;
+  }>({
+    queryKey: ['/api/admin/data-entry-upload-stats'],
+    enabled: sidebarTab === 'user-management' || activeTab === 'user-management',
+    refetchInterval: 60_000,
+  });
+  const dataEntryUploadStats = dataEntryUploadStatsData?.stats ?? {};
+
+  const dataEntryTeamMembers = useMemo(
+    () => employees.filter((emp: any) => (emp.role || '').toLowerCase() === 'data_entry'),
+    [employees],
+  );
+
+  const dataEntryMetricsSummary = useMemo(() => {
+    let totalUploaded = 0;
+    let todayUploaded = 0;
+    for (const emp of dataEntryTeamMembers) {
+      const stats = dataEntryUploadStats[emp.id];
+      totalUploaded += stats?.totalUploaded ?? 0;
+      todayUploaded += stats?.todayUploaded ?? 0;
+    }
+    return {
+      count: dataEntryTeamMembers.length,
+      totalUploaded,
+      todayUploaded,
+    };
+  }, [dataEntryTeamMembers, dataEntryUploadStats]);
+
   // Filter employees for HR-related tables (Employees Master)
   // Only include employee_record role, exclude TL/TA (they belong in User Management), admin, and clients
   const hrEmployees = useMemo(() => {
@@ -1870,6 +1916,7 @@ export default function AdminDashboard() {
       return (
         role === "team_leader" ||
         role === "recruiter" ||
+        role === "data_entry" ||
         role === "client" ||
         role === "client_admin" ||
         role === "client_member"
@@ -1886,6 +1933,8 @@ export default function AdminDashboard() {
         const role = (emp.role || "").toLowerCase();
         return role === "client" || role === "client_admin" || role === "client_member";
       });
+    } else if (userManagementTab === 'data_entry') {
+      filtered = filtered.filter((emp: any) => emp.role === 'data_entry');
     }
     // 'all' shows everything
 
@@ -3048,6 +3097,7 @@ export default function AdminDashboard() {
       setIsAddTeamLeaderModalNewOpen(false);
       setIsAddUserModalOpen(false);
       setIsAddClientCredentialsModalOpen(false);
+      setIsAddDataEntryModalOpen(false);
       setEditingUser(null);
     },
     onError: (error: Error) => {
@@ -3926,7 +3976,53 @@ export default function AdminDashboard() {
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
-    setIsAddUserModalOpen(true);
+    if ((user.role || "").toLowerCase() === "data_entry") {
+      setIsAddDataEntryModalOpen(true);
+    } else {
+      setIsAddUserModalOpen(true);
+    }
+  };
+
+  const handleAddDataEntry = (userData: any) => {
+    if (editingUser) {
+      const employeeRecordId = userData.dbId || editingUser?.id;
+      if (!employeeRecordId) {
+        toast({
+          title: "Update failed",
+          description: "Could not resolve the user record to update.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const employeeData: Record<string, unknown> = {
+        name: userData.name,
+        email: userData.email,
+        role: "data_entry",
+        phone: userData.phoneNumber || editingUser?.phone || "",
+        department: "Data Entry",
+        joiningDate: userData.joiningDate || editingUser?.joiningDate || "",
+      };
+      if (userData.password) {
+        employeeData.password = userData.password;
+      }
+      updateEmployeeMutation.mutate({ id: employeeRecordId, data: employeeData });
+      return;
+    }
+
+    createEmployeeMutation.mutate({
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: "data_entry",
+      phone: userData.phoneNumber || "",
+      department: "Data Entry",
+      joiningDate: userData.joiningDate || "",
+    }, {
+      onSuccess: () => {
+        setIsAddDataEntryModalOpen(false);
+        setEditingUser(null);
+      },
+    });
   };
 
   const handleUnifiedUserSubmit = (userData: any) => {
@@ -6658,16 +6754,31 @@ export default function AdminDashboard() {
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <div className="px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar" style={{ height: 'calc(100vh - 4rem)' }}>
             {/* User Management Header - Add User Button at top left */}
-            <div className="flex items-center justify-between mb-6">
-              <Button
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 h-10 text-sm whitespace-nowrap"
-                data-testid="button-add-user"
-                onClick={() => setIsAddUserModalOpen(true)}
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add User
-              </Button>
+            <div className="flex items-center justify-between mb-6 gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 h-10 text-sm whitespace-nowrap"
+                  data-testid="button-add-user"
+                  onClick={() => setIsAddUserModalOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add User
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="px-4 py-2 h-10 text-sm whitespace-nowrap border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-950"
+                  data-testid="button-add-data-entry"
+                  onClick={() => {
+                    setEditingUser(null);
+                    setIsAddDataEntryModalOpen(true);
+                  }}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Data Entry
+                </Button>
+              </div>
 
               {/* Search Bar */}
               <div className="w-full max-w-md relative">
@@ -6719,6 +6830,15 @@ export default function AdminDashboard() {
                   }`}
               >
                 Talent Advisors
+              </button>
+              <button
+                onClick={() => setUserManagementTab('data_entry')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${userManagementTab === 'data_entry'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+              >
+                Data Entry
               </button>
             </div>
 
@@ -6805,7 +6925,7 @@ export default function AdminDashboard() {
                                       disabled={resumeEmployeeMutation.isPending || emp.role === 'admin'}
                                     >
                                       <RotateCcw className="mr-2 h-4 w-4" />
-                                      Resume User
+                                      Revoke Suspension
                                     </DropdownMenuItem>
                                   ) : (
                                     <DropdownMenuItem
@@ -6874,6 +6994,49 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold text-gray-900 dark:text-white">{userManagementEmployees.length - onlineCount}</div>
             </CardContent>
           </Card>
+
+          {/* Data Entry upload metrics — compact summary + modal */}
+          <div className="mt-2 border-t border-gray-200 pt-4 dark:border-gray-700">
+            <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-white">
+              Data Entry Uploads
+            </h3>
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+              {dataEntryMetricsSummary.count === 0
+                ? "No Data Entry users yet"
+                : `${dataEntryMetricsSummary.count} user${dataEntryMetricsSummary.count === 1 ? "" : "s"}`}
+            </p>
+
+            {dataEntryMetricsSummary.count > 0 && (
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-gray-200 bg-white p-2.5 text-center dark:border-gray-700 dark:bg-gray-900">
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                    {dataEntryMetricsSummary.totalUploaded}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-500">Team total</div>
+                </div>
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-center dark:border-emerald-800 dark:bg-emerald-900/20">
+                  <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                    {dataEntryMetricsSummary.todayUploaded}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                    Today
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full border-emerald-300 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-950"
+              onClick={() => setIsDataEntryMetricsModalOpen(true)}
+              data-testid="button-view-data-entry-metrics"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              View all metrics
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -7653,17 +7816,17 @@ export default function AdminDashboard() {
 
               <div className="space-y-4">
                 <div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">DIRECT UPLOADS</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RECRUITER UPLOADS</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-direct-uploads">{masterTotals.directUploads.toLocaleString()}</div>
                 </div>
 
                 <div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RECRUITER UPLOADS</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">DIRECT UPLOADS</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-recruiter-uploads">{masterTotals.recruiterUploads.toLocaleString()}</div>
                 </div>
 
                 <div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RESUMES</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TOTAL RESUMES</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-resumes">{masterTotals.resumes.toLocaleString()}</div>
                 </div>
 
@@ -10867,8 +11030,27 @@ export default function AdminDashboard() {
           setIsAddUserModalOpen(false);
           setEditingUser(null);
         }}
-        editData={editingUser}
+        editData={editingUser && (editingUser.role || "").toLowerCase() !== "data_entry" ? editingUser : null}
         onSubmit={handleUnifiedUserSubmit}
+      />
+
+      <AddDataEntryModal
+        isOpen={isAddDataEntryModalOpen}
+        onClose={() => {
+          setIsAddDataEntryModalOpen(false);
+          setEditingUser(null);
+        }}
+        editData={editingUser && (editingUser.role || "").toLowerCase() === "data_entry" ? editingUser : null}
+        onSubmit={handleAddDataEntry}
+        isSubmitting={createEmployeeMutation.isPending || updateEmployeeMutation.isPending}
+      />
+
+      <DataEntryMetricsModal
+        isOpen={isDataEntryMetricsModalOpen}
+        onClose={() => setIsDataEntryMetricsModalOpen(false)}
+        members={dataEntryTeamMembers}
+        uploadStats={dataEntryUploadStats}
+        activeEmployeeIds={activeEmployeeIds}
       />
 
       {/* Reassign Requirement Modal */}

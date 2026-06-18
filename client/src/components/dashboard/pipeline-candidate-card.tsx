@@ -11,6 +11,7 @@ type PipelineCandidateCardProps = {
   profilePicture?: string | null;
   rejected?: boolean;
   clickable?: boolean;
+  hasUnreadComments?: boolean;
   onClick?: () => void;
   testId?: string;
 };
@@ -35,6 +36,7 @@ export function PipelineCandidateCard({
   profilePicture,
   rejected = false,
   clickable = false,
+  hasUnreadComments = false,
   onClick,
   testId,
 }: PipelineCandidateCardProps) {
@@ -57,11 +59,17 @@ export function PipelineCandidateCard({
           : undefined
       }
       style={{ borderRadius: PIPELINE_CARD_RADIUS_PX }}
-      className={`border bg-white p-2 shadow-sm transition-all ${
+      className={`relative border bg-white p-2 shadow-sm transition-all ${
         rejected ? "border-red-200 bg-red-50" : "border-gray-200"
       } ${clickable ? "cursor-pointer hover:border-blue-300 hover:shadow-md" : ""}`}
       data-testid={testId}
     >
+      {hasUnreadComments ? (
+        <span
+          className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
+          aria-label="Unread team messages"
+        />
+      ) : null}
       <div className="flex items-start gap-2.5">
         <Avatar className="h-9 w-9 shrink-0 border border-gray-100">
           {avatarSrc ? (

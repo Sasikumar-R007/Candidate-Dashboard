@@ -12,6 +12,7 @@ import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useNotificationSound } from "@/hooks/use-notification-sound";
+import { dispatchOpenCommentSession } from "@/lib/open-comment-session";
 import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
 
 type PortalNudge = {
@@ -50,6 +51,7 @@ type EmployeeNotificationItem = {
   isUnread?: boolean;
   escalationLevel?: string | null;
   currentStatus?: string | null;
+  applicationId?: string | null;
 };
 
 type EmployeeNotificationFeed = {
@@ -59,6 +61,7 @@ type EmployeeNotificationFeed = {
   escalatedNudges: EmployeeNotificationItem[];
   closures: EmployeeNotificationItem[];
   newCandidateApplied: EmployeeNotificationItem[];
+  candidateComments?: EmployeeNotificationItem[];
   unreadCount: number;
 };
 
@@ -87,6 +90,7 @@ type NotificationRow = {
   isUnread?: boolean;
   escalationLevel?: string | null;
   currentStatus?: string | null;
+  applicationId?: string | null;
 };
 
 export default function SimpleClientHeader({ 
@@ -157,6 +161,7 @@ export default function SimpleClientHeader({
     () => [
       { id: "all", label: "All" },
       { id: "newProfiles", label: "New Profiles" },
+      { id: "teamMessages", label: "Team Messages" },
       { id: "nudges", label: "Nudges" },
       { id: "closures", label: "Closures" },
     ],
@@ -165,6 +170,14 @@ export default function SimpleClientHeader({
 
   const notificationSections = useMemo((): NotificationSectionConfig[] => {
     return [
+      {
+        id: "teamMessages",
+        heading: "Team discussion messages",
+        headingClassName: "text-sky-700",
+        kinds: ["candidateComment"],
+        tabId: "teamMessages",
+        navigateTo: "pipeline",
+      },
       {
         id: "newProfiles",
         heading: "New profiles shared",
@@ -258,6 +271,9 @@ export default function SimpleClientHeader({
     if (row.kind === "nudge") {
       dismissNotificationMutation.mutate({ kind: row.kind, id: row.id });
     }
+    if (row.kind === "candidateComment") {
+      dismissNotificationMutation.mutate({ kind: "candidateComment", id: row.id });
+    }
   };
 
   const allNotificationRows = useMemo(() => {
@@ -273,10 +289,12 @@ export default function SimpleClientHeader({
           isUnread: item.isUnread,
           escalationLevel: item.escalationLevel,
           currentStatus: item.currentStatus,
+          applicationId: item.applicationId ?? null,
         }),
       );
     };
     const feedNudges = employeeFeed?.nudges?.length ? employeeFeed.nudges : portalNudgeItems;
+    pushRows("candidateComment", employeeFeed?.candidateComments || []);
     pushRows("newProfile", employeeFeed?.newCandidateApplied || []);
     pushRows("nudge", feedNudges);
     pushRows("closure", employeeFeed?.closures || []);
@@ -294,8 +312,13 @@ export default function SimpleClientHeader({
 
   const panelRows = useMemo((): NotificationPanelRow[] => visibleNotificationRows, [visibleNotificationRows]);
 
-  const handlePanelNavigate = (section: NotificationNavigateSection) => {
+  const handlePanelNavigate = (section: NotificationNavigateSection, row: NotificationPanelRow) => {
     setShowNotifications(false);
+    if (row.kind === "candidateComment" && row.applicationId) {
+      dispatchOpenCommentSession(row.applicationId);
+      onOpenPipeline?.();
+      return;
+    }
     if (section === "closures") onOpenClosures?.();
     if (section === "nudges") onOpenNudges?.();
     if (section === "newCandidates") onOpenPipeline?.();
@@ -553,7 +576,7 @@ export default function SimpleClientHeader({
               isError={feedError && !employeeFeed && portalNudgeItems.length === 0}
               onRetry={() => void refetchNotificationFeed()}
               onDismiss={dismissNotification}
-              onNavigate={(section) => handlePanelNavigate(section)}
+              onNavigate={(section, row) => handlePanelNavigate(section, row)}
             />
           </div>
         </>

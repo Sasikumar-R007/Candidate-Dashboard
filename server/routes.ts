@@ -38,7 +38,7 @@ import { sql, eq, and, or, desc, lte, gte, inArray, isNull } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
-import { db } from "./db";
+import { db, pool } from "./db";
 import {
   HOLD_LOGOUT_GRACE_MS,
   autoResumeEmployeeIfExpired,
@@ -105,6 +105,42 @@ function resolveWelcomeEmailLoginUrl(): string {
 function resolveCandidateWelcomeLoginUrl(): string {
   const base = resolveWelcomeEmailLoginUrl().replace(/\/$/, "");
   return base.endsWith("/candidate-login") ? base : `${base}/candidate-login`;
+}
+
+function resolveEmployerLoginUrl(): string {
+  const base = resolveWelcomeEmailLoginUrl().replace(/\/$/, "");
+  return base.endsWith("/employer-login") ? base : `${base}/employer-login`;
+}
+
+function resolveDataEntryPortalUrl(): string {
+  const base = resolveWelcomeEmailLoginUrl().replace(/\/$/, "");
+  return `${base}${DATA_ENTRY_PORTAL_PATH}`;
+}
+
+async function sendEmployeeRoleWelcomeEmail(
+  employee: { name: string; email: string; employeeId: string; role: string },
+  rawPassword: string,
+): Promise<void> {
+  if (employee.role === DATA_ENTRY_ROLE) {
+    await sendDataEntryWelcomeEmail({
+      name: employee.name,
+      email: employee.email,
+      employeeId: employee.employeeId,
+      password: rawPassword,
+      loginUrl: resolveEmployerLoginUrl(),
+      portalUrl: resolveDataEntryPortalUrl(),
+    });
+    return;
+  }
+
+  await sendEmployeeWelcomeEmail({
+    name: employee.name,
+    email: employee.email,
+    employeeId: employee.employeeId,
+    role: employee.role,
+    password: rawPassword,
+    loginUrl: resolveWelcomeEmailLoginUrl(),
+  });
 }
 
 /** Client Admin / Client Member sign-in page (same portal as internal employees). */
@@ -188,6 +224,7 @@ import {
   sendOTPEmail,
   sendClientAdminWelcomeEmail,
   sendClientMemberWelcomeEmail,
+  sendDataEntryWelcomeEmail,
 } from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
 import { DEFAULT_EMPLOYEE_WELCOME_MESSAGE, EMPLOYEE_WELCOME_MESSAGE_KEY, getAppSetting, upsertAppSetting } from "./admin-settings";
@@ -205,12 +242,15 @@ import {
   isClientPortalRole,
   isClientAdminRole,
   isClientMemberRole,
+  getClientRoleDisplayName,
 } from "@shared/client-roles";
+import { DATA_ENTRY_ROLE, DATA_ENTRY_PORTAL_PATH } from "@shared/data-entry-roles";
 import {
   resolveClientCompanyForEmployee,
   getJobApplicationsScopedToClientEmployee,
   clientEmployeeCanAccessApplication,
   getClientScopedRequirements,
+  getClientScopedRequirementIds,
   clientNudgeInScope,
 } from "./client-org";
 import {
@@ -890,6 +930,11 @@ async function buildEmployeeNotificationsFeed(employee: any) {
     (a) => (a.status || "").toLowerCase() === "active",
   );
 
+  const candidateComments = await getEmployeeCommentNotifications(employee.id).catch((err) => {
+    console.error("[notifications-feed] candidateComments failed:", err);
+    return [] as Awaited<ReturnType<typeof getEmployeeCommentNotifications>>;
+  });
+
   const toIso = (value: any): string | null => {
     if (!value) return null;
     const d = new Date(value);
@@ -972,11 +1017,13 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       clientJdSubmissions,
       newRequirements: [],
       newCandidateApplied: [],
+      candidateComments,
       unreadCount:
         adminNudges.filter((i) => i.isUnread).length +
         clientEscalations.filter((i) => i.isUnread).length +
         closures.filter((i) => i.isUnread).length +
-        clientJdSubmissions.filter((i) => i.isUnread).length,
+        clientJdSubmissions.filter((i) => i.isUnread).length +
+        candidateComments.filter((i) => i.isUnread).length,
     };
   }
 
@@ -1072,11 +1119,13 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       escalatedNudges,
       closures,
       newCandidateApplied: [],
+      candidateComments,
       unreadCount:
         newRequirements.filter((i) => i.isUnread).length +
         nudges.filter((i) => i.isUnread).length +
         escalatedNudges.filter((i) => i.isUnread).length +
-        closures.filter((i) => i.isUnread).length,
+        closures.filter((i) => i.isUnread).length +
+        candidateComments.filter((i) => i.isUnread).length,
     };
   }
 
@@ -1189,10 +1238,12 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       escalatedNudges: [],
       closures,
       newCandidateApplied,
+      candidateComments,
       unreadCount:
         nudges.filter((i) => i.isUnread).length +
         closures.filter((i) => i.isUnread).length +
-        newCandidateApplied.filter((i) => i.isUnread).length,
+        newCandidateApplied.filter((i) => i.isUnread).length +
+        candidateComments.filter((i) => i.isUnread).length,
     };
   }
 
@@ -1281,12 +1332,14 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       escalatedNudges,
       closures,
       newCandidateApplied,
+      candidateComments,
       unreadCount:
         newRequirements.filter((i) => i.isUnread).length +
         nudges.filter((i) => i.isUnread).length +
         escalatedNudges.filter((i) => i.isUnread).length +
         closures.filter((i) => i.isUnread).length +
-        newCandidateApplied.filter((i) => i.isUnread).length,
+        newCandidateApplied.filter((i) => i.isUnread).length +
+        candidateComments.filter((i) => i.isUnread).length,
     };
   }
 
@@ -1297,7 +1350,8 @@ async function buildEmployeeNotificationsFeed(employee: any) {
     escalatedNudges: [],
     closures: [],
     newCandidateApplied: [],
-    unreadCount: 0,
+    candidateComments,
+    unreadCount: candidateComments.filter((i) => i.isUnread).length,
   };
 }
 
@@ -1484,6 +1538,17 @@ function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function requireDataEntryOrAdminAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.employeeId) {
+    return res.status(403).json({ message: "Authentication required." });
+  }
+  const role = req.session.employeeRole;
+  if (role === DATA_ENTRY_ROLE || role === "admin") {
+    return next();
+  }
+  return res.status(403).json({ message: "Access denied." });
+}
+
 function normalizeSourcingRole(role: string | null | undefined): "recruiter" | "team_leader" | null {
   const raw = (role || "").toLowerCase().trim();
   const r = raw.replace(/[\s-]+/g, "_");
@@ -1651,6 +1716,321 @@ function formatCommentAuthorRole(role: string | null | undefined): string {
   if (r === "client") return "Client";
   if (r === "hr" || r === "human_resources") return "HR";
   return role || "Staff";
+}
+
+function resolveSessionMemberRoleLabel(
+  emp: { role?: string | null },
+  roleOverride?: string,
+): string {
+  if (roleOverride) return roleOverride;
+  const r = (emp.role || "").toLowerCase();
+  if (r === "admin" || r === "manager") return "Admin";
+  if (r === "team_leader" || r === "teamleader") return "TL";
+  if (r === "recruiter" || r === "talent_advisor" || r === "ta") return "TA";
+  if (isClientPortalRole(emp.role)) return getClientRoleDisplayName(emp.role);
+  return formatCommentAuthorRole(emp.role);
+}
+
+function findTeamLeadersForRecruiter(
+  ta: { id: string },
+  allEmployees: Array<{
+    id: string;
+    employeeId?: string | null;
+    name?: string | null;
+    role?: string | null;
+    reportingTo?: string | null;
+  }>,
+) {
+  return allEmployees.filter((emp) => {
+    if (normalizeSourcingRole(emp.role) !== "team_leader") return false;
+    const team = getTeamLeaderRecruiters(emp, allEmployees);
+    return team.some((recruiter) => recruiter.id === ta.id);
+  });
+}
+
+type ApplicationSessionMember = {
+  id: string;
+  name: string;
+  role: string;
+};
+
+/** Everyone who can read or post in the candidate comment session for this application. */
+async function resolveApplicationSessionMembers(
+  application: {
+    id: string;
+    ownerEmployeeId?: string | null;
+    ownerRole?: string | null;
+    recruiterJobId?: string | null;
+    requirementId?: string | null;
+    company?: string | null;
+    jobTitle?: string | null;
+    candidateName?: string | null;
+  },
+): Promise<ApplicationSessionMember[]> {
+  const allEmployees = await storage.getAllEmployees();
+  const memberMap = new Map<string, ApplicationSessionMember>();
+
+  const addEmp = (
+    emp: (typeof allEmployees)[number] | undefined,
+    roleOverride?: string,
+  ) => {
+    if (!emp?.id || !emp.name?.trim() || emp.isActive === false) return;
+    memberMap.set(emp.id, {
+      id: emp.id,
+      name: emp.name.trim(),
+      role: resolveSessionMemberRoleLabel(emp, roleOverride),
+    });
+  };
+
+  const findByRef = (ref?: string | null) =>
+    ref ? allEmployees.find((e) => matchesEmployeeRef(e, ref) || e.id === ref) : undefined;
+
+  const findByName = (name?: string | null) => {
+    if (!name?.trim()) return undefined;
+    const lower = name.trim().toLowerCase();
+    return allEmployees.find((e) => (e.name || "").toLowerCase() === lower);
+  };
+
+  // All active admins can access every candidate comment session.
+  for (const emp of allEmployees) {
+    const role = (emp.role || "").toLowerCase();
+    if (emp.isActive !== false && (role === "admin" || role === "manager")) {
+      addEmp(emp, "Admin");
+    }
+  }
+
+  const owner = findByRef(application.ownerEmployeeId);
+  addEmp(owner, application.ownerRole === "team_leader" ? "TL" : "TA");
+  if (owner?.reportingTo) {
+    addEmp(findByRef(owner.reportingTo), "TL");
+  }
+  if (owner && normalizeSourcingRole(owner.role) === "recruiter") {
+    for (const tl of findTeamLeadersForRecruiter(owner, allEmployees)) {
+      addEmp(tl, "TL");
+    }
+  }
+
+  if (application.requirementId) {
+    const req = await storage.getRequirementById(application.requirementId);
+    if (req) {
+      addEmp(findByRef(req.talentAdvisorId), "TA");
+      addEmp(findByName(req.talentAdvisor), "TA");
+      addEmp(findByName(req.teamLead), "TL");
+
+      if (req.assignedClientMemberId) {
+        addEmp(findByRef(req.assignedClientMemberId), "Client Member");
+      }
+
+      try {
+        const { requirementAssignments } = await import("@shared/schema");
+        const assignments = await db
+          .select()
+          .from(requirementAssignments)
+          .where(
+            and(
+              eq(requirementAssignments.requirementId, application.requirementId),
+              eq(requirementAssignments.status, "active"),
+            ),
+          );
+        for (const assignment of assignments) {
+          addEmp(findByRef(assignment.recruiterId), "TA");
+          addEmp(findByRef(assignment.teamLeadId), "TL");
+          addEmp(findByName(assignment.teamLeadName), "TL");
+        }
+      } catch {
+        // requirement_assignments may be unavailable on older DBs
+      }
+
+      const companyLower = (req.company || application.company || "").trim().toLowerCase();
+      const clientEmployees = allEmployees.filter(
+        (e) => isClientPortalRole(e.role || "") && e.isActive !== false,
+      );
+      for (const clientEmp of clientEmployees) {
+        const company = await resolveClientCompanyForEmployee(clientEmp);
+        const brand = (company?.brandName || "").trim().toLowerCase();
+        if (!companyLower || brand !== companyLower) continue;
+
+        if (isClientAdminRole(clientEmp.role)) {
+          addEmp(clientEmp, "Client Admin");
+          continue;
+        }
+
+        const scopedIds = await getClientScopedRequirementIds({
+          id: clientEmp.id,
+          role: clientEmp.role || "",
+          name: clientEmp.name || "",
+          email: clientEmp.email || "",
+          employeeId: clientEmp.employeeId,
+          clientCompanyId: clientEmp.clientCompanyId,
+        });
+        if (scopedIds === null || scopedIds.has(application.requirementId)) {
+          addEmp(clientEmp, "Client Member");
+        }
+      }
+    }
+  }
+
+  if (application.recruiterJobId) {
+    const job = await storage.getRecruiterJobById(application.recruiterJobId);
+    if (job) {
+      const ta = findByRef(job.assignedTaId);
+      addEmp(ta, "TA");
+      addEmp(findByRef(job.ownerEmployeeId), "TA");
+      addEmp(findByRef(job.recruiterId), "TA");
+      if (ta?.reportingTo) {
+        addEmp(findByRef(ta.reportingTo), "TL");
+      }
+    }
+  }
+
+  const comments = await storage.getCandidateApplicationComments(application.id);
+  for (const comment of comments) {
+    addEmp(findByRef(comment.authorEmployeeId), formatCommentAuthorRole(comment.authorRole));
+  }
+
+  return Array.from(memberMap.values()).sort((a, b) => {
+    const roleOrder = (role: string) => {
+      const r = role.toLowerCase();
+      if (r === "ta") return 0;
+      if (r === "tl") return 1;
+      if (r === "admin") return 2;
+      if (r.includes("client admin")) return 3;
+      if (r.includes("client member")) return 4;
+      return 5;
+    };
+    const byRole = roleOrder(a.role) - roleOrder(b.role);
+    if (byRole !== 0) return byRole;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+async function markApplicationCommentsRead(
+  applicationId: string,
+  employeeId: string,
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO application_comment_reads (application_id, employee_id, last_read_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (application_id, employee_id)
+     DO UPDATE SET last_read_at = NOW()`,
+    [applicationId, employeeId],
+  );
+
+  try {
+    const { notifications: notificationsTable } = await import("@shared/schema");
+    await db
+      .update(notificationsTable)
+      .set({ status: "read", readAt: new Date().toISOString() })
+      .where(
+        and(
+          eq(notificationsTable.userId, employeeId),
+          eq(notificationsTable.type, "application_comment"),
+          eq(notificationsTable.relatedJobId, applicationId),
+          eq(notificationsTable.status, "unread"),
+        ),
+      );
+  } catch (error) {
+    console.warn("Failed to mark comment notifications read:", error);
+  }
+}
+
+async function getUnreadCommentApplicationIdsForEmployee(
+  employeeId: string,
+  applicationIds: string[],
+): Promise<Set<string>> {
+  if (!applicationIds.length) return new Set();
+
+  const result = await pool.query<{ application_id: string }>(
+    `SELECT c.application_id
+     FROM candidate_application_comments c
+     LEFT JOIN application_comment_reads r
+       ON r.application_id = c.application_id AND r.employee_id = $1
+     WHERE c.application_id = ANY($2::varchar[])
+       AND c.author_employee_id <> $1
+     GROUP BY c.application_id, r.last_read_at
+     HAVING MAX(c.created_at) > COALESCE(r.last_read_at, TIMESTAMP '1970-01-01')`,
+    [employeeId, applicationIds],
+  );
+
+  return new Set(result.rows.map((row) => row.application_id));
+}
+
+async function attachHasUnreadComments<T extends { id: string }>(
+  employeeId: string,
+  items: T[],
+): Promise<(T & { hasUnreadComments: boolean })[]> {
+  const applicationIds = items
+    .map((item) => item.id)
+    .filter((id) => id && !id.startsWith("submission-"));
+  const unreadIds = await getUnreadCommentApplicationIdsForEmployee(employeeId, applicationIds);
+  return items.map((item) => ({
+    ...item,
+    hasUnreadComments:
+      Boolean(item.id) &&
+      !item.id.startsWith("submission-") &&
+      unreadIds.has(item.id),
+  }));
+}
+
+async function notifyApplicationCommentMembers(
+  application: {
+    id: string;
+    candidateName?: string | null;
+    jobTitle?: string | null;
+  },
+  comment: {
+    authorEmployeeId: string;
+    authorName: string;
+    body: string;
+  },
+): Promise<void> {
+  const members = await resolveApplicationSessionMembers(application);
+  const candidateName = application.candidateName || "Candidate";
+  const jobTitle = application.jobTitle || "Role";
+  const preview = comment.body.trim().slice(0, 140);
+  const now = new Date().toISOString();
+
+  await Promise.all(
+    members
+      .filter((member) => member.id !== comment.authorEmployeeId)
+      .map((member) =>
+        storage.createNotification({
+          userId: member.id,
+          type: "application_comment",
+          title: "New team message",
+          message: `${comment.authorName} on ${candidateName} (${jobTitle}): ${preview}`,
+          relatedJobId: application.id,
+          createdAt: now,
+          status: "unread",
+        }).catch((error) => {
+          console.warn("Failed to notify comment member:", member.id, error);
+        }),
+      ),
+  );
+}
+
+async function getEmployeeCommentNotifications(employeeId: string) {
+  const { notifications: notificationsTable } = await import("@shared/schema");
+  const rows = await db
+    .select()
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.userId, employeeId),
+        eq(notificationsTable.type, "application_comment"),
+        eq(notificationsTable.status, "unread"),
+      ),
+    )
+    .orderBy(desc(notificationsTable.createdAt))
+    .limit(50);
+
+  return rows.map((row) => ({
+    id: row.id,
+    line: row.message,
+    createdAt: row.createdAt,
+    isUnread: row.status === "unread",
+    applicationId: row.relatedJobId,
+  }));
 }
 
 async function collectTalentAdvisorRequirementIds(
@@ -2170,10 +2550,13 @@ async function clientCanAccessJobApplication(
   return { allowed, application: allowed ? application : undefined };
 }
 
-async function loadCandidateJobApplications(candidate: {
+async function loadCandidateJobApplications(
+  candidate: {
   id: string;
   email?: string | null;
-}) {
+},
+  req?: Request,
+) {
   if (candidate.email) {
     await linkStaffOsTaggedApplicationsToCandidate(candidate.id, candidate.email);
   }
@@ -2184,7 +2567,7 @@ async function loadCandidateJobApplications(candidate: {
         byProfile,
         await storage.getJobApplicationsByCandidateEmail(candidate.email),
       );
-  return enrichCandidateApplicationsWithJd(merged);
+  return enrichCandidateApplicationsWithJd(merged, req);
 }
 
 async function enrichCandidateApplicationsWithJd<T extends { requirementId?: string | null }>(
@@ -4583,7 +4966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      let candidateJobApplications = await loadCandidateJobApplications(candidate);
+      let candidateJobApplications = await loadCandidateJobApplications(candidate, req);
 
       // If candidate has already confirmed at least one StaffOS-tagged application,
       // auto-confirm other pending tagged rows to avoid repeated consent prompts.
@@ -4605,7 +4988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({ isCandidateConfirmed: true })
           .where(inArray(jobApplications.id, pendingRecruiterTaggedIds));
 
-        candidateJobApplications = await loadCandidateJobApplications(candidate);
+        candidateJobApplications = await loadCandidateJobApplications(candidate, req);
       }
 
       res.json(candidateJobApplications);
@@ -5323,6 +5706,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     );
   };
 
+  const inferStoredFileContentType = (safeName: string): string => {
+    const lower = safeName.toLowerCase();
+    if (lower.endsWith(".pdf")) return "application/pdf";
+    if (lower.endsWith(".doc")) return "application/msword";
+    if (lower.endsWith(".docx")) {
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    }
+    if (lower.endsWith(".png")) return "image/png";
+    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+    if (lower.endsWith(".webp")) return "image/webp";
+    if (lower.endsWith(".gif")) return "image/gif";
+    if (lower.endsWith(".txt")) return "text/plain; charset=utf-8";
+    return "application/octet-stream";
+  };
+
   const serveStoredFile = async (
     req: Request,
     res: Response,
@@ -5333,7 +5731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ) => {
     for (const filePath of localCandidates) {
       if (fs.existsSync(filePath)) {
-        setStoredFileResponseHeaders(req, res, safeName, "application/octet-stream");
+        setStoredFileResponseHeaders(req, res, safeName, inferStoredFileContentType(safeName));
         return res.sendFile(path.resolve(filePath));
       }
     }
@@ -6287,7 +6685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(pipelineData);
+      res.json(await attachHasUnreadComments(employee.id, pipelineData));
     } catch (error) {
       console.error("Get team leader pipeline error:", error);
       res.status(500).json({
@@ -7478,12 +7876,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adminNudges: feed.nudges,
         clientEscalations: feed.escalatedNudges,
         clientJdSubmissions: (feed as { clientJdSubmissions?: unknown[] }).clientJdSubmissions ?? [],
+        candidateComments: feed.candidateComments ?? [],
         unreadAdminNudges: feed.nudges.filter((i: any) => i.isUnread).length,
         unreadClientEscalations: feed.escalatedNudges.filter((i: any) => i.isUnread).length,
         unreadClientJdSubmissions:
           ((feed as { clientJdSubmissions?: { isUnread?: boolean }[] }).clientJdSubmissions ?? []).filter(
             (i) => i.isUnread,
           ).length,
+        unreadCandidateComments:
+          (feed.candidateComments ?? []).filter((i: { isUnread?: boolean }) => i.isUnread).length,
       });
     } catch (error) {
       console.error("Admin notifications feed error:", error);
@@ -7534,6 +7935,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .update(nudgesTable)
           .set({ isRead: true })
           .where(eq(nudgesTable.id, id));
+      }
+      if (kind === "candidateComment" || kind === "applicationComment") {
+        const { notifications: notificationsTable } = await import("@shared/schema");
+        await db
+          .update(notificationsTable)
+          .set({ status: "read", readAt: new Date().toISOString() })
+          .where(eq(notificationsTable.id, id));
       }
       res.json({ ok: true });
     } catch (error) {
@@ -11016,6 +11424,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/save-push-token", requireAnyAuth, async (req, res) => {
+    try {
+      const token = String(req.body?.token || "").trim();
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+
+      const userId = req.session.employeeId || req.session.candidateId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      await storage.savePushToken({
+        userId,
+        token,
+        createdAt: new Date().toISOString(),
+      });
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Save push token error:", error);
+      return res.status(500).json({ message: "Failed to save push token" });
+    }
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    app.post("/api/dev/test-push", requireAnyAuth, async (req, res) => {
+      try {
+        const userId = req.session.employeeId || req.session.candidateId;
+        if (!userId) {
+          return res.status(401).json({ message: "Authentication required" });
+        }
+
+        const { sendPushNotification } = await import("./utils/pushNotifications");
+        const tokens = await storage.getPushTokensByUserId(userId);
+        if (tokens.length === 0) {
+          return res.status(400).json({ message: "No push tokens saved for this user" });
+        }
+
+        const results = await Promise.allSettled(
+          tokens.map((entry) =>
+            sendPushNotification({
+              token: entry.token,
+              title: "StaffOS test",
+              body: "Desktop push is working.",
+            }),
+          ),
+        );
+
+        const sent = results.filter((r) => r.status === "fulfilled").length;
+        const failed = results.filter((r) => r.status === "rejected").length;
+        return res.json({ sent, failed, total: tokens.length });
+      } catch (error) {
+        console.error("Dev test push error:", error);
+        return res.status(500).json({ message: "Test push failed" });
+      }
+    });
+  }
+
   // Get user activities for role (Admin/TL/Recruiter notifications)
   app.get("/api/user-activities/:role", async (req, res) => {
     try {
@@ -11441,16 +11908,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Send welcome email for (new or updated) login
           if (finalEmployee.email) {
-            const loginUrl = resolveWelcomeEmailLoginUrl();
-
-            await sendEmployeeWelcomeEmail({
-              name: finalEmployee.name,
-              email: finalEmployee.email,
-              employeeId: finalEmployee.employeeId,
-              role: finalEmployee.role,
-              password: rawPassword,
-              loginUrl,
-            });
+            await sendEmployeeRoleWelcomeEmail(
+              {
+                name: finalEmployee.name,
+                email: finalEmployee.email,
+                employeeId: finalEmployee.employeeId,
+                role: finalEmployee.role,
+              },
+              rawPassword,
+            );
           }
 
           return res.status(200).json({
@@ -11466,16 +11932,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send welcome email to new employee
       if (employee.email && rawPassword) {
-        const loginUrl = resolveWelcomeEmailLoginUrl();
-
-        await sendEmployeeWelcomeEmail({
-          name: employee.name,
-          email: employee.email,
-          employeeId: employee.employeeId,
-          role: employee.role,
-          password: rawPassword,
-          loginUrl
-        });
+        await sendEmployeeRoleWelcomeEmail(
+          {
+            name: employee.name,
+            email: employee.email,
+            employeeId: employee.employeeId,
+            role: employee.role,
+          },
+          rawPassword,
+        );
       }
 
       res.status(201).json({ message: "Employee created successfully", employee });
@@ -14685,7 +15150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json(filteredApplications);
+      res.json(await attachHasUnreadComments(employee.id, filteredApplications));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Get applications error:", message, error);
@@ -15039,10 +15504,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const details = await resolveApplicationCandidateDetails(application);
-      return res.json({ application: details });
+      const members = await resolveApplicationSessionMembers(application);
+      return res.json({ application: details, members });
     } catch (error) {
       console.error("Get application session error:", error);
       return res.status(500).json({ message: "Failed to load candidate session" });
+    }
+  });
+
+  app.get("/api/recruiter/applications/:id/session/members", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const members = await resolveApplicationSessionMembers(application);
+      return res.json({ members });
+    } catch (error) {
+      console.error("Get application session members error:", error);
+      return res.status(500).json({ message: "Failed to load session members" });
     }
   });
 
@@ -15178,10 +15669,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         comment = row;
       }
 
+      void notifyApplicationCommentMembers(application, {
+        authorEmployeeId: employee.id,
+        authorName: employee.name,
+        body: parsed.data.body,
+      }).catch((err) => console.warn("Comment notify failed:", err));
+
       return res.status(201).json(serializeApplicationComment(comment));
     } catch (error) {
       console.error("Create application comment error:", error);
       return res.status(500).json({ message: "Failed to post comment" });
+    }
+  });
+
+  app.post("/api/recruiter/applications/:id/comments/read", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await markApplicationCommentsRead(id, employee.id);
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("Mark application comments read error:", error);
+      return res.status(500).json({ message: "Failed to mark comments as read" });
     }
   });
 
@@ -15781,12 +16303,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(
-        pipelineData.sort((a: any, b: any) => {
+      const adminEmployee = await storage.getEmployeeById(req.session.employeeId!);
+      const sortedPipeline = pipelineData.sort((a: any, b: any) => {
           const aTime = new Date(a.appliedDate || a.updatedAt || 0).getTime();
           const bTime = new Date(b.appliedDate || b.updatedAt || 0).getTime();
           return bTime - aTime;
-        })
+        });
+
+      res.json(
+        adminEmployee
+          ? await attachHasUnreadComments(adminEmployee.id, sortedPipeline)
+          : sortedPipeline,
       );
     } catch (error) {
       console.error("Get admin pipeline error:", error);
@@ -15804,6 +16331,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get employees error:', error);
       res.status(500).json({ message: "Failed to get employees" });
+    }
+  });
+
+  app.get("/api/admin/data-entry-upload-stats", requireAdminAuth, async (_req, res) => {
+    try {
+      const allEmployees = await storage.getAllEmployees();
+      const dataEntryEmployees = allEmployees.filter((emp) => emp.role === DATA_ENTRY_ROLE);
+
+      if (dataEntryEmployees.length === 0) {
+        return res.json({ stats: {} });
+      }
+
+      const names = dataEntryEmployees.map((emp) => emp.name).filter(Boolean) as string[];
+      if (names.length === 0) {
+        return res.json({ stats: {} });
+      }
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const todayIso = startOfToday.toISOString();
+
+      const rows = await db
+        .select({
+          addedBy: candidates.addedBy,
+          total: sql<number>`count(*)::int`,
+          today: sql<number>`count(*) filter (where ${candidates.createdAt} >= ${todayIso})::int`,
+        })
+        .from(candidates)
+        .where(inArray(candidates.addedBy, names))
+        .groupBy(candidates.addedBy);
+
+      const byName = new Map(
+        rows
+          .filter((row) => row.addedBy)
+          .map((row) => [
+            row.addedBy as string,
+            { totalUploaded: row.total ?? 0, todayUploaded: row.today ?? 0 },
+          ]),
+      );
+
+      const stats: Record<string, { totalUploaded: number; todayUploaded: number }> = {};
+      for (const emp of dataEntryEmployees) {
+        if (!emp.name) continue;
+        stats[emp.id] = byName.get(emp.name) ?? { totalUploaded: 0, todayUploaded: 0 };
+      }
+
+      res.json({ stats });
+    } catch (error) {
+      console.error("Data entry upload stats error:", error);
+      res.status(500).json({ message: "Failed to load data entry upload stats" });
     }
   });
 
@@ -16574,6 +17151,298 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to import candidates" });
     }
   });
+
+  // --- Data Entry portal (Resume Upload Hub) ---
+  app.get("/api/data-entry/profile", requireDataEntryOrAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const { password, ...safeEmployee } = employee;
+      res.json(safeEmployee);
+    } catch (error) {
+      console.error("Data entry profile error:", error);
+      res.status(500).json({ message: "Failed to load profile" });
+    }
+  });
+
+  app.patch("/api/data-entry/profile", requireDataEntryOrAdminAuth, async (req, res) => {
+    try {
+      const { name, phone } = req.body;
+      if (!name?.trim()) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      const updated = await storage.updateEmployee(req.session.employeeId!, {
+        name: String(name).trim(),
+        phone: phone ? String(phone).trim() : null,
+      });
+      if (!updated) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const { password, ...safeEmployee } = updated;
+      res.json({ message: "Profile updated", employee: safeEmployee });
+    } catch (error) {
+      console.error("Data entry profile update error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  app.get("/api/data-entry/stats", requireDataEntryOrAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee?.name) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const todayIso = startOfToday.toISOString();
+
+      const [totalRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(candidates)
+        .where(eq(candidates.addedBy, employee.name));
+
+      const [todayRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(candidates)
+        .where(
+          and(
+            eq(candidates.addedBy, employee.name),
+            gte(candidates.createdAt, todayIso),
+          ),
+        );
+
+      res.json({
+        totalUploaded: totalRow?.count ?? 0,
+        todayUploaded: todayRow?.count ?? 0,
+        lastLoginAt: employee.lastLoginAt ?? null,
+      });
+    } catch (error) {
+      console.error("Data entry stats error:", error);
+      res.status(500).json({ message: "Failed to load stats" });
+    }
+  });
+
+  app.get("/api/data-entry/recent-uploads", requireDataEntryOrAdminAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee?.name) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const limit = Math.min(Math.max(parseInt(String(req.query.limit || "20"), 10) || 20, 1), 50);
+
+      const rows = await db
+        .select({
+          id: candidates.id,
+          candidateId: candidates.candidateId,
+          fullName: candidates.fullName,
+          email: candidates.email,
+          createdAt: candidates.createdAt,
+          pipelineStatus: candidates.pipelineStatus,
+        })
+        .from(candidates)
+        .where(eq(candidates.addedBy, employee.name))
+        .orderBy(desc(candidates.createdAt))
+        .limit(limit);
+
+      res.json(rows);
+    } catch (error) {
+      console.error("Data entry recent uploads error:", error);
+      res.status(500).json({ message: "Failed to load recent uploads" });
+    }
+  });
+
+  app.post(
+    "/api/data-entry/parse-resumes-bulk",
+    extendBulkParseTimeouts,
+    requireDataEntryOrAdminAuth,
+    handleBulkResumeUpload,
+    async (req, res) => {
+      try {
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+          return res.status(400).json({ message: "No resume files uploaded" });
+        }
+
+        const fileData = files.map((f) => ({
+          path: f.path,
+          originalname: f.originalname,
+          mimetype: f.mimetype,
+        }));
+
+        const results = await parseBulkResumes(fileData);
+
+        const successCount = results.filter((r) => r.success).length;
+        const failedCount = results.filter((r) => !r.success).length;
+
+        const storedFileUrls = await Promise.all(
+          files.map(async (file, index) => {
+            if (!results[index]?.success) {
+              if (process.env.NODE_ENV === "production" && file.path && fs.existsSync(file.path)) {
+                await fs.promises.unlink(file.path).catch(() => {});
+              }
+              return null;
+            }
+            return storeResumeFile(file, req);
+          }),
+        );
+
+        res.json({
+          total: results.length,
+          successCount,
+          failedCount,
+          results: results.map((r, index) => {
+            if (r.success && files[index]) {
+              const fileUrl = storedFileUrls[index];
+              return {
+                fileName: r.fileName,
+                success: r.success,
+                data: {
+                  fullName: r.data?.fullName,
+                  email: r.data?.email,
+                  phone: r.data?.phone,
+                  designation: r.data?.designation,
+                  experience: r.data?.experience,
+                  skills: r.data?.skills,
+                  location: r.data?.location,
+                  company: r.data?.company,
+                  education: r.data?.education,
+                  linkedinUrl: r.data?.linkedinUrl,
+                  portfolioUrl: r.data?.portfolioUrl,
+                  websiteUrl: r.data?.websiteUrl,
+                  currentRole: r.data?.currentRole,
+                  filePath: fileUrl,
+                },
+                error: r.error,
+              };
+            }
+            return {
+              fileName: r.fileName,
+              success: r.success,
+              data: null,
+              error: r.error,
+            };
+          }),
+        });
+      } catch (error) {
+        console.error("Data entry bulk parse resume error:", error);
+        applyCorsHeaders(req, res);
+        res.status(500).json({ message: "Failed to parse resumes" });
+      }
+    },
+  );
+
+  app.post(
+    "/api/data-entry/import-candidates-bulk",
+    extendBulkParseTimeouts,
+    requireDataEntryOrAdminAuth,
+    async (req, res) => {
+      try {
+        const employee = await storage.getEmployeeById(req.session.employeeId!);
+        if (!employee?.name) {
+          return res.status(404).json({ message: "Employee not found" });
+        }
+
+        const { candidates: candidatesToImport } = req.body;
+
+        if (!candidatesToImport || !Array.isArray(candidatesToImport) || candidatesToImport.length === 0) {
+          return res.status(400).json({ message: "No candidates to import" });
+        }
+
+        const addedBy = employee.name;
+        const results: Array<{ fileName: string; success: boolean; candidateId?: string; error?: string }> = [];
+
+        for (const candidate of candidatesToImport) {
+          try {
+            if (!candidate.fullName || !candidate.email) {
+              results.push({
+                fileName: candidate.fileName || "Unknown",
+                success: false,
+                error: "Missing name or email",
+              });
+              continue;
+            }
+
+            const existing = await storage.getCandidateByEmail(candidate.email.toLowerCase());
+            if (existing) {
+              results.push({
+                fileName: candidate.fileName || "Unknown",
+                success: false,
+                error: "Email already exists",
+              });
+              continue;
+            }
+
+            const candidateId = await storage.generateNextCandidateId();
+
+            const cleanValue = (value: any): any => {
+              if (!value) return null;
+              const str = String(value).trim().toLowerCase();
+              if (str === "null" || str === "undefined" || str === "" || str === "not available" || str === "n/a") {
+                return null;
+              }
+              return value;
+            };
+
+            await storage.createCandidate({
+              candidateId,
+              fullName: candidate.fullName,
+              email: candidate.email.toLowerCase(),
+              phone: cleanValue(candidate.phone),
+              designation: cleanValue(candidate.designation),
+              experience: cleanValue(candidate.experience),
+              skills: normalizeParsedSkills(candidate.skills) ?? cleanValue(candidate.skills),
+              location: cleanValue(candidate.location),
+              company: cleanValue(candidate.company),
+              education: normalizeParsedEducation(candidate.education) ?? cleanValue(candidate.education),
+              highestQualification: candidate.education
+                ? (normalizeParsedEducation(candidate.education)?.split(" · ")[0] ?? null)
+                : null,
+              collegeName: extractPrimaryInstitution(candidate.education) ?? null,
+              linkedinUrl: cleanValue(candidate.linkedinUrl),
+              portfolioUrl: cleanValue(candidate.portfolioUrl),
+              websiteUrl: cleanValue(candidate.websiteUrl),
+              currentRole: cleanValue(candidate.currentRole),
+              resumeFile: candidate.filePath || null,
+              addedBy,
+              pipelineStatus: "New",
+              isActive: true,
+              isVerified: false,
+              createdAt: new Date().toISOString(),
+            });
+
+            results.push({
+              fileName: candidate.fileName || "Unknown",
+              success: true,
+              candidateId,
+            });
+          } catch (err: any) {
+            results.push({
+              fileName: candidate.fileName || "Unknown",
+              success: false,
+              error: err.message || "Failed to create candidate",
+            });
+          }
+        }
+
+        const successCount = results.filter((r) => r.success).length;
+        const failedCount = results.filter((r) => !r.success).length;
+
+        res.json({
+          total: results.length,
+          successCount,
+          failedCount,
+          results,
+        });
+      } catch (error) {
+        console.error("Data entry bulk import candidates error:", error);
+        res.status(500).json({ message: "Failed to import candidates" });
+      }
+    },
+  );
 
   // Update employee
   app.put("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
@@ -17627,7 +18496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(pipelineData);
+      res.json(await attachHasUnreadComments(employee.id, pipelineData));
     } catch (error) {
       console.error('Get client pipeline error:', error);
       res.status(500).json({ message: "Failed to get pipeline data" });
@@ -17789,10 +18658,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applicationPayload = canSeeSalary
         ? details
         : stripSalaryFromApplicationSession(details as Record<string, unknown>);
-      return res.json({ application: applicationPayload });
+      const members = await resolveApplicationSessionMembers(application);
+      return res.json({ application: applicationPayload, members });
     } catch (error) {
       console.error("Get client application session error:", error);
       return res.status(500).json({ message: "Failed to load candidate session" });
+    }
+  });
+
+  app.get("/api/client/applications/:id/session/members", requireClientAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed, application } = await clientCanAccessJobApplication(employee, id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const members = await resolveApplicationSessionMembers(application);
+      return res.json({ members });
+    } catch (error) {
+      console.error("Get client application session members error:", error);
+      return res.status(500).json({ message: "Failed to load session members" });
     }
   });
 
@@ -17868,10 +18762,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         comment = row;
       }
 
+      const application = await storage.getJobApplicationById(id);
+
+      void notifyApplicationCommentMembers(application || { id }, {
+        authorEmployeeId: employee.id,
+        authorName: employee.name,
+        body: parsed.data.body,
+      }).catch((err) => console.warn("Comment notify failed (client):", err));
+
       return res.status(201).json(serializeApplicationComment(comment));
     } catch (error) {
       console.error("Create client application comment error:", error);
       return res.status(500).json({ message: "Failed to post comment" });
+    }
+  });
+
+  app.post("/api/client/applications/:id/comments/read", requireClientAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed } = await clientCanAccessJobApplication(employee, id);
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await markApplicationCommentsRead(id, employee.id);
+      return res.json({ ok: true });
+    } catch (error) {
+      console.error("Mark client application comments read error:", error);
+      return res.status(500).json({ message: "Failed to mark comments as read" });
     }
   });
 

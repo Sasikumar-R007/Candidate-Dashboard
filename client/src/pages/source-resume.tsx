@@ -188,11 +188,9 @@ const allEmploymentTypes = [
 ];
 
 const allJobTypes = [
-  "Permanent",
-  "Contract",
-  "Temporary",
-  "Internship",
-  "Any",
+  "Hybrid",
+  "On-Site",
+  "Remote",
 ];
 
 const allWorkPermits = [
@@ -886,15 +884,15 @@ const initialFilters: FilterState = {
   selectedRequirementId: undefined,
 };
 
-/** Source Resume field styling — small radius, distinct shades for inputs vs dropdowns */
+/** Source Resume field styling — compact radius and light blue theme */
 const SR_INPUT =
-  "border border-gray-300 bg-slate-50 rounded-[4px] text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-400";
+  "border border-blue-200 bg-blue-50/60 rounded-[4px] text-sm text-gray-800 placeholder:text-gray-400/90 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400";
 const SR_INPUT_COMPACT = `${SR_INPUT} px-2 py-1.5`;
 const SR_INPUT_STANDARD = `${SR_INPUT} px-3 py-2`;
 const SR_DROPDOWN_TRIGGER =
-  "w-full justify-between bg-slate-100 border border-slate-300 rounded-[4px] h-10 font-normal text-gray-700 hover:bg-slate-200/70 relative";
+  "w-full justify-between bg-white border border-gray-400 rounded-[4px] h-10 font-normal text-gray-900 hover:bg-gray-50 relative";
 const SR_SELECT_TRIGGER =
-  "w-full bg-slate-100 border border-slate-300 rounded-[4px] h-10 focus:ring-1 focus:ring-purple-500 focus:ring-offset-0";
+  "w-full bg-white border border-gray-400 rounded-[4px] h-10 text-gray-900 focus:ring-1 focus:ring-blue-400 focus:ring-offset-0";
 
 const BOOLEAN_SEARCH_PLACEHOLDER =
   "e.g. (Java OR Python) AND React NOT manager";
@@ -1289,6 +1287,7 @@ interface CandidateDisplay {
   resumeText?: string; // Raw resume text for better searchability
   createdAt?: string; // For reactive lastSeen calculation
   isFromDatabase?: boolean;
+  isPlatformUser?: boolean;
 }
 
 function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTime: Date): CandidateDisplay {
@@ -1380,6 +1379,7 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTi
     // Show "DB" tag only for candidates uploaded via Master Database (has resumeFile or addedBy)
     // Direct registrations (no resumeFile and no addedBy) should not have any tag
     isFromDatabase: !!(dbCandidate.resumeFile || dbCandidate.addedBy) && (!dbCandidate.password || dbCandidate.password === '') && !dbCandidate.isVerified,
+    isPlatformUser: !!dbCandidate.isVerified || !!(dbCandidate.password && dbCandidate.password.trim()),
   };
 }
 
@@ -1852,6 +1852,33 @@ const SourceResume = () => {
 
   // Save search to recent searches
   const saveSearchToHistory = () => {
+    const hasNonDefaultFilters =
+      filters.keywords.length > 0 ||
+      filters.excludedKeywords.length > 0 ||
+      filters.specificSkills.length > 0 ||
+      filters.experience[0] !== initialFilters.experience[0] ||
+      filters.experience[1] !== initialFilters.experience[1] ||
+      filters.ctcMin.trim() !== "" ||
+      filters.ctcMax.trim() !== "" ||
+      filters.location.length > 0 ||
+      filters.role.length > 0 ||
+      filters.noticePeriod.trim() !== "" ||
+      filters.preferredLocation.length > 0 ||
+      filters.company.length > 0 ||
+      filters.excludedCompanies.length > 0 ||
+      filters.educationUG.trim() !== "" ||
+      filters.educationPG.trim() !== "" ||
+      filters.additionalDegrees.length > 0 ||
+      filters.employmentType.trim() !== "" ||
+      filters.jobType.trim() !== "" ||
+      filters.workPermit.trim() !== "" ||
+      filters.candidateStatus !== "all" ||
+      filters.showWith.length > 0 ||
+      Boolean(filters.selectedRequirementId) ||
+      (filters.booleanMode && filters.searchQuery.trim() !== "");
+
+    if (!hasNonDefaultFilters) return;
+
     const newSearch: RecentSearch = {
       id: Date.now().toString(),
       keywords: filters.keywords,
@@ -2186,6 +2213,13 @@ const SourceResume = () => {
         return false;
       }
 
+      // CTC range filter
+      const ctcValue = parseFloat(candidate.ctc.replace(/[^\d.]/g, "")) || 0;
+      const minCtc = filters.ctcMin.trim() ? parseFloat(filters.ctcMin) : NaN;
+      const maxCtc = filters.ctcMax.trim() ? parseFloat(filters.ctcMax) : NaN;
+      if (!Number.isNaN(minCtc) && ctcValue < minCtc) return false;
+      if (!Number.isNaN(maxCtc) && ctcValue > maxCtc) return false;
+
       // Display Details - Show candidate with
       if (filters.showWith.includes("resume") && !candidate.resumeFile && !candidate.profilePic) {
         // If resume is required but candidate doesn't have one, skip
@@ -2202,14 +2236,12 @@ const SourceResume = () => {
 
       // Candidate status filter
       if (filters.candidateStatus === "new_registration") {
-        // Filter for new candidates (e.g., created in last 7 days)
-        const createdDate = new Date();
-        // This would need actual creation date from candidate data
-      }
-
-      if (filters.candidateStatus === "modified_candidates") {
-        // Filter for recently modified candidates
-        // This would need actual modification date from candidate data
+        if (!candidate.isPlatformUser) return false;
+        const createdDate = candidate.createdAt ? new Date(candidate.createdAt) : null;
+        if (!createdDate || Number.isNaN(createdDate.getTime())) return false;
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        if (createdDate < sevenDaysAgo) return false;
       }
 
       return true;
@@ -3079,7 +3111,7 @@ const SourceResume = () => {
             <h2 className="text-lg font-bold text-gray-900">Filters</h2>
             <button
               onClick={() => setView('search')}
-              className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
+              className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
             >
               <ChevronLeft className="w-4 h-4" />
               Back
@@ -3104,10 +3136,10 @@ const SourceResume = () => {
                   }
                 }}
               >
-                <SelectTrigger className={SR_SELECT_TRIGGER}>
+                <SelectTrigger className={`${SR_SELECT_TRIGGER} bg-gradient-to-r from-blue-50 to-sky-50 border-blue-300`}>
                   <SelectValue placeholder="Select requirement for AI matching" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-blue-50 border border-blue-200">
                   <SelectItem value="none">None (General Search)</SelectItem>
                   {requirements.map((req: any) => (
                     <SelectItem key={req.id} value={req.id}>
@@ -3143,12 +3175,29 @@ const SourceResume = () => {
             </div>
             {/* Skills Search */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Skills
-              </label>
+              <div className="flex items-center justify-between mb-2 gap-3">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Skills
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
+                    className="text-xs text-blue-700 hover:text-blue-800"
+                  >
+                    + Exclude Keywords
+                  </button>
+                  <button
+                    onClick={() => setShowSpecificSkills(!showSpecificSkills)}
+                    className="text-xs text-blue-700 hover:text-blue-800"
+                  >
+                    + Add Specific Skills
+                  </button>
+                </div>
+              </div>
               <div className="relative">
                 <input
                   type="text"
+                  list="left-filter-skill-suggestions"
                   placeholder={
                     filters.booleanMode
                       ? BOOLEAN_SEARCH_PLACEHOLDER
@@ -3188,6 +3237,11 @@ const SourceResume = () => {
                   />
                 )}
               </div>
+              <datalist id="left-filter-skill-suggestions">
+                {suggestedKeywords.map((skill) => (
+                  <option key={skill} value={skill} />
+                ))}
+              </datalist>
               <div className="flex flex-wrap gap-2 mt-2">
                 {!filters.booleanMode && filters.keywords.map((keyword) => (
                   <span
@@ -3234,6 +3288,13 @@ const SourceResume = () => {
               )}
             </div>
 
+            {/* Employment Details */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Employment Details
+              </label>
+            </div>
+
             {/* Experience */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -3243,8 +3304,7 @@ const SourceResume = () => {
                 <div className="relative flex-1">
                   <input
                     type="number"
-                    min={0}
-                    max={filters.experience[1]}
+                    step={1}
                     value={filters.experience[0]}
                     onChange={(e) =>
                       setFilters({
@@ -3266,20 +3326,20 @@ const SourceResume = () => {
                   <input
                     type="number"
                     min={filters.experience[0]}
-                    max={15}
+                    step={1}
                     value={filters.experience[1]}
                     onChange={(e) =>
                       setFilters({
                         ...filters,
-                        experience: [filters.experience[0], parseInt(e.target.value) || 15],
+                        experience: [filters.experience[0], parseInt(e.target.value) || filters.experience[1]],
                       })
                     }
                     className={`w-full ${SR_INPUT_COMPACT} pr-7`}
                   />
-                  {filters.experience[1] !== 15 && (
+                  {filters.experience[1] !== initialFilters.experience[1] && (
                     <X
                       className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setFilters({ ...filters, experience: [filters.experience[0], 15] })}
+                      onClick={() => setFilters({ ...filters, experience: [filters.experience[0], initialFilters.experience[1]] })}
                     />
                   )}
                 </div>
@@ -3292,13 +3352,13 @@ const SourceResume = () => {
                 CTC Range (Lakhs)
               </label>
               <div className="flex gap-2 items-center">
-                <div className="relative flex-1">
+                <div className="relative w-[9.5rem]">
                   <input
                     type="number"
                     placeholder="Min"
                     value={filters.ctcMin}
                     onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
-                    className={`w-full ${SR_INPUT_COMPACT} pr-7`}
+                    className={`${SR_INPUT_COMPACT} w-full pr-7`}
                   />
                   {filters.ctcMin && (
                     <X
@@ -3308,13 +3368,13 @@ const SourceResume = () => {
                   )}
                 </div>
                 <span className="text-gray-500">-</span>
-                <div className="relative flex-1">
+                <div className="relative w-[9.5rem]">
                   <input
                     type="number"
                     placeholder="Max"
                     value={filters.ctcMax}
                     onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
-                    className={`w-full ${SR_INPUT_COMPACT} pr-7`}
+                    className={`${SR_INPUT_COMPACT} w-full pr-7`}
                   />
                   {filters.ctcMax && (
                     <X
@@ -3324,6 +3384,19 @@ const SourceResume = () => {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Current Location */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Current Location
+              </label>
+              <MultiFilterableDropdown
+                values={filters.location}
+                onChange={(values) => setFilters({ ...filters, location: values })}
+                options={locations.map(l => l.label)}
+                placeholder="All locations"
+              />
             </div>
 
             {/* Designation */}
@@ -3362,19 +3435,6 @@ const SourceResume = () => {
                 onChange={(values) => setFilters({ ...filters, company: values })}
                 options={allCompanies}
                 placeholder="All companies"
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Location
-              </label>
-              <MultiFilterableDropdown
-                values={filters.location}
-                onChange={(values) => setFilters({ ...filters, location: values })}
-                options={locations.map(l => l.label)}
-                placeholder="All locations"
               />
             </div>
 
@@ -3458,17 +3518,27 @@ const SourceResume = () => {
 
             {/* Candidate Status */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Show
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Show
+                </label>
+                {filters.candidateStatus !== "all" && (
+                  <button
+                    onClick={() => setFilters({ ...filters, candidateStatus: "all" })}
+                    className="text-xs text-blue-700 hover:text-blue-800"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
               <div className="flex flex-col gap-2">
-                {["All Candidates", "New registration", "Modified Candidates"].map((option) => {
+                {["All Candidates", "New registration"].map((option) => {
                   const value = option === "All Candidates" ? "all" : option.toLowerCase().replace(" ", "_");
                   return (
                     <button
                       key={option}
                       onClick={() => setFilters({ ...filters, candidateStatus: value })}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors text-left ${
+                      className={`px-3 py-1.5 rounded-[4px] text-xs font-medium transition-colors text-left ${
                         filters.candidateStatus === value
                           ? "bg-blue-600 text-white"
                           : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
@@ -3483,9 +3553,19 @@ const SourceResume = () => {
 
             {/* Show Candidate With */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Show candidate with
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Show candidate with
+                </label>
+                {filters.showWith.length > 0 && (
+                  <button
+                    onClick={() => setFilters({ ...filters, showWith: [] })}
+                    className="text-xs text-blue-700 hover:text-blue-800"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
               <div className="flex flex-col gap-2">
                 {[
                   { value: "resume", label: "Attached Resume" },
@@ -3495,7 +3575,7 @@ const SourceResume = () => {
                   <button
                     key={option.value}
                     onClick={() => handleShowWithToggle(option.value)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors text-left ${
+                    className={`px-3 py-1.5 rounded-[4px] text-xs font-medium transition-colors text-left ${
                       filters.showWith.includes(option.value)
                         ? "bg-blue-600 text-white"
                         : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
@@ -3637,7 +3717,7 @@ const SourceResume = () => {
                     });
                   }
                 }}
-                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                className={`px-3 py-1.5 text-sm rounded-[4px] font-medium transition-colors ${
                   showSavedProfiles 
                     ? "bg-purple-600 text-white hover:bg-purple-700" 
                     : "bg-blue-600 text-white hover:bg-blue-700"
@@ -3683,10 +3763,10 @@ const SourceResume = () => {
               <div className="flex items-center gap-2">
                 {/* Sort Dropdown */}
                 <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                  <SelectTrigger className="w-40 h-8 text-xs">
+                  <SelectTrigger className="w-40 h-8 text-xs bg-blue-50 border border-blue-300 text-gray-900">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white border border-blue-200">
                     <SelectItem value="relevance">Relevance</SelectItem>
                     <SelectItem value="experience-high">Experience (High to Low)</SelectItem>
                     <SelectItem value="experience-low">Experience (Low to High)</SelectItem>
@@ -3700,7 +3780,11 @@ const SourceResume = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => exportToCSV(displayCandidates)}
+                  onClick={() => {
+                    if (window.confirm(`Export ${displayCandidates.length} candidate(s) to CSV?`)) {
+                      exportToCSV(displayCandidates);
+                    }
+                  }}
                   className="text-xs"
                   title="Export all results to CSV"
                 >
@@ -4100,7 +4184,7 @@ const SourceResume = () => {
                                   Tag to Requirement
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} className="bg-blue-50 border border-blue-200">
                                 {isLoadingRequirements ? (
                                   <DropdownMenuItem disabled>
                                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -4116,7 +4200,9 @@ const SourceResume = () => {
                                       key={req.id}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleTagToRequirement(candidate, req.id);
+                                        if (window.confirm(`Tag ${candidate.name} to requirement "${req.position} - ${req.company}"?`)) {
+                                          handleTagToRequirement(candidate, req.id);
+                                        }
                                       }}
                                     >
                                       {req.position} - {req.company}
@@ -4403,7 +4489,7 @@ const SourceResume = () => {
           </div>
 
           {/* Keywords Section */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Keywords</h2>
               <div className="flex items-center gap-2">
@@ -4469,8 +4555,26 @@ const SourceResume = () => {
 
             {/* Search Input */}
             <div className="relative mb-2">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-gray-700">Keywords Search</span>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
+                    className="text-sm text-blue-700 hover:text-blue-800"
+                  >
+                    + Exclude Keywords
+                  </button>
+                  <button
+                    onClick={() => setShowSpecificSkills(!showSpecificSkills)}
+                    className="text-sm text-blue-700 hover:text-blue-800"
+                  >
+                    + Add Specific Skills
+                  </button>
+                </div>
+              </div>
               <input
                 type="text"
+                list="source-keyword-suggestions"
                 value={filters.booleanMode ? filters.searchQuery : keywordInput}
                 onChange={(e) => {
                   if (filters.booleanMode) {
@@ -4492,27 +4596,17 @@ const SourceResume = () => {
                 }
               />
             </div>
+            <datalist id="source-keyword-suggestions">
+              {suggestedKeywords.map((skill) => (
+                <option key={skill} value={skill} />
+              ))}
+            </datalist>
 
             {filters.booleanMode && (
               <p className="text-xs text-gray-500 mb-2">
                 Use AND, OR, NOT and parentheses — e.g. (Java OR Python) AND React NOT manager
               </p>
             )}
-
-            <div className="flex items-center gap-4 mt-3">
-              <button 
-                onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                + Exclude Keywords
-              </button>
-              <button 
-                onClick={() => setShowSpecificSkills(!showSpecificSkills)}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                + Add Specific Skills
-              </button>
-            </div>
 
             {/* Exclude Keywords Input */}
             {showExcludeKeywords && (
@@ -4599,121 +4693,103 @@ const SourceResume = () => {
             )}
           </div>
 
-          {/* Experience, CTC Range, Location - Combined with Keywords */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            {/* Experience */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Briefcase className="w-4 h-4 text-purple-600" />
-                Experience
-              </label>
-              <div className="flex gap-2 items-center">
-                <div className="relative">
-                  <input
-                    type="number"
-                    min={0}
-                    max={filters.experience[1]}
-                    value={filters.experience[0]}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        experience: [parseInt(e.target.value) || 0, filters.experience[1]],
-                      })
-                    }
-                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
-                  />
-                  {filters.experience[0] !== 0 && (
-                    <X
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setFilters({ ...filters, experience: [0, filters.experience[1]] })}
-                    />
-                  )}
-                </div>
-                <span className="text-gray-500">to</span>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min={filters.experience[0]}
-                    max={15}
-                    value={filters.experience[1]}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        experience: [filters.experience[0], parseInt(e.target.value) || 15],
-                      })
-                    }
-                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
-                  />
-                  {filters.experience[1] !== 15 && (
-                    <X
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setFilters({ ...filters, experience: [filters.experience[0], 15] })}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* CTC Range */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <DollarSign className="w-4 h-4 text-purple-600" />
-                CTC Range (Lakhs)
-              </label>
-              <div className="flex gap-2 items-center">
-                <div className="relative">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.ctcMin}
-                    onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
-                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
-                  />
-                  {filters.ctcMin && (
-                    <X
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setFilters({ ...filters, ctcMin: "" })}
-                    />
-                  )}
-                </div>
-                <span className="text-gray-500">to</span>
-                <div className="relative">
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.ctcMax}
-                    onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
-                    className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
-                  />
-                  {filters.ctcMax && (
-                    <X
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setFilters({ ...filters, ctcMax: "" })}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <MapPin className="w-4 h-4 text-purple-600" />
-                Location
-              </label>
-              <MultiFilterableDropdown
-                values={filters.location}
-                onChange={(values) => setFilters({ ...filters, location: values })}
-                options={locations.map(l => l.label)}
-                placeholder="All locations"
-                icon={<MapPin className="w-4 h-4" />}
-              />
-            </div>
-          </div>
-
           {/* Employee Details */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Employee Details</h3>
+          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Experience</label>
+                <div className="flex gap-2 items-center">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step={1}
+                      value={filters.experience[0]}
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          experience: [parseInt(e.target.value) || 0, filters.experience[1]],
+                        })
+                      }
+                      className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
+                    />
+                    {filters.experience[0] !== 0 && (
+                      <X
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        onClick={() => setFilters({ ...filters, experience: [0, filters.experience[1]] })}
+                      />
+                    )}
+                  </div>
+                  <span className="text-gray-500">to</span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={filters.experience[0]}
+                      step={1}
+                      value={filters.experience[1]}
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          experience: [filters.experience[0], parseInt(e.target.value) || filters.experience[1]],
+                        })
+                      }
+                      className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
+                    />
+                    {filters.experience[1] !== initialFilters.experience[1] && (
+                      <X
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        onClick={() => setFilters({ ...filters, experience: [filters.experience[0], initialFilters.experience[1]] })}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">CTC Range (Lakhs)</label>
+                <div className="flex gap-2 items-center">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={filters.ctcMin}
+                      onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
+                      className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
+                    />
+                    {filters.ctcMin && (
+                      <X
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        onClick={() => setFilters({ ...filters, ctcMin: "" })}
+                      />
+                    )}
+                  </div>
+                  <span className="text-gray-500">to</span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={filters.ctcMax}
+                      onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
+                      className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
+                    />
+                    {filters.ctcMax && (
+                      <X
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        onClick={() => setFilters({ ...filters, ctcMax: "" })}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Current Location</label>
+                <MultiFilterableDropdown
+                  values={filters.location}
+                  onChange={(values) => setFilters({ ...filters, location: values })}
+                  options={locations.map((l) => l.label)}
+                  placeholder="All locations"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
               {/* Role */}
@@ -4727,7 +4803,6 @@ const SourceResume = () => {
                   onChange={(values) => setFilters({ ...filters, role: values })}
                   options={allRoles}
                   placeholder="All roles"
-                  icon={<Briefcase className="w-4 h-4" />}
                 />
               </div>
 
@@ -4742,7 +4817,6 @@ const SourceResume = () => {
                   onChange={(values) => setFilters({ ...filters, preferredLocation: values })}
                   options={locations.map(l => l.label)}
                   placeholder="Any location"
-                  icon={<MapPin className="w-4 h-4" />}
                 />
               </div>
 
@@ -4757,7 +4831,6 @@ const SourceResume = () => {
                   onChange={(values) => setFilters({ ...filters, company: values })}
                   options={allCompanies}
                   placeholder="All companies"
-                  icon={<Building className="w-4 h-4" />}
                 />
               </div>
 
@@ -4772,30 +4845,7 @@ const SourceResume = () => {
                   onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
                   options={allNoticePeriods}
                   placeholder="Any"
-                  icon={<Calendar className="w-4 h-4" />}
                 />
-                {/* Quick Select Buttons */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {["+3 Months", "Current Designation", "+1 Months", "+1 Week", "Any"].map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        if (option === "Any") {
-                          setFilters({ ...filters, noticePeriod: "" });
-                        } else if (option === "+3 Months") {
-                          setFilters({ ...filters, noticePeriod: "90 days" });
-                        } else if (option === "+1 Months") {
-                          setFilters({ ...filters, noticePeriod: "30 days" });
-                        } else if (option === "+1 Week") {
-                          setFilters({ ...filters, noticePeriod: "15 days" });
-                        }
-                      }}
-                      className="px-3 py-1 text-xs border border-blue-200 rounded-full text-gray-700 hover:bg-blue-50 transition-colors"
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
 
@@ -4852,7 +4902,7 @@ const SourceResume = () => {
           </div>
 
           {/* Education Details */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Education Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -4865,7 +4915,6 @@ const SourceResume = () => {
                   onChange={(value) => setFilters({ ...filters, educationUG: value })}
                   options={allEducationUG}
                   placeholder="BCA, Btech..."
-                  icon={<GraduationCap className="w-4 h-4" />}
                 />
               </div>
               <div className="space-y-2">
@@ -4878,7 +4927,6 @@ const SourceResume = () => {
                   onChange={(value) => setFilters({ ...filters, educationPG: value })}
                   options={allEducationPG}
                   placeholder="MCA, Mtech...."
-                  icon={<GraduationCap className="w-4 h-4" />}
                 />
               </div>
             </div>
@@ -4935,7 +4983,7 @@ const SourceResume = () => {
           </div>
 
           {/* Work Details */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Work Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -4948,7 +4996,7 @@ const SourceResume = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Job Type</label>
+                <label className="text-sm font-semibold text-gray-700">Job Mode</label>
                 <FilterableDropdown
                   value={filters.jobType}
                   onChange={(value) => setFilters({ ...filters, jobType: value })}
@@ -4969,19 +5017,19 @@ const SourceResume = () => {
           </div>
 
           {/* Display Details */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Display Details</h3>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Show</label>
                 <div className="flex gap-2">
-                  {["All Candidates", "New registration", "Modified Candidates"].map((option) => {
+                  {["All Candidates", "New registration"].map((option) => {
                     const value = option === "All Candidates" ? "all" : option.toLowerCase().replace(" ", "_");
                     return (
                       <button
                         key={option}
                         onClick={() => setFilters({ ...filters, candidateStatus: value })}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      className={`px-4 py-2 rounded-[4px] text-sm font-medium transition-colors ${
                           filters.candidateStatus === value
                             ? "bg-blue-600 text-white"
                             : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
@@ -5006,7 +5054,7 @@ const SourceResume = () => {
                     <button
                       key={option.value}
                       onClick={() => handleShowWithToggle(option.value)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      className={`px-4 py-2 rounded-[4px] text-sm font-medium transition-colors ${
                         filters.showWith.includes(option.value)
                           ? "bg-blue-600 text-white"
                           : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
@@ -5120,7 +5168,7 @@ const SourceResume = () => {
       {/* Fixed Source Resume Button - Bottom Right */}
       <button
         onClick={handleSourceResume}
-        className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
+        className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-[4px] font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
       >
         <span>Source Resume</span>
         <ArrowRight className="w-5 h-5" />

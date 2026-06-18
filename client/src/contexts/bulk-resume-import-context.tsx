@@ -14,6 +14,8 @@ import {
   BULK_PARSE_BATCH_SIZE,
   BULK_UPLOAD_LIMIT,
   createApiUrl,
+  getBulkImportApiBase,
+  getBulkImportPortalPath,
   type BulkParseProgress,
   type BulkParseResult,
   type BulkImportResults,
@@ -121,7 +123,9 @@ export function BulkResumeImportProvider({ children }: { children: ReactNode }) 
   }, []);
 
   useEffect(() => {
+    const portalPath = getBulkImportPortalPath(location);
     if (
+      location !== portalPath &&
       location !== "/master-database" &&
       isImportModalOpen &&
       isProcessing &&
@@ -233,11 +237,14 @@ export function BulkResumeImportProvider({ children }: { children: ReactNode }) 
           formData.append("resumes", file);
         });
 
-        const response = await fetch(createApiUrl("/api/admin/parse-resumes-bulk"), {
+        const response = await fetch(
+          createApiUrl(`${getBulkImportApiBase(location)}/parse-resumes-bulk`),
+          {
           method: "POST",
           body: formData,
           credentials: "include",
-        });
+        },
+        );
 
         let result: { message?: string; results?: BulkParseResult[] } = {};
         try {
@@ -324,8 +331,9 @@ export function BulkResumeImportProvider({ children }: { children: ReactNode }) 
         setBulkParsedResults(allResults);
         setImportStep("confirm");
         expandImportModal();
-        if (location !== "/master-database") {
-          navigate("/master-database");
+        const portalPath = getBulkImportPortalPath(location);
+        if (location !== portalPath && location !== "/master-database") {
+          navigate(portalPath);
         }
 
         const failedCount = allResults.filter((r) => !r.success).length;

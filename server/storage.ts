@@ -25,6 +25,8 @@ import {
   type InsertCandidateLoginAttempts,
   type Notification,
   type InsertNotification,
+  type PushToken,
+  type InsertPushToken,
   type Client,
   type InsertClient,
   type ImpactMetrics,
@@ -155,6 +157,8 @@ export interface IStorage {
   getNotificationsByUserId(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<Notification | undefined>;
   deleteNotification(id: string): Promise<boolean>;
+  savePushToken(pushToken: InsertPushToken): Promise<PushToken>;
+  getPushTokensByUserId(userId: string): Promise<PushToken[]>;
   
   // User Activity methods (for Admin/TL/Recruiter notifications)
   createUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
@@ -385,6 +389,7 @@ export class MemStorage implements IStorage {
   private candidateLoginAttempts: Map<string, CandidateLoginAttempts>;
   private otpStorage: Map<string, { otp: string; expiry: Date; email: string }>;
   private notifications: Map<string, Notification>;
+  private pushTokens: Map<string, PushToken>;
   private userActivities: Map<string, UserActivity>;
   private requirementAssignments: Map<string, RequirementAssignment>;
   private resumeSubmissions: Map<string, ResumeSubmission>;
@@ -405,6 +410,7 @@ export class MemStorage implements IStorage {
     this.candidateLoginAttempts = new Map();
     this.otpStorage = new Map();
     this.notifications = new Map();
+    this.pushTokens = new Map();
     this.userActivities = new Map();
     this.requirementAssignments = new Map();
     this.resumeSubmissions = new Map();
@@ -1564,6 +1570,28 @@ export class MemStorage implements IStorage {
 
   async deleteNotification(id: string): Promise<boolean> {
     return this.notifications.delete(id);
+  }
+
+  async savePushToken(pushToken: InsertPushToken): Promise<PushToken> {
+    const existing = Array.from(this.pushTokens.values()).find(
+      (entry) => entry.userId === pushToken.userId && entry.token === pushToken.token,
+    );
+    if (existing) {
+      return existing;
+    }
+    const id = randomUUID();
+    const newPushToken: PushToken = {
+      id,
+      userId: pushToken.userId,
+      token: pushToken.token,
+      createdAt: pushToken.createdAt,
+    };
+    this.pushTokens.set(id, newPushToken);
+    return newPushToken;
+  }
+
+  async getPushTokensByUserId(userId: string): Promise<PushToken[]> {
+    return Array.from(this.pushTokens.values()).filter((entry) => entry.userId === userId);
   }
 
   // User Activity methods

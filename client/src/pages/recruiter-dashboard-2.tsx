@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import TeamLeaderMainSidebar from '@/components/dashboard/team-leader-main-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -51,6 +51,7 @@ import {
   isWithinClosureGracePeriod,
   type TerminalOutcome,
 } from "@/lib/pipeline-session-utils";
+import { useOpenCommentSessionListener } from "@/lib/open-comment-session";
 import { TaPipelineTab } from "@/components/dashboard/ta-pipeline-tab";
 import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { format } from "date-fns";
@@ -922,7 +923,8 @@ export default function RecruiterDashboard2() {
         isUsingStaffOS: app.isUsingStaffOS || false,
         appliedDate: app.appliedDate || null,
         statusNote: app.statusNote || null,
-        rejectionReason: app.rejectionReason || null
+        rejectionReason: app.rejectionReason || null,
+        hasUnreadComments: Boolean(app.hasUnreadComments),
       };
     });
   }, [allApplications]);
@@ -1050,6 +1052,15 @@ export default function RecruiterDashboard2() {
     setSessionApplicationId(null);
     setSessionApplicantSnapshot(null);
   };
+
+  const openCommentSessionFromNotification = useCallback((applicationId: string) => {
+    setSidebarTab("pipeline");
+    setSessionApplicationId(applicationId);
+    setSessionApplicantSnapshot(null);
+    setPipelineView("candidate-session");
+  }, []);
+
+  useOpenCommentSessionListener(openCommentSessionFromNotification);
 
   // Use API data for pending meetings and CEO commands
   const { data: recruiterMeetings = [] } = useQuery({

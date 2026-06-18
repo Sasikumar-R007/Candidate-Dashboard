@@ -28,6 +28,8 @@ export function formatEmployeeRoleDisplay(
       return "Client Member";
     case "client":
       return "Client";
+    case "data_entry":
+      return "Data Entry";
     default:
       return role
         .split(/[_\s]+/)

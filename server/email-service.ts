@@ -706,3 +706,101 @@ Transparent Hiring Starts Here.
   }
 }
 
+export interface DataEntryWelcomeEmailData {
+  name: string;
+  email: string;
+  employeeId: string;
+  password: string;
+  loginUrl: string;
+  portalUrl: string;
+}
+
+export async function sendDataEntryWelcomeEmail(
+  data: DataEntryWelcomeEmailData,
+): Promise<boolean> {
+  try {
+    const { client: resend, fromEmail } = await getUncachableResendClient();
+    const senderEmail = fromEmail || "StaffOS <onboarding@resend.dev>";
+    const username = data.email;
+
+    const emailContent = `
+Hi ${data.name},
+
+Welcome to StaffOS — Resume Upload Hub.
+
+Your Data Entry account has been created. You will use this workspace exclusively for bulk resume uploads into the StaffOS database.
+
+Login Credentials:
+- Login URL: ${data.loginUrl}
+- Username: ${username}
+- Temporary Password: ${data.password}
+- Employee ID: ${data.employeeId}
+
+After you sign in, you will be taken directly to the Resume Upload Hub (${data.portalUrl}).
+
+What you can do in the portal:
+- Bulk upload resumes (PDF, DOC, DOCX)
+- Review parsed candidate details before import
+- Track your daily and total upload counts
+
+Important:
+Please change your password after your first login from Settings in the portal.
+
+Sign in: ${data.loginUrl}
+
+Warm regards,
+Team StaffOS
+    `.trim();
+
+    const bodyHtml = `
+      <p>Hi ${data.name},</p>
+      <p>Welcome to <strong>StaffOS — Resume Upload Hub</strong>.</p>
+      <p>Your <strong>Data Entry</strong> account has been created. You will use this workspace exclusively for bulk resume uploads into the StaffOS database.</p>
+      <p class="section-title">Login Credentials</p>
+      ${buildCredentialsTable(data.loginUrl, username, data.password)}
+      <p><strong>Employee ID:</strong> ${data.employeeId}</p>
+      <div class="callout">
+        <strong>Your workspace</strong>
+        After you sign in, you will be taken directly to the
+        <strong>Resume Upload Hub</strong> at
+        <a href="${data.portalUrl}">${data.portalUrl}</a>.
+      </div>
+      <p class="section-title">What you can do</p>
+      <ul>
+        <li>Bulk upload resumes (PDF, DOC, DOCX)</li>
+        <li>Review parsed candidate details before import</li>
+        <li>Track your daily and total upload counts</li>
+      </ul>
+      <p>Please change your password after your first login from <strong>Settings</strong> in the portal.</p>
+    `;
+
+    const htmlContent = buildClientPortalEmailShell({
+      title: "Welcome to Resume Upload Hub",
+      subtitle: "Your Data Entry account is ready",
+      bodyHtml,
+      loginUrl: data.loginUrl,
+      ctaLabel: "Sign in to StaffOS",
+    });
+
+    console.log(`[Data Entry Welcome] Sending to ${data.email}`);
+
+    const result = await resend.emails.send({
+      from: senderEmail,
+      to: data.email,
+      subject: "Welcome to StaffOS — Resume Upload Hub",
+      text: emailContent,
+      html: htmlContent,
+    });
+
+    if (result.error) {
+      console.error("[Data Entry Welcome] Resend error:", result.error);
+      return false;
+    }
+    console.log(`[Data Entry Welcome] Sent to ${data.email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending data entry welcome email:", error);
+    return false;
+  }
+}
+

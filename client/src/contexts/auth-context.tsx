@@ -249,8 +249,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Logout request failed:', error);
     } finally {
       setUser(null);
-      setIsVerified(false);
+      setIsVerified(true);
       setHoldPending(null);
+      setIsLoading(false);
       sessionStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem(AUTH_STORAGE_KEY);
       sessionStorage.removeItem('employee');

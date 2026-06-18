@@ -36,12 +36,14 @@ import SetupAdmin from "@/pages/setup-admin";
 import SetupSupport from "@/pages/setup-support";
 import SupportDashboard from "@/pages/support-dashboard";
 import SupportLogin from "@/pages/support-login";
+import ResumeIntakePortal from "@/pages/resume-intake-portal";
 import CandidateProfile from "@/pages/candidate-profile";
 import PrivacyPolicyPage from "@/pages/privacy-policy";
 import PlatformTermsPage from "@/pages/platform-terms";
 import ClientAgreementPage from "@/pages/client-agreement";
 import EmployeeAgreementPage from "@/pages/employee-agreement";
 import ClientInvitePage from "@/pages/client-invite";
+import PushNotificationBootstrap from "@/components/push-notification-bootstrap";
 
 
 function Router() {
@@ -154,6 +156,16 @@ function Router() {
           <SupportDashboard />
         </ProtectedRoute>
       </Route>
+
+      <Route path="/upload-hub">
+        <ProtectedRoute userType="employee" allowedRoles={["data_entry", "admin"]}>
+          <ResumeIntakePortal />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/resume-intake">
+        <Redirect to="/upload-hub" />
+      </Route>
       
 
       
@@ -172,6 +184,7 @@ function App() {
               <BulkResumeImportProvider>
                 <AccountHoldOverlay />
                 <SigningOutOverlay />
+                <PushNotificationBootstrap />
                 <AuthenticatedNavigationGuard />
                 <Toaster />
                 <Router />

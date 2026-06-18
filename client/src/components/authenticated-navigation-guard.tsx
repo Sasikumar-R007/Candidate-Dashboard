@@ -8,6 +8,8 @@ const protectedPrefixes = [
   "/recruiter",
   "/client",
   "/support-dashboard",
+  "/upload-hub",
+  "/resume-intake",
   "/candidate",
   "/source-resume",
   "/recruiter-active-jobs",

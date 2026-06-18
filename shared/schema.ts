@@ -535,6 +535,13 @@ export const notifications = pgTable("notifications", {
   readAt: text("read_at"),
 });
 
+export const pushTokens = pgTable("push_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
 export const impactMetrics = pgTable("impact_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: text("client_id"), // Optional - can be null for global metrics
@@ -815,6 +822,10 @@ export const insertInterviewTrackerCountsSchema = createInsertSchema(interviewTr
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+});
+
+export const insertPushTokenSchema = createInsertSchema(pushTokens).omit({
   id: true,
 });
 
@@ -1153,6 +1164,8 @@ export type InsertInterviewTrackerCounts = z.infer<typeof insertInterviewTracker
 export type InterviewTrackerCounts = typeof interviewTrackerCounts.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+export type InsertPushToken = z.infer<typeof insertPushTokenSchema>;
+export type PushToken = typeof pushTokens.$inferSelect;
 export type UserActivity = typeof userActivities.$inferSelect;
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type ProfileMedia = typeof profileMedia.$inferSelect;

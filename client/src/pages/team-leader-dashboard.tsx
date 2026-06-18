@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import TeamLeaderMainSidebar from '@/components/dashboard/team-leader-main-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -72,6 +72,7 @@ import {
   groupCandidatesByPipelineStage,
   mapTeamLeaderPipelineCandidate,
 } from '@/lib/pipeline-session-utils';
+import { useOpenCommentSessionListener } from '@/lib/open-comment-session';
 import { TlPipelineTab } from '@/components/dashboard/tl-pipeline-tab';
 import { ClosureReportsCardList } from '@/components/dashboard/closure-reports-card-list';
 
@@ -1072,6 +1073,15 @@ export default function TeamLeaderDashboard() {
     setSessionApplicationId(null);
     setSessionApplicantSnapshot(null);
   };
+
+  const openCommentSessionFromNotification = useCallback((applicationId: string) => {
+    setSidebarTab("pipeline");
+    setSessionApplicationId(applicationId);
+    setSessionApplicantSnapshot(null);
+    setPipelineView("candidate-session");
+  }, []);
+
+  useOpenCommentSessionListener(openCommentSessionFromNotification);
   
   // Handle immediate refetch when switching to pipeline tab
   useEffect(() => {

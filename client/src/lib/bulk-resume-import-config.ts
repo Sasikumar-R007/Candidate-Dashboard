@@ -43,7 +43,37 @@ export type BulkParseProgress = {
   fileTotal: number;
 };
 
+import {
+  DATA_ENTRY_PORTAL_PATH,
+  LEGACY_DATA_ENTRY_PORTAL_PATH,
+} from "@shared/data-entry-roles";
+
+export const MASTER_DATABASE_PATH = "/master-database" as const;
+
+function isDataEntryPortalPath(pathname: string): boolean {
+  return (
+    pathname === DATA_ENTRY_PORTAL_PATH ||
+    pathname.startsWith(`${DATA_ENTRY_PORTAL_PATH}/`) ||
+    pathname === LEGACY_DATA_ENTRY_PORTAL_PATH ||
+    pathname.startsWith(`${LEGACY_DATA_ENTRY_PORTAL_PATH}/`)
+  );
+}
+
 export function createApiUrl(path: string): string {
   const apiUrl = import.meta.env.VITE_API_URL || "";
   return `${apiUrl}${path}`;
+}
+
+export function getBulkImportApiBase(pathname: string): string {
+  if (isDataEntryPortalPath(pathname)) {
+    return "/api/data-entry";
+  }
+  return "/api/admin";
+}
+
+export function getBulkImportPortalPath(pathname: string): string {
+  if (isDataEntryPortalPath(pathname)) {
+    return DATA_ENTRY_PORTAL_PATH;
+  }
+  return MASTER_DATABASE_PATH;
 }

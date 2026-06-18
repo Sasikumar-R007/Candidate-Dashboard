@@ -18,6 +18,7 @@ import {
   Pencil,
   Phone,
   SendHorizontal,
+  Users,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -33,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -50,6 +52,106 @@ import {
 } from "@/lib/pipeline-session-utils";
 
 const BTN_RADIUS = "rounded-[6px]";
+
+type ChatSessionMember = {
+  id: string;
+  name: string;
+  role: string;
+  isCurrentUser?: boolean;
+};
+
+type ApplicationComment = {
+  id: string;
+  applicationId: string;
+  authorEmployeeId: string;
+  authorName: string;
+  authorRole: string;
+  body: string;
+  createdAt: string;
+};
+
+const CHAT_MEMBER_PALETTE = [
+  {
+    avatar: "bg-violet-500",
+    name: "text-violet-700",
+    bubble: "bg-violet-100 border-violet-200",
+  },
+  {
+    avatar: "bg-emerald-500",
+    name: "text-emerald-700",
+    bubble: "bg-emerald-100 border-emerald-200",
+  },
+  {
+    avatar: "bg-amber-500",
+    name: "text-amber-800",
+    bubble: "bg-amber-100 border-amber-200",
+  },
+  {
+    avatar: "bg-rose-500",
+    name: "text-rose-700",
+    bubble: "bg-rose-100 border-rose-200",
+  },
+  {
+    avatar: "bg-cyan-500",
+    name: "text-cyan-700",
+    bubble: "bg-cyan-100 border-cyan-200",
+  },
+  {
+    avatar: "bg-indigo-500",
+    name: "text-indigo-700",
+    bubble: "bg-indigo-100 border-indigo-200",
+  },
+] as const;
+
+function hashMemberKey(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function memberPaletteForId(memberId: string) {
+  return CHAT_MEMBER_PALETTE[hashMemberKey(memberId) % CHAT_MEMBER_PALETTE.length];
+}
+
+function renderCommentBody(body: string, members: ChatSessionMember[]): ReactNode {
+  if (!body) return null;
+  const mentionNames = members
+    .map((m) => m.name)
+    .sort((a, b) => b.length - a.length);
+  if (mentionNames.length === 0) {
+    return body;
+  }
+
+  const pattern = new RegExp(
+    `@(${mentionNames.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+    "gi",
+  );
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = pattern.exec(body)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(body.slice(lastIndex, match.index));
+    }
+    parts.push(
+      <span key={`mention-${key++}`} className="font-semibold text-blue-700">
+        @{match[1]}
+      </span>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < body.length) {
+    parts.push(body.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : body;
+}
 
 export const CLIENT_REJECTION_COMMENT_PREFIX = "Reason from Client for Rejection:";
 
@@ -165,16 +267,6 @@ type SessionApplication = {
   applicationExpectedCtc?: string | null;
   salaryEditedByName?: string | null;
   salaryEditedAt?: string | null;
-};
-
-type ApplicationComment = {
-  id: string;
-  applicationId: string;
-  authorEmployeeId: string;
-  authorName: string;
-  authorRole: string;
-  body: string;
-  createdAt: string;
 };
 
 import { resolveUploadAssetUrl } from "@/lib/resolve-upload-url";
@@ -454,7 +546,12 @@ function SalaryDetailsSection({
         >
           <p className="text-sm font-medium text-gray-800">{summary}</p>
           {lastEditedBy && (
-            <p className="mt-1 text-xs text-gray-500">Last edited by {lastEditedBy}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Last edited by {lastEditedBy}
+              {lastEditedAt
+                ? ` · ${format(new Date(lastEditedAt), "MMM d, yyyy h:mm a")}`
+                : ""}
+            </p>
           )}
         </div>
       )}
@@ -548,6 +645,9 @@ export function CandidateCommentsSession({
   const employee = useEmployeeAuth();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState("");
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionAnchor, setMentionAnchor] = useState(0);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
@@ -579,7 +679,7 @@ export function CandidateCommentsSession({
     data: sessionData,
     isLoading: sessionLoading,
     isFetching: sessionFetching,
-  } = useQuery<{ application: SessionApplication }>({
+  } = useQuery<{ application: SessionApplication; members?: ChatSessionMember[] }>({
     queryKey: sessionQueryKey,
     queryFn: async () => {
       const res = await apiRequest("GET", `${apiBase}/session`);
@@ -587,6 +687,16 @@ export function CandidateCommentsSession({
     },
     enabled: !!applicationId,
     placeholderData: (previous) => previous,
+  });
+
+  const { data: sessionMembersData } = useQuery<{ members: ChatSessionMember[] }>({
+    queryKey: [...sessionQueryKey, "members"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `${apiBase}/session/members`);
+      return res.json();
+    },
+    enabled: !!applicationId,
+    staleTime: 30_000,
   });
 
   const { data: comments = [], isLoading: commentsLoading, isFetching: commentsFetching } =
@@ -605,6 +715,7 @@ export function CandidateCommentsSession({
       prevApplicationIdRef.current = applicationId;
       setIsSwitching(true);
       setCommentText("");
+      setMentionQuery(null);
       setRejectReason("");
       setShowRejectForm(false);
       setConfirmRejectOpen(false);
@@ -619,6 +730,21 @@ export function CandidateCommentsSession({
     }
   }, [isSwitching, sessionFetching, sessionLoading]);
 
+  useEffect(() => {
+    if (!applicationId) return;
+    void apiRequest("POST", `${apiBase}/comments/read`, {}).catch(() => {
+      // non-blocking
+    });
+    void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
+    void queryClient.invalidateQueries({ queryKey: [...sessionQueryKey, "members"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/recruiter/applications"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/team-leader/pipeline"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications-feed"] });
+  }, [applicationId, apiBase, queryClient, sessionQueryKey]);
+
   const postCommentMutation = useMutation({
     mutationFn: async (body: string) => {
       const res = await apiRequest("POST", `${apiBase}/comments`, { body });
@@ -626,7 +752,16 @@ export function CandidateCommentsSession({
     },
     onSuccess: () => {
       setCommentText("");
+      setMentionQuery(null);
       queryClient.invalidateQueries({ queryKey: commentsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
+      void queryClient.invalidateQueries({ queryKey: [...sessionQueryKey, "members"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/recruiter/applications"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/team-leader/pipeline"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications-feed"] });
       setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     },
     onError: (error: Error) => {
@@ -735,6 +870,128 @@ export function CandidateCommentsSession({
     );
   }, [app?.status, app?.statusNote, fallbackApplicant?.currentStatus, clientRejectionReason, displayComments]);
   const posterName = employee?.name || viewerName;
+  const currentUserId = employee?.id;
+  const currentUserRole =
+    apiMode === "client"
+      ? "Client"
+      : isTalentAdvisorEmployeeRole(employee?.role)
+        ? "TA"
+        : employee?.role === "team_leader" || employee?.role === "teamLead"
+          ? "TL"
+          : employee?.role === "admin"
+            ? "Admin"
+            : employee?.role || "Member";
+
+  const sessionMembers = useMemo(() => {
+    const accessMembers =
+      sessionData?.members?.length
+        ? sessionData.members
+        : sessionMembersData?.members ?? [];
+
+    const map = new Map<string, ChatSessionMember>();
+
+    for (const member of accessMembers) {
+      if (!member?.id || !member.name) continue;
+      map.set(member.id, {
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        isCurrentUser: Boolean(currentUserId && member.id === currentUserId),
+      });
+    }
+
+    for (const comment of displayComments) {
+      const id = comment.authorEmployeeId || comment.authorName;
+      if (!id || map.has(id)) continue;
+      map.set(id, {
+        id,
+        name: comment.authorName,
+        role: comment.authorRole,
+        isCurrentUser: Boolean(currentUserId && comment.authorEmployeeId === currentUserId),
+      });
+    }
+
+    if (currentUserId && posterName) {
+      const existing = map.get(currentUserId);
+      map.set(currentUserId, {
+        id: currentUserId,
+        name: posterName,
+        role: existing?.role || currentUserRole,
+        isCurrentUser: true,
+      });
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [
+    sessionData?.members,
+    sessionMembersData?.members,
+    displayComments,
+    currentUserId,
+    posterName,
+    currentUserRole,
+  ]);
+
+  const mentionCandidates = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return sessionMembers.filter(
+      (m) => m.id !== currentUserId && m.name.toLowerCase().includes(q),
+    );
+  }, [mentionQuery, sessionMembers, currentUserId]);
+
+  const syncMentionState = (value: string, cursor: number) => {
+    const beforeCursor = value.slice(0, cursor);
+    const atIndex = beforeCursor.lastIndexOf("@");
+    if (atIndex < 0) {
+      setMentionQuery(null);
+      return;
+    }
+    const charBefore = atIndex > 0 ? beforeCursor[atIndex - 1] : " ";
+    if (charBefore !== " " && charBefore !== "\n" && atIndex !== 0) {
+      setMentionQuery(null);
+      return;
+    }
+    const query = beforeCursor.slice(atIndex + 1);
+    if (/\s/.test(query)) {
+      setMentionQuery(null);
+      return;
+    }
+    setMentionAnchor(atIndex);
+    setMentionQuery(query);
+  };
+
+  const handleCommentChange = (value: string) => {
+    setCommentText(value);
+    const cursor = commentInputRef.current?.selectionStart ?? value.length;
+    syncMentionState(value, cursor);
+  };
+
+  const insertMention = (member: ChatSessionMember) => {
+    const cursor = commentInputRef.current?.selectionStart ?? commentText.length;
+    const before = commentText.slice(0, mentionAnchor);
+    const after = commentText.slice(cursor);
+    const mention = `@${member.name} `;
+    const next = `${before}${mention}${after}`;
+    setCommentText(next);
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      const el = commentInputRef.current;
+      if (!el) return;
+      const pos = before.length + mention.length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  const isOwnComment = (comment: ApplicationComment) => {
+    if (currentUserId && comment.authorEmployeeId) {
+      return comment.authorEmployeeId === currentUserId;
+    }
+    if (posterName && comment.authorName) {
+      return comment.authorName.trim().toLowerCase() === posterName.trim().toLowerCase();
+    }
+    return false;
+  };
 
   const builtInClientRejectMutation = useMutation({
     mutationFn: async (reason: string) => {
@@ -878,52 +1135,57 @@ export function CandidateCommentsSession({
     );
   }
 
-  const commentsPanelHeaderRight = effectiveClientReject ? (
-    isRejected ? (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled
-        className={cn(
-          "h-8 cursor-default border-red-200 bg-red-50 text-xs text-red-600 opacity-100",
-          BTN_RADIUS,
-        )}
-        data-testid="button-candidate-rejected"
-      >
-        Rejected
-      </Button>
-    ) : effectiveClientReject.canReject ? (
-      showRejectForm ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={cn("h-8 text-xs text-gray-600 hover:text-gray-900", BTN_RADIUS)}
-          onClick={() => {
-            setShowRejectForm(false);
-            setRejectReason("");
-          }}
-        >
-          Cancel
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            "h-8 border-red-300 bg-white text-xs text-red-600 hover:bg-red-50 hover:text-red-700",
-            BTN_RADIUS,
-          )}
-          onClick={() => setShowRejectForm(true)}
-          data-testid="button-open-reject-candidate"
-        >
-          Reject Candidate
-        </Button>
-      )
-    ) : null
-  ) : null;
+  const commentsPanelHeaderRight = (
+    <div className="flex items-center gap-2">
+      <SessionMembersPopover members={sessionMembers} />
+      {effectiveClientReject ? (
+        isRejected ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled
+            className={cn(
+              "h-8 cursor-default border-red-200 bg-red-50 text-xs text-red-600 opacity-100",
+              BTN_RADIUS,
+            )}
+            data-testid="button-candidate-rejected"
+          >
+            Rejected
+          </Button>
+        ) : effectiveClientReject.canReject ? (
+          showRejectForm ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn("h-8 text-xs text-gray-600 hover:text-gray-900", BTN_RADIUS)}
+              onClick={() => {
+                setShowRejectForm(false);
+                setRejectReason("");
+              }}
+            >
+              Cancel
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-8 border-red-300 bg-white text-xs text-red-600 hover:bg-red-50 hover:text-red-700",
+                BTN_RADIUS,
+              )}
+              onClick={() => setShowRejectForm(true)}
+              data-testid="button-open-reject-candidate"
+            >
+              Reject Candidate
+            </Button>
+          )
+        ) : null
+      ) : null}
+    </div>
+  );
 
   return (
     <div
@@ -1310,7 +1572,7 @@ export function CandidateCommentsSession({
 
         <section
           className={cn(
-            "min-h-0 w-full flex-col bg-gray-100 text-gray-900 md:min-h-0 md:w-[42%] md:max-w-[42%] md:flex-none",
+            "min-h-0 w-full flex-col bg-[#eef2f7] text-gray-900 md:min-h-0 md:w-[42%] md:max-w-[42%] md:flex-none",
             mobileSessionTab === "comments" ? "flex flex-1" : "hidden",
             "md:flex",
           )}
@@ -1323,7 +1585,7 @@ export function CandidateCommentsSession({
           ) : null}
           <SectionHeader
             className="hidden md:flex"
-            title="Comments"
+            title="Team Discussion"
             mutedPanel
             taRail={taCommentsRail}
             right={commentsPanelHeaderRight}
@@ -1402,48 +1664,30 @@ export function CandidateCommentsSession({
                 <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               </div>
             ) : displayComments.length === 0 ? (
-              <p className="py-12 text-center text-sm text-gray-500">
-                No comments yet. Start the discussion about {displayName}&apos;s interviews and performance.
-              </p>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-800">No messages yet</p>
+                <p className="mt-1 max-w-xs text-xs text-gray-500">
+                  Start the discussion about {displayName}&apos;s interviews and performance with your team.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-5 pb-2">
                 {commentsByDay.map((group) => (
                   <div key={group.label}>
-                    <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-wider text-gray-500">
+                    <p className="mb-4 text-center text-[11px] font-medium uppercase tracking-wider text-gray-500">
                       {group.label}
                     </p>
                     <div className="space-y-4">
                       {group.items.map((comment) => (
-                        <article key={comment.id} className="flex gap-3" data-testid={`comment-${comment.id}`}>
-                          <AvatarInitials name={comment.authorName} size="sm" />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-medium text-gray-900">{comment.authorName}</span>
-                              <span
-                                className={cn(
-                                  "px-1.5 py-0.5 text-[10px] font-semibold uppercase",
-                                  BTN_RADIUS,
-                                  roleBadgeClass(comment.authorRole, true),
-                                )}
-                              >
-                                {comment.authorRole}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {formatCommentTime(comment.createdAt)}
-                              </span>
-                            </div>
-                            <p
-                              className={cn(
-                                "mt-1 whitespace-pre-wrap text-sm",
-                                isClientRejectionComment(comment.body, comment.authorRole)
-                                  ? "font-medium text-red-700"
-                                  : "text-gray-700",
-                              )}
-                            >
-                              {comment.body}
-                            </p>
-                          </div>
-                        </article>
+                        <CommentChatBubble
+                          key={comment.id}
+                          comment={comment}
+                          isOwn={isOwnComment(comment)}
+                          members={sessionMembers}
+                        />
                       ))}
                     </div>
                   </div>
@@ -1455,51 +1699,104 @@ export function CandidateCommentsSession({
 
           <div
             className={cn(
-              "shrink-0 border-t border-gray-200 bg-gray-50 pb-[env(safe-area-inset-bottom)]",
+              "shrink-0 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(15,23,42,0.06)]",
               taCommentsRail ? "px-3 py-2.5" : "px-3 py-3 sm:px-4",
             )}
           >
-            <p className={cn("text-[11px] text-gray-600", taCommentsRail ? "mb-1.5" : "mb-2")}>
-              {apiMode === "client"
-                ? "Comments are shared with your hiring team on this application."
-                : "Comments are visible only to your team on this application."}
-            </p>
-            <div
-              className={cn(
-                "flex items-center gap-2 border border-gray-300 bg-white px-3 py-1.5 shadow-sm",
-                BTN_RADIUS,
+            <div className="mb-2">
+              <p className={cn("text-[11px] text-gray-600")}>
+                {apiMode === "client"
+                  ? "Shared with your hiring team on this application."
+                  : "Visible to your team on this application."}
+              </p>
+            </div>
+            <div className="relative">
+              {mentionQuery !== null && mentionCandidates.length > 0 && (
+                <div
+                  className={cn(
+                    "absolute bottom-full left-0 right-0 z-20 mb-2 max-h-44 overflow-y-auto border border-gray-200 bg-white shadow-lg",
+                    BTN_RADIUS,
+                  )}
+                >
+                  <p className="border-b border-gray-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Mention someone
+                  </p>
+                  {mentionCandidates.map((member) => {
+                    const palette = memberPaletteForId(member.id);
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          insertMention(member);
+                        }}
+                      >
+                        <ChatMemberAvatar name={member.name} memberId={member.id} size="sm" />
+                        <div className="min-w-0">
+                          <p className={cn("truncate text-sm font-medium", palette.name)}>{member.name}</p>
+                          <p className="text-[11px] text-gray-500">{member.role}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <Input
-                placeholder="Write to your team…"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="h-9 flex-1 border-0 bg-transparent pl-3 pr-0 text-sm text-gray-900 shadow-none placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0"
-                data-testid="input-candidate-comment"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmitComment();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleSubmitComment}
-                disabled={!commentText.trim() || postCommentMutation.isPending}
+              <div
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40",
+                  "flex items-end gap-2 border border-gray-200 bg-white px-3 py-2 shadow-sm",
                   BTN_RADIUS,
                 )}
-                aria-label="Send comment"
-                data-testid="button-post-candidate-comment"
               >
-                {postCommentMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <SendHorizontal className="h-4 w-4" />
-                )}
-              </button>
+                <textarea
+                  ref={commentInputRef}
+                  placeholder="Write a message to your team…"
+                  value={commentText}
+                  onChange={(e) => handleCommentChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (mentionQuery !== null && mentionCandidates.length > 0) {
+                      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab") {
+                        e.preventDefault();
+                        return;
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setMentionQuery(null);
+                        return;
+                      }
+                    }
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmitComment();
+                    }
+                  }}
+                  onClick={() => {
+                    const cursor = commentInputRef.current?.selectionStart ?? commentText.length;
+                    syncMentionState(commentText, cursor);
+                  }}
+                  rows={1}
+                  className="min-h-[40px] max-h-28 flex-1 resize-none border-0 bg-transparent p-0 py-1.5 text-sm text-gray-900 outline-none ring-0 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+                  data-testid="input-candidate-comment"
+                />
+                <button
+                  type="button"
+                  onClick={handleSubmitComment}
+                  disabled={!commentText.trim() || postCommentMutation.isPending}
+                  className={cn(
+                    "mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40",
+                    BTN_RADIUS,
+                  )}
+                  aria-label="Send comment"
+                  data-testid="button-post-candidate-comment"
+                >
+                  {postCommentMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <SendHorizontal className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
             {posterName && (
               <p className="mt-1.5 text-[11px] text-gray-500">Posting as {posterName}</p>
@@ -1835,6 +2132,159 @@ function ContactDetailCard({
         )}
       </div>
     </DetailCard>
+  );
+}
+
+function SessionMembersPopover({ members }: { members: ChatSessionMember[] }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn("h-8 gap-1.5 border-blue-200 bg-blue-50 text-xs text-blue-800 hover:bg-blue-100", BTN_RADIUS)}
+          data-testid="button-session-members"
+        >
+          <Users className="h-3.5 w-3.5" />
+          Members ({members.length})
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-0">
+        <div className="border-b border-gray-100 px-3 py-2.5">
+          <p className="text-sm font-semibold text-gray-900">Session members</p>
+          <p className="text-[11px] text-gray-500">
+            Everyone with access to this candidate&apos;s pipeline session.
+          </p>
+        </div>
+        <div className="max-h-64 overflow-y-auto p-2">
+          {members.length === 0 ? (
+            <p className="px-2 py-3 text-xs text-gray-500">No members yet.</p>
+          ) : (
+            members.map((member) => {
+              const palette = memberPaletteForId(member.id);
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50"
+                >
+                  <ChatMemberAvatar name={member.name} memberId={member.id} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("truncate text-sm font-medium", palette.name)}>
+                      {member.name}
+                      {member.isCurrentUser ? (
+                        <span className="ml-1 text-[10px] font-normal text-gray-500">(You)</span>
+                      ) : null}
+                    </p>
+                    <p className="text-[11px] text-gray-500">{member.role}</p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ChatMemberAvatar({
+  name,
+  memberId,
+  size = "sm",
+}: {
+  name: string;
+  memberId: string;
+  size?: "sm" | "md";
+}) {
+  const palette = memberPaletteForId(memberId);
+  const initials =
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?";
+  const sizeClass = size === "md" ? "h-10 w-10 text-sm" : "h-8 w-8 text-[11px]";
+
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full font-semibold text-white shadow-sm",
+        palette.avatar,
+        sizeClass,
+      )}
+    >
+      {initials}
+    </div>
+  );
+}
+
+function CommentChatBubble({
+  comment,
+  isOwn,
+  members,
+}: {
+  comment: ApplicationComment;
+  isOwn: boolean;
+  members: ChatSessionMember[];
+}) {
+  const memberId = comment.authorEmployeeId || comment.authorName;
+  const palette = memberPaletteForId(memberId);
+  const isRejection = isClientRejectionComment(comment.body, comment.authorRole);
+  const timeLabel = formatCommentTime(comment.createdAt);
+
+  if (isOwn) {
+    return (
+      <article
+        className="flex flex-col items-end"
+        data-testid={`comment-${comment.id}`}
+      >
+        <span className="mb-1 text-[11px] text-gray-500">{timeLabel}</span>
+        <div
+          className={cn(
+            "max-w-[88%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
+            BTN_RADIUS,
+            isRejection
+              ? "border border-red-200 bg-red-50 text-red-800"
+              : "border border-blue-200 bg-blue-100 text-gray-900",
+          )}
+        >
+          {isRejection ? comment.body : renderCommentBody(comment.body, members)}
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article className="flex gap-2.5" data-testid={`comment-${comment.id}`}>
+      <ChatMemberAvatar name={comment.authorName} memberId={memberId} />
+      <div className="min-w-0 max-w-[88%]">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <span className={cn("text-sm font-semibold", palette.name)}>{comment.authorName}</span>
+          <span
+            className={cn(
+              "px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+              BTN_RADIUS,
+              roleBadgeClass(comment.authorRole, true),
+            )}
+          >
+            {comment.authorRole}
+          </span>
+          <span className="text-[11px] text-gray-500">{timeLabel}</span>
+        </div>
+        <div
+          className={cn(
+            "whitespace-pre-wrap border px-3.5 py-2.5 text-sm leading-relaxed text-gray-800 shadow-sm",
+            BTN_RADIUS,
+            isRejection ? "border-red-200 bg-red-50 text-red-800" : palette.bubble,
+          )}
+        >
+          {isRejection ? comment.body : renderCommentBody(comment.body, members)}
+        </div>
+      </div>
+    </article>
   );
 }
 

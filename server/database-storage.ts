@@ -30,6 +30,8 @@ import {
   type InsertBulkUploadFile,
   type Notification,
   type InsertNotification,
+  type PushToken,
+  type InsertPushToken,
   type Client,
   type InsertClient,
   type ImpactMetrics,
@@ -77,6 +79,7 @@ import {
   bulkUploadJobs,
   bulkUploadFiles,
   notifications,
+  pushTokens,
   clients,
   impactMetrics,
   targetMappings,
@@ -108,6 +111,7 @@ import {
   getRevenueMappingRecencyTs,
 } from "./target-revenue-sync";
 import { requirementListSelect, requirementCompanyListSelect } from "./query-columns";
+import { dispatchPushForUser } from "./utils/pushDispatch";
 
 // Helper function to convert snake_case employee object to camelCase
 function normalizeEmployee(emp: any): Employee {
@@ -980,6 +984,8 @@ export class DatabaseStorage implements IStorage {
       prefix = 'STTL';
     } else if (role === 'client') {
       prefix = 'STCL';
+    } else if (role === 'data_entry') {
+      prefix = 'STDE';
     }
 
     // Get all employees with this prefix (excluding last_login_at)
@@ -1329,6 +1335,13 @@ export class DatabaseStorage implements IStorage {
 
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const [newNotification] = await db.insert(notifications).values(notification).returning();
+    const pushData: Record<string, string> = {
+      type: notification.type,
+    };
+    if (notification.relatedJobId) {
+      pushData.applicationId = notification.relatedJobId;
+    }
+    dispatchPushForUser(notification.userId, notification.title, notification.message, pushData);
     return newNotification;
   }
 
@@ -1348,6 +1361,23 @@ export class DatabaseStorage implements IStorage {
   async deleteNotification(id: string): Promise<boolean> {
     const result = await db.delete(notifications).where(eq(notifications.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async savePushToken(pushToken: InsertPushToken): Promise<PushToken> {
+    const [existing] = await db
+      .select()
+      .from(pushTokens)
+      .where(and(eq(pushTokens.userId, pushToken.userId), eq(pushTokens.token, pushToken.token)))
+      .limit(1);
+    if (existing) {
+      return existing;
+    }
+    const [created] = await db.insert(pushTokens).values(pushToken).returning();
+    return created;
+  }
+
+  async getPushTokensByUserId(userId: string): Promise<PushToken[]> {
+    return await db.select().from(pushTokens).where(eq(pushTokens.userId, userId));
   }
 
   // Client methods
@@ -3048,6 +3078,13 @@ export class DatabaseStorage implements IStorage {
   // Nudge methods
   async createNudge(insertNudge: InsertNudge): Promise<Nudge> {
     const [nudge] = await db.insert(nudges).values(insertNudge).returning();
+    if (nudge.recruiterId) {
+      dispatchPushForUser(
+        nudge.recruiterId,
+        "New candidate nudge",
+        `${nudge.candidateName} · ${nudge.jobTitle} (${nudge.company})`,
+      );
+    }
     return nudge;
   }
 

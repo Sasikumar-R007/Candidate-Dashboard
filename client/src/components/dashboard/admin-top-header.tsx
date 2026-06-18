@@ -16,6 +16,7 @@ import type { UserActivity } from "@shared/schema";
 import { formatEmployeeRoleDisplay } from "@/lib/employee-display";
 import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
 import { useNotificationSound } from "@/hooks/use-notification-sound";
+import { dispatchOpenCommentSession } from "@/lib/open-comment-session";
 
 interface AdminTopHeaderProps {
   companyName?: string;
@@ -42,6 +43,7 @@ type EmployeeNotificationItem = {
   isUnread: boolean;
   escalationLevel?: string | null;
   currentStatus?: string | null;
+  applicationId?: string | null;
 };
 
 type EmployeeNotificationFeed = {
@@ -52,6 +54,7 @@ type EmployeeNotificationFeed = {
   escalatedNudges: EmployeeNotificationItem[];
   closures: EmployeeNotificationItem[];
   newCandidateApplied: EmployeeNotificationItem[];
+  candidateComments?: EmployeeNotificationItem[];
   unreadCount: number;
 };
 
@@ -230,29 +233,35 @@ export default function AdminTopHeader({
             adminNudges?: EmployeeNotificationItem[];
             clientEscalations?: EmployeeNotificationItem[];
             clientJdSubmissions?: EmployeeNotificationItem[];
+            candidateComments?: EmployeeNotificationItem[];
             nudges?: EmployeeNotificationItem[];
             escalatedNudges?: EmployeeNotificationItem[];
             unreadAdminNudges?: number;
             unreadClientEscalations?: number;
             unreadClientJdSubmissions?: number;
+            unreadCandidateComments?: number;
           };
           const nudges = adminData.adminNudges ?? adminData.nudges ?? [];
           const escalated = adminData.clientEscalations ?? adminData.escalatedNudges ?? [];
           const closures = adminData.closures ?? [];
           const clientJds = adminData.clientJdSubmissions ?? [];
+          const candidateComments = adminData.candidateComments ?? [];
           return {
             role: "admin",
             closures,
             nudges,
             escalatedNudges: escalated,
             clientJdSubmissions: clientJds,
+            candidateComments,
             newRequirements: [],
             newCandidateApplied: [],
             unreadCount:
               (adminData.unreadAdminNudges ?? 0) +
               (adminData.unreadClientEscalations ?? 0) +
               (adminData.unreadClientJdSubmissions ?? 0) +
-              closures.filter((c) => c.isUnread).length,
+              (adminData.unreadCandidateComments ?? 0) +
+              closures.filter((c) => c.isUnread).length +
+              candidateComments.filter((c) => c.isUnread).length,
           };
         }
         return data as EmployeeNotificationFeed;
@@ -334,6 +343,7 @@ export default function AdminTopHeader({
         { id: "all", label: "All" },
         { id: "clientJds", label: "Client JDs" },
         { id: "closures", label: "Candidate Closures" },
+        { id: "teamMessages", label: "Team Messages" },
         { id: "nudges", label: "Nudges" },
         { id: "escalations", label: "Nudges Escalations" },
       ];
@@ -342,6 +352,7 @@ export default function AdminTopHeader({
       return [
         { id: "all", label: "All" },
         { id: "newRequirements", label: "New Requirements" },
+        { id: "teamMessages", label: "Team Messages" },
         { id: "nudges", label: "Nudges" },
         { id: "escalatedNudges", label: "Nudges Escalations" },
         { id: "closures", label: "Candidate Closures" },
@@ -350,6 +361,7 @@ export default function AdminTopHeader({
     return [
       { id: "all", label: "All" },
       { id: "newRequirements", label: "New Requirements" },
+      { id: "teamMessages", label: "Team Messages" },
       { id: "nudges", label: "Nudges" },
       { id: "escalatedNudges", label: "Nudges Escalations" },
       { id: "newCandidateApplied", label: "New Profiles" },
@@ -394,6 +406,14 @@ export default function AdminTopHeader({
           showTimeRemaining: true,
           navigateTo: "escalations",
         },
+        {
+          id: "teamMessages",
+          heading: "Team discussion messages",
+          headingClassName: "text-sky-700",
+          kinds: ["candidateComment"],
+          tabId: "teamMessages",
+          navigateTo: "pipeline",
+        },
       ];
     }
     if (isTL) {
@@ -405,6 +425,14 @@ export default function AdminTopHeader({
           kinds: ["closure"],
           tabId: "closures",
           navigateTo: "closures",
+        },
+        {
+          id: "teamMessages",
+          heading: "Team discussion messages",
+          headingClassName: "text-sky-700",
+          kinds: ["candidateComment"],
+          tabId: "teamMessages",
+          navigateTo: "pipeline",
         },
         {
           id: "requirements",
@@ -442,6 +470,14 @@ export default function AdminTopHeader({
         kinds: ["closure"],
         tabId: "closures",
         navigateTo: "closures",
+      },
+      {
+        id: "teamMessages",
+        heading: "Team discussion messages",
+        headingClassName: "text-sky-700",
+        kinds: ["candidateComment"],
+        tabId: "teamMessages",
+        navigateTo: "pipeline",
       },
       {
         id: "requirements",
@@ -501,6 +537,9 @@ export default function AdminTopHeader({
     if (row.kind === "nudge" || row.kind === "escalation" || row.kind === "escalatedNudge") {
       dismissNotificationMutation.mutate({ kind: row.kind, id: row.id });
     }
+    if (row.kind === "candidateComment") {
+      dismissNotificationMutation.mutate({ kind: "candidateComment", id: row.id });
+    }
   };
 
   const mergedRows = useMemo<FeedRow[]>(() => {
@@ -520,6 +559,7 @@ export default function AdminTopHeader({
           nudgeId: includeNudgeId ? item.id : undefined,
           sort: item.createdAt ? new Date(item.createdAt).getTime() : 0,
           id: item.id,
+          applicationId: item.applicationId ?? null,
         });
       }
     };
@@ -527,15 +567,18 @@ export default function AdminTopHeader({
     if (isAdmin) {
       pushRows("clientJd", employeeFeed.clientJdSubmissions ?? []);
       pushRows("closure", employeeFeed.closures);
+      pushRows("candidateComment", employeeFeed.candidateComments ?? []);
       pushRows("nudge", employeeFeed.nudges, true);
       pushRows("escalation", employeeFeed.escalatedNudges);
     } else if (isTL) {
       pushRows("newRequirement", employeeFeed.newRequirements);
+      pushRows("candidateComment", employeeFeed.candidateComments ?? []);
       pushRows("nudge", employeeFeed.nudges);
       pushRows("escalatedNudge", employeeFeed.escalatedNudges);
       pushRows("closure", employeeFeed.closures);
     } else {
       pushRows("newRequirement", employeeFeed.newRequirements);
+      pushRows("candidateComment", employeeFeed.candidateComments ?? []);
       pushRows("nudge", employeeFeed.nudges);
       pushRows("escalatedNudge", employeeFeed.escalatedNudges);
       pushRows("closure", employeeFeed.closures);
@@ -596,6 +639,13 @@ export default function AdminTopHeader({
   };
 
   const handlePanelNavigate = (_section: NotificationNavigateSection, row: NotificationPanelRow) => {
+    if (row.kind === "candidateComment" && row.applicationId) {
+      dispatchOpenCommentSession(row.applicationId);
+      setShowNotifications(false);
+      onNavigateToSection?.("pipeline");
+      return;
+    }
+
     const section = notificationSections.find((s) => s.kinds.includes(row.kind))?.navigateTo ?? "nudges";
     navigateForSection(section);
   };

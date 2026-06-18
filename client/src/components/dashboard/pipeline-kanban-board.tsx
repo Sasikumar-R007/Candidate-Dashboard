@@ -71,6 +71,7 @@ function renderPipelineCandidateCard(options: {
   const subtitle = getSubtitle?.(candidate);
   const timestamp = getAppliedTimestamp?.(candidate);
   const rejected = isRejectedCandidate?.(candidate) ?? false;
+  const hasUnreadComments = Boolean(candidate?.hasUnreadComments);
   const clickable = Boolean(onCandidateClick);
   const key = candidate.id || `${stageKey}-${index}`;
 
@@ -85,6 +86,7 @@ function renderPipelineCandidateCard(options: {
         timestamp={timestamp}
         profilePicture={getProfilePicture?.(candidate)}
         rejected={rejected}
+        hasUnreadComments={hasUnreadComments}
         clickable={clickable}
         onClick={clickable ? () => onCandidateClick?.(candidate) : undefined}
         testId={`pipeline-${stageKey}-candidate-${index}`}
@@ -122,6 +124,12 @@ function renderPipelineCandidateCard(options: {
       } ${clickable ? "cursor-pointer hover:border-blue-300 hover:shadow" : ""}`}
       data-testid={`pipeline-${stageKey}-candidate-${index}`}
     >
+      {hasUnreadComments ? (
+        <span
+          className="absolute right-1.5 top-1.5 z-10 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
+          aria-label="Unread team messages"
+        />
+      ) : null}
       <div className="flex items-start gap-2">
         <div className="shrink-0">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100">

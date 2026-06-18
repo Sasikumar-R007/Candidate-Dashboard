@@ -55,6 +55,7 @@ import {
   isPipelineApplicationSessionId,
   resolvePipelineGroupingStatus,
 } from '@/lib/pipeline-session-utils';
+import { useOpenCommentSessionListener } from '@/lib/open-comment-session';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
 import { queryPresets } from '@/lib/query-config';
@@ -947,6 +948,15 @@ export default function ClientDashboard() {
     setSessionApplicationId(null);
     setSessionApplicantSnapshot(null);
   };
+
+  const openCommentSessionFromNotification = useCallback((applicationId: string) => {
+    handleSidebarTabChange('pipeline');
+    setSessionApplicationId(applicationId);
+    setSessionApplicantSnapshot(null);
+    setPipelineView('candidate-session');
+  }, []);
+
+  useOpenCommentSessionListener(openCommentSessionFromNotification);
 
   const renderMainContent = () => {
     const activeTab = normalizeClientPortalTab(sidebarTab);

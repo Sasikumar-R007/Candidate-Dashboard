@@ -7,6 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useBulkResumeImport } from "@/contexts/bulk-resume-import-context";
+import { getBulkImportPortalPath } from "@/lib/bulk-resume-import-config";
 
 export function BulkImportFloatingBubble() {
   const [location, navigate] = useLocation();
@@ -21,12 +22,13 @@ export function BulkImportFloatingBubble() {
     expandImportModal,
   } = useBulkResumeImport();
 
+  const portalPath = getBulkImportPortalPath(location);
   const showBubble =
     isImportModalOpen &&
     isBulkUpload &&
     isProcessing &&
     importStep === "upload" &&
-    (isImportModalMinimized || location !== "/master-database");
+    (isImportModalMinimized || (location !== "/master-database" && location !== portalPath));
 
   if (!showBubble) return null;
 
@@ -35,8 +37,8 @@ export function BulkImportFloatingBubble() {
 
   const handleExpand = () => {
     expandImportModal();
-    if (location !== "/master-database") {
-      navigate("/master-database");
+    if (location !== "/master-database" && location !== portalPath) {
+      navigate(portalPath);
     }
   };
 

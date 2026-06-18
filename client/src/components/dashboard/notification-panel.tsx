@@ -12,6 +12,7 @@ export type NotificationPanelRow = {
   nudgeId?: string;
   escalationLevel?: string | null;
   currentStatus?: string | null;
+  applicationId?: string | null;
 };
 
 export type NotificationNavigateSection =
@@ -276,7 +277,9 @@ function NotificationSectionBlock({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <h4 className={`mb-2 text-sm font-semibold ${section.headingClassName}`}>{section.heading}</h4>
+      {section.heading ? (
+        <h4 className={`mb-2 text-sm font-semibold ${section.headingClassName}`}>{section.heading}</h4>
+      ) : null}
       <div className="space-y-2">
         {visible.map((row) => (
           <NotificationCard
@@ -359,14 +362,41 @@ export default function NotificationPanel({
     return rows.filter((r) => section.kinds.includes(r.kind));
   }, [rows, activeTab, sections]);
 
+  const sortRowsNewestFirst = (list: NotificationPanelRow[]) =>
+    [...list].sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+
   const groupedSections = useMemo(() => {
+    if (activeTab === "all") {
+      const sorted = sortRowsNewestFirst(filteredRows);
+      if (sorted.length === 0) {
+        return [];
+      }
+      return [
+        {
+          section: {
+            id: "all-chronological",
+            heading: "",
+            headingClassName: "",
+            kinds: [],
+            tabId: "all",
+            navigateTo: "pipeline" as NotificationNavigateSection,
+          },
+          rows: sorted,
+        },
+      ];
+    }
+
     return sections
       .map((section) => ({
         section,
-        rows: filteredRows.filter((r) => section.kinds.includes(r.kind)),
+        rows: sortRowsNewestFirst(filteredRows.filter((r) => section.kinds.includes(r.kind))),
       }))
       .filter((g) => g.rows.length > 0);
-  }, [sections, filteredRows]);
+  }, [sections, filteredRows, activeTab]);
 
   const addExitingKey = (key: string) => {
     setExitingKeys((prev) => {

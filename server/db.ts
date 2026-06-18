@@ -278,6 +278,20 @@ export async function ensureRequirementManagementColumns() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS push_tokens (
+      id varchar(255) PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id text NOT NULL,
+      token text NOT NULL,
+      created_at text NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS push_tokens_user_token_idx
+    ON push_tokens (user_id, token)
+  `);
+
+  await pool.query(`
     ALTER TABLE candidates
     ADD COLUMN IF NOT EXISTS "registration_stage" text NOT NULL DEFAULT 'registered'
   `);
@@ -413,6 +427,15 @@ export async function ensureRequirementManagementColumns() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_candidate_application_comments_application_id
     ON candidate_application_comments (application_id)
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS application_comment_reads (
+      application_id varchar(255) NOT NULL,
+      employee_id varchar(255) NOT NULL,
+      last_read_at timestamp NOT NULL DEFAULT now(),
+      PRIMARY KEY (application_id, employee_id)
+    )
   `);
 }
 
