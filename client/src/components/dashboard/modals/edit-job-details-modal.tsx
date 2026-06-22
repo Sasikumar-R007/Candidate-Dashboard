@@ -100,7 +100,7 @@ export default function EditJobDetailsModal({
                 <SelectTrigger className="h-12 border-gray-200 dark:border-gray-700 rounded-xl px-4 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
                   <SelectValue placeholder="Select pedigree level" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                   <SelectItem value="Tier 1 Institution">Tier 1 Institution</SelectItem>
                   <SelectItem value="Tier 2 Institution">Tier 2 Institution</SelectItem>
                   <SelectItem value="Tier 3 Institution">Tier 3 Institution</SelectItem>
@@ -199,7 +199,7 @@ export default function EditJobDetailsModal({
               <SelectTrigger className="h-12 border-gray-200 dark:border-gray-700 rounded-xl px-4 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
                 <SelectValue placeholder="Select product/service type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                 <SelectItem value="Service">Service Based</SelectItem>
                 <SelectItem value="Product Based">Product Based</SelectItem>
                 <SelectItem value="Service & Product Based">Service & Product Based</SelectItem>

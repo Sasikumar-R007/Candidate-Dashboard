@@ -661,14 +661,20 @@ export function CandidateCommentsSession({
     apiMode === "client"
       ? `/api/client/applications/${encodedApplicationId}`
       : `/api/recruiter/applications/${encodedApplicationId}`;
-  const sessionQueryKey =
-    apiMode === "client"
-      ? ["/api/client/applications", applicationId, "session"]
-      : ["/api/recruiter/applications", applicationId, "session"];
-  const commentsQueryKey =
-    apiMode === "client"
-      ? ["/api/client/applications", applicationId, "comments"]
-      : ["/api/recruiter/applications", applicationId, "comments"];
+  const sessionQueryKey = useMemo(
+    () =>
+      apiMode === "client"
+        ? (["/api/client/applications", applicationId, "session"] as const)
+        : (["/api/recruiter/applications", applicationId, "session"] as const),
+    [apiMode, applicationId],
+  );
+  const commentsQueryKey = useMemo(
+    () =>
+      apiMode === "client"
+        ? (["/api/client/applications", applicationId, "comments"] as const)
+        : (["/api/recruiter/applications", applicationId, "comments"] as const),
+    [apiMode, applicationId],
+  );
 
   const navIndex = pipelineApplicants.findIndex((a) => a.id === applicationId);
   const navTotal = pipelineApplicants.length;
@@ -743,7 +749,7 @@ export function CandidateCommentsSession({
     void queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline"] });
     void queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
     void queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications-feed"] });
-  }, [applicationId, apiBase, queryClient, sessionQueryKey]);
+  }, [applicationId, apiMode, apiBase, queryClient]);
 
   const postCommentMutation = useMutation({
     mutationFn: async (body: string) => {

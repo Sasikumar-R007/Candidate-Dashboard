@@ -786,12 +786,18 @@ export function buildSearchQuery(filters: any) {
     );
   }
   
-  // Education filter
-  if (hasTextFilter(filters.educationUG)) {
-    conditions.push(ilike(candidates.education, `%${filters.educationUG}%`));
+  // Education filter — match any selected UG/PG course
+  const ugCourses = getFilterValues(filters.educationUG);
+  if (ugCourses.length > 0) {
+    conditions.push(
+      or(...ugCourses.map((course) => ilike(candidates.education, `%${course}%`))),
+    );
   }
-  if (hasTextFilter(filters.educationPG)) {
-    conditions.push(ilike(candidates.education, `%${filters.educationPG}%`));
+  const pgCourses = getFilterValues(filters.educationPG);
+  if (pgCourses.length > 0) {
+    conditions.push(
+      or(...pgCourses.map((course) => ilike(candidates.education, `%${course}%`))),
+    );
   }
   
   // Skills filter: all requested skills should be present for stronger matching

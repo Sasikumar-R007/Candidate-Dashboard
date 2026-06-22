@@ -487,6 +487,7 @@ export default function RecruiterDashboard2() {
       return response.json();
     },
     onSuccess: (_data, applicant) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
       toast({
         title: "Invite Sent",
         description: `Welcome email with temporary login password sent to ${applicant.candidateName}.`,
@@ -502,9 +503,32 @@ export default function RecruiterDashboard2() {
   });
 
   const handleInviteClick = (applicant: any) => {
-    if (applicant.isUsingStaffOS) return;
+    if (!applicant.canSendOnboardInvite) return;
     setApplicantToInvite(applicant);
     setIsInviteConfirmModalOpen(true);
+  };
+
+  const getOnboardTooltip = (applicant: {
+    canSendOnboardInvite?: boolean;
+    onboardInvitePending?: boolean;
+    isUsingStaffOS?: boolean;
+    awaitingCandidateAcceptance?: boolean;
+    staffosInviteSentAt?: string | null;
+    isCandidateConfirmed?: boolean;
+  }) => {
+    if (applicant.isCandidateConfirmed) {
+      return "Candidate has accepted the application";
+    }
+    if (applicant.isUsingStaffOS && applicant.awaitingCandidateAcceptance) {
+      return "Candidate is on StaffOS — waiting for them to confirm this application";
+    }
+    if (applicant.onboardInvitePending) {
+      return "Invite sent — resend available after 3 hours if the candidate has not logged in";
+    }
+    if (applicant.staffosInviteSentAt && applicant.canSendOnboardInvite) {
+      return "Resend StaffOS welcome email";
+    }
+    return "Invite to StaffOS";
   };
 
   const handleConfirmInvite = () => {
@@ -921,6 +945,12 @@ export default function RecruiterDashboard2() {
         profilePicture: app.profilePicture || null,
         profileId: app.profileId || null,
         isUsingStaffOS: app.isUsingStaffOS || false,
+        canUpdateStatus: app.canUpdateStatus !== false,
+        canSendOnboardInvite: Boolean(app.canSendOnboardInvite),
+        onboardInvitePending: Boolean(app.onboardInvitePending),
+        awaitingCandidateAcceptance: Boolean(app.awaitingCandidateAcceptance),
+        staffosInviteSentAt: app.staffosInviteSentAt || null,
+        isCandidateConfirmed: app.isCandidateConfirmed !== false,
         appliedDate: app.appliedDate || null,
         statusNote: app.statusNote || null,
         rejectionReason: app.rejectionReason || null,
@@ -1213,6 +1243,14 @@ export default function RecruiterDashboard2() {
 
   const renderApplicantStatusCell = (applicant: ApplicantOverviewRow, isUpdating: boolean) => {
     const terminal = getApplicantTerminal(applicant);
+    const statusLocked = applicant.canUpdateStatus === false;
+    const statusLockReason =
+      applicant.isUsingStaffOS && applicant.awaitingCandidateAcceptance
+        ? "Waiting for the candidate to confirm this application on StaffOS"
+        : applicant.onboardInvitePending || applicant.staffosInviteSentAt
+          ? "Waiting for the candidate to log in to StaffOS and accept the invite"
+          : "Send an onboard invite and wait for the candidate to accept before updating status";
+
     if (terminal.kind) {
       return (
         <TooltipProvider>
@@ -1226,6 +1264,23 @@ export default function RecruiterDashboard2() {
             </TooltipTrigger>
             <TooltipContent>
               <p>{terminal.hoverLabel}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    if (statusLocked) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex h-8 min-w-[9rem] cursor-not-allowed items-center justify-center rounded-md border border-slate-200 bg-slate-100 px-2 text-sm font-medium text-slate-500">
+                {applicant.currentStatus}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{statusLockReason}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -1769,14 +1824,14 @@ export default function RecruiterDashboard2() {
                                           size="sm"
                                           className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 w-8 p-0"
                                           onClick={() => handleInviteClick(applicant)}
-                                          disabled={applicant.isUsingStaffOS}
+                                          disabled={!applicant.canSendOnboardInvite}
                                           data-testid={`button-onboard-${applicant.id}`}
                                         >
                                           <PaperPlaneNudgeIcon className="h-4 w-4 shrink-0" />
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>{applicant.isUsingStaffOS ? 'Candidate is already using StaffOS' : 'Invite to StaffOS'}</p>
+                                        <p>{getOnboardTooltip(applicant)}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -3853,14 +3908,14 @@ export default function RecruiterDashboard2() {
                                     size="sm"
                                     className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 w-8 p-0"
                                     onClick={() => handleInviteClick(applicant)}
-                                    disabled={applicant.isUsingStaffOS}
+                                    disabled={!applicant.canSendOnboardInvite}
                                     data-testid={`button-onboard-modal-${applicant.id}`}
                                   >
                                     <PaperPlaneNudgeIcon className="h-4 w-4 shrink-0" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{applicant.isUsingStaffOS ? 'Candidate is already using StaffOS' : 'Invite to StaffOS'}</p>
+                                  <p>{getOnboardTooltip(applicant)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -3905,7 +3960,9 @@ export default function RecruiterDashboard2() {
                     Invite to StaffOS
                   </h3>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Send an onboarding invite to this candidate.
+                    {applicantToInvite?.staffosInviteSentAt
+                      ? "Resend the StaffOS welcome email to this candidate."
+                      : "Send an onboarding invite to this candidate."}
                   </p>
                 </div>
               </div>

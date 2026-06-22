@@ -61,6 +61,7 @@ const supplementalMigrations = [
   "add_client_logo.sql",
   "add_jd_fields.sql",
   "add_last_login_at.sql",
+  "add_staffos_invite_fields.sql",
   "add_requirement_management_fields.sql",
   "add_sourcing_owner_fields.sql",
   "add_employee_hold_fields.sql",

@@ -915,11 +915,11 @@ function GenderModal({ open, onOpenChange, profile }: { open: boolean; onOpenCha
             <label className="absolute -top-2 left-3 bg-white dark:bg-gray-800 px-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest z-10 group-focus-within:text-purple-500 transition-colors">
               Gender
             </label>
-            <Select value={gender} onValueChange={setGender}>
-              <SelectTrigger className="border-gray-200 dark:border-gray-700 rounded-xl h-12 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+            <Select value={gender || undefined} onValueChange={setGender}>
+              <SelectTrigger className="border-gray-200 dark:border-gray-700 rounded-xl h-12 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                 <SelectItem value="Male">Male</SelectItem>
                 <SelectItem value="Female">Female</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
@@ -1420,7 +1420,7 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
                 <SelectTrigger className="border-gray-200 dark:border-gray-700 rounded-xl h-12 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium text-gray-900 dark:text-white">
                   <SelectValue placeholder="Select Mode" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                   <SelectItem value="Remote">Remote</SelectItem>
                   <SelectItem value="Hybrid">Hybrid</SelectItem>
                   <SelectItem value="On-site">On-site</SelectItem>
@@ -1436,7 +1436,7 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
                 <SelectTrigger className="border-gray-200 dark:border-gray-700 rounded-xl h-12 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium text-gray-900 dark:text-white">
                   <SelectValue placeholder="Select Type" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                   <SelectItem value="Full-time">Full-time</SelectItem>
                   <SelectItem value="Part-time">Part-time</SelectItem>
                   <SelectItem value="Contract">Contract</SelectItem>
@@ -1468,7 +1468,7 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
                 <SelectTrigger className="border-gray-200 dark:border-gray-700 rounded-xl h-12 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium text-gray-900 dark:text-white">
                   <SelectValue placeholder="Select Availability" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                   <SelectItem value="Immediate">Immediate</SelectItem>
                   <SelectItem value="15 Days">15 Days</SelectItem>
                   <SelectItem value="30 Days">30 Days</SelectItem>

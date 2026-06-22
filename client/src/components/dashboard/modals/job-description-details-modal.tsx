@@ -19,7 +19,7 @@ import {
   CANDIDATE_MOBILE_DIALOG_CLASSES,
 } from "@/lib/candidate-ui-preferences";
 import { cn } from "@/lib/utils";
-import { resolveJdFileUrl as resolveStoredJdFileUrl } from "@/lib/resolve-upload-url";
+import { resolveJdFileUrl as resolveStoredJdFileUrl, resolveJdPreviewUrl } from "@/lib/resolve-upload-url";
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ||
@@ -39,6 +39,16 @@ type JdViewPayload = {
 function isPdfJd(jdFile?: string | null, jdFileUrl?: string | null): boolean {
   const probe = `${jdFile || ""} ${jdFileUrl || ""}`.toLowerCase();
   return /\.pdf(\?|#|$)/.test(probe);
+}
+
+function isDocxJd(jdFile?: string | null, jdFileUrl?: string | null): boolean {
+  const probe = `${jdFile || ""} ${jdFileUrl || ""}`.toLowerCase();
+  return /\.docx(\?|#|$)/.test(probe);
+}
+
+function isLegacyDocJd(jdFile?: string | null, jdFileUrl?: string | null): boolean {
+  const probe = `${jdFile || ""} ${jdFileUrl || ""}`.toLowerCase();
+  return /\.doc(\?|#|$)/.test(probe) && !/\.docx(\?|#|$)/.test(probe);
 }
 
 export type JobDescriptionDetailsData = {
@@ -194,7 +204,49 @@ function JdDocumentPanel({
   loading?: boolean;
 }) {
   const jdFileUrl = useMemo(() => resolveJdFileUrl(jdFile), [jdFile]);
+  const jdPreviewUrl = useMemo(() => resolveJdPreviewUrl(jdFile), [jdFile]);
   const isPdf = isPdfJd(jdFile, jdFileUrl);
+  const isDocx = isDocxJd(jdFile, jdFileUrl);
+  const isLegacyDoc = isLegacyDocJd(jdFile, jdFileUrl);
+  const [docxHtml, setDocxHtml] = useState<string | null>(null);
+  const [docxPreviewLoading, setDocxPreviewLoading] = useState(false);
+  const [docxPreviewError, setDocxPreviewError] = useState(false);
+
+  useEffect(() => {
+    if (!jdPreviewUrl) {
+      setDocxHtml(null);
+      setDocxPreviewLoading(false);
+      setDocxPreviewError(false);
+      return;
+    }
+
+    let cancelled = false;
+    setDocxPreviewLoading(true);
+    setDocxPreviewError(false);
+    setDocxHtml(null);
+
+    fetch(jdPreviewUrl, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload: { html?: string } | null) => {
+        if (cancelled) return;
+        if (payload?.html?.trim()) {
+          setDocxHtml(payload.html);
+          setDocxPreviewError(false);
+        } else {
+          setDocxPreviewError(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDocxPreviewError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setDocxPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jdPreviewUrl]);
 
   const fileName = jdFile?.split("/").pop() || "document";
   const hasSkillsOrInstructions = Boolean(
@@ -236,7 +288,7 @@ function JdDocumentPanel({
           <JdSection title="Document preview" accent="indigo">
             <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
               <iframe
-                src={jdFileUrl}
+                src={`${jdFileUrl}#view=FitH`}
                 className="h-[min(520px,50vh)] w-full bg-white"
                 title="JD PDF Preview"
               />
@@ -245,13 +297,76 @@ function JdDocumentPanel({
         </div>
       )}
 
-      {!loading && jdFileUrl && !isPdf && (
+      {!loading && jdFileUrl && isDocx && (
+        <div className="mb-4">
+          <JdSection title="Document preview" accent="indigo">
+            {docxPreviewLoading && (
+              <p className="rounded-lg border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-800">
+                Loading document preview…
+              </p>
+            )}
+            {!docxPreviewLoading && docxHtml && (
+              <div
+                className="max-h-[min(520px,50vh)] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 text-sm leading-relaxed text-slate-800 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5"
+                dangerouslySetInnerHTML={{ __html: docxHtml }}
+              />
+            )}
+            {!docxPreviewLoading && !docxHtml && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-600 dark:bg-slate-800/60">
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {docxPreviewError
+                      ? "Preview could not be loaded. Open the file to view it."
+                      : "No preview available."}
+                  </p>
+                </div>
+                <a
+                  href={jdFileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open document
+                </a>
+              </div>
+            )}
+          </JdSection>
+        </div>
+      )}
+
+      {!loading && jdFileUrl && isLegacyDoc && (
+        <div className="mb-4">
+          <JdSection title="Document preview" accent="indigo">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-600 dark:bg-slate-800/60">
+              <div>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Legacy Word (.doc) files cannot be previewed here. Open the file to view it.
+                </p>
+              </div>
+              <a
+                href={jdFileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open document
+              </a>
+            </div>
+          </JdSection>
+        </div>
+      )}
+
+      {!loading && jdFileUrl && !isPdf && !isDocx && !isLegacyDoc && (
         <div className="mb-4">
           <JdSection title="Attached document" accent="indigo">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-slate-900 dark:text-white">{fileName}</p>
-                <p className="mt-1 text-xs text-slate-500">Opens in a new tab</p>
+                <p className="mt-1 text-xs text-slate-500">This file type cannot be previewed inline.</p>
               </div>
               <a
                 href={jdFileUrl}

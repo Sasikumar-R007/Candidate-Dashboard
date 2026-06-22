@@ -24,7 +24,8 @@ import { Slider } from "@/components/ui/slider";
 import ProfileStrength from '@/components/dashboard/profile-strength';
 import { useQuery } from '@tanstack/react-query';
 import type { RecruiterJob } from "@shared/schema";
-import { calculateProfileCompletion } from '@/lib/profile-utils';
+import { calculateProfileCompletion, canCandidateApplyToJobs, getProfileCompletionApplyBlockedMessage } from '@/lib/profile-utils';
+import ProfileCompletionApplyAlert from '@/components/candidate-dashboard/profile-completion-apply-alert';
 import {
   getArchiveStatusLabel,
   getArchiveTerminalMeta,
@@ -220,6 +221,20 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
   const { toast } = useToast();
 
   const { percentage } = calculateProfileCompletion(profile, jobPreferences);
+  const canApplyToJobs = canCandidateApplyToJobs(percentage);
+
+  const requestJobApply = (job: JobListing) => {
+    if (!canApplyToJobs) {
+      toast({
+        title: "Profile incomplete",
+        description: getProfileCompletionApplyBlockedMessage(percentage),
+        variant: "destructive",
+      });
+      return;
+    }
+    setJobToApply(job);
+    setShowApplicationConsent(true);
+  };
 
   const savedJobs = new Set(savedJobsData.map(job => `${job.jobTitle}-${job.company}`));
   
@@ -714,6 +729,17 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
             </div>
         </div>
 
+        {profile && !canApplyToJobs && (
+          <div className="shrink-0 border-b border-amber-100 bg-amber-50/40 px-3 py-3 sm:px-6 lg:px-8">
+            <ProfileCompletionApplyAlert
+              profile={profile}
+              jobPreferences={jobPreferences}
+              onNavigateToProfile={onNavigateToProfile}
+              variant="card"
+            />
+          </div>
+        )}
+
         {/* Split Content View */}
         <div className="flex-1 flex overflow-hidden min-h-0">
           {/* Job List (42% desktop; full width mobile) */}
@@ -1041,14 +1067,15 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                             type="button"
                             onClick={() => {
                               if (isApplied) return;
-                              setJobToApply(selectedJob);
-                              setShowApplicationConsent(true);
+                              requestJobApply(selectedJob);
                             }}
                             disabled={applyJobMutation.isPending || isApplied}
                             className={`${JB_RADIUS} h-11 flex-1 font-semibold text-sm flex items-center justify-center gap-2 shadow-sm ${
                               isApplied
                                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-none'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : !canApplyToJobs
+                                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
+                                  : 'bg-blue-600 hover:bg-blue-700 text-white'
                             }`}
                           >
                             {applyJobMutation.isPending ? (
@@ -1058,7 +1085,7 @@ export default function JobBoardTab({ onNavigateToSettings, onNavigateToProfile 
                             ) : (
                               <MousePointer2 size={16} />
                             )}
-                            {isApplied ? 'Applied' : 'Apply now'}
+                            {isApplied ? 'Applied' : !canApplyToJobs ? 'Profile < 40%' : 'Apply now'}
                           </Button>
                         );
                       })()}

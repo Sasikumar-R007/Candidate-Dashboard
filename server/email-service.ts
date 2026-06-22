@@ -16,6 +16,9 @@ interface CandidateWelcomeEmailData {
   candidateId: string;
   loginUrl: string;
   password?: string;
+  jobTitle?: string | null;
+  company?: string | null;
+  invitedByRecruiter?: boolean;
 }
 
 interface OTPEmailData {
@@ -140,6 +143,14 @@ Team StaffOS
 export async function sendCandidateWelcomeEmail(data: CandidateWelcomeEmailData): Promise<boolean> {
   try {
     const { client: resend, fromEmail } = await getUncachableResendClient();
+    const roleLabel = (data.jobTitle || "").trim();
+    const companyLabel = (data.company || "").trim();
+    const isRecruiterInvite = Boolean(data.invitedByRecruiter && (roleLabel || companyLabel));
+
+    const introText = isRecruiterInvite
+      ? `Your recruiter has shortlisted you for ${roleLabel || "a role"}${companyLabel ? ` at ${companyLabel}` : ""} on StaffOS. Log in below to review and confirm your application.`
+      : "Your candidate account has been successfully created. We're excited to have you join our platform and help you find the perfect career opportunity.";
+
     const credentialsBlock = data.password
       ? `
 **Your Login Details:**
@@ -176,15 +187,51 @@ Please change your password after your first login.
       </div>
 `;
 
+    const nextStepsText = isRecruiterInvite
+      ? `**What's Next?**
+
+1. Log in using the credentials above
+2. Review and accept the StaffOS platform agreement
+3. Confirm your interest in ${roleLabel || "this role"}${companyLabel ? ` at ${companyLabel}` : ""}
+4. Complete your profile and upload your latest resume`
+      : `**What's Next?**
+
+1. Complete your profile to increase your visibility to recruiters
+2. Upload your latest resume for better job matching
+3. Browse and apply to jobs that interest you
+4. Stay updated on your application progress through your dashboard`;
+
+    const nextStepsHtml = isRecruiterInvite
+      ? `
+      <div class="next-steps">
+        <h3 style="margin-top: 0;">What's Next?</h3>
+        <ol>
+          <li>Log in using the credentials above</li>
+          <li>Review and accept the StaffOS platform agreement</li>
+          <li>Confirm your interest in ${roleLabel || "this role"}${companyLabel ? ` at ${companyLabel}` : ""}</li>
+          <li>Complete your profile and upload your latest resume</li>
+        </ol>
+      </div>`
+      : `
+      <div class="next-steps">
+        <h3 style="margin-top: 0;">What's Next?</h3>
+        <ol>
+          <li>Complete your profile to increase your visibility to recruiters</li>
+          <li>Upload your latest resume for better job matching</li>
+          <li>Browse and apply to jobs that interest you</li>
+          <li>Stay updated on your application progress through your dashboard</li>
+        </ol>
+      </div>`;
+
     const emailContent = `
 Hi ${data.fullName},
 
 Welcome to StaffOS!
 
-Your candidate account has been successfully created. We're excited to have you join our platform and help you find the perfect career opportunity.
+${introText}
 
 ${credentialsBlock}
-With StaffOS, you can:
+${isRecruiterInvite ? "" : `With StaffOS, you can:
 
 • Track all your job applications in one place
 • Update your profile and resume anytime
@@ -192,12 +239,8 @@ With StaffOS, you can:
 • Communicate directly with recruiters
 • Get matched with opportunities that fit your skills and preferences
 
-**What's Next?**
-
-1. Complete your profile to increase your visibility to recruiters
-2. Upload your latest resume for better job matching
-3. Browse and apply to jobs that interest you
-4. Stay updated on your application progress through your dashboard
+`}
+${nextStepsText}
 
 Our team is committed to providing you with a transparent and seamless job search experience. If you have any questions or need assistance, feel free to reach out to our support team.
 
@@ -231,16 +274,16 @@ Team StaffOS
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to StaffOS!</h1>
+      <h1>${isRecruiterInvite ? "You have been shortlisted" : "Welcome to StaffOS!"}</h1>
     </div>
     <div class="content">
       <p>Hi ${data.fullName},</p>
       
-      <p>Your candidate account has been successfully created. We're excited to have you join our platform and help you find the perfect career opportunity.</p>
+      <p>${introText}</p>
       
       ${credentialsHtml}
       
-      <div class="features">
+      ${isRecruiterInvite ? "" : `<div class="features">
         <h3 style="margin-top: 0;">With StaffOS, you can:</h3>
         <ul>
           <li>Track all your job applications in one place</li>
@@ -249,17 +292,9 @@ Team StaffOS
           <li>Communicate directly with recruiters</li>
           <li>Get matched with opportunities that fit your skills and preferences</li>
         </ul>
-      </div>
+      </div>`}
       
-      <div class="next-steps">
-        <h3 style="margin-top: 0;">What's Next?</h3>
-        <ol>
-          <li>Complete your profile to increase your visibility to recruiters</li>
-          <li>Upload your latest resume for better job matching</li>
-          <li>Browse and apply to jobs that interest you</li>
-          <li>Stay updated on your application progress through your dashboard</li>
-        </ol>
-      </div>
+      ${nextStepsHtml}
       
       <center>
         <a href="${data.loginUrl}" class="cta-button">Login to Your Account</a>

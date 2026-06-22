@@ -151,7 +151,7 @@ export default function RecruiterTaggedJobConsentModal({
               className="cursor-pointer text-left text-sm font-normal leading-snug text-gray-800"
             >
               I confirm my interest in this opportunity and consent to sharing my profile, resume, and
-              application details with this hiring company in accordance with the{" "}
+              application details with StaffOS in accordance with the{" "}
               <Link href="/privacy-policy" className="font-medium text-blue-600 underline hover:text-blue-800">
                 Privacy Policy
               </Link>{" "}

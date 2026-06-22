@@ -21,10 +21,10 @@ interface DataEntrySettingsModalProps {
 }
 
 const fieldClassName =
-  "h-10 rounded-lg border border-slate-300 bg-slate-100 text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400";
+  "h-10 rounded-[6px] border border-slate-300 bg-slate-100 text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400";
 
 const disabledFieldClassName =
-  "h-10 rounded-lg border border-slate-200 bg-slate-200 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400";
+  "h-10 rounded-[6px] border border-slate-200 bg-slate-200 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400";
 
 export default function DataEntrySettingsModal({
   isOpen,
@@ -114,14 +114,18 @@ export default function DataEntrySettingsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <DialogContent className="max-w-md rounded-[8px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="profile">
-          <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-800">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="password">Password</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 rounded-[6px] bg-slate-100 dark:bg-slate-800">
+            <TabsTrigger value="profile" className="rounded-[4px]">
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="password" className="rounded-[4px]">
+              Password
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="profile" className="space-y-4 pt-4">
             <div className="space-y-2">
@@ -150,7 +154,11 @@ export default function DataEntrySettingsModal({
               <Label className="text-slate-700 dark:text-slate-300">Email</Label>
               <Input value={profile?.email || ""} disabled className={disabledFieldClassName} />
             </div>
-            <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="w-full">
+            <Button
+              onClick={handleSaveProfile}
+              disabled={isSavingProfile}
+              className="w-full rounded-[6px]"
+            >
               {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save profile"}
             </Button>
           </TabsContent>
@@ -188,7 +196,11 @@ export default function DataEntrySettingsModal({
                 className={fieldClassName}
               />
             </div>
-            <Button onClick={handleSavePassword} disabled={isSavingPassword} className="w-full">
+            <Button
+              onClick={handleSavePassword}
+              disabled={isSavingPassword}
+              className="w-full rounded-[6px]"
+            >
               {isSavingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update password"}
             </Button>
           </TabsContent>

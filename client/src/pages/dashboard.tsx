@@ -11,13 +11,14 @@ import ActivityTab from '@/components/dashboard/tabs/activity-tab';
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import EditViewProfile from '@/pages/edit-view-profile';
-import { useProfile } from '@/hooks/use-profile';
+import { useProfile, useJobPreferences } from '@/hooks/use-profile';
 import { useJobApplications } from '@/hooks/use-job-applications';
 import { MessageCircle, HelpCircle } from 'lucide-react';
 import { ChatDock } from '@/components/chat/chat-dock';
 
 import DashboardHeader from '@/components/dashboard/dashboard-header';
 import CandidatePlatformWelcomeModal from '@/components/candidate-dashboard/candidate-platform-welcome-modal';
+import ProfileCompletionApplyAlert from '@/components/candidate-dashboard/profile-completion-apply-alert';
 import RecruiterTaggedJobConsentModal from '@/components/candidate-dashboard/recruiter-tagged-job-consent-modal';
 import { CandidateNotificationBell } from '@/components/dashboard/candidate-notification-bell';
 import { logConsent } from '@/lib/consent-log';
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('my-jobs');
   const [, setLocation] = useLocation();
   const { data: profile, isLoading } = useProfile();
+  const { data: jobPreferences } = useJobPreferences();
   const { data: jobApplications = [], isLoading: jobsLoading } = useJobApplications({
     enabled: !!profile,
   });
@@ -153,6 +155,18 @@ export default function Dashboard() {
     );
   }
 
+  const renderProfileApplyGate = () =>
+    profile ? (
+      <div className="shrink-0 px-3 pt-2 lg:px-6">
+        <ProfileCompletionApplyAlert
+          profile={profile}
+          jobPreferences={jobPreferences}
+          onNavigateToProfile={() => setSidebarTab('edit-view')}
+          variant="banner"
+        />
+      </div>
+    ) : null;
+
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'my-jobs':
@@ -162,6 +176,7 @@ export default function Dashboard() {
               title="StaffOS" 
               actions={headerActions}
             />
+            {renderProfileApplyGate()}
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">
               <MyJobsTab 
                 onNavigateToJobBoard={() => setSidebarTab('job-board')} 
@@ -179,6 +194,7 @@ export default function Dashboard() {
               title="StaffOS" 
               actions={headerActions}
             />
+            {renderProfileApplyGate()}
             <div className="flex-1 overflow-y-auto mt-2 max-lg:mt-0 px-4 pb-24 max-lg:pb-28 lg:mt-4 lg:px-8 lg:pb-8">
               <SettingsTab onOpenSupport={() => setChatOpen(true)} />
             </div>
@@ -191,6 +207,7 @@ export default function Dashboard() {
               title="StaffOS" 
               actions={headerActions}
             />
+            {renderProfileApplyGate()}
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
               <EditViewProfile profile={profile!} onNavigateToJobBoard={() => setSidebarTab('job-board')} />
             </div>
@@ -203,6 +220,7 @@ export default function Dashboard() {
               title="StaffOS" 
               actions={headerActions}
             />
+            {renderProfileApplyGate()}
             <div className="flex-1 min-h-0 overflow-hidden">
               <JobBoardTab 
                 onNavigateToSettings={() => setSidebarTab('settings')}

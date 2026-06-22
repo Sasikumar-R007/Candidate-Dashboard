@@ -141,6 +141,8 @@ export const jobApplications = pgTable("job_applications", {
   statusNote: text("status_note"),
   rejectionReason: text("rejection_reason"),
   isCandidateConfirmed: boolean("is_candidate_confirmed").default(true),
+  staffosInviteSentAt: timestamp("staffos_invite_sent_at"),
+  staffosInviteReminderSentAt: timestamp("staffos_invite_reminder_sent_at"),
   /** Per-application salary (editable by TL/TA in pipeline comments session). */
   applicationCurrentCtc: text("application_current_ctc").default("0"),
   applicationExpectedCtc: text("application_expected_ctc").default("0"),
@@ -476,6 +478,7 @@ export const candidates = pgTable("candidates", {
   phoneVerified: boolean("phone_verified").default(false),
   createdAt: text("created_at").notNull(),
   lastViewedAt: text("last_viewed_at"), // Track when profile was last viewed
+  lastLoginAt: text("last_login_at"),
   registrationStage: registrationStageEnum("registration_stage").notNull().default("registered"),
 });
 

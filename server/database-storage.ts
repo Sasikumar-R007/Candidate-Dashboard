@@ -195,6 +195,7 @@ function normalizeCandidate(candidate: any): Candidate {
     registrationStage: candidate.registration_stage || candidate.registrationStage,
     createdAt: candidate.created_at || candidate.createdAt,
     lastViewedAt: candidate.last_viewed_at || candidate.lastViewedAt,
+    lastLoginAt: candidate.last_login_at || candidate.lastLoginAt || null,
   } as Candidate;
 }
 
@@ -234,6 +235,12 @@ function normalizeJobApplication(application: any): JobApplication {
       application.is_candidate_confirmed !== undefined
         ? application.is_candidate_confirmed
         : (application.isCandidateConfirmed ?? true),
+    staffosInviteSentAt:
+      application.staffos_invite_sent_at ?? application.staffosInviteSentAt ?? null,
+    staffosInviteReminderSentAt:
+      application.staffos_invite_reminder_sent_at ??
+      application.staffosInviteReminderSentAt ??
+      null,
     applicationCurrentCtc:
       application.application_current_ctc ?? application.applicationCurrentCtc ?? "0",
     applicationExpectedCtc:

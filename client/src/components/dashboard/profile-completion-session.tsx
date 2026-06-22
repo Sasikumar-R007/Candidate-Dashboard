@@ -8,7 +8,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { Profile } from '@shared/schema';
-import { calculateProfileCompletion } from '@/lib/profile-utils';
+import {
+  calculateProfileCompletion,
+  canCandidateApplyToJobs,
+  MIN_PROFILE_COMPLETION_TO_APPLY,
+  profileCompletionGapToApply,
+} from '@/lib/profile-utils';
 
 const PROFILE_COMPLETION_INFO =
   'Your completion percentage increases only when you fully complete each profile tab (e.g. Personal Info, Education, Resume)—not from partial or single-field updates.';
@@ -23,8 +28,8 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
   if (!profile) return null;
 
   const { percentage, missing } = calculateProfileCompletion(profile, jobPreferences);
-  const neededForVisibility = Math.max(0, 50 - percentage);
-  const isRecruiterVisible = percentage >= 50;
+  const canApply = canCandidateApplyToJobs(percentage);
+  const neededToApply = profileCompletionGapToApply(percentage);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -49,9 +54,9 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
               </Tooltip>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {isRecruiterVisible
-                ? 'Your profile is visible to recruiters. Keep it updated for better matches.'
-                : `Complete ${neededForVisibility}% more of your profile to apply for jobs and be visible to recruiters.`}
+              {canApply
+                ? 'Your profile meets the minimum to apply for jobs. Keep it updated for better matches.'
+                : `Complete ${neededToApply}% more of your profile to apply for jobs on the job board.`}
             </p>
           </div>
           <div className="text-3xl font-bold text-gray-900 dark:text-white shrink-0 tabular-nums">
@@ -62,16 +67,19 @@ export default function ProfileCompletionSession({ profile, jobPreferences, onNa
         <div className="mt-5">
           <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
             <span>Progress</span>
-            <span className={isRecruiterVisible ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
-              {isRecruiterVisible ? 'Recruiter visible' : '50% needed to apply'}
+            <span className={canApply ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
+              {canApply ? 'Ready to apply' : `${MIN_PROFILE_COMPLETION_TO_APPLY}% needed to apply`}
             </span>
           </div>
           <div className="relative h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
             <div
-              className={`h-full rounded-full transition-all duration-700 ${isRecruiterVisible ? 'bg-emerald-500' : 'bg-blue-600'}`}
+              className={`h-full rounded-full transition-all duration-700 ${canApply ? 'bg-emerald-500' : 'bg-blue-600'}`}
               style={{ width: `${percentage}%` }}
             />
-            <div className="absolute top-0 bottom-0 w-px bg-amber-400/80" style={{ left: '50%' }} />
+            <div
+              className="absolute top-0 bottom-0 w-px bg-amber-400/80"
+              style={{ left: `${MIN_PROFILE_COMPLETION_TO_APPLY}%` }}
+            />
           </div>
         </div>
 

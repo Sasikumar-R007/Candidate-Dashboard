@@ -456,7 +456,14 @@ export async function ensureCriticalPipelineColumns() {
     ADD COLUMN IF NOT EXISTS application_expected_ctc text DEFAULT '0',
     ADD COLUMN IF NOT EXISTS salary_edited_by_employee_id varchar(255),
     ADD COLUMN IF NOT EXISTS salary_edited_by_name text,
-    ADD COLUMN IF NOT EXISTS salary_edited_at timestamp
+    ADD COLUMN IF NOT EXISTS salary_edited_at timestamp,
+    ADD COLUMN IF NOT EXISTS staffos_invite_sent_at timestamp,
+    ADD COLUMN IF NOT EXISTS staffos_invite_reminder_sent_at timestamp
+  `);
+
+  await pool.query(`
+    ALTER TABLE candidates
+    ADD COLUMN IF NOT EXISTS last_login_at text
   `);
 
   await pool.query(`

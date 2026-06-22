@@ -130,6 +130,13 @@ export function resolveJdFileUrl(filePath?: string | null): string | null {
   return apiBase ? `${apiBase}${normalized}` : normalized;
 }
 
+export function resolveJdPreviewUrl(filePath?: string | null): string | null {
+  const fileUrl = resolveJdFileUrl(filePath);
+  if (!fileUrl) return null;
+  if (!/\.docx(\?|#|$)/i.test(fileUrl)) return null;
+  return `${fileUrl.replace(/\/+$/, "")}/preview`;
+}
+
 export function resolveLogoFileUrl(filePath?: string | null): string | null {
   if (!filePath?.trim()) return null;
   const url = filePath.trim();

@@ -11,6 +11,8 @@ import {
   LogOut,
   Minimize2,
   User,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useBulkResumeImport } from "@/contexts/bulk-resume-import-context";
 import {
   BULK_IMPORT_BATCH_SIZE,
@@ -45,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import DataEntrySettingsModal from "@/components/resume-intake/data-entry-settings-modal";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import staffosLogo from "@/assets/staffos logo 2.png";
 
 type RecentUpload = {
   id: string;
@@ -61,6 +65,21 @@ type Stats = {
   lastLoginAt: string | null;
 };
 
+type RecentUploadsResponse = {
+  rows: RecentUpload[];
+  total: number;
+};
+
+type DataEntryProfile = {
+  name?: string;
+  email?: string;
+  phone?: string | null;
+  employeeId?: string;
+  joiningDate?: string | null;
+};
+
+const RECENT_UPLOADS_PAGE_SIZE = 10;
+
 function formatDateTime(value: string | null | undefined) {
   if (!value) return "—";
   try {
@@ -76,6 +95,19 @@ function formatDateTime(value: string | null | undefined) {
   }
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+}
+
 export default function ResumeIntakePortal() {
   const employee = useEmployeeAuth();
   const { logout, beginSignOut } = useAuth();
@@ -85,6 +117,7 @@ export default function ResumeIntakePortal() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [recentUploadsPage, setRecentUploadsPage] = useState(0);
 
   const {
     isImportModalOpen,
@@ -118,20 +151,52 @@ export default function ResumeIntakePortal() {
     setIsBulkUpload(true);
   }, [setIsBulkUpload]);
 
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<DataEntryProfile>({
     queryKey: ["/api/data-entry/profile"],
     retry: false,
   });
+
+  const profileName = profile?.name || employee?.name || "User";
+  const profileEmployeeId = profile?.employeeId || employee?.employeeId || "—";
+  const profileJoiningDate = profile?.joiningDate || employee?.joiningDate;
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/data-entry/stats"],
     refetchInterval: 60_000,
   });
 
-  const { data: recentUploads = [] } = useQuery<RecentUpload[]>({
-    queryKey: ["/api/data-entry/recent-uploads"],
+  const { data: recentUploadsData } = useQuery<RecentUploadsResponse>({
+    queryKey: ["/api/data-entry/recent-uploads", recentUploadsPage],
+    queryFn: async () => {
+      const offset = recentUploadsPage * RECENT_UPLOADS_PAGE_SIZE;
+      const response = await fetch(
+        createApiUrl(
+          `/api/data-entry/recent-uploads?limit=${RECENT_UPLOADS_PAGE_SIZE}&offset=${offset}`,
+        ),
+        { credentials: "include" },
+      );
+      if (!response.ok) {
+        throw new Error("Failed to load recent uploads");
+      }
+      return response.json();
+    },
     refetchInterval: 60_000,
   });
+
+  const recentUploads = recentUploadsData?.rows ?? [];
+  const recentUploadsTotal = recentUploadsData?.total ?? 0;
+  const recentUploadsTotalPages = Math.max(
+    1,
+    Math.ceil(recentUploadsTotal / RECENT_UPLOADS_PAGE_SIZE),
+  );
+
+  useEffect(() => {
+    if (recentUploadsPage > 0 && recentUploadsPage >= recentUploadsTotalPages) {
+      setRecentUploadsPage(Math.max(0, recentUploadsTotalPages - 1));
+    }
+  }, [recentUploadsPage, recentUploadsTotalPages]);
+
+  const showRecentUploadsPagination = recentUploadsTotal > 0;
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -238,6 +303,7 @@ export default function ResumeIntakePortal() {
 
       setImportResults(aggregated);
       setImportStep("result");
+      setRecentUploadsPage(0);
       queryClient.invalidateQueries({ queryKey: ["/api/data-entry/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/data-entry/recent-uploads"] });
 
@@ -279,23 +345,78 @@ export default function ResumeIntakePortal() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900 dark:text-white">
-              {DATA_ENTRY_PORTAL_TITLE}
-            </h1>
-            <p className="text-sm text-slate-500">Bulk resume upload workspace</p>
+      <header className="border-b border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
+          <div className="flex min-w-0 items-center gap-3">
+            <img
+              src={staffosLogo}
+              alt="StaffOS logo"
+              className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-700"
+            />
+            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              StaffOS
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="mr-2 hidden items-center gap-2 text-sm text-slate-600 dark:text-slate-300 sm:flex">
-              <User className="h-4 w-4" />
-              <span>{employee?.name || "User"}</span>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Popover>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="View profile"
+                      className="h-9 w-9"
+                    >
+                      <User className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Profile</TooltipContent>
+              </Tooltip>
+              <PopoverContent
+                align="end"
+                className="w-64 border border-slate-200 bg-slate-50 p-0 shadow-lg dark:border-slate-600 dark:bg-slate-800"
+              >
+                <div className="border-b border-slate-200 bg-slate-100 px-4 py-3 dark:border-slate-600 dark:bg-slate-900/60">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {profileName}
+                  </p>
+                </div>
+                <div className="space-y-3 px-4 py-3 text-sm">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Employee ID
+                    </p>
+                    <p className="mt-0.5 font-medium text-slate-800 dark:text-slate-200">
+                      {profileEmployeeId}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Joining date
+                    </p>
+                    <p className="mt-0.5 font-medium text-slate-800 dark:text-slate-200">
+                      {formatDate(profileJoiningDate)}
+                    </p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setSettingsOpen(true)}
+                  aria-label="Settings"
+                  className="h-9 w-9"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Settings</TooltipContent>
+            </Tooltip>
             <Button
               variant="destructive"
               size="sm"
@@ -315,6 +436,15 @@ export default function ResumeIntakePortal() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            {DATA_ENTRY_PORTAL_TITLE}
+          </h1>
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 sm:text-base">
+            Bulk resume upload workspace
+          </p>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
@@ -366,8 +496,54 @@ export default function ResumeIntakePortal() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
             <CardTitle className="text-lg">Recent uploads</CardTitle>
+            {showRecentUploadsPagination && (
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  disabled={recentUploadsPage === 0}
+                  onClick={() => setRecentUploadsPage((page) => Math.max(0, page - 1))}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-1 overflow-x-auto">
+                  {Array.from({ length: recentUploadsTotalPages }, (_, index) => (
+                    <Button
+                      key={index}
+                      type="button"
+                      variant={recentUploadsPage === index ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 min-w-8 px-2.5"
+                      onClick={() => setRecentUploadsPage(index)}
+                      aria-label={`Page ${index + 1}`}
+                      aria-current={recentUploadsPage === index ? "page" : undefined}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  disabled={recentUploadsPage >= recentUploadsTotalPages - 1}
+                  onClick={() =>
+                    setRecentUploadsPage((page) =>
+                      Math.min(recentUploadsTotalPages - 1, page + 1),
+                    )
+                  }
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -376,14 +552,13 @@ export default function ResumeIntakePortal() {
                   <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-700">
                     <th className="pb-2 pr-4 font-medium">Name</th>
                     <th className="pb-2 pr-4 font-medium">Email</th>
-                    <th className="pb-2 pr-4 font-medium">Uploaded at</th>
-                    <th className="pb-2 font-medium">Status</th>
+                    <th className="pb-2 font-medium">Uploaded on</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentUploads.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-400">
+                      <td colSpan={3} className="py-8 text-center text-slate-400">
                         No uploads yet. Start a bulk upload to add resumes.
                       </td>
                     </tr>
@@ -395,8 +570,7 @@ export default function ResumeIntakePortal() {
                       >
                         <td className="py-3 pr-4">{row.fullName || "—"}</td>
                         <td className="py-3 pr-4">{row.email || "—"}</td>
-                        <td className="py-3 pr-4">{formatDateTime(row.createdAt)}</td>
-                        <td className="py-3">{row.pipelineStatus || "New"}</td>
+                        <td className="py-3">{formatDateTime(row.createdAt)}</td>
                       </tr>
                     ))
                   )}

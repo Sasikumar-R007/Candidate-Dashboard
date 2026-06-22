@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import type { Profile } from '@shared/schema';
 import { calculateProfileCompletion } from '@/lib/profile-utils';
+import ProfileCompletionApplyAlert from '@/components/candidate-dashboard/profile-completion-apply-alert';
 import { Edit3 } from 'lucide-react';
 
 interface ProfileStrengthProps {
@@ -89,6 +90,12 @@ export default function ProfileStrength({ profile, jobPreferences, onEdit, editI
         )}
         </div>
         <p className="text-xs font-medium text-gray-400 mb-1">{profile.title || 'Job Seeker'}</p>
+        <ProfileCompletionApplyAlert
+          profile={profile}
+          jobPreferences={jobPreferences}
+          variant="inline"
+          className="mb-2"
+        />
       </div>
 
       {!editIconOnly && (

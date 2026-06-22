@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { apiRequest } from "@/lib/queryClient";
 import { messagingPromise } from "@/lib/firebase";
 import { dispatchOpenCommentSession } from "@/lib/open-comment-session";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 
 const SW_URL = "/firebase-messaging-sw.js";
 
@@ -69,7 +69,6 @@ async function savePushTokenOnly(): Promise<"saved" | "unsupported" | "no-token"
 export default function PushNotificationBootstrap() {
   const { user, isLoading } = useAuth();
   const [promptState, setPromptState] = useState<"hidden" | "default" | "denied" | "enabling">("hidden");
-  const siteOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   const syncPromptFromPermission = useCallback(() => {
     if (!("Notification" in window)) {
@@ -220,8 +219,8 @@ export default function PushNotificationBootstrap() {
             {promptState === "enabling"
               ? "Saving your device token…"
               : promptState === "denied"
-                ? `Notifications are blocked for ${siteOrigin}. Open chrome://settings/content/notifications and allow this exact site, then refresh.`
-                : `Allow notifications for this exact site: ${siteOrigin}`}
+                ? "Notifications are blocked. Allow this site in browser settings, then refresh."
+                : "Get alerts for comments and requirement updates."}
           </p>
           {promptState === "default" && (
             <button
@@ -237,10 +236,10 @@ export default function PushNotificationBootstrap() {
           <button
             type="button"
             onClick={() => setPromptState("hidden")}
-            className="text-slate-400 hover:text-slate-600"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             aria-label="Dismiss"
           >
-            ×
+            <X className="h-5 w-5" />
           </button>
         )}
       </div>

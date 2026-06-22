@@ -31,6 +31,7 @@ import {
   UserPlus,
   ArrowUp,
   Edit,
+  Info,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,6 +63,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import EditCandidateModal from "@/components/dashboard/modals/edit-candidate-modal";
 import { ResumePreviewPanel } from "@/components/source-resume/resume-preview-panel";
 
@@ -817,8 +828,8 @@ interface FilterState {
   preferredLocation: string[];
   company: string[];
   excludedCompanies: string[];
-  educationUG: string;
-  educationPG: string;
+  educationUG: string[];
+  educationPG: string[];
   additionalDegrees: string[];
   employmentType: string;
   jobType: string;
@@ -871,8 +882,8 @@ const initialFilters: FilterState = {
   preferredLocation: [],
   company: [],
   excludedCompanies: [],
-  educationUG: "",
-  educationPG: "",
+  educationUG: [],
+  educationPG: [],
   additionalDegrees: [],
   employmentType: "",
   jobType: "",
@@ -884,18 +895,66 @@ const initialFilters: FilterState = {
   selectedRequirementId: undefined,
 };
 
-/** Source Resume field styling — compact radius and light blue theme */
+/** Source Resume field styling — soft radius and light blue theme */
+const SR_RADIUS = "rounded-xl";
+const SR_INPUT_RADIUS = "rounded-[4px]";
+const SR_SECTION_CARD = `bg-white ${SR_RADIUS} p-6 shadow-sm border border-gray-200`;
+const SR_INLINE_FIELD = "w-full max-w-xs";
 const SR_INPUT =
-  "border border-blue-200 bg-blue-50/60 rounded-[4px] text-sm text-gray-800 placeholder:text-gray-400/90 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400";
+  `border border-blue-200 bg-blue-50/60 ${SR_INPUT_RADIUS} text-sm text-gray-800 placeholder:text-gray-400/90 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400`;
 const SR_INPUT_COMPACT = `${SR_INPUT} px-2 py-1.5`;
 const SR_INPUT_STANDARD = `${SR_INPUT} px-3 py-2`;
 const SR_DROPDOWN_TRIGGER =
-  "w-full justify-between bg-white border border-gray-400 rounded-[4px] h-10 font-normal text-gray-900 hover:bg-gray-50 relative";
+  `w-full justify-between bg-white border border-gray-300 ${SR_RADIUS} h-10 font-normal text-gray-900 hover:bg-gray-50 relative`;
 const SR_SELECT_TRIGGER =
-  "w-full bg-white border border-gray-400 rounded-[4px] h-10 text-gray-900 focus:ring-1 focus:ring-blue-400 focus:ring-offset-0";
+  `w-full bg-white border border-gray-300 ${SR_RADIUS} h-10 text-gray-900 focus:ring-1 focus:ring-blue-400 focus:ring-offset-0`;
+const SR_FILTER_DROPDOWN_PANEL =
+  "border border-gray-700 bg-neutral-950 text-gray-100 shadow-xl";
+const SR_FILTER_DROPDOWN_CMD =
+  "bg-neutral-950 text-gray-100 [&_[cmdk-input-wrapper]]:border-gray-700 [&_[cmdk-input-wrapper]_svg]:text-gray-400";
+const SR_FILTER_CMD_INPUT = "text-gray-100 placeholder:text-gray-500";
+const SR_FILTER_CMD_ITEM =
+  "text-gray-100 data-[selected=true]:bg-neutral-800 data-[selected=true]:text-white";
+const SR_FILTER_SELECT_CONTENT =
+  "border border-gray-700 bg-neutral-950 text-gray-100 [&_[role=option]]:text-gray-100 [&_[role=option][data-highlighted]]:bg-neutral-700 [&_[role=option][data-highlighted]]:text-gray-100 [&_[role=option]:focus]:bg-neutral-700 [&_[role=option]:focus]:text-gray-100";
+const SR_FILTER_SELECT_ITEM =
+  "text-gray-100 focus:bg-neutral-700 focus:text-gray-100 data-[highlighted]:bg-neutral-700 data-[highlighted]:text-gray-100";
 
 const BOOLEAN_SEARCH_PLACEHOLDER =
   "e.g. (Java OR Python) AND React NOT manager";
+
+function parseNonNegativeExperience(value: string, fallback = 0): number {
+  const parsed = parseInt(value, 10);
+  if (Number.isNaN(parsed)) return fallback;
+  return Math.max(0, parsed);
+}
+
+function updateExperienceMin(current: [number, number], min: number): [number, number] {
+  const safeMin = Math.max(0, min);
+  return [safeMin, Math.max(safeMin, current[1])];
+}
+
+function updateExperienceMax(current: [number, number], max: number): [number, number] {
+  const safeMax = Math.max(0, max);
+  return [Math.min(current[0], safeMax), safeMax];
+}
+
+function getSavedProfilesStorageKey(employeeId?: string | null): string {
+  return employeeId ? `sourceResumeSavedProfiles:${employeeId}` : "sourceResumeSavedProfiles";
+}
+
+function readSavedCandidateIds(storageKey: string): Set<string> {
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (!stored) return new Set();
+    const parsed = JSON.parse(stored) as unknown;
+    return Array.isArray(parsed)
+      ? new Set(parsed.filter((id): id is string => typeof id === "string" && id.trim().length > 0))
+      : new Set();
+  } catch {
+    return new Set();
+  }
+}
 
 function normalizeFilterValues(value: string | string[] | undefined): string[] {
   if (Array.isArray(value)) {
@@ -917,7 +976,16 @@ function matchAnyTextFilter(
   return values.some((value) => lowerCandidate.includes(value.toLowerCase()));
 }
 
-// Filterable Dropdown Component
+function sortDropdownOptions(
+  options: { value: string; label: string }[] | string[],
+): { value: string; label: string }[] {
+  const list = options.map((opt) =>
+    typeof opt === "string" ? { value: opt, label: opt } : opt,
+  );
+  return [...list].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+}
+
+// Filterable Dropdown Component — single select; clear via X or "Clear selection" only
 interface FilterableDropdownProps {
   value: string;
   onChange: (value: string) => void;
@@ -929,61 +997,58 @@ interface FilterableDropdownProps {
 function FilterableDropdown({ value, onChange, options, placeholder, icon }: FilterableDropdownProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  
-  const optionsList = options.map(opt => 
-    typeof opt === 'string' ? { value: opt, label: opt } : opt
-  );
-  
-  const selectedLabel = optionsList.find(opt => opt.value === value)?.label || value || placeholder;
+
+  const optionsList = sortDropdownOptions(options);
+
+  const selectedLabel = value
+    ? optionsList.find((opt) => opt.value === value)?.label || value
+    : null;
 
   const handleSelect = (selectedValue: string) => {
-    onChange(selectedValue === value ? "" : selectedValue);
+    onChange(selectedValue);
     setOpen(false);
     setInputValue("");
   };
 
-  // Filter options based on input
   const filteredOptions = inputValue.trim()
-    ? optionsList.filter(opt => 
-        opt.label.toLowerCase().includes(inputValue.toLowerCase()) ||
-        opt.value.toLowerCase().includes(inputValue.toLowerCase())
+    ? optionsList.filter(
+        (opt) =>
+          opt.label.toLowerCase().includes(inputValue.toLowerCase()) ||
+          opt.value.toLowerCase().includes(inputValue.toLowerCase()),
       )
     : optionsList;
 
-  const hasExactMatch = filteredOptions.some(opt => 
-    opt.value.toLowerCase() === inputValue.trim().toLowerCase() ||
-    opt.label.toLowerCase() === inputValue.trim().toLowerCase()
+  const hasExactMatch = filteredOptions.some(
+    (opt) =>
+      opt.value.toLowerCase() === inputValue.trim().toLowerCase() ||
+      opt.label.toLowerCase() === inputValue.trim().toLowerCase(),
   );
   const showCustomOption = inputValue.trim() && !hasExactMatch;
 
   return (
-    <Popover open={open} onOpenChange={(isOpen) => {
-      setOpen(isOpen);
-      if (!isOpen) setInputValue("");
-    }}>
+    <Popover
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) setInputValue("");
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className={`${SR_DROPDOWN_TRIGGER} font-normal`}
-          onClick={(e) => {
-            // Don't open if clicking on the X button
-            if ((e.target as HTMLElement).closest('.clear-filter-button')) {
-              return;
-            }
-            e.preventDefault();
-            setOpen(true);
-            setInputValue("");
-          }}
         >
-          <span className="flex items-center gap-2 flex-1 min-w-0">
-            {icon && <span className="text-purple-600 flex-shrink-0">{icon}</span>}
-            <span className="truncate">{selectedLabel}</span>
+          <span className="flex min-w-0 flex-1 items-center gap-2">
+            {icon && <span className="flex-shrink-0 text-purple-600">{icon}</span>}
+            <span className={cn("truncate", !selectedLabel && "text-gray-500")}>
+              {selectedLabel || placeholder}
+            </span>
           </span>
-          {value && (
-            <X 
-              className="clear-filter-button ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer z-10" 
+          {value ? (
+            <X
+              className="clear-filter-button z-10 ml-2 h-4 w-4 shrink-0 cursor-pointer text-gray-400 hover:text-gray-700"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -995,49 +1060,81 @@ function FilterableDropdown({ value, onChange, options, placeholder, icon }: Fil
                 e.stopPropagation();
               }}
             />
+          ) : (
+            <ChevronRight className="ml-2 h-4 w-4 shrink-0 rotate-90 text-gray-400" />
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput 
-            placeholder={`Search or type ${placeholder.toLowerCase()}...`}
+      <PopoverContent
+        className={cn(
+          "w-[var(--radix-popover-trigger-width)] p-0",
+          SR_RADIUS,
+          SR_FILTER_DROPDOWN_PANEL,
+        )}
+        align="start"
+      >
+        <Command shouldFilter={false} className={SR_FILTER_DROPDOWN_CMD}>
+          <CommandInput
+            placeholder={`Search ${placeholder.toLowerCase()}...`}
             value={inputValue}
             onValueChange={setInputValue}
+            className={SR_FILTER_CMD_INPUT}
           />
           <CommandList>
+            {value && (
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() => {
+                    onChange("");
+                    setOpen(false);
+                    setInputValue("");
+                  }}
+                  className={cn(SR_FILTER_CMD_ITEM, "text-gray-400")}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Clear selection
+                </CommandItem>
+              </CommandGroup>
+            )}
             {showCustomOption && (
               <CommandGroup>
                 <CommandItem
                   onSelect={() => handleSelect(inputValue.trim())}
-                  className="text-blue-600 font-medium"
+                  className={cn(SR_FILTER_CMD_ITEM, "font-medium text-blue-400")}
                 >
-                  <Check className="mr-2 h-4 w-4 opacity-0" />
-                  Use "{inputValue.trim()}"
+                  Use &quot;{inputValue.trim()}&quot;
                 </CommandItem>
               </CommandGroup>
             )}
             {filteredOptions.length > 0 ? (
               <CommandGroup>
-                {filteredOptions.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.value}
-                    onSelect={() => handleSelect(option.value)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === option.value ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {option.label}
-                  </CommandItem>
-                ))}
+                {filteredOptions.map((option) => {
+                  const isSelected = value === option.value;
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      value={option.value}
+                      onSelect={() => handleSelect(option.value)}
+                      className={cn(SR_FILTER_CMD_ITEM, isSelected && "bg-neutral-800")}
+                    >
+                      <span
+                        className={cn(
+                          "mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                          isSelected
+                            ? "border-blue-500 bg-blue-500 text-white"
+                            : "border-gray-500 bg-neutral-900",
+                        )}
+                      >
+                        {isSelected ? <Check className="h-3 w-3" /> : null}
+                      </span>
+                      {option.label}
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ) : (
               !showCustomOption && (
-                <CommandEmpty>
+                <CommandEmpty className="text-gray-400">
                   No results found. Type to add a custom value.
                 </CommandEmpty>
               )
@@ -1067,18 +1164,16 @@ function MultiFilterableDropdown({
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
 
-  const optionsList = options.map((opt) =>
-    typeof opt === "string" ? { value: opt, label: opt } : opt,
-  );
+  const optionsList = sortDropdownOptions(options);
 
   const selectedLabel =
     values.length === 0
-      ? placeholder
+      ? null
       : values.length === 1
         ? values[0]
         : `${values.length} selected`;
 
-  const handleSelect = (selectedValue: string) => {
+  const handleToggle = (selectedValue: string) => {
     if (values.includes(selectedValue)) {
       onChange(values.filter((v) => v !== selectedValue));
     } else {
@@ -1117,22 +1212,16 @@ function MultiFilterableDropdown({
             role="combobox"
             aria-expanded={open}
             className={`${SR_DROPDOWN_TRIGGER} font-normal`}
-            onClick={(e) => {
-              if ((e.target as HTMLElement).closest(".clear-filter-button")) {
-                return;
-              }
-              e.preventDefault();
-              setOpen(true);
-              setInputValue("");
-            }}
           >
-            <span className="flex items-center gap-2 flex-1 min-w-0">
-              {icon && <span className="text-purple-600 flex-shrink-0">{icon}</span>}
-              <span className="truncate">{selectedLabel}</span>
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              {icon && <span className="flex-shrink-0 text-purple-600">{icon}</span>}
+              <span className={cn("truncate", !selectedLabel && "text-gray-500")}>
+                {selectedLabel || placeholder}
+              </span>
             </span>
-            {values.length > 0 && (
+            {values.length > 0 ? (
               <X
-                className="clear-filter-button ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer z-10"
+                className="clear-filter-button z-10 ml-2 h-4 w-4 shrink-0 cursor-pointer text-gray-400 hover:text-gray-700"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1144,49 +1233,80 @@ function MultiFilterableDropdown({
                   e.stopPropagation();
                 }}
               />
+            ) : (
+              <ChevronRight className="ml-2 h-4 w-4 shrink-0 rotate-90 text-gray-400" />
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <Command shouldFilter={false}>
+        <PopoverContent
+          className={cn(
+            "w-[var(--radix-popover-trigger-width)] p-0",
+            SR_RADIUS,
+            SR_FILTER_DROPDOWN_PANEL,
+          )}
+          align="start"
+        >
+          <Command shouldFilter={false} className={SR_FILTER_DROPDOWN_CMD}>
             <CommandInput
-              placeholder={`Search or type ${placeholder.toLowerCase()}...`}
+              placeholder={`Search ${placeholder.toLowerCase()}...`}
               value={inputValue}
               onValueChange={setInputValue}
+              className={SR_FILTER_CMD_INPUT}
             />
             <CommandList>
+              {values.length > 0 && (
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={() => {
+                      onChange([]);
+                      setInputValue("");
+                    }}
+                    className={cn(SR_FILTER_CMD_ITEM, "text-gray-400")}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Clear all ({values.length})
+                  </CommandItem>
+                </CommandGroup>
+              )}
               {showCustomOption && (
                 <CommandGroup>
                   <CommandItem
-                    onSelect={() => handleSelect(inputValue.trim())}
-                    className="text-blue-600 font-medium"
+                    onSelect={() => handleToggle(inputValue.trim())}
+                    className={cn(SR_FILTER_CMD_ITEM, "font-medium text-blue-400")}
                   >
-                    <Check className="mr-2 h-4 w-4 opacity-0" />
-                    Use "{inputValue.trim()}"
+                    Add &quot;{inputValue.trim()}&quot;
                   </CommandItem>
                 </CommandGroup>
               )}
               {filteredOptions.length > 0 ? (
                 <CommandGroup>
-                  {filteredOptions.map((option) => (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      onSelect={() => handleSelect(option.value)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          values.includes(option.value) ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      {option.label}
-                    </CommandItem>
-                  ))}
+                  {filteredOptions.map((option) => {
+                    const isSelected = values.includes(option.value);
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        value={option.value}
+                        onSelect={() => handleToggle(option.value)}
+                        className={cn(SR_FILTER_CMD_ITEM, isSelected && "bg-neutral-800")}
+                      >
+                        <span
+                          className={cn(
+                            "mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                            isSelected
+                              ? "border-blue-500 bg-blue-500 text-white"
+                              : "border-gray-500 bg-neutral-900",
+                          )}
+                        >
+                          {isSelected ? <Check className="h-3 w-3" /> : null}
+                        </span>
+                        {option.label}
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               ) : (
                 !showCustomOption && (
-                  <CommandEmpty>
+                  <CommandEmpty className="text-gray-400">
                     No results found. Type to add a custom value.
                   </CommandEmpty>
                 )
@@ -1195,22 +1315,144 @@ function MultiFilterableDropdown({
           </Command>
         </PopoverContent>
       </Popover>
-      {values.length > 1 && (
+      {values.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {values.map((value) => (
             <span
               key={value}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-800"
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800"
             >
               {value}
               <X
-                className="w-3 h-3 cursor-pointer hover:text-purple-600"
+                className="h-3 w-3 cursor-pointer hover:text-blue-600"
                 onClick={() => onChange(values.filter((v) => v !== value))}
               />
             </span>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface ExcludeKeywordsFilterPanelProps {
+  keywords: string[];
+  input: string;
+  onInputChange: (value: string) => void;
+  onAdd: (keyword: string) => void;
+  onRemove: (keyword: string) => void;
+  compact?: boolean;
+}
+
+function ExcludeKeywordsFilterPanel({
+  keywords,
+  input,
+  onInputChange,
+  onAdd,
+  onRemove,
+  compact = false,
+}: ExcludeKeywordsFilterPanelProps) {
+  const chipClass = compact
+    ? "inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium"
+    : "inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-sm font-medium";
+
+  return (
+    <div className={compact ? "mt-2 space-y-2" : "mt-4 space-y-2"}>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {keywords.map((keyword) => (
+          <span key={keyword} className={chipClass}>
+            {keyword}
+            <button
+              type="button"
+              onClick={() => onRemove(keyword)}
+              className="ml-1 hover:text-red-900"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && input.trim()) {
+              onAdd(input.trim());
+            }
+          }}
+          className={`${compact ? "w-full" : SR_INLINE_FIELD} ${compact ? SR_INPUT_COMPACT : SR_INPUT_STANDARD} pr-10 border`}
+          placeholder="Enter keywords to exclude..."
+        />
+        {input && (
+          <X
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+            onClick={() => onInputChange("")}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface SpecificSkillsFilterPanelProps {
+  skills: string[];
+  input: string;
+  onInputChange: (value: string) => void;
+  onAdd: (skill: string) => void;
+  onRemove: (skill: string) => void;
+  compact?: boolean;
+}
+
+function SpecificSkillsFilterPanel({
+  skills,
+  input,
+  onInputChange,
+  onAdd,
+  onRemove,
+  compact = false,
+}: SpecificSkillsFilterPanelProps) {
+  const chipClass = compact
+    ? "inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium"
+    : "inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-800 rounded-full text-sm font-medium";
+
+  return (
+    <div className={compact ? "mt-2 space-y-2" : "mt-4 space-y-2"}>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {skills.map((skill) => (
+          <span key={skill} className={chipClass}>
+            {skill}
+            <button
+              type="button"
+              onClick={() => onRemove(skill)}
+              className="ml-1 hover:text-green-900"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && input.trim()) {
+              onAdd(input.trim());
+            }
+          }}
+          className={`${compact ? "w-full" : SR_INLINE_FIELD} ${compact ? SR_INPUT_COMPACT : SR_INPUT_STANDARD} pr-10 border`}
+          placeholder="Enter specific skills (must have all)..."
+        />
+        {input && (
+          <X
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+            onClick={() => onInputChange("")}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -1670,6 +1912,12 @@ const SourceResume = () => {
   const [compareCandidates, setCompareCandidates] = useState<CandidateDisplay[]>([]);
   const [useInfiniteScroll, setUseInfiniteScroll] = useState(false);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [tagConfirmOpen, setTagConfirmOpen] = useState(false);
+  const [tagDropdownCandidateId, setTagDropdownCandidateId] = useState<string | null>(null);
+  const [pendingTag, setPendingTag] = useState<{
+    candidate: CandidateDisplay;
+    requirementId: string;
+  } | null>(null);
   
   const { toast } = useToast();
   
@@ -1777,6 +2025,22 @@ const SourceResume = () => {
     }
   }, []);
 
+  // Load saved profiles from localStorage (per employee)
+  const savedProfilesHydratedRef = useRef(false);
+  useEffect(() => {
+    setSavedCandidates(readSavedCandidateIds(getSavedProfilesStorageKey(employee.id)));
+    savedProfilesHydratedRef.current = true;
+  }, [employee.id]);
+
+  // Persist saved profiles
+  useEffect(() => {
+    if (!employee?.id || !savedProfilesHydratedRef.current) return;
+    localStorage.setItem(
+      getSavedProfilesStorageKey(employee.id),
+      JSON.stringify(Array.from(savedCandidates)),
+    );
+  }, [savedCandidates, employee.id]);
+
   const queryClient = useQueryClient();
 
   // Server-side search state
@@ -1866,8 +2130,8 @@ const SourceResume = () => {
       filters.preferredLocation.length > 0 ||
       filters.company.length > 0 ||
       filters.excludedCompanies.length > 0 ||
-      filters.educationUG.trim() !== "" ||
-      filters.educationPG.trim() !== "" ||
+      filters.educationUG.length > 0 ||
+      filters.educationPG.length > 0 ||
       filters.additionalDegrees.length > 0 ||
       filters.employmentType.trim() !== "" ||
       filters.jobType.trim() !== "" ||
@@ -2186,16 +2450,22 @@ const SourceResume = () => {
         }
       }
 
-      // Education filter - with fuzzy matching
-      if (filters.educationUG && filters.educationUG.trim() !== "") {
-        const eduMatch = fuzzyMatch(candidate.education.toLowerCase(), filters.educationUG.toLowerCase(), 0.8) ||
-                        candidate.education.toLowerCase().includes(filters.educationUG.toLowerCase());
+      // Education filter — match any selected UG/PG course
+      if (filters.educationUG.length > 0) {
+        const eduMatch = filters.educationUG.some(
+          (course) =>
+            fuzzyMatch(candidate.education.toLowerCase(), course.toLowerCase(), 0.8) ||
+            candidate.education.toLowerCase().includes(course.toLowerCase()),
+        );
         if (!eduMatch) return false;
       }
 
-      if (filters.educationPG && filters.educationPG.trim() !== "") {
-        const eduMatch = fuzzyMatch(candidate.education.toLowerCase(), filters.educationPG.toLowerCase(), 0.8) ||
-                        candidate.education.toLowerCase().includes(filters.educationPG.toLowerCase());
+      if (filters.educationPG.length > 0) {
+        const eduMatch = filters.educationPG.some(
+          (course) =>
+            fuzzyMatch(candidate.education.toLowerCase(), course.toLowerCase(), 0.8) ||
+            candidate.education.toLowerCase().includes(course.toLowerCase()),
+        );
         if (!eduMatch) return false;
       }
 
@@ -3034,6 +3304,113 @@ const SourceResume = () => {
     tagToRequirementMutation.mutate({ candidate, requirementId });
   };
 
+  const isTeamLeaderTagger =
+    employee.role === "team_leader" || employee.role === "teamLead";
+
+  const openTagConfirm = (candidate: CandidateDisplay, requirementId: string) => {
+    setTagDropdownCandidateId(null);
+    setPendingTag({ candidate, requirementId });
+    setTagConfirmOpen(true);
+  };
+
+  const pendingRequirement = pendingTag
+    ? requirements.find((r: { id: string }) => r.id === pendingTag.requirementId)
+    : null;
+
+  const sortedRequirementsForTag = useMemo(
+    () =>
+      [...requirements].sort((a: { position?: string; company?: string }, b: { position?: string; company?: string }) =>
+        `${a.position || ""} - ${a.company || ""}`.localeCompare(
+          `${b.position || ""} - ${b.company || ""}`,
+          undefined,
+          { sensitivity: "base" },
+        ),
+      ),
+    [requirements],
+  );
+
+  const tagConfirmDialog = (
+    <AlertDialog
+      open={tagConfirmOpen}
+      onOpenChange={(open) => {
+        setTagConfirmOpen(open);
+        if (!open) setPendingTag(null);
+      }}
+    >
+      <AlertDialogContent className="max-w-md rounded-xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Tag candidate to requirement?</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 pt-1 text-left text-sm text-gray-600">
+              {pendingTag && (
+                <>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Candidate</p>
+                    <p className="mt-1 font-medium text-gray-900">{pendingTag.candidate.name}</p>
+                    <p className="text-xs text-gray-500">{pendingTag.candidate.email || "No email"}</p>
+                    {pendingTag.candidate.title && pendingTag.candidate.title !== "Not Available" && (
+                      <p className="mt-1 text-xs text-gray-600">{pendingTag.candidate.title}</p>
+                    )}
+                  </div>
+                  {pendingRequirement && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Requirement</p>
+                      <p className="mt-1 font-medium text-gray-900">
+                        {pendingRequirement.position || "Role"} — {pendingRequirement.company || "Company"}
+                      </p>
+                      {pendingRequirement.id && (
+                        <p className="mt-1 text-xs text-gray-500">ID: {pendingRequirement.id}</p>
+                      )}
+                      {pendingRequirement.teamLead && (
+                        <p className="mt-1 text-xs text-gray-600">
+                          Team Lead: <span className="font-medium">{pendingRequirement.teamLead}</span>
+                        </p>
+                      )}
+                      {pendingRequirement.talentAdvisor && (
+                        <p className="text-xs text-gray-600">
+                          Talent Advisor: <span className="font-medium">{pendingRequirement.talentAdvisor}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-900">
+                    {isTeamLeaderTagger ? (
+                      <>
+                        This will be recorded as a <span className="font-semibold">Team Lead tag</span>
+                        {pendingRequirement?.talentAdvisor
+                          ? ` and assigned to TA ${pendingRequirement.talentAdvisor}.`
+                          : "."}
+                      </>
+                    ) : (
+                      <>This candidate will be tagged to the selected requirement and added to your pipeline.</>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={tagToRequirementMutation.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={!pendingTag || tagToRequirementMutation.isPending}
+            onClick={(e) => {
+              e.preventDefault();
+              if (pendingTag) {
+                handleTagToRequirement(pendingTag.candidate, pendingTag.requirementId);
+                setTagConfirmOpen(false);
+                setPendingTag(null);
+              }
+            }}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {tagToRequirementMutation.isPending ? "Tagging…" : "Confirm tag"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   // Check if candidate is tagged
   const isCandidateTagged = (candidate: CandidateDisplay): boolean => {
     return taggedCandidates.has(candidate.email.toLowerCase());
@@ -3105,6 +3482,14 @@ const SourceResume = () => {
   if (view === 'results') {
     return (
       <div className="source-resume-page flex h-screen bg-gray-50">
+        {tagDropdownCandidateId && (
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            aria-label="Close tag requirement menu"
+            onClick={() => setTagDropdownCandidateId(null)}
+          />
+        )}
         {/* Left Sidebar - Filters (Static) */}
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -3139,10 +3524,10 @@ const SourceResume = () => {
                 <SelectTrigger className={`${SR_SELECT_TRIGGER} bg-gradient-to-r from-blue-50 to-sky-50 border-blue-300`}>
                   <SelectValue placeholder="Select requirement for AI matching" />
                 </SelectTrigger>
-                <SelectContent className="bg-blue-50 border border-blue-200">
-                  <SelectItem value="none">None (General Search)</SelectItem>
-                  {requirements.map((req: any) => (
-                    <SelectItem key={req.id} value={req.id}>
+                <SelectContent className={SR_FILTER_SELECT_CONTENT}>
+                  <SelectItem value="none" className={SR_FILTER_SELECT_ITEM}>None (General Search)</SelectItem>
+                  {sortedRequirementsForTag.map((req: any) => (
+                    <SelectItem key={req.id} value={req.id} className={SR_FILTER_SELECT_ITEM}>
                       {req.position} - {req.company}
                     </SelectItem>
                   ))}
@@ -3175,25 +3560,45 @@ const SourceResume = () => {
             </div>
             {/* Skills Search */}
             <div>
-              <div className="flex items-center justify-between mb-2 gap-3">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Skills
-                </label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
-                    className="text-xs text-blue-700 hover:text-blue-800"
-                  >
-                    + Exclude Keywords
-                  </button>
-                  <button
-                    onClick={() => setShowSpecificSkills(!showSpecificSkills)}
-                    className="text-xs text-blue-700 hover:text-blue-800"
-                  >
-                    + Add Specific Skills
-                  </button>
-                </div>
+              <label className="mb-2 block text-sm font-semibold text-gray-700">
+                Skills
+              </label>
+              <div className="mb-2 flex flex-col items-start gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
+                  className="text-xs text-blue-700 hover:text-blue-800"
+                >
+                  + Exclude Keywords
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSpecificSkills(!showSpecificSkills)}
+                  className="text-xs text-blue-700 hover:text-blue-800"
+                >
+                  + Add Specific Skills
+                </button>
               </div>
+              {showExcludeKeywords && (
+                <ExcludeKeywordsFilterPanel
+                  compact
+                  keywords={filters.excludedKeywords}
+                  input={excludeKeywordInput}
+                  onInputChange={setExcludeKeywordInput}
+                  onAdd={handleExcludeKeywordAdd}
+                  onRemove={handleExcludeKeywordRemove}
+                />
+              )}
+              {showSpecificSkills && (
+                <SpecificSkillsFilterPanel
+                  compact
+                  skills={filters.specificSkills}
+                  input={specificSkillInput}
+                  onInputChange={setSpecificSkillInput}
+                  onAdd={handleSpecificSkillAdd}
+                  onRemove={handleSpecificSkillRemove}
+                />
+              )}
               <div className="relative">
                 <input
                   type="text"
@@ -3304,12 +3709,16 @@ const SourceResume = () => {
                 <div className="relative flex-1">
                   <input
                     type="number"
+                    min={0}
                     step={1}
                     value={filters.experience[0]}
                     onChange={(e) =>
                       setFilters({
                         ...filters,
-                        experience: [parseInt(e.target.value) || 0, filters.experience[1]],
+                        experience: updateExperienceMin(
+                          filters.experience,
+                          parseNonNegativeExperience(e.target.value, filters.experience[0]),
+                        ),
                       })
                     }
                     className={`w-full ${SR_INPUT_COMPACT} pr-7`}
@@ -3325,13 +3734,16 @@ const SourceResume = () => {
                 <div className="relative flex-1">
                   <input
                     type="number"
-                    min={filters.experience[0]}
+                    min={0}
                     step={1}
                     value={filters.experience[1]}
                     onChange={(e) =>
                       setFilters({
                         ...filters,
-                        experience: [filters.experience[0], parseInt(e.target.value) || filters.experience[1]],
+                        experience: updateExperienceMax(
+                          filters.experience,
+                          parseNonNegativeExperience(e.target.value, filters.experience[1]),
+                        ),
                       })
                     }
                     className={`w-full ${SR_INPUT_COMPACT} pr-7`}
@@ -3456,11 +3868,11 @@ const SourceResume = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Education UG
               </label>
-              <FilterableDropdown
-                value={filters.educationUG}
-                onChange={(value) => setFilters({ ...filters, educationUG: value })}
+              <MultiFilterableDropdown
+                values={filters.educationUG}
+                onChange={(values) => setFilters({ ...filters, educationUG: values })}
                 options={allEducationUG}
-                placeholder="Any"
+                placeholder="Select undergraduate degree(s)"
               />
             </div>
 
@@ -3469,11 +3881,11 @@ const SourceResume = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Education PG
               </label>
-              <FilterableDropdown
-                value={filters.educationPG}
-                onChange={(value) => setFilters({ ...filters, educationPG: value })}
+              <MultiFilterableDropdown
+                values={filters.educationPG}
+                onChange={(values) => setFilters({ ...filters, educationPG: values })}
                 options={allEducationPG}
-                placeholder="Any"
+                placeholder="Select postgraduate degree(s)"
               />
             </div>
 
@@ -3590,7 +4002,29 @@ const SourceResume = () => {
             {/* Analytics Panel */}
             {searchResults?.analytics && (
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">Search Analytics</h3>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-gray-900">Search Analytics</h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="shrink-0 text-gray-400 hover:text-gray-600"
+                          aria-label="What is Search Analytics?"
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="left"
+                        className="max-w-[260px] border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs leading-relaxed text-gray-100 shadow-lg"
+                      >
+                        A snapshot of your current search results: most common skills, experience
+                        ranges, top locations, and average CTC among the candidates shown.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 
                 {/* Top Skills */}
                 {searchResults.analytics.topSkills && searchResults.analytics.topSkills.length > 0 && (
@@ -3763,18 +4197,18 @@ const SourceResume = () => {
               <div className="flex items-center gap-2">
                 {/* Sort Dropdown */}
                 <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                  <SelectTrigger className="w-40 h-8 text-xs bg-blue-50 border border-blue-300 text-gray-900">
+                  <SelectTrigger className="h-8 w-40 rounded-[4px] border border-blue-300 bg-blue-50 text-xs text-gray-900">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border border-blue-200">
-                    <SelectItem value="relevance">Relevance</SelectItem>
-                    <SelectItem value="experience-high">Experience (High to Low)</SelectItem>
-                    <SelectItem value="experience-low">Experience (Low to High)</SelectItem>
-                    <SelectItem value="ctc-high">CTC (High to Low)</SelectItem>
-                    <SelectItem value="ctc-low">CTC (Low to High)</SelectItem>
-                    <SelectItem value="notice-period">Notice Period</SelectItem>
-                    <SelectItem value="recently-updated">Recently Updated</SelectItem>
-                    <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                  <SelectContent className={SR_FILTER_SELECT_CONTENT}>
+                    <SelectItem value="relevance" className={SR_FILTER_SELECT_ITEM}>Relevance</SelectItem>
+                    <SelectItem value="experience-high" className={SR_FILTER_SELECT_ITEM}>Experience (High to Low)</SelectItem>
+                    <SelectItem value="experience-low" className={SR_FILTER_SELECT_ITEM}>Experience (Low to High)</SelectItem>
+                    <SelectItem value="ctc-high" className={SR_FILTER_SELECT_ITEM}>CTC (High to Low)</SelectItem>
+                    <SelectItem value="ctc-low" className={SR_FILTER_SELECT_ITEM}>CTC (Low to High)</SelectItem>
+                    <SelectItem value="notice-period" className={SR_FILTER_SELECT_ITEM}>Notice Period</SelectItem>
+                    <SelectItem value="recently-updated" className={SR_FILTER_SELECT_ITEM}>Recently Updated</SelectItem>
+                    <SelectItem value="alphabetical" className={SR_FILTER_SELECT_ITEM}>Alphabetical</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button
@@ -3863,7 +4297,7 @@ const SourceResume = () => {
               <>
                 {/* Bulk Actions Bar */}
                 {selectedCandidates.size > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
+                  <div className="sticky top-0 z-20 mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm">
                     <span className="text-sm font-medium text-blue-900">
                       {selectedCandidates.size} candidate{selectedCandidates.size !== 1 ? 's' : ''} selected
                     </span>
@@ -3872,37 +4306,6 @@ const SourceResume = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          // Bulk tag to requirement
-                          if (filters.selectedRequirementId) {
-                            selectedCandidates.forEach(candidateId => {
-                              const candidate = displayCandidates.find(c => c.id === candidateId);
-                              if (candidate) {
-                                handleTagToRequirement(candidate, filters.selectedRequirementId!);
-                              }
-                            });
-                            setSelectedCandidates(new Set());
-                            toast({
-                              title: "Success",
-                              description: `${selectedCandidates.size} candidates tagged to requirement`,
-                            });
-                          } else {
-                            toast({
-                              title: "No Requirement Selected",
-                              description: "Please select a requirement first",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                        className="text-xs"
-                      >
-                        <Send className="w-3 h-3 mr-1" />
-                        Tag Selected ({selectedCandidates.size})
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          // Export selected to CSV
                           const selected = displayCandidates.filter(c => selectedCandidates.has(c.id));
                           exportToCSV(selected);
                         }}
@@ -3926,11 +4329,18 @@ const SourceResume = () => {
                   <div
                     key={candidate.id}
                     ref={selectedCandidate?.id === candidate.id ? selectedCandidateRef : null}
-                    className={`bg-white rounded-lg border p-6 hover:shadow-md transition-all cursor-pointer ${
+                    className={cn(
+                      "bg-white rounded-lg border p-6 hover:shadow-md transition-all cursor-pointer",
                       selectedCandidate?.id === candidate.id
                         ? "border-blue-500 shadow-lg"
-                        : "border-gray-200"
-                    } ${selectedCandidates.has(candidate.id) ? 'ring-2 ring-blue-500' : ''}`}
+                        : "border-gray-200",
+                      selectedCandidates.has(candidate.id) && "ring-2 ring-blue-500",
+                      tagDropdownCandidateId === candidate.id &&
+                        "relative z-50 border-green-500 shadow-2xl ring-2 ring-green-400",
+                      tagDropdownCandidateId &&
+                        tagDropdownCandidateId !== candidate.id &&
+                        "opacity-50 pointer-events-none",
+                    )}
                     onClick={(e) => {
                       // Don't handle card click if clicking on a button or link
                       const target = e.target as HTMLElement;
@@ -4174,41 +4584,81 @@ const SourceResume = () => {
                               </Tooltip>
                             </TooltipProvider>
                           ) : (
-                            <DropdownMenu>
+                            <DropdownMenu
+                              open={tagDropdownCandidateId === candidate.id}
+                              onOpenChange={(open) => {
+                                setTagDropdownCandidateId(open ? candidate.id : null);
+                              }}
+                            >
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   onClick={(e) => e.stopPropagation()}
-                                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-3 py-1.5 text-sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-3 py-1.5 text-sm rounded-[4px]"
                                 >
                                   <Send className="w-3.5 h-3.5" />
                                   Tag to Requirement
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} className="bg-blue-50 border border-blue-200">
-                                {isLoadingRequirements ? (
-                                  <DropdownMenuItem disabled>
-                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                    Loading requirements...
-                                  </DropdownMenuItem>
-                                ) : requirements.length === 0 ? (
-                                  <DropdownMenuItem disabled>
-                                    No requirements
-                                  </DropdownMenuItem>
-                                ) : (
-                                  requirements.map((req: any) => (
+                              <DropdownMenuContent
+                                align="end"
+                                sideOffset={10}
+                                onClick={(e) => e.stopPropagation()}
+                                className="z-[60] w-[min(100vw-2rem,22rem)] overflow-hidden rounded-xl border border-gray-700 bg-neutral-950 p-0 text-gray-100 shadow-2xl"
+                              >
+                                <div className="border-b border-gray-700 bg-neutral-900 px-4 py-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                    Select requirement
+                                  </p>
+                                  <p className="mt-1 truncate text-sm font-semibold text-white">
+                                    {candidate.name}
+                                  </p>
+                                  <p className="mt-0.5 truncate text-xs text-gray-400">
+                                    {candidate.title !== "Not Available" ? candidate.title : "Role not specified"}
+                                    {candidate.currentCompany && candidate.currentCompany !== "Not Available"
+                                      ? ` · ${candidate.currentCompany}`
+                                      : ""}
+                                  </p>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto p-1.5">
+                                  {isLoadingRequirements ? (
                                     <DropdownMenuItem
-                                      key={req.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (window.confirm(`Tag ${candidate.name} to requirement "${req.position} - ${req.company}"?`)) {
-                                          handleTagToRequirement(candidate, req.id);
-                                        }
-                                      }}
+                                      disabled
+                                      className="cursor-default rounded-lg px-3 py-2.5 text-gray-400 focus:bg-transparent focus:text-gray-400"
                                     >
-                                      {req.position} - {req.company}
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Loading requirements...
                                     </DropdownMenuItem>
-                                  ))
-                                )}
+                                  ) : requirements.length === 0 ? (
+                                    <DropdownMenuItem
+                                      disabled
+                                      className="cursor-default rounded-lg px-3 py-2.5 text-gray-400 focus:bg-transparent focus:text-gray-400"
+                                    >
+                                      No requirements available
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    sortedRequirementsForTag.map((req: any) => (
+                                      <DropdownMenuItem
+                                        key={req.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openTagConfirm(candidate, req.id);
+                                        }}
+                                        className="cursor-pointer rounded-lg px-3 py-2.5 text-gray-100 focus:bg-neutral-800 focus:text-white data-[highlighted]:bg-neutral-800 data-[highlighted]:text-white"
+                                      >
+                                        <Briefcase className="mr-2 h-4 w-4 shrink-0 text-blue-400" />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="truncate text-sm font-medium">
+                                            {req.position || "Role"}
+                                          </p>
+                                          <p className="truncate text-xs text-gray-400">
+                                            {req.company || "Company"}
+                                            {req.teamLead ? ` · TL: ${req.teamLead}` : ""}
+                                          </p>
+                                        </div>
+                                      </DropdownMenuItem>
+                                    ))
+                                  )}
+                                </div>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
@@ -4461,6 +4911,7 @@ const SourceResume = () => {
             candidate={candidateToEdit}
           />
         )}
+        {tagConfirmDialog}
       </div>
     );
   }
@@ -4489,7 +4940,7 @@ const SourceResume = () => {
           </div>
 
           {/* Keywords Section */}
-          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
+          <div className={SR_SECTION_CARD}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Keywords</h2>
               <div className="flex items-center gap-2">
@@ -4559,12 +5010,14 @@ const SourceResume = () => {
                 <span className="text-sm font-semibold text-gray-700">Keywords Search</span>
                 <div className="flex items-center gap-4">
                   <button
+                    type="button"
                     onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
                     className="text-sm text-blue-700 hover:text-blue-800"
                   >
                     + Exclude Keywords
                   </button>
                   <button
+                    type="button"
                     onClick={() => setShowSpecificSkills(!showSpecificSkills)}
                     className="text-sm text-blue-700 hover:text-blue-800"
                   >
@@ -4610,91 +5063,28 @@ const SourceResume = () => {
 
             {/* Exclude Keywords Input */}
             {showExcludeKeywords && (
-              <div className="mt-4 space-y-2">
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {filters.excludedKeywords.map((keyword) => (
-                    <span
-                      key={keyword}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-sm font-medium"
-                    >
-                      {keyword}
-                      <button
-                        onClick={() => handleExcludeKeywordRemove(keyword)}
-                        className="ml-1 hover:text-red-900"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={excludeKeywordInput}
-                    onChange={(e) => setExcludeKeywordInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && excludeKeywordInput.trim()) {
-                        handleExcludeKeywordAdd(excludeKeywordInput.trim());
-                      }
-                    }}
-                    className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
-                    placeholder="Enter keywords to exclude..."
-                  />
-                  {excludeKeywordInput && (
-                    <X
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setExcludeKeywordInput("")}
-                    />
-                  )}
-                </div>
-              </div>
+              <ExcludeKeywordsFilterPanel
+                keywords={filters.excludedKeywords}
+                input={excludeKeywordInput}
+                onInputChange={setExcludeKeywordInput}
+                onAdd={handleExcludeKeywordAdd}
+                onRemove={handleExcludeKeywordRemove}
+              />
             )}
 
-            {/* Specific Skills Input */}
             {showSpecificSkills && (
-              <div className="mt-4 space-y-2">
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {filters.specificSkills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-800 rounded-full text-sm font-medium"
-                    >
-                      {skill}
-                      <button
-                        onClick={() => handleSpecificSkillRemove(skill)}
-                        className="ml-1 hover:text-green-900"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={specificSkillInput}
-                    onChange={(e) => setSpecificSkillInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && specificSkillInput.trim()) {
-                        handleSpecificSkillAdd(specificSkillInput.trim());
-                      }
-                    }}
-                    className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
-                    placeholder="Enter specific skills (must have all)..."
-                  />
-                  {specificSkillInput && (
-                    <X
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setSpecificSkillInput("")}
-                    />
-                  )}
-                </div>
-              </div>
+              <SpecificSkillsFilterPanel
+                skills={filters.specificSkills}
+                input={specificSkillInput}
+                onInputChange={setSpecificSkillInput}
+                onAdd={handleSpecificSkillAdd}
+                onRemove={handleSpecificSkillRemove}
+              />
             )}
           </div>
 
           {/* Employee Details */}
-          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
+          <div className={SR_SECTION_CARD}>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
@@ -4703,12 +5093,16 @@ const SourceResume = () => {
                   <div className="relative">
                     <input
                       type="number"
+                      min={0}
                       step={1}
                       value={filters.experience[0]}
                       onChange={(e) =>
                         setFilters({
                           ...filters,
-                          experience: [parseInt(e.target.value) || 0, filters.experience[1]],
+                          experience: updateExperienceMin(
+                            filters.experience,
+                            parseNonNegativeExperience(e.target.value, filters.experience[0]),
+                          ),
                         })
                       }
                       className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
@@ -4724,13 +5118,16 @@ const SourceResume = () => {
                   <div className="relative">
                     <input
                       type="number"
-                      min={filters.experience[0]}
+                      min={0}
                       step={1}
                       value={filters.experience[1]}
                       onChange={(e) =>
                         setFilters({
                           ...filters,
-                          experience: [filters.experience[0], parseInt(e.target.value) || filters.experience[1]],
+                          experience: updateExperienceMax(
+                            filters.experience,
+                            parseNonNegativeExperience(e.target.value, filters.experience[1]),
+                          ),
                         })
                       }
                       className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
@@ -4886,7 +5283,7 @@ const SourceResume = () => {
                           handleExcludeCompanyAdd(excludeCompanyInput.trim());
                         }
                       }}
-                      className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
+                      className={`${SR_INLINE_FIELD} ${SR_INPUT_STANDARD} pr-10 border`}
                       placeholder="Enter company names to exclude..."
                     />
                     {excludeCompanyInput && (
@@ -4902,7 +5299,7 @@ const SourceResume = () => {
           </div>
 
           {/* Education Details */}
-          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
+          <div className={SR_SECTION_CARD}>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Education Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -4910,11 +5307,11 @@ const SourceResume = () => {
                   <GraduationCap className="w-4 h-4 text-purple-600" />
                   Education UG
                 </label>
-                <FilterableDropdown
-                  value={filters.educationUG}
-                  onChange={(value) => setFilters({ ...filters, educationUG: value })}
+                <MultiFilterableDropdown
+                  values={filters.educationUG}
+                  onChange={(values) => setFilters({ ...filters, educationUG: values })}
                   options={allEducationUG}
-                  placeholder="BCA, Btech..."
+                  placeholder="Select undergraduate degree(s)"
                 />
               </div>
               <div className="space-y-2">
@@ -4922,11 +5319,11 @@ const SourceResume = () => {
                   <GraduationCap className="w-4 h-4 text-purple-600" />
                   Education PG
                 </label>
-                <FilterableDropdown
-                  value={filters.educationPG}
-                  onChange={(value) => setFilters({ ...filters, educationPG: value })}
+                <MultiFilterableDropdown
+                  values={filters.educationPG}
+                  onChange={(values) => setFilters({ ...filters, educationPG: values })}
                   options={allEducationPG}
-                  placeholder="MCA, Mtech...."
+                  placeholder="Select postgraduate degree(s)"
                 />
               </div>
             </div>
@@ -4967,7 +5364,7 @@ const SourceResume = () => {
                           handleAddDegree(addDegreeInput.trim());
                         }
                       }}
-                      className={`w-full ${SR_INPUT_STANDARD} pr-10 border`}
+                      className={`${SR_INLINE_FIELD} ${SR_INPUT_STANDARD} pr-10 border`}
                       placeholder="Enter degree or certificate name..."
                     />
                     {addDegreeInput && (
@@ -4983,7 +5380,7 @@ const SourceResume = () => {
           </div>
 
           {/* Work Details */}
-          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
+          <div className={SR_SECTION_CARD}>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Work Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -5017,7 +5414,7 @@ const SourceResume = () => {
           </div>
 
           {/* Display Details */}
-          <div className="bg-white rounded-[4px] p-6 shadow-sm border border-gray-200">
+          <div className={SR_SECTION_CARD}>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Display Details</h3>
             <div className="space-y-4">
               <div>
@@ -5168,11 +5565,12 @@ const SourceResume = () => {
       {/* Fixed Source Resume Button - Bottom Right */}
       <button
         onClick={handleSourceResume}
-        className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-[4px] font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
+        className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
       >
         <span>Source Resume</span>
         <ArrowRight className="w-5 h-5" />
       </button>
+      {tagConfirmDialog}
     </div>
   );
 };

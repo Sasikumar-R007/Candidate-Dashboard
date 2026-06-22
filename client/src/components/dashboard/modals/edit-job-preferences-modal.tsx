@@ -140,7 +140,7 @@ export default function EditJobPreferencesModal({
                     <SelectTrigger className="h-14 border-gray-200 dark:border-gray-700 rounded-2xl px-4 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all font-bold text-sm">
                       <SelectValue placeholder="Select Mode" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                    <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                       <SelectItem value="Remote">Remote Only</SelectItem>
                       <SelectItem value="Hybrid">Hybrid</SelectItem>
                       <SelectItem value="On-site">On-site</SelectItem>
@@ -162,7 +162,7 @@ export default function EditJobPreferencesModal({
                     <SelectTrigger className="h-14 border-gray-200 dark:border-gray-700 rounded-2xl px-4 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-bold text-sm">
                       <SelectValue placeholder="Select Type" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                    <SelectContent position="popper" side="bottom" sideOffset={4} className="z-[200] rounded-xl border-gray-100 shadow-xl">
                       <SelectItem value="Full-time">Full-time</SelectItem>
                       <SelectItem value="Contract">Contract</SelectItem>
                       <SelectItem value="Part-time">Part-time</SelectItem>
@@ -224,4 +224,4 @@ export default function EditJobPreferencesModal({
       </DialogContent>
     </Dialog>
   );
-}
+}

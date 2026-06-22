@@ -35,6 +35,11 @@ import {
 import CandidateMetrics from '@/components/dashboard/candidate-metrics';
 import ProfileStrength from '@/components/dashboard/profile-strength';
 import ProfileCompletionSession from '@/components/dashboard/profile-completion-session';
+import {
+  calculateProfileCompletion,
+  canCandidateApplyToJobs,
+  getProfileCompletionApplyBlockedMessage,
+} from '@/lib/profile-utils';
 import { formatJobAppliedDate, PIPELINE_COLUMN_STYLES, getArchiveStatusLabel, getArchiveTerminalMeta, mapCandidateApplicationStage, getApplicationNudgeDisplayState } from '@/lib/candidate-pipeline-utils';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import { useAuth } from '@/contexts/auth-context';
@@ -307,6 +312,8 @@ export default function MyJobsTab({
   const { toast } = useToast();
   const { data: profile } = useProfile();
   const { data: jobPreferences } = useJobPreferences();
+  const { percentage: profileCompletionPct } = calculateProfileCompletion(profile, jobPreferences);
+  const canApplyToJobs = canCandidateApplyToJobs(profileCompletionPct);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (nudgeId: string) => {
@@ -567,6 +574,14 @@ export default function MyJobsTab({
       });
       return;
     }
+    if (!canApplyToJobs) {
+      toast({
+        title: "Profile incomplete",
+        description: getProfileCompletionApplyBlockedMessage(profileCompletionPct),
+        variant: "destructive",
+      });
+      return;
+    }
     const ok = await logConsent({
       user_id: profile.id,
       role: "candidate",
@@ -614,6 +629,14 @@ export default function MyJobsTab({
 
   const openApplicationConsentFromModal = () => {
     if (!selectedJob) return;
+    if (!canApplyToJobs) {
+      toast({
+        title: "Profile incomplete",
+        description: getProfileCompletionApplyBlockedMessage(profileCompletionPct),
+        variant: "destructive",
+      });
+      return;
+    }
     setPendingApplyJob(selectedJob);
     setShowApplicationConsent(true);
   };
@@ -1528,11 +1551,17 @@ export default function MyJobsTab({
                 className={`px-6 py-2 rounded font-medium border-0 text-sm ${
                   selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
                     ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : !canApplyToJobs
+                      ? 'bg-gray-400 hover:bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
                 data-testid="button-apply-job-modal"
               >
-                {selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Applied' : 'Apply'}
+                {selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
+                  ? 'Applied'
+                  : !canApplyToJobs
+                    ? 'Complete profile to apply'
+                    : 'Apply'}
               </Button>
             </div>
           </div>
@@ -1777,11 +1806,17 @@ export default function MyJobsTab({
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">Choose your primary reason for withdrawing</Label>
-                    <Select value={withdrawReason} onValueChange={setWithdrawReason}>
-                      <SelectTrigger className="h-12 rounded-xl border-gray-100 bg-gray-50/50 hover:bg-gray-100/50 transition-all text-[14px]">
+                    <Select value={withdrawReason || undefined} onValueChange={setWithdrawReason}>
+                      <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200/80 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all text-[14px] font-medium shadow-sm">
                         <SelectValue placeholder="Select a reason" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                      <SelectContent
+                        position="popper"
+                        side="bottom"
+                        sideOffset={6}
+                        avoidCollisions={false}
+                        className="z-[200] max-h-60 overflow-y-auto rounded-xl border-slate-200 bg-white shadow-xl"
+                      >
                         <SelectItem value="Accepted another offer">Accepted another offer</SelectItem>
                         <SelectItem value="Compensation not aligned">Compensation not aligned</SelectItem>
                         <SelectItem value="Role not aligned">Role not aligned</SelectItem>

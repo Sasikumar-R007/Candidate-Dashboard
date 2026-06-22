@@ -25,6 +25,11 @@ import {
   resolvePipelineGroupingStatus,
 } from "@shared/pipeline-stages";
 import {
+  calculateProfileCompletion,
+  canCandidateApplyToJobs,
+  MIN_PROFILE_COMPLETION_TO_APPLY,
+} from "@shared/profile-completion";
+import {
   buildClientQualityChartPoints,
   buildClientSpeedChartPoints,
   computeClientQualityMetrics,
@@ -34,7 +39,7 @@ import {
 } from "./client-portal-metrics";
 import { z } from "zod";
 import bcrypt from "bcrypt";
-import { sql, eq, and, or, desc, lte, gte, inArray, isNull } from "drizzle-orm";
+import { sql, eq, and, or, desc, lte, gte, inArray, isNull, count } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
@@ -216,6 +221,13 @@ import {
   linkStaffOsTaggedApplicationsToCandidate,
   mergeJobApplicationsById,
 } from "./candidate-job-application-utils";
+import { computeStaffosOnboardGate } from "@shared/staffos-onboard";
+import {
+  applyOnboardGateToApplication,
+  assertRecruiterCanUpdateApplicationStatus,
+  recordCandidateStaffOSLogin,
+} from "./staffos-onboard-server";
+import { startStaffosInviteReminderScheduler } from "./staffos-invite-reminders";
 import { applyCorsHeaders } from "./cors-config";
 import { parseJDWithAI } from "./ai-jd-parser";
 import {
@@ -2830,6 +2842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })(req, res, () => {
       const candidate = req.user as any;
       if (candidate && candidate.candidateId) {
+        void recordCandidateStaffOSLogin(candidate.id);
         // Regenerate session to prevent session fixation attacks and ensure isolation
         req.session.regenerate((err) => {
           if (err) {
@@ -3798,6 +3811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Reset login attempts on successful login
       await storage.resetLoginAttempts(email);
+      await recordCandidateStaffOSLogin(candidate.id);
 
       // Regenerate session to prevent session fixation attacks and ensure isolation
       req.session.regenerate(async (err) => {
@@ -3915,6 +3929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Reset login attempts
         await storage.resetLoginAttempts(email);
+        await recordCandidateStaffOSLogin(candidate.id);
 
         // Regenerate session to prevent session fixation attacks and ensure isolation
         req.session.regenerate((err) => {
@@ -5157,6 +5172,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
+      const profile = await storage.getProfile(candidate.id);
+      const jobPreferences = profile ? await storage.getJobPreferences(profile.id) : undefined;
+      const { percentage: profileCompletion } = calculateProfileCompletion(profile, jobPreferences);
+      if (!canCandidateApplyToJobs(profileCompletion)) {
+        return res.status(403).json({
+          message: `Your profile must be at least ${MIN_PROFILE_COMPLETION_TO_APPLY}% complete to apply for jobs.`,
+          profileCompletion,
+          requiredCompletion: MIN_PROFILE_COMPLETION_TO_APPLY,
+        });
+      }
+
       // Validate request body using zod
       const validationResult = insertJobApplicationSchema.safeParse(req.body);
       if (!validationResult.success) {
@@ -5721,6 +5747,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return "application/octet-stream";
   };
 
+  const resolveStoredFileContentType = (safeName: string, storedContentType?: string | null): string => {
+    const inferred = inferStoredFileContentType(safeName);
+    const trimmed = storedContentType?.trim();
+    if (!trimmed || trimmed === "application/octet-stream" || trimmed === "binary/octet-stream") {
+      return inferred;
+    }
+    if (inferred !== "application/octet-stream" && trimmed !== inferred) {
+      return inferred;
+    }
+    return trimmed;
+  };
+
+  const loadStoredFileBuffer = async (
+    safeName: string,
+    localCandidates: string[],
+    r2Folder: string,
+  ): Promise<Buffer | null> => {
+    for (const filePath of localCandidates) {
+      if (fs.existsSync(filePath)) {
+        return fs.promises.readFile(filePath);
+      }
+    }
+
+    if (isR2Configured()) {
+      const r2Object = await getR2FileByFolderAndName(r2Folder, safeName);
+      if (r2Object) {
+        return r2Object.body;
+      }
+    }
+
+    return null;
+  };
+
   const serveStoredFile = async (
     req: Request,
     res: Response,
@@ -5739,7 +5798,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (isR2Configured()) {
       const r2Object = await getR2FileByFolderAndName(r2Folder, safeName);
       if (r2Object) {
-        setStoredFileResponseHeaders(req, res, safeName, r2Object.contentType);
+        setStoredFileResponseHeaders(
+          req,
+          res,
+          safeName,
+          resolveStoredFileContentType(safeName, r2Object.contentType),
+        );
         return res.send(r2Object.body);
       }
     }
@@ -5771,6 +5835,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Serve resume file error:", error);
       applyCorsHeaders(req, res);
       return res.status(500).json({ message: "Failed to load resume file" });
+    }
+  });
+
+  app.get("/api/files/jds/:filename/preview", async (req, res) => {
+    try {
+      const safeName = path.basename(decodeURIComponent(req.params.filename || ""));
+      if (!safeName) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      if (!safeName.toLowerCase().endsWith(".docx")) {
+        return res.status(400).json({ message: "Preview is only available for .docx files" });
+      }
+
+      const localCandidates = [
+        path.join(uploadsRoot, safeName),
+        path.join(chatFilesRoot, safeName),
+      ];
+      const buffer = await loadStoredFileBuffer(safeName, localCandidates, "jds");
+      if (!buffer) {
+        applyCorsHeaders(req, res);
+        return res.status(404).json({
+          message: "This job description file is no longer available. Please upload the JD again.",
+        });
+      }
+
+      const mammoth = await import("mammoth");
+      const result = await mammoth.convertToHtml({ buffer });
+      applyCorsHeaders(req, res);
+      return res.json({ html: result.value });
+    } catch (error) {
+      console.error("Serve JD preview error:", error);
+      applyCorsHeaders(req, res);
+      return res.status(500).json({ message: "Failed to load job description preview" });
     }
   });
 
@@ -15081,16 +15178,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const enrichedApplications = recruiterApplications.map((app) => {
-        if (app.profileId) {
-          const candidate = candidatesMap.get(app.profileId);
-          const profile = profilesMap.get(app.profileId);
-          
-          if (candidate) {
-            (app as any).isUsingStaffOS = candidate.isVerified || (candidate.password && candidate.password !== '');
-          } else {
-            (app as any).isUsingStaffOS = false;
+      const candidateEmails = [
+        ...new Set(
+          recruiterApplications
+            .map((app) => app.candidateEmail?.trim().toLowerCase())
+            .filter((email): email is string => Boolean(email)),
+        ),
+      ];
+      const candidatesByEmailMap = new Map<string, any>();
+      await Promise.all(
+        candidateEmails.map(async (email) => {
+          try {
+            const candidate = await storage.getCandidateByEmail(email);
+            if (candidate) candidatesByEmailMap.set(email, candidate);
+          } catch (error) {
+            console.warn("Error resolving candidate by email:", email, error);
           }
+        }),
+      );
+
+      const enrichedApplications = recruiterApplications.map((app) => {
+        let linkedCandidate: any = null;
+
+        if (app.profileId) {
+          linkedCandidate = candidatesMap.get(app.profileId) ?? null;
+          const profile = profilesMap.get(app.profileId);
 
           if (!app.candidateName || app.candidateName === 'Unknown Candidate') {
             if (profile) {
@@ -15100,24 +15212,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (!(app as any).resumeFile && profile.resumeFile) {
                 (app as any).resumeFile = profile.resumeFile;
               }
-            } else if (candidate) {
-              app.candidateName = candidate.fullName || app.candidateName;
-              app.candidateEmail = app.candidateEmail || candidate.email || null;
-              app.candidatePhone = app.candidatePhone || candidate.phone || null;
-              if (!(app as any).resumeFile && candidate.resumeFile) {
-                (app as any).resumeFile = candidate.resumeFile;
+            } else if (linkedCandidate) {
+              app.candidateName = linkedCandidate.fullName || app.candidateName;
+              app.candidateEmail = app.candidateEmail || linkedCandidate.email || null;
+              app.candidatePhone = app.candidatePhone || linkedCandidate.phone || null;
+              if (!(app as any).resumeFile && linkedCandidate.resumeFile) {
+                (app as any).resumeFile = linkedCandidate.resumeFile;
               }
             }
           }
           (app as any).profilePicture =
-            candidate?.profilePicture ||
+            linkedCandidate?.profilePicture ||
             profile?.profilePicture ||
             (app as any).profilePicture ||
             null;
         } else {
-          (app as any).isUsingStaffOS = false;
           (app as any).profilePicture = null;
         }
+
+        if (!linkedCandidate && app.candidateEmail) {
+          linkedCandidate =
+            candidatesByEmailMap.get(app.candidateEmail.trim().toLowerCase()) ?? null;
+        }
+
+        applyOnboardGateToApplication(app as Record<string, unknown>, linkedCandidate);
         (app as any).taggedByTeamLead = app.source === "tl_tagged";
         return app;
       });
@@ -15412,9 +15530,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Candidate email is missing for this application" });
       }
 
+      const existingCandidate = await storage.getCandidateByEmail(candidateEmail);
+      const inviteGate = computeStaffosOnboardGate({
+        source: application.source,
+        isCandidateConfirmed: application.isCandidateConfirmed,
+        staffosInviteSentAt: application.staffosInviteSentAt ?? null,
+        candidateLastLoginAt: existingCandidate?.lastLoginAt ?? null,
+      });
+
+      if (!inviteGate.canSendOnboardInvite) {
+        if (inviteGate.isUsingStaffOS && !inviteGate.canUpdateStatus) {
+          return res.status(400).json({
+            message:
+              "This candidate is already on StaffOS. They must log in and confirm the application before you can proceed.",
+          });
+        }
+        if (inviteGate.onboardInvitePending) {
+          return res.status(429).json({
+            message:
+              "Invite already sent. You can resend the welcome email after 3 hours if the candidate has not logged in.",
+          });
+        }
+        return res.status(400).json({ message: "Cannot send onboard invite for this application." });
+      }
+
       const temporaryPassword = generateClientTemporaryPassword();
       const loginUrl = resolveCandidateWelcomeLoginUrl();
-      let candidate = await storage.getCandidateByEmail(candidateEmail);
+      let candidate = existingCandidate ?? null;
 
       if (candidate) {
         candidate = await storage.updateCandidate(candidate.id, {
@@ -15455,12 +15597,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to provision candidate login" });
       }
 
-      if (!application.profileId && candidate.id) {
-        await db
-          .update(jobApplications)
-          .set({ profileId: candidate.id })
-          .where(eq(jobApplications.id, application.id));
+      const inviteSentAt = new Date();
+      const inviteUpdate: Record<string, unknown> = {
+        profileId: candidate.id,
+        staffosInviteSentAt: inviteSentAt,
+        staffosInviteReminderSentAt: null,
+      };
+      if (isStaffOsTaggedSource(application.source)) {
+        inviteUpdate.isCandidateConfirmed = false;
       }
+
+      await db
+        .update(jobApplications)
+        .set(inviteUpdate)
+        .where(eq(jobApplications.id, application.id));
 
       const emailSent = await sendCandidateWelcomeEmail({
         fullName: application.candidateName || candidate.fullName || "Candidate",
@@ -15468,6 +15618,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         candidateId: candidate.candidateId,
         loginUrl,
         password: temporaryPassword,
+        jobTitle: application.jobTitle,
+        company: application.company,
+        invitedByRecruiter: isStaffOsTaggedSource(application.source),
       });
 
       if (!emailSent) {
@@ -15478,6 +15631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: "Invite email sent successfully",
         candidateEmail,
+        staffosInviteSentAt: inviteSentAt.toISOString(),
       });
     } catch (error) {
       console.error("Send invite email error:", error);
@@ -15840,6 +15994,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingApplication = await storage.getJobApplicationById(id);
       if (!existingApplication) {
         return res.status(404).json({ message: "Application not found" });
+      }
+
+      const statusGate = await assertRecruiterCanUpdateApplicationStatus(storage, existingApplication);
+      if (!statusGate.allowed) {
+        return res.status(403).json({ message: statusGate.message });
       }
 
       const previousStatus = existingApplication.status;
@@ -17232,7 +17391,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const limit = Math.min(Math.max(parseInt(String(req.query.limit || "20"), 10) || 20, 1), 50);
+      const limit = Math.min(Math.max(parseInt(String(req.query.limit || "10"), 10) || 10, 1), 50);
+      const offset = Math.max(parseInt(String(req.query.offset || "0"), 10) || 0, 0);
+      const addedByFilter = eq(candidates.addedBy, employee.name);
+
+      const [totalRow] = await db
+        .select({ count: count() })
+        .from(candidates)
+        .where(addedByFilter);
 
       const rows = await db
         .select({
@@ -17244,11 +17410,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pipelineStatus: candidates.pipelineStatus,
         })
         .from(candidates)
-        .where(eq(candidates.addedBy, employee.name))
+        .where(addedByFilter)
         .orderBy(desc(candidates.createdAt))
-        .limit(limit);
+        .limit(limit)
+        .offset(offset);
 
-      res.json(rows);
+      res.json({ rows, total: totalRow?.count ?? 0 });
     } catch (error) {
       console.error("Data entry recent uploads error:", error);
       res.status(500).json({ message: "Failed to load recent uploads" });
@@ -20920,6 +21087,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Export broadcast function for use in message endpoints
   (app as any).broadcastToRoom = broadcastToRoom;
+
+  startStaffosInviteReminderScheduler(storage);
 
   return httpServer;
 }

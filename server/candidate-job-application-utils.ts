@@ -1,12 +1,11 @@
 import type { Candidate, JobApplication } from "@shared/schema";
+import { isStaffOsTaggedSource as isStaffOsTaggedSourceShared } from "@shared/staffos-onboard";
 import { db } from "./db";
 import { jobApplications } from "@shared/schema";
 import { and, eq, ne, or, sql } from "drizzle-orm";
 
-const STAFFOS_TAGGED_SOURCES = new Set(["recruiter_tagged", "tl_tagged"]);
-
 export function isStaffOsTaggedSource(source: unknown): boolean {
-  return STAFFOS_TAGGED_SOURCES.has(String(source || "").toLowerCase());
+  return isStaffOsTaggedSourceShared(source);
 }
 
 export function isEphemeralRecruiterProfileId(profileId: string | null | undefined): boolean {

@@ -21,6 +21,9 @@ type UploadStats = {
   todayUploaded: number;
 };
 
+const searchInputClassName =
+  "h-10 rounded-lg border border-slate-300 bg-slate-100 pl-9 text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400";
+
 interface DataEntryMetricsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -176,7 +179,7 @@ export default function DataEntryMetricsModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, ID, or email…"
-                className="pl-9"
+                className={searchInputClassName}
               />
             </div>
           )}

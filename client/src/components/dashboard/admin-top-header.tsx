@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Settings, KeyRound, LogOut, HelpCircle, Bell, MessageCircle, Briefcase, Users, CheckCircle, Calendar } from "lucide-react";
 import NotificationPanel, {
   type NotificationNavigateSection,
@@ -100,6 +101,7 @@ export default function AdminTopHeader({
 }: AdminTopHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationPortalTarget, setNotificationPortalTarget] = useState<HTMLElement | null>(null);
   const [notificationTab, setNotificationTab] = useState<string>('all');
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -181,6 +183,10 @@ export default function AdminTopHeader({
   }, [employee?.role]);
 
   // Handle click outside to close dropdown
+  useEffect(() => {
+    setNotificationPortalTarget(document.body);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -722,32 +728,34 @@ export default function AdminTopHeader({
               </span>
             </button>
 
-            {showNotifications && (
-              <>
-                <button
-                  type="button"
-                  className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px]"
-                  aria-label="Close notifications"
-                  onClick={() => setShowNotifications(false)}
-                />
-                <div className="notification-panel-container fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col overflow-hidden rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-                  <NotificationPanel
-                    rows={panelRows}
-                    tabs={notificationTabs}
-                    sections={notificationSections}
-                    activeTab={notificationTab}
-                    onTabChange={setNotificationTab}
-                    isLoading={feedLoading}
-                    isError={feedError && !employeeFeed}
-                    hasStaleFeed={feedError && !!employeeFeed && panelRows.length > 0}
-                    onRetry={() => void refetchNotificationFeed()}
-                    onDismiss={dismissNotification}
-                    onNavigate={handlePanelNavigate}
-                    onActOnNudge={isAdmin ? handleActOnNudge : undefined}
+            {showNotifications && notificationPortalTarget &&
+              createPortal(
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-[240] bg-slate-900/25 backdrop-blur-[1px]"
+                    aria-label="Close notifications"
+                    onClick={() => setShowNotifications(false)}
                   />
-                </div>
-              </>
-            )}
+                  <div className="notification-panel-container fixed right-0 top-16 z-[250] flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col overflow-hidden rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+                    <NotificationPanel
+                      rows={panelRows}
+                      tabs={notificationTabs}
+                      sections={notificationSections}
+                      activeTab={notificationTab}
+                      onTabChange={setNotificationTab}
+                      isLoading={feedLoading}
+                      isError={feedError && !employeeFeed}
+                      hasStaleFeed={feedError && !!employeeFeed && panelRows.length > 0}
+                      onRetry={() => void refetchNotificationFeed()}
+                      onDismiss={dismissNotification}
+                      onNavigate={handlePanelNavigate}
+                      onActOnNudge={isAdmin ? handleActOnNudge : undefined}
+                    />
+                  </div>
+                </>,
+                notificationPortalTarget,
+              )}
           </div>
         )}
 
