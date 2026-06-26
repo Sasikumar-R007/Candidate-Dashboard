@@ -75,7 +75,7 @@ import {
   mapTeamLeaderPipelineCandidate,
 } from '@/lib/pipeline-session-utils';
 import { useOpenCommentSessionListener } from '@/lib/open-comment-session';
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, getIsMobileViewport } from "@/hooks/use-mobile";
 import { TlPipelineTab } from '@/components/dashboard/tl-pipeline-tab';
 import { ClosureReportsCardList } from '@/components/dashboard/closure-reports-card-list';
 
@@ -177,6 +177,9 @@ export default function TeamLeaderDashboard() {
   // ALL useState hooks MUST be here at the top, before any conditionals
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
+    if (getIsMobileViewport()) {
+      return "pipeline";
+    }
     const saved = sessionStorage.getItem('tlDashboardSidebarTab');
     sessionStorage.removeItem('tlDashboardSidebarTab');
     if (saved === 'chat') return 'dashboard';
@@ -1275,6 +1278,10 @@ export default function TeamLeaderDashboard() {
   );
 
   const renderMainContent = () => {
+    if (isMobile) {
+      return renderPipelineContent();
+    }
+
     switch (sidebarTab) {
       case 'dashboard':
         return renderTeamContent();
@@ -3817,7 +3824,7 @@ export default function TeamLeaderDashboard() {
     <div
       className={
         isMobile
-          ? "flex min-h-screen flex-col bg-gray-50"
+          ? "flex h-screen max-h-[100dvh] flex-col overflow-hidden bg-gray-50"
           : "min-h-screen"
       }
     >

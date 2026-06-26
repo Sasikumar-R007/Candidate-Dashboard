@@ -11,6 +11,7 @@ import { PipelineWorkspace } from "@/components/dashboard/pipeline-workspace";
 import type { PipelineStageKey } from "@shared/pipeline-stages";
 import { PipelineStatsSidebar } from "@/components/dashboard/pipeline-stats-sidebar";
 import { EmployeePipelineMobileFilters } from "@/components/dashboard/employee-pipeline-mobile-filters";
+import { EmployeePipelineMobileStatsBackdrop } from "@/components/dashboard/employee-pipeline-mobile-stats-backdrop";
 import { PIPELINE_FILTER_RADIUS_PX } from "@/lib/pipeline-ui-tokens";
 import { isSameDay } from "date-fns";
 import { BarChart3, Users } from "lucide-react";
@@ -200,15 +201,7 @@ export function AdminPipelineTab({
         isSessionOpen ? " pipeline-tab-session-open" : ""
       }${mobileStatsOpen ? " employee-pipeline-stats-open" : ""}`}
     >
-      {mobileStatsOpen && (
-        <button
-          type="button"
-          className="fixed bottom-[4.25rem] left-0 top-[3.25rem] z-[90] bg-black/25 md:hidden"
-          style={{ width: "calc(100% - 13.75rem)" }}
-          onClick={() => setMobileStatsOpen(false)}
-          aria-label="Close pipeline stats"
-        />
-      )}
+      <EmployeePipelineMobileStatsBackdrop onClose={() => setMobileStatsOpen(false)} />
       <PipelineCandidateSessionShell
         fullscreen
         className="flex min-h-0 w-full flex-1 flex-col overflow-hidden md:overflow-hidden"

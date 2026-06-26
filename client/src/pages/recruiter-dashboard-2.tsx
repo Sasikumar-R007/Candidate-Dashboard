@@ -54,7 +54,7 @@ import {
   type TerminalOutcome,
 } from "@/lib/pipeline-session-utils";
 import { useOpenCommentSessionListener } from "@/lib/open-comment-session";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, getIsMobileViewport } from "@/hooks/use-mobile";
 import { TaPipelineTab } from "@/components/dashboard/ta-pipeline-tab";
 import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { format } from "date-fns";
@@ -204,9 +204,12 @@ export default function RecruiterDashboard2() {
 
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
-    const saved = sessionStorage.getItem('recruiterDashboardSidebarTab');
-    sessionStorage.removeItem('recruiterDashboardSidebarTab');
-    return saved ? saved : 'dashboard';
+    if (getIsMobileViewport()) {
+      return "pipeline";
+    }
+    const saved = sessionStorage.getItem("recruiterDashboardSidebarTab");
+    sessionStorage.removeItem("recruiterDashboardSidebarTab");
+    return saved ? saved : "dashboard";
   };
 
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
@@ -1753,6 +1756,10 @@ export default function RecruiterDashboard2() {
   );
 
   const renderMainContent = () => {
+    if (isMobile) {
+      return renderPipelineContent();
+    }
+
     switch (sidebarTab) {
       case 'dashboard':
         return renderRecruiterContent();
@@ -3355,7 +3362,7 @@ export default function RecruiterDashboard2() {
     <div
       className={
         isMobile
-          ? "flex min-h-screen flex-col bg-gray-50"
+          ? "flex h-screen max-h-[100dvh] flex-col overflow-hidden bg-gray-50"
           : sidebarTab === "pipeline"
             ? `h-screen max-h-screen overflow-hidden`
             : `min-h-screen`

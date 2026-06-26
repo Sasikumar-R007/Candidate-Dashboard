@@ -2,6 +2,8 @@ import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import {
   PIPELINE_BUTTON_RADIUS_PX,
 } from "@/lib/pipeline-ui-tokens";
+import { cn } from "@/lib/utils";
+import { CalendarDays } from "lucide-react";
 import type { ReactNode } from "react";
 
 const buttonRadiusStyle = { borderRadius: PIPELINE_BUTTON_RADIUS_PX };
@@ -24,13 +26,27 @@ export function EmployeePipelineMobileFilters({
   isAllDatesActive,
 }: EmployeePipelineMobileFiltersProps) {
   const datePicker = (
-    <StandardDatePicker
-      value={pipelineDate || undefined}
-      onChange={(date) => onPipelineDateChange(date || null)}
-      placeholder="dd-mm-yyyy"
-      className="h-9 w-full shrink-0 rounded-[6px] border-gray-200 bg-white text-sm md:w-36"
-      data-testid="button-pipeline-date-picker"
-    />
+    <div className="relative min-w-0" data-testid="button-pipeline-date-picker">
+      <StandardDatePicker
+        value={pipelineDate || undefined}
+        onChange={(date) => onPipelineDateChange(date || null)}
+        placeholder="dd-mm-yyyy"
+        className={cn(
+          "h-9 w-full shrink-0 rounded-[6px] border-gray-200 bg-white text-sm md:w-36",
+          isAllDatesActive &&
+            "text-transparent [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-datetime-edit]:text-transparent",
+        )}
+      />
+      {isAllDatesActive ? (
+        <span
+          className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center gap-1.5 text-sm font-medium text-gray-500"
+          aria-hidden
+        >
+          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+          Any date
+        </span>
+      ) : null}
+    </div>
   );
 
   return (

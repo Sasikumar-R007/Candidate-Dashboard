@@ -126,7 +126,7 @@ import {
   mapAdminPipelineCandidate,
 } from "@/lib/pipeline-session-utils";
 import { useOpenCommentSessionListener } from "@/lib/open-comment-session";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, getIsMobileViewport } from "@/hooks/use-mobile";
 import { AdminPipelineTab } from "@/components/dashboard/admin-pipeline-tab";
 import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { useEmployeeAuth } from "@/contexts/auth-context";
@@ -1031,6 +1031,9 @@ export default function AdminDashboard() {
 
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
+    if (getIsMobileViewport()) {
+      return "pipeline";
+    }
     const saved = sessionStorage.getItem('adminDashboardSidebarTab');
     sessionStorage.removeItem('adminDashboardSidebarTab');
     const allowedTabs = new Set(['dashboard', 'requirements', 'pipeline', 'metrics', 'master-data', 'performance', 'report', 'nudges', 'user-management']);
@@ -7074,6 +7077,14 @@ export default function AdminDashboard() {
   }, [sidebarTab, activeTab, pipelineView]);
 
   const renderSidebarContent = () => {
+    if (isMobile) {
+      return (
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {renderAdminPipelineView()}
+        </div>
+      );
+    }
+
     switch (sidebarTab) {
       case 'dashboard':
         // Dashboard shows the Team section with tabs (team, requirements, pipeline, etc.)
