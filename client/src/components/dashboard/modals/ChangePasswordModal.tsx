@@ -83,43 +83,43 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border-none bg-white p-0 shadow-2xl sm:max-w-[450px] sm:w-full sm:rounded-3xl">
-        <DialogHeader className="relative bg-slate-900 px-4 py-6 text-white md:px-8 md:py-8">
+      <DialogContent className="max-h-[min(88vh,640px)] w-[calc(100%-1.5rem)] max-w-[400px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl sm:max-w-[450px]">
+        <DialogHeader className="relative bg-slate-900 px-4 py-5 text-white md:px-8 md:py-8">
           <div className="absolute top-0 right-0 hidden p-8 opacity-10 sm:block">
             <ShieldCheck size={120} />
           </div>
-          <div className="mb-2 flex items-center gap-3">
-            <div className="rounded-xl bg-blue-500/20 p-2 backdrop-blur-sm">
-              <Lock className="h-5 w-5 text-blue-400 md:h-6 md:w-6" />
+          <div className="mb-1.5 flex items-center gap-2.5 md:mb-2 md:gap-3">
+            <div className="rounded-lg bg-blue-500/20 p-1.5 backdrop-blur-sm md:rounded-xl md:p-2">
+              <Lock className="h-4 w-4 text-blue-400 md:h-6 md:w-6" />
             </div>
-            <DialogTitle className="text-xl font-black tracking-tight md:text-2xl">Change Password</DialogTitle>
+            <DialogTitle className="text-base font-bold tracking-tight md:text-2xl">Change Password</DialogTitle>
           </div>
-          <DialogDescription className="text-slate-400 font-medium text-sm">
+          <DialogDescription className="text-xs font-medium text-slate-400 md:text-sm">
             Keep your account secure by updating your password regularly.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 px-4 py-6 md:px-8 md:py-8">
+        <form onSubmit={handleSubmit} className="space-y-4 px-4 py-5 md:space-y-6 md:px-8 md:py-8">
           {error && (
-            <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              <AlertCircle size={18} />
-              <p className="text-xs font-bold uppercase tracking-tight">{error}</p>
+            <div className="flex items-center gap-2.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-red-600 md:gap-3 md:rounded-2xl md:px-4 md:py-3">
+              <AlertCircle size={16} />
+              <p className="text-[11px] font-bold uppercase tracking-tight md:text-xs">{error}</p>
             </div>
           )}
 
-          <div className="space-y-5">
+          <div className="space-y-4 md:space-y-5">
             {/* Current Password */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-500 flex justify-between">
+            <div className="space-y-1.5">
+              <Label className="flex justify-between text-xs font-semibold text-slate-500 md:text-sm">
                 Current Password
               </Label>
-              <div className="relative group">
+              <div className="group relative">
                 <Input
                   type={showPasswords.current ? "text" : "password"}
                   value={formData.currentPassword}
                   onChange={(e) => handleInputChange("currentPassword", e.target.value)}
                   placeholder="••••••••"
-                  className="h-12 bg-slate-50 border-slate-200 rounded-2xl focus-visible:ring-blue-500 font-medium text-slate-900 pr-12 transition-all group-hover:border-slate-300 placeholder:text-slate-300"
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50 pr-11 text-sm font-medium text-slate-900 transition-all placeholder:text-slate-300 focus-visible:ring-blue-500 group-hover:border-slate-300 md:h-12 md:rounded-2xl"
                   required
                 />
                 <button
@@ -133,17 +133,17 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             </div>
 
             {/* New Password */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-500 flex justify-between">
+            <div className="space-y-1.5">
+              <Label className="flex justify-between text-xs font-semibold text-slate-500 md:text-sm">
                 New Password
               </Label>
-              <div className="relative group">
+              <div className="group relative">
                 <Input
                   type={showPasswords.new ? "text" : "password"}
                   value={formData.newPassword}
                   onChange={(e) => handleInputChange("newPassword", e.target.value)}
                   placeholder="Minimum 8 characters"
-                  className="h-12 bg-slate-50 border-slate-200 rounded-2xl focus-visible:ring-blue-500 font-medium text-slate-900 pr-12 transition-all group-hover:border-slate-300 placeholder:text-slate-300"
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50 pr-11 text-sm font-medium text-slate-900 transition-all placeholder:text-slate-300 focus-visible:ring-blue-500 group-hover:border-slate-300 md:h-12 md:rounded-2xl"
                   required
                 />
                 <button
@@ -157,17 +157,17 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             </div>
 
             {/* Confirm New Password */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-500 flex justify-between">
+            <div className="space-y-1.5">
+              <Label className="flex justify-between text-xs font-semibold text-slate-500 md:text-sm">
                 Confirm New Password
               </Label>
-              <div className="relative group">
+              <div className="group relative">
                 <Input
                   type={showPasswords.confirm ? "text" : "password"}
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                   placeholder="Repeat new password"
-                  className="h-12 bg-slate-50 border-slate-200 rounded-2xl focus-visible:ring-blue-500 font-medium text-slate-900 pr-12 transition-all group-hover:border-slate-300 placeholder:text-slate-300"
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50 pr-11 text-sm font-medium text-slate-900 transition-all placeholder:text-slate-300 focus-visible:ring-blue-500 group-hover:border-slate-300 md:h-12 md:rounded-2xl"
                   required
                 />
                 <button
@@ -181,19 +181,19 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-between">
+          <DialogFooter className="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:justify-between md:gap-3 md:pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="h-11 w-full rounded-2xl border-slate-200 px-6 font-semibold tracking-tight text-slate-600 transition-all hover:bg-slate-50 sm:h-12 sm:flex-1 sm:px-8"
+              className="h-10 w-full rounded-xl border-slate-200 px-5 text-xs font-semibold tracking-tight text-slate-600 transition-all hover:bg-slate-50 sm:h-11 sm:flex-1 sm:px-8 md:h-12 md:rounded-2xl md:text-sm"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="h-11 w-full rounded-2xl bg-blue-600 px-6 font-semibold tracking-tight text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 sm:h-12 sm:flex-1 sm:px-10"
+              className="h-10 w-full rounded-xl bg-blue-600 px-5 text-xs font-semibold tracking-tight text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 sm:h-11 sm:flex-1 sm:px-10 md:h-12 md:rounded-2xl md:text-sm"
             >
               {isSubmitting ? (
                 <>

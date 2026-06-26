@@ -6,6 +6,7 @@ import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-description-details-modal';
+import { JdVisibilityModal } from '@/components/dashboard/modals/jd-visibility-modal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
@@ -26,6 +27,7 @@ import { RequirementRoleCell } from '@/components/dashboard/requirement-role-cel
 import {
   buildStreqDisplayMap,
   getRequirementLookupId,
+  parseRequirementJdVisibility,
   resolveRequirementDisplayId,
 } from '@shared/requirement-jd-extras';
 import { getRequirementResumeTarget, RESUME_TARGET_MATRIX } from '@shared/constants';
@@ -52,6 +54,7 @@ import {
   type TerminalOutcome,
 } from "@/lib/pipeline-session-utils";
 import { useOpenCommentSessionListener } from "@/lib/open-comment-session";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TaPipelineTab } from "@/components/dashboard/ta-pipeline-tab";
 import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { format } from "date-fns";
@@ -197,6 +200,7 @@ export default function RecruiterDashboard2() {
   const { toast } = useToast();
   const employee = useEmployeeAuth(); // Must be called before any hooks that depend on it
   const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
+  const isMobile = useIsMobile();
 
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
@@ -211,11 +215,21 @@ export default function RecruiterDashboard2() {
     const handleNotificationNavigate = (event: Event) => {
       const detail = (event as CustomEvent<{ tab?: string; storageKey?: string }>).detail;
       if (detail?.storageKey && detail.storageKey !== "recruiterDashboardSidebarTab") return;
+      if (isMobile) {
+        setSidebarTab("pipeline");
+        return;
+      }
       if (detail?.tab) setSidebarTab(detail.tab);
     };
     window.addEventListener("staffos-notification-navigate", handleNotificationNavigate);
     return () => window.removeEventListener("staffos-notification-navigate", handleNotificationNavigate);
-  }, []);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (isMobile && sidebarTab !== "pipeline") {
+      setSidebarTab("pipeline");
+    }
+  }, [isMobile, sidebarTab]);
 
   const [updateModalNudge, setUpdateModalNudge] = useState<any>(null);
   const [updateDropdown1, setUpdateDropdown1] = useState("");
@@ -233,6 +247,9 @@ export default function RecruiterDashboard2() {
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
   const [selectedJD, setSelectedJD] = useState<any>(null);
   const [isJDDetailsModalOpen, setIsJDDetailsModalOpen] = useState(false);
+  const [isJdVisibilityModalOpen, setIsJdVisibilityModalOpen] = useState(false);
+  const [jdVisibilityRequirement, setJdVisibilityRequirement] = useState<any | null>(null);
+  const [jdVisibilityValue, setJdVisibilityValue] = useState(true);
   const [assignments, setAssignments] = useState<{ [key: string]: string }>({ 'mobile-app-dev': 'Arun' });
   const [isReallocating, setIsReallocating] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
@@ -442,11 +459,23 @@ export default function RecruiterDashboard2() {
 
   // Mutation for updating application status
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, statusNote, rejectionReason }: { id: string; status: string; statusNote?: string; rejectionReason?: string }) => {
+    mutationFn: async ({
+      id,
+      status,
+      statusNote,
+      rejectionReason,
+      silent,
+    }: {
+      id: string;
+      status: string;
+      statusNote?: string;
+      rejectionReason?: string;
+      silent?: boolean;
+    }) => {
       setUpdatingApplicantId(id);
       const response = await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status, statusNote, rejectionReason });
       const responseData = await response.json();
-      return { id, status, application: responseData.application };
+      return { id, status, application: responseData.application, silent: Boolean(silent) };
     },
     onSuccess: (data) => {
       const app = data.application as { status?: string; statusNote?: string | null } | undefined;
@@ -462,22 +491,35 @@ export default function RecruiterDashboard2() {
       void queryClient.invalidateQueries({ queryKey: ["/api/recruiter/applications"] });
       void queryClient.refetchQueries({ queryKey: ["/api/recruiter/applications"] });
       setUpdatingApplicantId(null);
-      toast({
-        title: "Status Updated",
-        description: "Candidate status has been updated successfully.",
-      });
+      if (!data.silent) {
+        toast({
+          title: "Status Updated",
+          description: "Candidate status has been updated successfully.",
+        });
+      }
       console.log('Status updated successfully:', data);
     },
-    onError: (error: any) => {
+    onError: (error: any, variables) => {
       setUpdatingApplicantId(null);
+      if (variables?.silent) {
+        setApplicantStatusOverrides((prev) => {
+          const next = { ...prev };
+          delete next[variables.id];
+          return next;
+        });
+        setAutoArchivedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(variables.id);
+          return next;
+        });
+        return;
+      }
       toast({
         title: "Update Failed",
         description: error.message || "Failed to update status. Please try again.",
         variant: 'destructive',
       });
       console.error('Failed to update status:', error);
-      // Remove local override on error to revert UI
-      // The error will be logged but we don't show toast to avoid interrupting workflow
     }
   });
 
@@ -1008,6 +1050,8 @@ export default function RecruiterDashboard2() {
     const twentyFourHoursMs = 24 * 60 * 60 * 1000;
 
     applicantData.forEach((candidate: any) => {
+      if (candidate.canUpdateStatus === false) return;
+
       const effectiveStatus = applicantStatusOverrides[candidate.id] || candidate.currentStatus;
 
       if (effectiveStatus === "Closure") {
@@ -1025,6 +1069,7 @@ export default function RecruiterDashboard2() {
           updateStatusMutation.mutate({
             id: candidate.id,
             status: "Archived",
+            silent: true,
           });
         }
         return;
@@ -1044,7 +1089,8 @@ export default function RecruiterDashboard2() {
         setAutoArchivedIds(prev => new Set(prev).add(candidate.id));
         updateStatusMutation.mutate({
           id: candidate.id,
-          status: 'Archived'
+          status: 'Archived',
+          silent: true,
         });
       }
     });
@@ -1328,6 +1374,54 @@ export default function RecruiterDashboard2() {
     setIsReallocating(false);
     setSelectedAssignee('');
     setIsAssignmentModalOpen(true);
+  };
+
+  const updateJdVisibilityMutation = useMutation({
+    mutationFn: async ({
+      requirementId,
+      showToCandidate,
+    }: {
+      requirementId: string;
+      showToCandidate: boolean;
+    }) => {
+      const response = await apiRequest("PATCH", `/api/requirements/${requirementId}/jd-visibility`, {
+        showToCandidate,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || "Failed to update JD visibility");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/requirements'] });
+      setIsJdVisibilityModalOpen(false);
+      toast({
+        title: "JD visibility updated",
+        description: "Candidate visibility preference saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message || "Could not save JD visibility.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openJdVisibilityModal = (requirement: any) => {
+    const visibility = parseRequirementJdVisibility(requirement);
+    setJdVisibilityRequirement(requirement);
+    setJdVisibilityValue(visibility.showToCandidate);
+    setIsJdVisibilityModalOpen(true);
+  };
+
+  const handleSaveJdVisibility = () => {
+    const requirementId = jdVisibilityRequirement?.id;
+    if (!requirementId) return;
+    updateJdVisibilityMutation.mutate({ requirementId, showToCandidate: jdVisibilityValue });
   };
 
   const handleReallocate = (requirement: any) => {
@@ -2355,22 +2449,37 @@ export default function RecruiterDashboard2() {
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">
-                                    {req.jdText || req.jdFile ? (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedJD(req);
-                                          setIsJDDetailsModalOpen(true);
-                                        }}
-                                        className="p-1 h-8 w-8"
-                                        title="View JD"
-                                      >
-                                        <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
-                                      </Button>
-                                    ) : (
-                                      <span className="text-gray-400 text-sm">-</span>
-                                    )}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          data-testid={`button-requirement-actions-${req.id}`}
+                                        >
+                                          <MoreVertical className="h-4 w-4 text-gray-600" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-52">
+                                        <DropdownMenuItem
+                                          className="cursor-pointer"
+                                          onClick={() => {
+                                            setSelectedJD(req);
+                                            setIsJDDetailsModalOpen(true);
+                                          }}
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          View JD
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="cursor-pointer"
+                                          onClick={() => openJdVisibilityModal(req)}
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          JD Visibility
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </td>
                                 </tr>
                               );
@@ -2410,7 +2519,7 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Resume Count</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">JD</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2468,22 +2577,37 @@ export default function RecruiterDashboard2() {
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">
-                                    {req.jdText || req.jdFile ? (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedJD(req);
-                                          setIsJDDetailsModalOpen(true);
-                                        }}
-                                        className="p-1 h-8 w-8"
-                                        title="View JD"
-                                      >
-                                        <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
-                                      </Button>
-                                    ) : (
-                                      <span className="text-gray-400 text-sm">-</span>
-                                    )}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          data-testid={`button-requirement-actions-${req.id}`}
+                                        >
+                                          <MoreVertical className="h-4 w-4 text-gray-600" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-52">
+                                        <DropdownMenuItem
+                                          className="cursor-pointer"
+                                          onClick={() => {
+                                            setSelectedJD(req);
+                                            setIsJDDetailsModalOpen(true);
+                                          }}
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          View JD
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="cursor-pointer"
+                                          onClick={() => openJdVisibilityModal(req)}
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          JD Visibility
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </td>
                                 </tr>
                               );
@@ -2763,68 +2887,80 @@ export default function RecruiterDashboard2() {
 
 
   const renderPipelineContent = () => {
-    return (
-      <div className="flex h-screen max-h-screen overflow-hidden">
-        <div className="ml-16 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
-          <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
-          <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col overflow-hidden">
-            <TaPipelineTab
-              isLoading={isLoadingApplications}
-              isEmpty={!applicantData || applicantData.length === 0}
-              groupedByStage={getPipelineCandidatesByStage}
-              onCandidateClick={handlePipelineCandidateClick}
-              pipelineDate={pipelineDate}
-              onPipelineDateChange={setPipelineDate}
-              getCandidateName={(c) => c.candidateName || "N/A"}
-              getRoleApplied={(c) => c.roleApplied || c.jobTitle || "N/A"}
-              getCompany={(c) => c.company || c.currentCompany || "N/A"}
-              getProfilePicture={(c) => c.profilePicture || c.profile_picture || null}
-              getAppliedTimestamp={(c) =>
-                calculateDaysAgo(c.appliedDate || c.updatedAt || c.createdAt)
-              }
-              isRejectedCandidate={(c) => {
-                const status =
-                  applicantStatusOverrides[c.id] || c.currentStatus || "";
-                return status === "Screened Out" || status === "Rejected";
-              }}
-              pipelineView={pipelineView}
-              candidateSession={
-                sessionApplicationId ? (
-                  <CandidateCommentsSession
-                    applicationId={sessionApplicationId}
-                    fallbackApplicant={sessionApplicantSnapshot}
-                    pipelineApplicants={pipelineSessionList}
-                    onSelectApplicant={handleSelectSessionApplicant}
-                    onBack={handleCloseCandidateSession}
-                    commentsRailVariant="ta"
-                  />
-                ) : null
-              }
-              closureReportsFooter={
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
-                    {closureReports.length > 5 && (
-                      <Button
-                        variant="outline"
-                        className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
-                        style={{ borderRadius: 6 }}
-                        onClick={() => setIsClosureDetailsModalOpen(true)}
-                        data-testid="button-view-more-closures"
-                      >
-                        View More
-                      </Button>
-                    )}
-                  </div>
-                  <ClosureReportsCardList
-                    reports={taClosureReportsForPipeline}
-                    isLoading={isLoadingClosureReports}
-                    emptyMessage="No closures yet."
-                    maxRows={5}
-                  />
-                </div>
-              }
+    const pipelineTab = (
+      <TaPipelineTab
+        isLoading={isLoadingApplications}
+        isEmpty={!applicantData || applicantData.length === 0}
+        groupedByStage={getPipelineCandidatesByStage}
+        onCandidateClick={handlePipelineCandidateClick}
+        pipelineDate={pipelineDate}
+        onPipelineDateChange={setPipelineDate}
+        getCandidateName={(c) => c.candidateName || "N/A"}
+        getRoleApplied={(c) => c.roleApplied || c.jobTitle || "N/A"}
+        getCompany={(c) => c.company || c.currentCompany || "N/A"}
+        getProfilePicture={(c) => c.profilePicture || c.profile_picture || null}
+        getAppliedTimestamp={(c) =>
+          calculateDaysAgo(c.appliedDate || c.updatedAt || c.createdAt)
+        }
+        isRejectedCandidate={(c) => {
+          const status =
+            applicantStatusOverrides[c.id] || c.currentStatus || "";
+          return status === "Screened Out" || status === "Rejected";
+        }}
+        pipelineView={pipelineView}
+        candidateSession={
+          sessionApplicationId ? (
+            <CandidateCommentsSession
+              applicationId={sessionApplicationId}
+              fallbackApplicant={sessionApplicantSnapshot}
+              pipelineApplicants={pipelineSessionList}
+              onSelectApplicant={handleSelectSessionApplicant}
+              onBack={handleCloseCandidateSession}
+              commentsRailVariant="ta"
             />
+          ) : null
+        }
+        closureReportsFooter={
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
+              {closureReports.length > 5 && (
+                <Button
+                  variant="outline"
+                  className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                  style={{ borderRadius: 6 }}
+                  onClick={() => setIsClosureDetailsModalOpen(true)}
+                  data-testid="button-view-more-closures"
+                >
+                  View More
+                </Button>
+              )}
+            </div>
+            <ClosureReportsCardList
+              reports={taClosureReportsForPipeline}
+              isLoading={isLoadingClosureReports}
+              emptyMessage="No closures yet."
+              maxRows={5}
+            />
+          </div>
+        }
+      />
+    );
+
+    if (isMobile) {
+      return (
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {pipelineTab}
+        </div>
+      );
+    }
+
+    return (
+      <div className="employee-pipeline-tab-layout flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="ml-16 flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
+          <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
+          <div className="employee-pipeline-tab-scroll flex min-h-0 flex-1 flex-col overflow-hidden">
+            {pipelineTab}
           </div>
         </div>
       </div>
@@ -3218,13 +3354,40 @@ export default function RecruiterDashboard2() {
   return (
     <div
       className={
-        sidebarTab === "pipeline"
-          ? "h-screen max-h-screen overflow-hidden"
-          : "min-h-screen"
+        isMobile
+          ? "flex min-h-screen flex-col bg-gray-50"
+          : sidebarTab === "pipeline"
+            ? `h-screen max-h-screen overflow-hidden`
+            : `min-h-screen`
       }
     >
-      <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} chatUnreadCount={totalUnreadCount} />
-      {renderMainContent()}
+      {isMobile ? (
+        <>
+          <AdminTopHeader
+            companyName="Advisory Workspace"
+            hideHelpButton={true}
+            onNavigateToSection={() => setSidebarTab("pipeline")}
+          />
+          <div className="recruiter-mobile-pipeline-only flex min-h-0 flex-1 flex-col overflow-hidden">
+            <style>{`.recruiter-mobile-pipeline-only .ml-16 { margin-left: 0 !important; }`}</style>
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              style={{ height: "calc(100dvh - 4rem)" }}
+            >
+              {renderMainContent()}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <TeamLeaderMainSidebar
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+            chatUnreadCount={totalUnreadCount}
+          />
+          {renderMainContent()}
+        </>
+      )}
 
       {/* Target Modal */}
       <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
@@ -4127,6 +4290,26 @@ export default function RecruiterDashboard2() {
         data={selectedJD}
         variant="delivery"
         subtitle="Review the job description for this requirement."
+      />
+
+      <JdVisibilityModal
+        open={isJdVisibilityModalOpen}
+        onOpenChange={setIsJdVisibilityModalOpen}
+        requirementLabel={resolveRequirementDisplayId(jdVisibilityRequirement)}
+        value={jdVisibilityValue}
+        onValueChange={setJdVisibilityValue}
+        onSave={handleSaveJdVisibility}
+        isSaving={updateJdVisibilityMutation.isPending}
+        audit={
+          jdVisibilityRequirement
+            ? {
+                showToCandidate: parseRequirementJdVisibility(jdVisibilityRequirement).showToCandidate,
+                updatedByRole: parseRequirementJdVisibility(jdVisibilityRequirement).updatedByRole,
+                updatedByName: parseRequirementJdVisibility(jdVisibilityRequirement).updatedByName,
+                updatedAt: parseRequirementJdVisibility(jdVisibilityRequirement).updatedAt,
+              }
+            : null
+        }
       />
 
       {/* Chat Support Modal */}

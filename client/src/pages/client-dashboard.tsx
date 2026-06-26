@@ -88,6 +88,73 @@ import { ClientRequirementAssignModal } from "@/components/client-dashboard/clie
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
 import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
 
+type ParsedJdData = {
+  position?: unknown;
+  primarySkills?: unknown;
+  secondarySkills?: unknown;
+  knowledgeOnly?: unknown;
+  specialInstructions?: unknown;
+  jdText?: unknown;
+};
+
+function normalizeParsedJdField(value: unknown): string {
+  if (value == null) return "";
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+  }
+  return String(value).trim();
+}
+
+function hasParsedJdContent(data?: ParsedJdData | null): boolean {
+  if (!data) return false;
+  return Boolean(
+    normalizeParsedJdField(data.position) ||
+      normalizeParsedJdField(data.primarySkills) ||
+      normalizeParsedJdField(data.secondarySkills) ||
+      normalizeParsedJdField(data.knowledgeOnly) ||
+      normalizeParsedJdField(data.specialInstructions),
+  );
+}
+
+function applyParsedJdFields(
+  data: ParsedJdData,
+  current: {
+    jdPosition: string;
+    primarySkills: string;
+    secondarySkills: string;
+    knowledgeOnly: string;
+    specialInstructions: string;
+    jdText: string;
+  },
+  setters: {
+    setJdPosition: (value: string) => void;
+    setPrimarySkills: (value: string) => void;
+    setSecondarySkills: (value: string) => void;
+    setKnowledgeOnly: (value: string) => void;
+    setSpecialInstructions: (value: string) => void;
+    setJdText: (value: string) => void;
+  },
+  options?: { preserveExisting?: boolean },
+) {
+  const preserveExisting = options?.preserveExisting ?? true;
+  const pick = (currentValue: string, parsed: unknown) => {
+    const next = normalizeParsedJdField(parsed);
+    if (!next) return currentValue;
+    if (preserveExisting && currentValue.trim()) return currentValue;
+    return next;
+  };
+
+  setters.setJdPosition(pick(current.jdPosition, data.position));
+  setters.setPrimarySkills(pick(current.primarySkills, data.primarySkills));
+  setters.setSecondarySkills(pick(current.secondarySkills, data.secondarySkills));
+  setters.setKnowledgeOnly(pick(current.knowledgeOnly, data.knowledgeOnly));
+  setters.setSpecialInstructions(pick(current.specialInstructions, data.specialInstructions));
+  setters.setJdText(pick(current.jdText, data.jdText));
+}
+
 export default function ClientDashboard() {
   const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
   const { logout, beginSignOut, isSigningOut } = useAuth();
@@ -595,24 +662,38 @@ export default function ClientDashboard() {
       formData.append("jdFile", file);
       const response = await apiFileUpload("/api/client/parse-jd", formData);
       const parsed = await response.json();
+
+      if (!response.ok || parsed.success === false) {
+        throw new Error(parsed.message || "Failed to parse JD file");
+      }
+
       if (parsed.data) {
-        if (parsed.data.position) {
-          setJdPosition((prev) => prev || parsed.data.position);
-        }
-        if (parsed.data.primarySkills) {
-          setPrimarySkills((prev) => prev || parsed.data.primarySkills);
-        }
-        if (parsed.data.secondarySkills) {
-          setSecondarySkills((prev) => prev || parsed.data.secondarySkills);
-        }
-        if (parsed.data.knowledgeOnly) {
-          setKnowledgeOnly((prev) => prev || parsed.data.knowledgeOnly);
-        }
-        if (parsed.data.specialInstructions) {
-          setSpecialInstructions((prev) => prev || parsed.data.specialInstructions);
-        }
-        if (parsed.data.jdText) {
-          setJdText((prev) => prev || parsed.data.jdText);
+        applyParsedJdFields(
+          parsed.data,
+          {
+            jdPosition: "",
+            primarySkills: "",
+            secondarySkills: "",
+            knowledgeOnly: "",
+            specialInstructions: "",
+            jdText: "",
+          },
+          {
+            setJdPosition,
+            setPrimarySkills,
+            setSecondarySkills,
+            setKnowledgeOnly,
+            setSpecialInstructions,
+            setJdText,
+          },
+          { preserveExisting: false },
+        );
+
+        if (!hasParsedJdContent(parsed.data)) {
+          toast({
+            title: "Limited auto-fill",
+            description: "We read your file, but could not extract all fields. Please review and complete them manually.",
+          });
         }
       }
     } catch (error) {
@@ -2685,18 +2766,25 @@ export default function ClientDashboard() {
                       const response = await apiRequest('POST', '/api/client/parse-jd', { jdText: text });
                       const parsed = await response.json();
                       if (parsed.data) {
-                        if (parsed.data.position && !jdPosition) {
-                          setJdPosition(parsed.data.position);
-                        }
-                        if (parsed.data.primarySkills && !primarySkills) {
-                          setPrimarySkills(parsed.data.primarySkills);
-                        }
-                        if (parsed.data.secondarySkills && !secondarySkills) {
-                          setSecondarySkills(parsed.data.secondarySkills);
-                        }
-                        if (parsed.data.knowledgeOnly && !knowledgeOnly) {
-                          setKnowledgeOnly(parsed.data.knowledgeOnly);
-                        }
+                        applyParsedJdFields(
+                          parsed.data,
+                          {
+                            jdPosition,
+                            primarySkills,
+                            secondarySkills,
+                            knowledgeOnly,
+                            specialInstructions,
+                            jdText,
+                          },
+                          {
+                            setJdPosition,
+                            setPrimarySkills,
+                            setSecondarySkills,
+                            setKnowledgeOnly,
+                            setSpecialInstructions,
+                            setJdText,
+                          },
+                        );
                       }
                     } catch (error) {
                       // Silent fail - parsing is optional

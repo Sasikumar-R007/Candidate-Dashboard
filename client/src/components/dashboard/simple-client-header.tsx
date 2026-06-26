@@ -324,6 +324,13 @@ export default function SimpleClientHeader({
     if (section === "newCandidates") onOpenPipeline?.();
   };
 
+  const handleReplyToComment = (row: NotificationPanelRow) => {
+    if (!row.applicationId) return;
+    setShowNotifications(false);
+    dispatchOpenCommentSession(row.applicationId, { focusComposer: true });
+    onOpenPipeline?.();
+  };
+
   const headerUnreadCount = useMemo(
     () => visibleNotificationRows.filter((r) => r.isUnread).length,
     [visibleNotificationRows],
@@ -419,15 +426,10 @@ export default function SimpleClientHeader({
               <span className="relative inline-flex">
                 <Bell size={18} />
                 {headerUnreadCount > 0 && (
-                  <>
-                    <span
-                      className="absolute -right-0.5 -top-0.5 z-10 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
-                      aria-hidden
-                    />
-                    <span className="absolute -right-1 -top-1 hidden min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white md:flex">
-                      {headerUnreadCount > 99 ? "99+" : headerUnreadCount}
-                    </span>
-                  </>
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white"
+                    aria-hidden
+                  />
                 )}
               </span>
             </button>
@@ -577,6 +579,7 @@ export default function SimpleClientHeader({
               onRetry={() => void refetchNotificationFeed()}
               onDismiss={dismissNotification}
               onNavigate={(section, row) => handlePanelNavigate(section, row)}
+              onReplyToComment={handleReplyToComment}
             />
           </div>
         </>

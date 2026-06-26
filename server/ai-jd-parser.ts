@@ -70,3 +70,36 @@ export async function parseJDWithAI(text: string): Promise<any> {
     return null;
   }
 }
+
+function readJdFieldFromText(text: string, pattern: RegExp): string | null {
+  const match = text.match(pattern);
+  const value = match?.[1]?.trim();
+  return value ? value.replace(/\s{2,}/g, " ").slice(0, 500) : null;
+}
+
+/** Regex fallback when AI parsing is unavailable or returns empty fields. */
+export function extractBasicJdFieldsFromText(jdText: string) {
+  const text = jdText || "";
+  const position =
+    readJdFieldFromText(text, /(?:position|role|job title|title)\s*[:\-]\s*([^\n]+)/i) ||
+    readJdFieldFromText(text, /(?:looking for|seeking|hiring)\s*[:\-]?\s*([^\n]+)/i);
+
+  const primarySkills =
+    readJdFieldFromText(text, /(?:primary|mandatory|required|core)\s+skills?\s*[:\-]\s*([^\n]+)/i) ||
+    readJdFieldFromText(text, /(?:must have|must-have)\s*[:\-]?\s*([^\n]+)/i);
+
+  const secondarySkills =
+    readJdFieldFromText(text, /(?:secondary|preferred|nice to have|good to have)\s+skills?\s*[:\-]\s*([^\n]+)/i);
+
+  const knowledgeOnly =
+    readJdFieldFromText(text, /(?:knowledge only|tools?|technologies?)\s*[:\-]\s*([^\n]+)/i);
+
+  return {
+    position,
+    primarySkills,
+    secondarySkills,
+    knowledgeOnly,
+    experience: readJdFieldFromText(text, /(?:experience|years of experience)\s*[:\-]\s*([^\n]+)/i),
+    location: readJdFieldFromText(text, /(?:location|work location|job location)\s*[:\-]\s*([^\n]+)/i),
+  };
+}

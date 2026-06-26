@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Settings, KeyRound, LogOut, HelpCircle, Bell, MessageCircle, Briefcase, Users, CheckCircle, Calendar } from "lucide-react";
+import { ChevronDown, Settings, KeyRound, LogOut, HelpCircle, Bell, MessageCircle, Briefcase, Users, CheckCircle, Calendar, Info } from "lucide-react";
 import NotificationPanel, {
   type NotificationNavigateSection,
   type NotificationPanelRow,
@@ -18,6 +18,11 @@ import { formatEmployeeRoleDisplay } from "@/lib/employee-display";
 import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
 import { useNotificationSound } from "@/hooks/use-notification-sound";
 import { dispatchOpenCommentSession } from "@/lib/open-comment-session";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  EmployeeMobilePipelineInfoDialog,
+  getEmployeeMobilePipelineInfoSeenKey,
+} from "@/components/dashboard/employee-mobile-pipeline-info-dialog";
 
 interface AdminTopHeaderProps {
   companyName?: string;
@@ -56,6 +61,7 @@ type EmployeeNotificationFeed = {
   closures: EmployeeNotificationItem[];
   newCandidateApplied: EmployeeNotificationItem[];
   candidateComments?: EmployeeNotificationItem[];
+  staffosOnboard?: EmployeeNotificationItem[];
   unreadCount: number;
 };
 
@@ -117,6 +123,8 @@ export default function AdminTopHeader({
     readDismissedNotificationKeys(dismissedStorageKey),
   );
   const [profileImgError, setProfileImgError] = useState(false);
+  const [showMobilePipelineInfo, setShowMobilePipelineInfo] = useState(false);
+  const isMobile = useIsMobile();
 
   const userRole = employee?.role || "admin";
   const normalizedRole = (userRole || "").toLowerCase().replace(/[\s-]+/g, "_");
@@ -126,6 +134,24 @@ export default function AdminTopHeader({
     normalizedRole === "recruiter" ||
     normalizedRole === "talent_advisor" ||
     normalizedRole === "ta";
+  const employeeMobileHeader = isMobile && (isAdmin || isTL || isTA);
+
+  useEffect(() => {
+    if (!employeeMobileHeader || !employee?.id) return;
+    const storageKey = getEmployeeMobilePipelineInfoSeenKey(employee.id);
+    if (!storageKey) return;
+    if (localStorage.getItem(storageKey) !== "1") {
+      setShowMobilePipelineInfo(true);
+    }
+  }, [employeeMobileHeader, employee?.id]);
+
+  const handleMobilePipelineInfoOpenChange = (open: boolean) => {
+    setShowMobilePipelineInfo(open);
+    if (!open && employee?.id) {
+      const storageKey = getEmployeeMobilePipelineInfoSeenKey(employee.id);
+      if (storageKey) localStorage.setItem(storageKey, "1");
+    }
+  };
 
   const { data: activities = [], isLoading: activitiesLoading } = useQuery<UserActivity[]>({
     queryKey: ['/api/user-activities', userRole],
@@ -546,6 +572,9 @@ export default function AdminTopHeader({
     if (row.kind === "candidateComment") {
       dismissNotificationMutation.mutate({ kind: "candidateComment", id: row.id });
     }
+    if (row.kind === "staffosOnboard") {
+      dismissNotificationMutation.mutate({ kind: "staffosOnboard", id: row.id });
+    }
   };
 
   const mergedRows = useMemo<FeedRow[]>(() => {
@@ -579,12 +608,14 @@ export default function AdminTopHeader({
     } else if (isTL) {
       pushRows("newRequirement", employeeFeed.newRequirements);
       pushRows("candidateComment", employeeFeed.candidateComments ?? []);
+      pushRows("staffosOnboard", employeeFeed.staffosOnboard ?? []);
       pushRows("nudge", employeeFeed.nudges);
       pushRows("escalatedNudge", employeeFeed.escalatedNudges);
       pushRows("closure", employeeFeed.closures);
     } else {
       pushRows("newRequirement", employeeFeed.newRequirements);
       pushRows("candidateComment", employeeFeed.candidateComments ?? []);
+      pushRows("staffosOnboard", employeeFeed.staffosOnboard ?? []);
       pushRows("nudge", employeeFeed.nudges);
       pushRows("escalatedNudge", employeeFeed.escalatedNudges);
       pushRows("closure", employeeFeed.closures);
@@ -656,6 +687,13 @@ export default function AdminTopHeader({
     navigateForSection(section);
   };
 
+  const handleReplyToComment = (row: NotificationPanelRow) => {
+    if (!row.applicationId) return;
+    dispatchOpenCommentSession(row.applicationId, { focusComposer: true });
+    setShowNotifications(false);
+    onNavigateToSection?.("pipeline");
+  };
+
   const handleActOnNudge = async (row: NotificationPanelRow) => {
     if (row.nudgeId) {
       try {
@@ -689,15 +727,17 @@ export default function AdminTopHeader({
   };
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 z-30 sticky top-0">
+    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-4 md:px-6 z-30 sticky top-0">
       <div className="flex items-center min-w-0">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate pl-2">
-          {companyName}
-        </h1>
+        <div className="min-w-0 pl-1">
+          <h1 className="truncate text-base font-semibold text-gray-900 dark:text-gray-100 md:text-lg md:pl-2">
+            {employeeMobileHeader ? "StaffOS" : companyName}
+          </h1>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {!hideHelpButton && (
+      <div className="flex items-center gap-2 md:gap-4">
+        {!hideHelpButton && !employeeMobileHeader && (
           <button 
             onClick={onHelpClick}
             className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -708,6 +748,18 @@ export default function AdminTopHeader({
           </button>
         )}
 
+        {(isAdmin || isTL || isTA) && employeeMobileHeader ? (
+          <button
+            type="button"
+            onClick={() => setShowMobilePipelineInfo(true)}
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Mobile pipeline view information"
+            data-testid="button-mobile-pipeline-info"
+          >
+            <Info size={18} strokeWidth={2} />
+          </button>
+        ) : null}
+
         {(isAdmin || isTL || isTA) && (
           <div className="relative notification-panel-container">
             <button
@@ -716,7 +768,7 @@ export default function AdminTopHeader({
                 setShowUserDropdown(false);
                 setShowNotifications((prev) => !prev);
               }}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 md:h-10 md:w-10 md:rounded-xl"
               aria-label="Notifications"
               data-testid="button-header-notification"
             >
@@ -737,7 +789,7 @@ export default function AdminTopHeader({
                     aria-label="Close notifications"
                     onClick={() => setShowNotifications(false)}
                   />
-                  <div className="notification-panel-container fixed right-0 top-16 z-[250] flex h-[calc(100vh-4rem)] w-[min(96vw,720px)] flex-col overflow-hidden rounded-l-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+                  <div className="notification-panel-container fixed inset-x-3 top-[4.25rem] z-[250] flex max-h-[min(85vh,calc(100vh-5.5rem))] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)] text-sm sm:inset-x-auto sm:right-0 sm:top-16 sm:max-h-none sm:h-[calc(100vh-4rem)] sm:w-[min(96vw,720px)] sm:rounded-none sm:rounded-l-3xl md:text-base">
                     <NotificationPanel
                       rows={panelRows}
                       tabs={notificationTabs}
@@ -751,6 +803,7 @@ export default function AdminTopHeader({
                       onDismiss={dismissNotification}
                       onNavigate={handlePanelNavigate}
                       onActOnNudge={isAdmin ? handleActOnNudge : undefined}
+                      onReplyToComment={handleReplyToComment}
                     />
                   </div>
                 </>,
@@ -761,98 +814,136 @@ export default function AdminTopHeader({
 
         <div className="relative user-dropdown-container">
           <button
-            onClick={() => setShowUserDropdown(!showUserDropdown)}
-            className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            onClick={() => {
+              setShowNotifications(false);
+              setShowUserDropdown(!showUserDropdown);
+            }}
+            className={
+              employeeMobileHeader
+                ? "flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 hover:ring-2 hover:ring-blue-100"
+                : "flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            }
             data-testid="button-user-dropdown"
           >
             {profilePictureSrc && !profileImgError ? (
               <img
                 src={profilePictureSrc}
                 alt={userName}
-                className="h-9 w-9 rounded-full object-cover"
+                className={employeeMobileHeader ? "h-9 w-9 rounded-full object-cover shadow-sm" : "h-9 w-9 rounded-full object-cover"}
                 onError={() => setProfileImgError(true)}
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+              <div
+                className={
+                  employeeMobileHeader
+                    ? "flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-semibold text-white shadow-sm"
+                    : "w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium"
+                }
+              >
+                {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
               </div>
             )}
-            <div className="flex flex-col items-start">
-              <span className="text-sm font-medium" data-testid="text-profile-name">{userName}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-profile-role">{displayRole}</span>
-            </div>
-            <ChevronDown 
-              size={16} 
-              className={`transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} 
-            />
+            {!employeeMobileHeader ? (
+              <>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-medium" data-testid="text-profile-name">{userName}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-profile-role">{displayRole}</span>
+                </div>
+                <ChevronDown 
+                  size={16} 
+                  className={`transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} 
+                />
+              </>
+            ) : null}
           </button>
+
+          {showUserDropdown && employeeMobileHeader ? (
+            <button
+              type="button"
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+              onClick={() => setShowUserDropdown(false)}
+              aria-label="Close profile menu"
+              data-testid="employee-profile-menu-backdrop"
+            />
+          ) : null}
 
           {showUserDropdown && (
             <div
-              className="absolute right-0 top-full mt-3 w-72 rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.18)] z-50"
+              className={
+                employeeMobileHeader
+                  ? "absolute right-0 top-full z-50 mt-2 w-[min(100vw-2rem,18rem)] rounded-xl border border-gray-200 bg-white p-3 shadow-xl"
+                  : "absolute right-0 top-full mt-3 w-72 rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.18)] z-50"
+              }
               onClick={(e) => e.stopPropagation()}
             >
-            <div className="mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3">
+            <div className={`mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3 ${employeeMobileHeader ? "py-2.5" : ""}`}>
                 {profilePictureSrc && !profileImgError ? (
                   <img
                     src={profilePictureSrc}
                     alt={userName}
-                    className="h-11 w-11 rounded-2xl object-cover"
+                    className={`rounded-2xl object-cover ${employeeMobileHeader ? "h-9 w-9" : "h-11 w-11"}`}
                     onError={() => setProfileImgError(true)}
                   />
                 ) : (
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-base font-semibold">
+                  <div className={`rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white font-semibold ${employeeMobileHeader ? "h-9 w-9 text-sm" : "w-11 h-11 text-base"}`}>
                     {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
-                  <p className="truncate text-xs text-slate-500">{displayRole}</p>
+                  <p className={`truncate font-semibold text-slate-900 ${employeeMobileHeader ? "text-xs" : "text-sm"}`}>{userName}</p>
+                  <p className={`truncate text-slate-500 ${employeeMobileHeader ? "text-[11px]" : "text-xs"}`}>{displayRole}</p>
                 </div>
               </div>
 
               <div className="space-y-1">
                 <button
                   onClick={handleProfileSettings}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  className={`flex w-full items-center gap-3 text-left font-medium text-slate-700 transition hover:bg-slate-100 ${
+                    employeeMobileHeader ? "rounded-xl px-3 py-2.5 text-xs" : "rounded-2xl px-3 py-3 text-sm"
+                  }`}
                   data-testid="button-profile-settings"
                 >
-                  <Settings size={17} />
+                  <Settings size={employeeMobileHeader ? 15 : 17} />
                   <span>Profile Settings</span>
                 </button>
 
                 <button
                   onClick={handlePasswordChange}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  className={`flex w-full items-center gap-3 text-left font-medium text-slate-700 transition hover:bg-slate-100 ${
+                    employeeMobileHeader ? "rounded-xl px-3 py-2.5 text-xs" : "rounded-2xl px-3 py-3 text-sm"
+                  }`}
                   data-testid="button-change-password"
                 >
-                  <KeyRound size={17} />
+                  <KeyRound size={employeeMobileHeader ? 15 : 17} />
                   <span>Change Password</span>
                 </button>
 
-                {(isAdmin || isTL || isTA) && (
+                {employeeMobileHeader && !hideHelpButton && onHelpClick ? (
                   <button
                     type="button"
                     onClick={() => {
                       setShowUserDropdown(false);
-                      setShowNotifications(true);
+                      onHelpClick();
                     }}
-                    className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                    data-testid="button-header-help-mobile"
                   >
-                    <Bell size={17} />
-                    <span>Notifications</span>
+                    <HelpCircle size={15} />
+                    <span>Help</span>
                   </button>
-                )}
+                ) : null}
 
                 <div className="my-2 border-t border-slate-200" />
 
                 <button
                   onClick={handleLogout}
                   disabled={logoutMutation.isPending}
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-rose-500 transition hover:bg-rose-50 disabled:opacity-50"
+                  className={`flex w-full items-center gap-3 text-left font-medium text-rose-500 transition hover:bg-rose-50 disabled:opacity-50 ${
+                    employeeMobileHeader ? "rounded-xl px-3 py-2.5 text-xs" : "rounded-2xl px-3 py-3 text-sm"
+                  }`}
                   data-testid="button-admin-header-logout"
                 >
-                  <LogOut size={17} />
+                  <LogOut size={employeeMobileHeader ? 15 : 17} />
                   <span>{logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}</span>
                 </button>
               </div>
@@ -879,6 +970,13 @@ export default function AdminTopHeader({
         isOpen={isChangePasswordModalOpen}
         onClose={() => setIsChangePasswordModalOpen(false)}
       />
+
+      {employeeMobileHeader ? (
+        <EmployeeMobilePipelineInfoDialog
+          open={showMobilePipelineInfo}
+          onOpenChange={handleMobilePipelineInfoOpenChange}
+        />
+      ) : null}
     </header>
   );
 }

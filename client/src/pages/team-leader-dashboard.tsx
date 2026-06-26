@@ -8,6 +8,7 @@ import TeamLeaderPerformanceGauge from '@/components/dashboard/team-leader-perfo
 import AllQuartersTargetDialog from '@/components/dashboard/all-quarters-target-dialog';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-description-details-modal';
+import { JdVisibilityModal } from '@/components/dashboard/modals/jd-visibility-modal';
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
@@ -34,6 +35,7 @@ import {
   getRequirementLookupId,
   getRequirementTaSplitMeta,
   getRequirementSplitBadgeLabel,
+  parseRequirementJdVisibility,
   resolveRequirementDisplayId,
 } from "@shared/requirement-jd-extras";
 import { getRequirementResumeTarget } from "@shared/constants";
@@ -73,6 +75,7 @@ import {
   mapTeamLeaderPipelineCandidate,
 } from '@/lib/pipeline-session-utils';
 import { useOpenCommentSessionListener } from '@/lib/open-comment-session';
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TlPipelineTab } from '@/components/dashboard/tl-pipeline-tab';
 import { ClosureReportsCardList } from '@/components/dashboard/closure-reports-card-list';
 
@@ -168,6 +171,7 @@ export default function TeamLeaderDashboard() {
   const { user, isLoading } = useAuth();
   const employee = useEmployeeAuth();
   const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
+  const isMobile = useIsMobile();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   
   // ALL useState hooks MUST be here at the top, before any conditionals
@@ -185,11 +189,21 @@ export default function TeamLeaderDashboard() {
     const handleNotificationNavigate = (event: Event) => {
       const detail = (event as CustomEvent<{ tab?: string; storageKey?: string }>).detail;
       if (detail?.storageKey && detail.storageKey !== "tlDashboardSidebarTab") return;
+      if (isMobile) {
+        setSidebarTab("pipeline");
+        return;
+      }
       if (detail?.tab) setSidebarTab(detail.tab);
     };
     window.addEventListener("staffos-notification-navigate", handleNotificationNavigate);
     return () => window.removeEventListener("staffos-notification-navigate", handleNotificationNavigate);
-  }, []);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (isMobile && sidebarTab !== "pipeline") {
+      setSidebarTab("pipeline");
+    }
+  }, [isMobile, sidebarTab]);
 
   const [selectedChatRoom, setSelectedChatRoom] = useState<string | null>(null);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
@@ -210,6 +224,10 @@ export default function TeamLeaderDashboard() {
   >([{ talentAdvisor: "", noOfPositions: "1" }, { talentAdvisor: "", noOfPositions: "1" }]);
   const [selectedJD, setSelectedJD] = useState<Requirement | null>(null);
   const [isJDPreviewModalOpen, setIsJDPreviewModalOpen] = useState(false);
+  const [isJdVisibilityModalOpen, setIsJdVisibilityModalOpen] = useState(false);
+  const [jdVisibilityRequirement, setJdVisibilityRequirement] = useState<any | null>(null);
+  const [jdVisibilityValue, setJdVisibilityValue] = useState(true);
+  const [pendingJobStatusById, setPendingJobStatusById] = useState<Record<string, string>>({});
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
   const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
@@ -692,8 +710,10 @@ export default function TeamLeaderDashboard() {
               <div className="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-700">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</p>
                 <Select
-                  value={String(job.status || 'Active')}
-                  onValueChange={(value) => updateRecruiterJobMutation.mutate({ id: job.id, data: { status: value } })}
+                  value={pendingJobStatusById[job.id] ?? String(job.status || 'Active')}
+                  onValueChange={(value) =>
+                    setPendingJobStatusById((prev) => ({ ...prev, [job.id]: value }))
+                  }
                 >
                   <SelectTrigger className="mt-1 h-8 w-full text-xs border-slate-200 bg-slate-50">
                     <SelectValue placeholder="Status" />
@@ -704,6 +724,28 @@ export default function TeamLeaderDashboard() {
                     <SelectItem value="Closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button
+                  size="sm"
+                  className="mt-2 h-7 w-full rounded bg-blue-600 px-2 text-[11px] text-white hover:bg-blue-700"
+                  onClick={() => {
+                    const nextStatus = pendingJobStatusById[job.id] ?? String(job.status || "Active");
+                    updateRecruiterJobMutation.mutate(
+                      { id: job.id, data: { status: nextStatus } },
+                      {
+                        onSuccess: () => {
+                          setPendingJobStatusById((prev) => {
+                            const next = { ...prev };
+                            delete next[job.id];
+                            return next;
+                          });
+                        },
+                      },
+                    );
+                  }}
+                  disabled={updateRecruiterJobMutation.isPending}
+                >
+                  Save Changes
+                </Button>
               </div>
             </div>
             <div className="mt-4 flex justify-between items-center">
@@ -805,6 +847,54 @@ export default function TeamLeaderDashboard() {
       });
     },
   });
+
+  const updateJdVisibilityMutation = useMutation({
+    mutationFn: async ({
+      requirementId,
+      showToCandidate,
+    }: {
+      requirementId: string;
+      showToCandidate: boolean;
+    }) => {
+      const response = await apiRequest("PATCH", `/api/requirements/${requirementId}/jd-visibility`, {
+        showToCandidate,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || "Failed to update JD visibility");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/requirements'] });
+      setIsJdVisibilityModalOpen(false);
+      toast({
+        title: "JD visibility updated",
+        description: "Candidate visibility preference saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message || "Could not save JD visibility.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openJdVisibilityModal = (requirement: any) => {
+    const visibility = parseRequirementJdVisibility(requirement);
+    setJdVisibilityRequirement(requirement);
+    setJdVisibilityValue(visibility.showToCandidate);
+    setIsJdVisibilityModalOpen(true);
+  };
+
+  const handleSaveJdVisibility = () => {
+    const requirementId = jdVisibilityRequirement?.id;
+    if (!requirementId) return;
+    updateJdVisibilityMutation.mutate({ requirementId, showToCandidate: jdVisibilityValue });
+  };
 
   const handleAssign = (requirement: Requirement) => {
     setSelectedRequirement(requirement);
@@ -1823,19 +1913,24 @@ export default function TeamLeaderDashboard() {
                                         <MoreVertical className="h-4 w-4 text-gray-600" />
                                       </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-40">
-                                      {(requirement.jdFile || requirement.jdText) && (
-                                        <DropdownMenuItem
-                                          className="cursor-pointer"
-                                          onClick={() => {
-                                            setSelectedJD(requirement);
-                                            setIsJDPreviewModalOpen(true);
-                                          }}
-                                        >
-                                          <Eye className="mr-2 h-4 w-4" />
-                                          View JD
-                                        </DropdownMenuItem>
-                                      )}
+                                    <DropdownMenuContent align="end" className="w-52">
+                                      <DropdownMenuItem
+                                        className="cursor-pointer"
+                                        onClick={() => {
+                                          setSelectedJD(requirement);
+                                          setIsJDPreviewModalOpen(true);
+                                        }}
+                                      >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View JD
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="cursor-pointer"
+                                        onClick={() => openJdVisibilityModal(requirement)}
+                                      >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        JD Visibility
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem
                                         className="cursor-pointer"
                                         onClick={() => handleAssign(requirement)}
@@ -2279,6 +2374,25 @@ export default function TeamLeaderDashboard() {
           variant="delivery"
           subtitle="Review the job description for this requirement."
         />
+        <JdVisibilityModal
+          open={isJdVisibilityModalOpen}
+          onOpenChange={setIsJdVisibilityModalOpen}
+          requirementLabel={resolveRequirementDisplayId(jdVisibilityRequirement)}
+          value={jdVisibilityValue}
+          onValueChange={setJdVisibilityValue}
+          onSave={handleSaveJdVisibility}
+          isSaving={updateJdVisibilityMutation.isPending}
+          audit={
+            jdVisibilityRequirement
+              ? {
+                  showToCandidate: parseRequirementJdVisibility(jdVisibilityRequirement).showToCandidate,
+                  updatedByRole: parseRequirementJdVisibility(jdVisibilityRequirement).updatedByRole,
+                  updatedByName: parseRequirementJdVisibility(jdVisibilityRequirement).updatedByName,
+                  updatedAt: parseRequirementJdVisibility(jdVisibilityRequirement).updatedAt,
+                }
+              : null
+          }
+        />
       </div>
     );
   };
@@ -2346,66 +2460,78 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderPipelineContent = () => {
+    const pipelineTab = (
+      <TlPipelineTab
+        isLoading={isLoadingPipeline}
+        isError={isErrorPipeline}
+        isEmpty={
+          !isLoadingPipeline &&
+          !isErrorPipeline &&
+          (!Array.isArray(pipelineData) || pipelineData.length === 0)
+        }
+        groupedByStage={groupedPipelineCandidates}
+        onCandidateClick={handlePipelineCandidateClick}
+        selectedRecruiter={selectedPipelineRecruiter}
+        onRecruiterChange={setSelectedPipelineRecruiter}
+        teamMembers={teamMembers}
+        pipelineDate={pipelineDate}
+        onPipelineDateChange={setPipelineDate}
+        pipelineView={pipelineView}
+        candidateSession={
+          sessionApplicationId ? (
+            <CandidateCommentsSession
+              applicationId={sessionApplicationId}
+              fallbackApplicant={sessionApplicantSnapshot}
+              pipelineApplicants={tlPipelineSessionList}
+              onSelectApplicant={handleSelectSessionApplicant}
+              onBack={handleCloseCandidateSession}
+            />
+          ) : null
+        }
+        closureReportsFooter={
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
+              {closureData.length > 5 && (
+                <Button
+                  variant="outline"
+                  className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                  style={{ borderRadius: 6 }}
+                  onClick={() => setIsViewClosuresModalOpen(true)}
+                  data-testid="button-view-closures"
+                >
+                  View More
+                </Button>
+              )}
+            </div>
+            <ClosureReportsCardList
+              reports={tlClosureReportsForPipeline}
+              isLoading={isLoadingClosures}
+              emptyMessage="No closures yet."
+              maxRows={5}
+            />
+          </div>
+        }
+      />
+    );
+
+    if (isMobile) {
+      return (
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {pipelineTab}
+        </div>
+      );
+    }
+
     return (
-      <div className="flex min-h-screen">
+      <div className="employee-pipeline-tab-layout flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="ml-16 flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
           <AdminTopHeader
             companyName="Delivery Workspace"
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
-          <div className="flex h-[calc(100vh-64px)] min-h-0 flex-col overflow-hidden">
-            <TlPipelineTab
-              isLoading={isLoadingPipeline}
-              isError={isErrorPipeline}
-              isEmpty={
-                !isLoadingPipeline &&
-                !isErrorPipeline &&
-                (!Array.isArray(pipelineData) || pipelineData.length === 0)
-              }
-              groupedByStage={groupedPipelineCandidates}
-              onCandidateClick={handlePipelineCandidateClick}
-              selectedRecruiter={selectedPipelineRecruiter}
-              onRecruiterChange={setSelectedPipelineRecruiter}
-              teamMembers={teamMembers}
-              pipelineDate={pipelineDate}
-              onPipelineDateChange={setPipelineDate}
-              pipelineView={pipelineView}
-              candidateSession={
-                sessionApplicationId ? (
-                  <CandidateCommentsSession
-                    applicationId={sessionApplicationId}
-                    fallbackApplicant={sessionApplicantSnapshot}
-                    pipelineApplicants={tlPipelineSessionList}
-                    onSelectApplicant={handleSelectSessionApplicant}
-                    onBack={handleCloseCandidateSession}
-                  />
-                ) : null
-              }
-              closureReportsFooter={
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Closure Reports</h3>
-                    {closureData.length > 5 && (
-                      <Button
-                        variant="outline"
-                        className="border-blue-600 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
-                        style={{ borderRadius: 6 }}
-                        onClick={() => setIsViewClosuresModalOpen(true)}
-                        data-testid="button-view-closures"
-                      >
-                        View More
-                      </Button>
-                    )}
-                  </div>
-                  <ClosureReportsCardList
-                    reports={tlClosureReportsForPipeline}
-                    isLoading={isLoadingClosures}
-                    emptyMessage="No closures yet."
-                    maxRows={5}
-                  />
-                </div>
-              }
-            />
+          <div className="employee-pipeline-tab-scroll flex min-h-0 flex-1 flex-col overflow-hidden">
+            {pipelineTab}
           </div>
         </div>
       </div>
@@ -3688,12 +3814,39 @@ export default function TeamLeaderDashboard() {
   };
 
   return (
-    <div className="min-h-screen">
-      <TeamLeaderMainSidebar 
-        activeTab={sidebarTab} 
-        onTabChange={setSidebarTab} 
-      />
-      {renderMainContent()}
+    <div
+      className={
+        isMobile
+          ? "flex min-h-screen flex-col bg-gray-50"
+          : "min-h-screen"
+      }
+    >
+      {isMobile ? (
+        <>
+          <AdminTopHeader
+            companyName="Delivery Workspace"
+            onHelpClick={() => setIsHelpChatOpen(true)}
+            onNavigateToSection={() => setSidebarTab("pipeline")}
+          />
+          <div className="tl-mobile-pipeline-only flex min-h-0 flex-1 flex-col overflow-hidden">
+            <style>{`.tl-mobile-pipeline-only .ml-16 { margin-left: 0 !important; }`}</style>
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              style={{ height: "calc(100dvh - 4rem)" }}
+            >
+              {renderMainContent()}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <TeamLeaderMainSidebar
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+          />
+          {renderMainContent()}
+        </>
+      )}
 
       <PostJobModal
         isOpen={isPostJobModalOpen}

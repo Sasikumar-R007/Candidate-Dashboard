@@ -11,6 +11,10 @@ export type ClientJdSourceDetails = RequirementJdExtras & {
   allSkills?: string[];
   submittedBy?: string;
   submittedAt?: string;
+  jdVisibilityToCandidate?: boolean;
+  jdVisibilityUpdatedByRole?: string | null;
+  jdVisibilityUpdatedByName?: string | null;
+  jdVisibilityUpdatedAt?: string | null;
 };
 
 const STR_ROLE_ID_PATTERN = /^STR\d{5}$/;
@@ -387,6 +391,71 @@ export function parseRequirementJdExtras(requirement: {
     knowledgeOnly: requirement.knowledgeOnly ?? null,
     specialInstructions: requirement.specialInstructions ?? null,
   };
+}
+
+export type RequirementJdVisibility = {
+  showToCandidate: boolean;
+  updatedByRole: string | null;
+  updatedByName: string | null;
+  updatedAt: string | null;
+};
+
+export function parseRequirementJdVisibility(requirement: {
+  sourceDetails?: string | null;
+} | null | undefined): RequirementJdVisibility {
+  const fallback: RequirementJdVisibility = {
+    showToCandidate: true,
+    updatedByRole: null,
+    updatedByName: null,
+    updatedAt: null,
+  };
+  if (!requirement?.sourceDetails?.trim()) return fallback;
+  try {
+    const parsed = JSON.parse(requirement.sourceDetails) as Partial<ClientJdSourceDetails>;
+    return {
+      showToCandidate: parsed.jdVisibilityToCandidate !== false,
+      updatedByRole:
+        typeof parsed.jdVisibilityUpdatedByRole === "string"
+          ? parsed.jdVisibilityUpdatedByRole
+          : null,
+      updatedByName:
+        typeof parsed.jdVisibilityUpdatedByName === "string"
+          ? parsed.jdVisibilityUpdatedByName
+          : null,
+      updatedAt:
+        typeof parsed.jdVisibilityUpdatedAt === "string"
+          ? parsed.jdVisibilityUpdatedAt
+          : null,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function mergeRequirementJdVisibilityInSourceDetails(
+  existingSourceDetails: string | null | undefined,
+  visibility: {
+    showToCandidate: boolean;
+    updatedByRole?: string | null;
+    updatedByName?: string | null;
+    updatedAt?: string | null;
+  },
+): string {
+  let base: Record<string, unknown> = {};
+  if (existingSourceDetails?.trim()) {
+    try {
+      base = JSON.parse(existingSourceDetails) as Record<string, unknown>;
+    } catch {
+      base = {};
+    }
+  }
+  return JSON.stringify({
+    ...base,
+    jdVisibilityToCandidate: visibility.showToCandidate,
+    jdVisibilityUpdatedByRole: visibility.updatedByRole ?? null,
+    jdVisibilityUpdatedByName: visibility.updatedByName ?? null,
+    jdVisibilityUpdatedAt: visibility.updatedAt ?? new Date().toISOString(),
+  });
 }
 
 export function enrichRequirementWithJdExtras<T extends Record<string, unknown>>(requirement: T): T & RequirementJdExtras {

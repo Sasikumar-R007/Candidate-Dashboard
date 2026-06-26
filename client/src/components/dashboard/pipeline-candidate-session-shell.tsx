@@ -42,7 +42,7 @@ export function PipelineCandidateSessionShell({
   const sessionOpen = mode === "candidate-session" && showSession && session;
 
   return (
-    <div className={cn("relative h-full min-h-0 overflow-hidden", className)}>
+    <div className={cn("pipeline-candidate-session-shell relative h-full min-h-0 overflow-hidden", className)}>
       <div
         className={cn(
           "h-full min-h-0 transition-all ease-out",

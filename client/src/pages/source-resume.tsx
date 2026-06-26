@@ -47,6 +47,17 @@ import { useAuth } from "@/contexts/auth-context";
 import type { Employee } from "@shared/schema";
 import { formatEducationDisplay, extractPrimaryInstitution } from "@shared/education-format";
 import {
+  buildActiveFilterChips,
+  calculateRequirementMatchScore,
+  calculateRecencyScore,
+  getMatchTier,
+  getMatchTierLabel,
+  mergeRequirementIntoFilters,
+  scoreRecommendedCandidate,
+  SOURCE_RESUME_MATCH_WEIGHTS,
+  type ActiveFilterChip,
+} from "@shared/source-resume-match";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -2216,6 +2227,103 @@ const SourceResume = () => {
     });
   };
 
+  const handleRequirementSelection = (requirementId: string | undefined) => {
+    if (!requirementId) {
+      setFilters((prev) => ({ ...prev, selectedRequirementId: undefined }));
+      return;
+    }
+
+    const requirement = requirements.find((r: { id: string }) => r.id === requirementId);
+    setFilters((prev) => {
+      if (!requirement) {
+        return { ...prev, selectedRequirementId: requirementId };
+      }
+      return mergeRequirementIntoFilters(
+        requirement,
+        { ...prev, selectedRequirementId: requirementId },
+        { experience: initialFilters.experience },
+      );
+    });
+    setSortOption("relevance");
+    toast({
+      title: "AI Match Mode Enabled",
+      description: requirement
+        ? "Filters updated from requirement where empty. Candidates ranked by requirement fit."
+        : "Candidates will be scored against this requirement",
+    });
+  };
+
+  const handleRemoveFilterChip = (chip: ActiveFilterChip) => {
+    if (chip.id === "requirement") {
+      handleRequirementSelection(undefined);
+      return;
+    }
+    if (chip.id === "boolean-query") {
+      setFilters((prev) => ({ ...prev, searchQuery: "" }));
+      return;
+    }
+    if (chip.id === "experience") {
+      setFilters((prev) => ({ ...prev, experience: initialFilters.experience }));
+      return;
+    }
+    if (chip.id === "notice") {
+      setFilters((prev) => ({ ...prev, noticePeriod: "" }));
+      return;
+    }
+    if (chip.id === "ctc") {
+      setFilters((prev) => ({ ...prev, ctcMin: "", ctcMax: "" }));
+      return;
+    }
+    if (chip.id.startsWith("role-")) {
+      const value = chip.id.slice(5);
+      setFilters((prev) => ({ ...prev, role: prev.role.filter((r) => r !== value) }));
+      return;
+    }
+    if (chip.id.startsWith("skill-")) {
+      handleSpecificSkillRemove(chip.id.slice(6));
+      return;
+    }
+    if (chip.id.startsWith("kw-")) {
+      handleKeywordRemove(chip.id.slice(3));
+      return;
+    }
+    if (chip.id.startsWith("loc-")) {
+      const value = chip.id.slice(4);
+      setFilters((prev) => ({ ...prev, location: prev.location.filter((l) => l !== value) }));
+      return;
+    }
+    if (chip.id.startsWith("pref-")) {
+      const value = chip.id.slice(5);
+      setFilters((prev) => ({
+        ...prev,
+        preferredLocation: prev.preferredLocation.filter((l) => l !== value),
+      }));
+      return;
+    }
+    if (chip.id.startsWith("ug-")) {
+      const value = chip.id.slice(3);
+      setFilters((prev) => ({ ...prev, educationUG: prev.educationUG.filter((c) => c !== value) }));
+      return;
+    }
+    if (chip.id.startsWith("pg-")) {
+      const value = chip.id.slice(3);
+      setFilters((prev) => ({ ...prev, educationPG: prev.educationPG.filter((c) => c !== value) }));
+      return;
+    }
+    if (chip.id.startsWith("co-")) {
+      const value = chip.id.slice(3);
+      setFilters((prev) => ({ ...prev, company: prev.company.filter((c) => c !== value) }));
+      return;
+    }
+    if (chip.id.startsWith("ex-kw-")) {
+      handleExcludeKeywordRemove(chip.id.slice(6));
+      return;
+    }
+    if (chip.id.startsWith("ex-co-")) {
+      handleExcludeCompanyRemove(chip.id.slice(6));
+    }
+  };
+
   const handleExcludeCompanyAdd = (company: string) => {
     if (company && !filters.excludedCompanies.includes(company)) {
       setFilters({ ...filters, excludedCompanies: [...filters.excludedCompanies, company] });
@@ -2518,56 +2626,24 @@ const SourceResume = () => {
     });
   };
 
-  // Calculate comprehensive relevance score for a candidate
+  // Calculate comprehensive relevance score for a candidate (aligned with server weights)
   const calculateRelevanceScore = (candidate: CandidateDisplay, matchedTerms: string[] = []): number => {
-    let score = 0;
-    
-    // Base search score (from boolean search or simple search)
-    if (debouncedSearchQuery.trim()) {
-      if (filters.booleanMode) {
-        const searchResult = parseAdvancedBooleanSearch(debouncedSearchQuery, candidate);
-        score += searchResult.score * 0.4; // 40% weight
-      } else {
-        const searchTerms = extractSearchTerms(debouncedSearchQuery);
-        const searchText = getCandidateSearchText(candidate);
-        let matchCount = 0;
-        for (const term of searchTerms) {
-          if (fuzzyMatch(searchText, term, 0.7)) matchCount++;
-        }
-        score += (matchCount / searchTerms.length) * 50 * 0.4;
-      }
-    }
-    
-    // Skill match score (highest weight)
+    const weights = SOURCE_RESUME_MATCH_WEIGHTS.relevance;
+    const scoreParts: number[] = [];
+    const partWeights: number[] = [];
+
     if (filters.specificSkills.length > 0) {
-      const skillsText = candidate.skills.join(' ').toLowerCase();
+      const skillsText = candidate.skills.join(" ").toLowerCase();
       let skillMatchCount = 0;
       for (const skill of filters.specificSkills) {
         if (fuzzyMatch(skillsText, skill.toLowerCase(), 0.75)) {
           skillMatchCount++;
         }
       }
-      score += (skillMatchCount / filters.specificSkills.length) * 100 * 0.3; // 30% weight
+      scoreParts.push((skillMatchCount / filters.specificSkills.length) * 100);
+      partWeights.push(weights.specificSkills);
     }
-    
-    // Experience relevance (proximity to filter range)
-    const expMid = (filters.experience[0] + filters.experience[1]) / 2;
-    const expDiff = Math.abs(candidate.experience - expMid);
-    const expRange = filters.experience[1] - filters.experience[0];
-    if (expRange > 0) {
-      const expScore = Math.max(0, 1 - (expDiff / expRange)) * 100;
-      score += expScore * 0.1; // 10% weight
-    }
-    
-    // Recency score (based on last seen/created)
-    if (candidate.createdAt) {
-      const createdDate = new Date(candidate.createdAt);
-      const daysSinceCreation = (currentTime.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-      const recencyScore = Math.max(0, 100 - (daysSinceCreation / 30) * 10); // Decay over 30 days
-      score += recencyScore * 0.1; // 10% weight
-    }
-    
-    // Title similarity (if role filter is set)
+
     const roleFilters = normalizeFilterValues(filters.role);
     if (roleFilters.length > 0) {
       const titleSimilarity = Math.max(
@@ -2575,69 +2651,60 @@ const SourceResume = () => {
           calculateSimilarity(candidate.title.toLowerCase(), role.toLowerCase()),
         ),
       );
-      score += titleSimilarity * 100 * 0.1; // 10% weight
+      scoreParts.push(titleSimilarity * 100);
+      partWeights.push(weights.role);
     }
-    
+
+    if (debouncedSearchQuery.trim()) {
+      let queryScore = 0;
+      if (filters.booleanMode) {
+        const searchResult = parseAdvancedBooleanSearch(debouncedSearchQuery, candidate);
+        queryScore = searchResult.score * 100;
+      } else {
+        const searchTerms = extractSearchTerms(debouncedSearchQuery);
+        const searchText = getCandidateSearchText(candidate);
+        let matchCount = 0;
+        for (const term of searchTerms) {
+          if (fuzzyMatch(searchText, term, 0.7)) matchCount++;
+        }
+        queryScore = searchTerms.length > 0 ? (matchCount / searchTerms.length) * 100 : 0;
+      }
+      scoreParts.push(queryScore);
+      partWeights.push(weights.searchQuery);
+    }
+
+    if (scoreParts.length === 0) {
+      return 0;
+    }
+
+    const recencyScore = calculateRecencyScore(
+      { createdAt: candidate.createdAt },
+      currentTime,
+    );
+    scoreParts.push(recencyScore);
+    partWeights.push(weights.recency);
+
+    const totalWeight = partWeights.reduce((sum, w) => sum + w, 0);
+    const score = scoreParts.reduce((sum, value, i) => sum + value * partWeights[i], 0) / totalWeight;
     return Math.min(100, Math.round(score));
   };
-  
-  // Calculate match percentage for requirement (if selected)
+
+  // Calculate match percentage for requirement (shared scoring engine)
   const calculateRequirementMatch = (candidate: CandidateDisplay, requirement: any): number => {
     if (!requirement) return 0;
-    
-    let matchScore = 0;
-    let totalWeight = 0;
-    
-    // Skills match
-    if (requirement.skills || requirement.requiredSkills) {
-      const reqSkills = requirement.skills || requirement.requiredSkills || [];
-      const candidateSkills = candidate.skills.map(s => s.toLowerCase());
-      let skillMatches = 0;
-      for (const reqSkill of reqSkills) {
-        if (candidateSkills.some(cs => cs.includes(reqSkill.toLowerCase()) || reqSkill.toLowerCase().includes(cs))) {
-          skillMatches++;
-        }
-      }
-      if (reqSkills.length > 0) {
-        const skillScore = (skillMatches / reqSkills.length) * 100;
-        matchScore += skillScore * 0.4;
-        totalWeight += 0.4;
-      }
-    }
-    
-    // Experience match
-    if (requirement.experience) {
-      const reqExp = parseFloat(requirement.experience) || 0;
-      const expDiff = Math.abs(candidate.experience - reqExp);
-      const expScore = Math.max(0, 100 - (expDiff * 10));
-      matchScore += expScore * 0.2;
-      totalWeight += 0.2;
-    }
-    
-    // Location match
-    if (requirement.location) {
-      const locationMatch = candidate.location.toLowerCase().includes(requirement.location.toLowerCase()) ||
-                           candidate.preferredLocation.toLowerCase().includes(requirement.location.toLowerCase());
-      matchScore += (locationMatch ? 100 : 0) * 0.15;
-      totalWeight += 0.15;
-    }
-    
-    // Title/Role match
-    if (requirement.position || requirement.jobTitle) {
-      const reqTitle = (requirement.position || requirement.jobTitle).toLowerCase();
-      const titleSimilarity = calculateSimilarity(candidate.title.toLowerCase(), reqTitle);
-      matchScore += titleSimilarity * 100 * 0.15;
-      totalWeight += 0.15;
-    }
-    
-    // Education match
-    if (requirement.education) {
-      const eduMatch = candidate.education.toLowerCase().includes(requirement.education.toLowerCase());
-      matchScore += (eduMatch ? 100 : 0) * 0.1;
-      totalWeight += 0.1;
-    }
-    
-    return totalWeight > 0 ? Math.round(matchScore / totalWeight) : 0;
+    return calculateRequirementMatchScore(
+      {
+        skills: candidate.skills,
+        experience: candidate.experience,
+        location: candidate.location,
+        preferredLocation: candidate.preferredLocation,
+        designation: candidate.title,
+        currentRole: candidate.title,
+        title: candidate.title,
+        education: candidate.education,
+      },
+      requirement,
+    );
   };
   
   // Sort candidates based on sort option
@@ -2899,61 +2966,31 @@ const SourceResume = () => {
 
     const scored = allDisplayCandidates
       .filter((c) => !searchResultIds.has(c.id))
-      .map((candidate) => {
-        let score = 0;
-
-        if (activeRequirement) {
-          score += calculateRequirementMatch(candidate, activeRequirement) * 0.5;
-        }
-
-        if (filters.keywords.length > 0) {
-          const searchText = getCandidateSearchText(candidate);
-          const kwMatches = filters.keywords.filter((kw) =>
-            searchText.includes(kw.toLowerCase()),
-          ).length;
-          score += (kwMatches / filters.keywords.length) * 35;
-        }
-
-        if (filters.specificSkills.length > 0) {
-          const skMatches = filters.specificSkills.filter((sk) =>
-            candidate.skills.some((s) => s.toLowerCase().includes(sk.toLowerCase())),
-          ).length;
-          score += (skMatches / filters.specificSkills.length) * 25;
-        }
-
-        const roleFilters = normalizeFilterValues(filters.role);
-        if (roleFilters.length > 0) {
-          score +=
-            Math.max(
-              ...roleFilters.map((role) =>
-                calculateSimilarity(candidate.title.toLowerCase(), role.toLowerCase()),
-              ),
-            ) * 15;
-        }
-
-        const locationFilters = normalizeFilterValues(filters.location);
-        if (locationFilters.length > 0) {
-          const matchesLocation = locationFilters.some(
-            (loc) =>
-              candidate.location.toLowerCase().includes(loc.toLowerCase()) ||
-              candidate.preferredLocation.toLowerCase().includes(loc.toLowerCase()),
-          );
-          if (matchesLocation) {
-            score += 10;
-          }
-        }
-
-        if (selectedCandidate && selectedCandidate.id !== candidate.id) {
-          const commonSkills = candidate.skills.filter((s) =>
-            selectedCandidate.skills.some(
-              (ss) => ss.toLowerCase() === s.toLowerCase(),
-            ),
-          ).length;
-          score += Math.min(15, commonSkills * 4);
-        }
-
-        return { candidate, score };
-      })
+      .map((candidate) => ({
+        candidate,
+        score: scoreRecommendedCandidate(
+          {
+            skills: candidate.skills,
+            experience: candidate.experience,
+            location: candidate.location,
+            preferredLocation: candidate.preferredLocation,
+            designation: candidate.title,
+            currentRole: candidate.title,
+            title: candidate.title,
+            company: candidate.currentCompany,
+            createdAt: candidate.createdAt,
+          },
+          {
+            requirement: activeRequirement,
+            keywords: filters.keywords,
+            specificSkills: filters.specificSkills,
+            roles: normalizeFilterValues(filters.role),
+            locations: normalizeFilterValues(filters.location),
+            selectedCandidateSkills: selectedCandidate?.skills,
+            searchText: getCandidateSearchText(candidate),
+          },
+        ),
+      }))
       .filter((x) => x.score > 12)
       .sort((a, b) => b.score - a.score);
 
@@ -3329,6 +3366,17 @@ const SourceResume = () => {
     [requirements],
   );
 
+  const activeFilterChips = useMemo(() => {
+    const selectedReq = requirements.find(
+      (r: { id: string; position?: string; company?: string }) =>
+        r.id === filters.selectedRequirementId,
+    );
+    const requirementLabel = selectedReq
+      ? `${selectedReq.position || ""} - ${selectedReq.company || ""}`.trim()
+      : undefined;
+    return buildActiveFilterChips(filters, requirementLabel);
+  }, [filters, requirements]);
+
   const tagConfirmDialog = (
     <AlertDialog
       open={tagConfirmOpen}
@@ -3511,14 +3559,7 @@ const SourceResume = () => {
               <Select
                 value={filters.selectedRequirementId || 'none'}
                 onValueChange={(value) => {
-                  const requirementId = value === 'none' ? undefined : value;
-                  setFilters({ ...filters, selectedRequirementId: requirementId });
-                  if (requirementId) {
-                    toast({
-                      title: "AI Match Mode Enabled",
-                      description: "Candidates will be scored against this requirement",
-                    });
-                  }
+                  handleRequirementSelection(value === 'none' ? undefined : value);
                 }}
               >
                 <SelectTrigger className={`${SR_SELECT_TRIGGER} bg-gradient-to-r from-blue-50 to-sky-50 border-blue-300`}>
@@ -3557,6 +3598,18 @@ const SourceResume = () => {
                   </p>
                 </div>
               )}
+            </div>
+            {/* Designation / Role — priority filter */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Designation
+              </label>
+              <MultiFilterableDropdown
+                values={filters.role}
+                onChange={(values) => setFilters({ ...filters, role: values })}
+                options={allRoles}
+                placeholder="All roles"
+              />
             </div>
             {/* Skills Search */}
             <div>
@@ -3758,6 +3811,84 @@ const SourceResume = () => {
               </div>
             </div>
 
+            {/* Current Location */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Current Location
+              </label>
+              <MultiFilterableDropdown
+                values={filters.location}
+                onChange={(values) => setFilters({ ...filters, location: values })}
+                options={locations.map(l => l.label)}
+                placeholder="All locations"
+              />
+            </div>
+
+            {/* Preferred Location */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Preferred Location
+              </label>
+              <MultiFilterableDropdown
+                values={filters.preferredLocation}
+                onChange={(values) => setFilters({ ...filters, preferredLocation: values })}
+                options={locations.map(l => l.label)}
+                placeholder="Any location"
+              />
+            </div>
+
+            {/* Notice Period */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Notice period
+              </label>
+              <FilterableDropdown
+                value={filters.noticePeriod}
+                onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
+                options={allNoticePeriods}
+                placeholder="Any"
+              />
+            </div>
+
+            {/* Education UG */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Education UG
+              </label>
+              <MultiFilterableDropdown
+                values={filters.educationUG}
+                onChange={(values) => setFilters({ ...filters, educationUG: values })}
+                options={allEducationUG}
+                placeholder="Select undergraduate degree(s)"
+              />
+            </div>
+
+            {/* Education PG */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Education PG
+              </label>
+              <MultiFilterableDropdown
+                values={filters.educationPG}
+                onChange={(values) => setFilters({ ...filters, educationPG: values })}
+                options={allEducationPG}
+                placeholder="Select postgraduate degree(s)"
+              />
+            </div>
+
+            {/* Company */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Company
+              </label>
+              <MultiFilterableDropdown
+                values={filters.company}
+                onChange={(values) => setFilters({ ...filters, company: values })}
+                options={allCompanies}
+                placeholder="All companies"
+              />
+            </div>
+
             {/* CTC Range */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -3796,97 +3927,6 @@ const SourceResume = () => {
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Current Location */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Current Location
-              </label>
-              <MultiFilterableDropdown
-                values={filters.location}
-                onChange={(values) => setFilters({ ...filters, location: values })}
-                options={locations.map(l => l.label)}
-                placeholder="All locations"
-              />
-            </div>
-
-            {/* Designation */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Designation
-              </label>
-              <MultiFilterableDropdown
-                values={filters.role}
-                onChange={(values) => setFilters({ ...filters, role: values })}
-                options={allRoles}
-                placeholder="All roles"
-              />
-            </div>
-
-            {/* Notice Period */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Notice period
-              </label>
-              <FilterableDropdown
-                value={filters.noticePeriod}
-                onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
-                options={allNoticePeriods}
-                placeholder="Any"
-              />
-            </div>
-
-            {/* Company */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Company
-              </label>
-              <MultiFilterableDropdown
-                values={filters.company}
-                onChange={(values) => setFilters({ ...filters, company: values })}
-                options={allCompanies}
-                placeholder="All companies"
-              />
-            </div>
-
-            {/* Preferred Location */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Preferred Location
-              </label>
-              <MultiFilterableDropdown
-                values={filters.preferredLocation}
-                onChange={(values) => setFilters({ ...filters, preferredLocation: values })}
-                options={locations.map(l => l.label)}
-                placeholder="Any location"
-              />
-            </div>
-
-            {/* Education UG */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Education UG
-              </label>
-              <MultiFilterableDropdown
-                values={filters.educationUG}
-                onChange={(values) => setFilters({ ...filters, educationUG: values })}
-                options={allEducationUG}
-                placeholder="Select undergraduate degree(s)"
-              />
-            </div>
-
-            {/* Education PG */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Education PG
-              </label>
-              <MultiFilterableDropdown
-                values={filters.educationPG}
-                onChange={(values) => setFilters({ ...filters, educationPG: values })}
-                options={allEducationPG}
-                placeholder="Select postgraduate degree(s)"
-              />
             </div>
 
             {/* Employment Type */}
@@ -4168,19 +4208,21 @@ const SourceResume = () => {
                 <span className="text-xs text-gray-600 font-semibold">
                   {searchResults?.pagination?.totalCount || displayCandidates.length} {(searchResults?.pagination?.totalCount || displayCandidates.length) === 1 ? 'Candidate' : 'Candidates'} Found
                 </span>
-                {/* Active Filter Chips */}
-                {(filters.keywords.length > 0 || filters.location.length > 0 || filters.role.length > 0 || filters.searchQuery.trim() || filters.experience[0] > 0 || filters.experience[1] < 15) && (
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {filters.keywords.slice(0, 3).map((keyword) => (
+                {/* Active Filter Chips — priority order */}
+                {activeFilterChips.length > 0 && (
+                  <div className="flex items-center gap-1 flex-wrap max-w-xl">
+                    {activeFilterChips.slice(0, 8).map((chip) => (
                       <span
-                        key={keyword}
+                        key={chip.id}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        title={chip.category}
                       >
-                        {keyword}
+                        {chip.label}
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleKeywordRemove(keyword);
+                            handleRemoveFilterChip(chip);
                           }}
                           className="hover:text-blue-900"
                         >
@@ -4188,8 +4230,10 @@ const SourceResume = () => {
                         </button>
                       </span>
                     ))}
-                    {filters.keywords.length > 3 && (
-                      <span className="text-xs text-gray-500">+{filters.keywords.length - 3} more</span>
+                    {activeFilterChips.length > 8 && (
+                      <span className="text-xs text-gray-500">
+                        +{activeFilterChips.length - 8} more
+                      </span>
                     )}
                   </div>
                 )}
@@ -4380,31 +4424,47 @@ const SourceResume = () => {
                               {/* Relevance Score Badge */}
                               {hasActiveSearchCriteria &&
                                 'relevanceScore' in candidate &&
-                                candidate.relevanceScore > 0 && (
+                                candidate.relevanceScore > 0 && (() => {
+                                  const tier = getMatchTier(candidate.relevanceScore);
+                                  const tierLabel = getMatchTierLabel(tier);
+                                  return (
                                 <span 
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    candidate.relevanceScore >= 80 
+                                    tier === 'strong'
                                       ? 'bg-green-100 text-green-800' 
-                                      : candidate.relevanceScore >= 60 
+                                      : tier === 'good'
                                       ? 'bg-yellow-100 text-yellow-800' 
+                                      : tier === 'possible'
+                                      ? 'bg-orange-100 text-orange-800'
                                       : 'bg-gray-100 text-gray-800'
                                   }`}
-                                  title="Search Match — how well this profile matches your keywords, skills, and search query"
+                                  title="Search Match — skills, role, keywords, and recency"
                                 >
-                                  {candidate.relevanceScore}% Match
+                                  {candidate.relevanceScore}% Match{tierLabel ? ` · ${tierLabel}` : ''}
                                 </span>
-                              )}
+                                  );
+                                })()}
                               {filters.selectedRequirementId &&
                                 'matchPercentage' in candidate &&
                                 candidate.matchPercentage !== undefined &&
-                                candidate.matchPercentage > 0 && (
+                                candidate.matchPercentage > 0 && (() => {
+                                  const tier = getMatchTier(candidate.matchPercentage);
+                                  const tierLabel = getMatchTierLabel(tier);
+                                  return (
                                 <span 
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
-                                  title="Req Fit — how well this profile fits the selected requirement (AI Match Mode)"
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    tier === 'strong'
+                                      ? 'bg-purple-200 text-purple-900'
+                                      : tier === 'good'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-purple-50 text-purple-700'
+                                  }`}
+                                  title="Req Fit — role, skills, experience, and location from selected requirement"
                                 >
-                                  {candidate.matchPercentage}% Fit
+                                  {candidate.matchPercentage}% Fit{tierLabel ? ` · ${tierLabel}` : ''}
                                 </span>
-                              )}
+                                  );
+                                })()}
                             </div>
                             <p className="text-blue-600 font-medium">
                               {candidate.title && candidate.title !== 'Not Available'
@@ -4788,6 +4848,9 @@ const SourceResume = () => {
         <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900">Recommended candidates</h2>
+            <p className="mt-1 text-xs text-gray-500 leading-relaxed">
+              Profiles not in your current results, ranked by requirement fit, role, skills, and filters.
+            </p>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {recommendedCandidates.length === 0 ? (
@@ -4937,6 +5000,34 @@ const SourceResume = () => {
             >
               <RotateCw className="w-5 h-5 text-gray-600" />
             </button>
+          </div>
+
+          {/* AI Match Mode */}
+          <div className={SR_SECTION_CARD}>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Match Mode</h2>
+            <p className="text-sm text-gray-600 mb-3">
+              Select a requirement to auto-fill empty filters and rank candidates by requirement fit.
+            </p>
+            <Select
+              value={filters.selectedRequirementId || "none"}
+              onValueChange={(value) => {
+                handleRequirementSelection(value === "none" ? undefined : value);
+              }}
+            >
+              <SelectTrigger className={`${SR_SELECT_TRIGGER} bg-gradient-to-r from-blue-50 to-sky-50 border-blue-300 max-w-md`}>
+                <SelectValue placeholder="Select requirement for AI matching" />
+              </SelectTrigger>
+              <SelectContent className={SR_FILTER_SELECT_CONTENT}>
+                <SelectItem value="none" className={SR_FILTER_SELECT_ITEM}>
+                  None (General Search)
+                </SelectItem>
+                {sortedRequirementsForTag.map((req: any) => (
+                  <SelectItem key={req.id} value={req.id} className={SR_FILTER_SELECT_ITEM}>
+                    {req.position} - {req.company}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Keywords Section */}

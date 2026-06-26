@@ -4,15 +4,34 @@ export const OPEN_COMMENT_SESSION_EVENT = "staffos-open-comment-session";
 
 export type OpenCommentSessionDetail = {
   applicationId: string;
+  focusComposer?: boolean;
 };
 
-export function dispatchOpenCommentSession(applicationId: string) {
+export type OpenCommentSessionOptions = {
+  focusComposer?: boolean;
+};
+
+export function getFocusCommentComposerStorageKey(applicationId: string) {
+  return `staffos-focus-comment-composer:${applicationId}`;
+}
+
+export function dispatchOpenCommentSession(
+  applicationId: string,
+  options?: OpenCommentSessionOptions,
+) {
   if (!applicationId) {
     return;
   }
+  if (options?.focusComposer) {
+    try {
+      sessionStorage.setItem(getFocusCommentComposerStorageKey(applicationId), "1");
+    } catch {
+      // non-blocking
+    }
+  }
   window.dispatchEvent(
     new CustomEvent<OpenCommentSessionDetail>(OPEN_COMMENT_SESSION_EVENT, {
-      detail: { applicationId },
+      detail: { applicationId, focusComposer: options?.focusComposer },
     }),
   );
 }

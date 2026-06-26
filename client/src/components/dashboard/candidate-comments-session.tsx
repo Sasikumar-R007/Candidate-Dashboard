@@ -50,6 +50,7 @@ import {
   isTerminalRejectedStatus,
   parseTerminalOutcome,
 } from "@/lib/pipeline-session-utils";
+import { getFocusCommentComposerStorageKey } from "@/lib/open-comment-session";
 
 const BTN_RADIUS = "rounded-[6px]";
 
@@ -647,6 +648,7 @@ export function CandidateCommentsSession({
   const [commentText, setCommentText] = useState("");
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionAnchor, setMentionAnchor] = useState(0);
+  const [mentionHighlightIndex, setMentionHighlightIndex] = useState(0);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -728,6 +730,19 @@ export function CandidateCommentsSession({
       setMobileSessionTab("details");
     }
   }, [applicationId]);
+
+  useEffect(() => {
+    const key = getFocusCommentComposerStorageKey(applicationId);
+    try {
+      if (!sessionStorage.getItem(key)) return;
+      sessionStorage.removeItem(key);
+      requestAnimationFrame(() => {
+        commentInputRef.current?.focus();
+      });
+    } catch {
+      // non-blocking
+    }
+  }, [applicationId, sessionLoading, sessionFetching]);
 
   useEffect(() => {
     if (isSwitching && !sessionFetching && !sessionLoading) {
@@ -944,6 +959,10 @@ export function CandidateCommentsSession({
       (m) => m.id !== currentUserId && m.name.toLowerCase().includes(q),
     );
   }, [mentionQuery, sessionMembers, currentUserId]);
+
+  useEffect(() => {
+    setMentionHighlightIndex(0);
+  }, [mentionQuery, mentionCandidates.length]);
 
   const syncMentionState = (value: string, cursor: number) => {
     const beforeCursor = value.slice(0, cursor);
@@ -1195,7 +1214,7 @@ export function CandidateCommentsSession({
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col bg-white text-gray-900"
+      className="flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-white text-gray-900"
       data-testid="candidate-comments-session"
     >
       {/* Mobile: compact header + Details / Comments tabs */}
@@ -1329,14 +1348,21 @@ export function CandidateCommentsSession({
             >
               <div
                 className={cn(
-                  "mb-5 flex min-h-0 flex-col overflow-hidden border border-gray-200 bg-gray-50 shadow-sm sm:min-h-[112px] sm:flex-row",
+                  "mb-5 flex min-h-0 flex-col overflow-hidden border border-gray-200 bg-gray-50 shadow-sm sm:flex-row",
                   BTN_RADIUS,
                 )}
               >
-                <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4 sm:pr-3">
-                  <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 gap-3 p-4">
+                  <CandidateProfilePhoto
+                    name={displayName}
+                    imageUrl={profilePictureUrl}
+                    className="h-12 w-12 shrink-0 sm:h-14 sm:w-14"
+                    compact
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+                    <div className="flex items-start justify-between gap-2">
                     <h2
-                      className="min-w-0 flex-1 text-xl font-semibold leading-tight text-gray-900"
+                      className="min-w-0 flex-1 text-lg font-semibold leading-tight text-gray-900 sm:text-xl"
                       data-testid="text-session-candidate-name"
                     >
                       {displayName}
@@ -1374,11 +1400,12 @@ export function CandidateCommentsSession({
                       />
                     )}
                   </div>
+                  </div>
                 </div>
 
                 {(appliedRoleTitle || appliedCompanyName) && (
                   <div
-                    className="flex w-full shrink-0 flex-col justify-center border-t border-blue-100 bg-blue-50/80 px-3 py-3 text-left sm:max-w-[200px] sm:border-l sm:border-t-0 sm:text-right md:w-[min(11rem,34%)]"
+                    className="flex w-full shrink-0 flex-col justify-center border-t border-blue-100 bg-blue-50/80 px-4 py-3 text-left sm:max-w-[200px] sm:border-l sm:border-t-0 sm:px-3 sm:text-right md:w-[min(11rem,34%)]"
                     data-testid="session-applied-requirement"
                   >
                     <p className="text-xs font-medium text-blue-800">Applied for</p>
@@ -1400,14 +1427,6 @@ export function CandidateCommentsSession({
                     )}
                   </div>
                 )}
-
-                <div className="flex h-28 w-full shrink-0 border-t border-gray-200 bg-white p-2 sm:h-auto sm:w-[min(38%,148px)] sm:max-w-[148px] sm:self-stretch sm:border-l sm:border-t-0">
-                  <CandidateProfilePhoto
-                    name={displayName}
-                    imageUrl={profilePictureUrl}
-                    className="h-full w-full"
-                  />
-                </div>
               </div>
 
               <ContactDetailCard
@@ -1530,7 +1549,7 @@ export function CandidateCommentsSession({
                 title="Resume"
                 actions={
                   resumeUrl ? (
-                    <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                       <Button
                         size="sm"
                         className={cn("w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto", BTN_RADIUS)}
@@ -1578,8 +1597,8 @@ export function CandidateCommentsSession({
 
         <section
           className={cn(
-            "min-h-0 w-full flex-col bg-[#eef2f7] text-gray-900 md:min-h-0 md:w-[42%] md:max-w-[42%] md:flex-none",
-            mobileSessionTab === "comments" ? "flex flex-1" : "hidden",
+            "min-h-0 w-full flex-col overflow-hidden bg-[#eef2f7] text-gray-900 md:min-h-0 md:w-[42%] md:max-w-[42%] md:flex-none",
+            mobileSessionTab === "comments" ? "flex h-full max-h-full flex-1" : "hidden",
             "md:flex",
           )}
           aria-label="Candidate Comments"
@@ -1670,7 +1689,7 @@ export function CandidateCommentsSession({
                 <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               </div>
             ) : displayComments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="flex flex-col items-center justify-center py-8 text-center md:py-16">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
                   <Users className="h-5 w-5 text-blue-600" />
                 </div>
@@ -1709,7 +1728,7 @@ export function CandidateCommentsSession({
               taCommentsRail ? "px-3 py-2.5" : "px-3 py-3 sm:px-4",
             )}
           >
-            <div className="mb-2">
+            <div className="mb-2 hidden md:block">
               <p className={cn("text-[11px] text-gray-600")}>
                 {apiMode === "client"
                   ? "Shared with your hiring team on this application."
@@ -1727,17 +1746,22 @@ export function CandidateCommentsSession({
                   <p className="border-b border-gray-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                     Mention someone
                   </p>
-                  {mentionCandidates.map((member) => {
+                  {mentionCandidates.map((member, index) => {
                     const palette = memberPaletteForId(member.id);
+                    const isHighlighted = index === mentionHighlightIndex;
                     return (
                       <button
                         key={member.id}
                         type="button"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50"
+                        className={cn(
+                          "flex w-full items-center gap-2 px-3 py-2 text-left",
+                          isHighlighted ? "bg-blue-100" : "hover:bg-blue-50",
+                        )}
                         onMouseDown={(e) => {
                           e.preventDefault();
                           insertMention(member);
                         }}
+                        onMouseEnter={() => setMentionHighlightIndex(index)}
                       >
                         <ChatMemberAvatar name={member.name} memberId={member.id} size="sm" />
                         <div className="min-w-0">
@@ -1762,8 +1786,22 @@ export function CandidateCommentsSession({
                   onChange={(e) => handleCommentChange(e.target.value)}
                   onKeyDown={(e) => {
                     if (mentionQuery !== null && mentionCandidates.length > 0) {
-                      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab") {
+                      if (e.key === "ArrowDown") {
                         e.preventDefault();
+                        setMentionHighlightIndex((prev) => (prev + 1) % mentionCandidates.length);
+                        return;
+                      }
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setMentionHighlightIndex(
+                          (prev) => (prev - 1 + mentionCandidates.length) % mentionCandidates.length,
+                        );
+                        return;
+                      }
+                      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                        e.preventDefault();
+                        const member = mentionCandidates[mentionHighlightIndex];
+                        if (member) insertMention(member);
                         return;
                       }
                       if (e.key === "Escape") {
@@ -1804,9 +1842,6 @@ export function CandidateCommentsSession({
                 </button>
               </div>
             </div>
-            {posterName && (
-              <p className="mt-1.5 text-[11px] text-gray-500">Posting as {posterName}</p>
-            )}
           </div>
         </section>
       </div>
@@ -1963,9 +1998,9 @@ function DetailCardWithActions({
 }) {
   return (
     <div className={cn("mb-4 border border-gray-200 bg-white p-4 shadow-sm", BTN_RADIUS)}>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        {actions}
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="shrink-0 text-sm font-semibold text-gray-900">{title}</h3>
+        {actions ? <div className="w-full min-w-0 sm:w-auto">{actions}</div> : null}
       </div>
       {children}
     </div>
@@ -1985,10 +2020,12 @@ function CandidateProfilePhoto({
   name,
   imageUrl,
   className,
+  compact = false,
 }: {
   name: string;
   imageUrl?: string | null;
   className?: string;
+  compact?: boolean;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const showImage = Boolean(imageUrl) && !imgFailed;
@@ -1996,7 +2033,8 @@ function CandidateProfilePhoto({
   return (
     <div
       className={cn(
-        "relative min-h-[96px] w-full overflow-hidden bg-white",
+        "relative shrink-0 overflow-hidden bg-white",
+        compact ? "rounded-lg" : "min-h-[96px] w-full",
         BTN_RADIUS,
         className,
       )}
@@ -2009,6 +2047,8 @@ function CandidateProfilePhoto({
           className="h-full w-full object-cover"
           onError={() => setImgFailed(true)}
         />
+      ) : compact ? (
+        <AvatarInitials name={name} size="sm" className="h-full w-full text-sm" />
       ) : (
         <AvatarInitials name={name} variant="card" />
       )}
@@ -2299,11 +2339,13 @@ function AvatarInitials({
   size,
   variant = "round",
   dark = false,
+  className,
 }: {
   name: string;
   size?: "sm" | "lg";
   variant?: "round" | "card";
   dark?: boolean;
+  className?: string;
 }) {
   const initials =
     name
@@ -2337,6 +2379,7 @@ function AvatarInitials({
         dark
           ? "bg-gradient-to-br from-blue-600 to-indigo-700"
           : "bg-gradient-to-br from-blue-500 to-indigo-600",
+        className,
       )}
     >
       {initials}

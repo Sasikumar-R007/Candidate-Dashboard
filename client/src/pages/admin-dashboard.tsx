@@ -126,6 +126,7 @@ import {
   mapAdminPipelineCandidate,
 } from "@/lib/pipeline-session-utils";
 import { useOpenCommentSessionListener } from "@/lib/open-comment-session";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AdminPipelineTab } from "@/components/dashboard/admin-pipeline-tab";
 import { ClosureReportsCardList } from "@/components/dashboard/closure-reports-card-list";
 import { useEmployeeAuth } from "@/contexts/auth-context";
@@ -984,6 +985,7 @@ export default function AdminDashboard() {
   const { requirementsReady, pipelineReady, closuresReady } = useStaggeredDashboardLoad();
   const [, navigate] = useLocation();
   const [profileData, setProfileData] = useState<any>(null);
+  const isMobile = useIsMobile();
 
   // Load profile data for chat
   useEffect(() => {
@@ -1049,6 +1051,12 @@ export default function AdminDashboard() {
   };
 
   const [activeTab, setActiveTab] = useState(initialActiveTab());
+
+  useEffect(() => {
+    if (isMobile && sidebarTab !== "pipeline") {
+      setSidebarTab("pipeline");
+    }
+  }, [isMobile, sidebarTab]);
   const [requirementsVisible, setRequirementsVisible] = useState(10);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
@@ -9221,7 +9229,7 @@ export default function AdminDashboard() {
           color: #f8fafc !important;
         }
       `}</style>
-      <div className="pl-11">
+      <div className={isMobile ? "" : "pl-11"}>
         <AdminTopHeader
           companyName="Scaling Theory"
           onHelpClick={() => setIsChatOpen(true)}
@@ -9240,12 +9248,24 @@ export default function AdminDashboard() {
           }}
         />
       </div>
-      <div className="flex flex-1">
-        <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} hasUnreadNudges={hasUnreadNudges} />
-        <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
+      <div className={`flex flex-1 ${isMobile ? "admin-mobile-pipeline-only" : ""}`}>
+        {isMobile ? (
+          <style>{`.admin-mobile-pipeline-only .ml-16 { margin-left: 0 !important; }`}</style>
+        ) : null}
+        {!isMobile && (
+          <AdminSidebar
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+            hasUnreadNudges={hasUnreadNudges}
+          />
+        )}
+        <div
+          className="flex-1 ml-16 flex flex-col overflow-hidden max-md:ml-0 max-md:overflow-hidden"
+          style={isMobile ? { height: "calc(100dvh - 4rem)" } : { height: "calc(100vh - 4rem)" }}
+        >
           {renderSidebarContent()}
         </div>
-        {sidebarTab === 'dashboard' && <TeamMembersSidebar />}
+        {!isMobile && sidebarTab === 'dashboard' && <TeamMembersSidebar />}
       </div>
 
       {/* Recruiter Details Modal */}

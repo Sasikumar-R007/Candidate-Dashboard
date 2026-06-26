@@ -15,7 +15,9 @@ import {
   extractStreqId,
   mergeDisplayRequirementIdInSourceDetails,
   mergeDisplayRoleIdInSourceDetails,
+  mergeRequirementJdVisibilityInSourceDetails,
   parseRequirementJdExtras,
+  parseRequirementJdVisibility,
   resolveDisplayRoleId,
   type RequirementJdExtras,
 } from "@shared/requirement-jd-extras";
@@ -211,7 +213,7 @@ function calculateQuartersSince(joiningDate: string | Date | null | undefined): 
 }
 
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
-import { parseResumeFile, parseBulkResumes } from "./resume-parser";
+import { parseResumeFile, parseBulkResumes, extractTextFromFile } from "./resume-parser";
 import { normalizeParsedSkills } from "./parsed-field-format";
 import { normalizeParsedEducation, extractPrimaryInstitution } from "@shared/education-format";
 import { buildResumeMergePreview } from "./resume-profile-merge";
@@ -229,7 +231,7 @@ import {
 } from "./staffos-onboard-server";
 import { startStaffosInviteReminderScheduler } from "./staffos-invite-reminders";
 import { applyCorsHeaders } from "./cors-config";
-import { parseJDWithAI } from "./ai-jd-parser";
+import { parseJDWithAI, extractBasicJdFieldsFromText } from "./ai-jd-parser";
 import {
   sendEmployeeWelcomeEmail,
   sendCandidateWelcomeEmail,
@@ -244,6 +246,7 @@ import {
   buildSearchQuery,
   getSortOrder,
   calculateRelevanceScore,
+  getFilterValues,
   normalizeSkills,
   parseAndNormalizeSkills,
   candidateMatchesBooleanQuery,
@@ -947,6 +950,14 @@ async function buildEmployeeNotificationsFeed(employee: any) {
     return [] as Awaited<ReturnType<typeof getEmployeeCommentNotifications>>;
   });
 
+  const staffosOnboard =
+    isTA || isTL
+      ? await getEmployeeStaffosOnboardNotifications(employee.id).catch((err) => {
+          console.error("[notifications-feed] staffosOnboard failed:", err);
+          return [] as Awaited<ReturnType<typeof getEmployeeStaffosOnboardNotifications>>;
+        })
+      : [];
+
   const toIso = (value: any): string | null => {
     if (!value) return null;
     const d = new Date(value);
@@ -1132,12 +1143,14 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       closures,
       newCandidateApplied: [],
       candidateComments,
+      staffosOnboard,
       unreadCount:
         newRequirements.filter((i) => i.isUnread).length +
         nudges.filter((i) => i.isUnread).length +
         escalatedNudges.filter((i) => i.isUnread).length +
         closures.filter((i) => i.isUnread).length +
-        candidateComments.filter((i) => i.isUnread).length,
+        candidateComments.filter((i) => i.isUnread).length +
+        staffosOnboard.filter((i) => i.isUnread).length,
     };
   }
 
@@ -1345,13 +1358,15 @@ async function buildEmployeeNotificationsFeed(employee: any) {
       closures,
       newCandidateApplied,
       candidateComments,
+      staffosOnboard,
       unreadCount:
         newRequirements.filter((i) => i.isUnread).length +
         nudges.filter((i) => i.isUnread).length +
         escalatedNudges.filter((i) => i.isUnread).length +
         closures.filter((i) => i.isUnread).length +
         newCandidateApplied.filter((i) => i.isUnread).length +
-        candidateComments.filter((i) => i.isUnread).length,
+        candidateComments.filter((i) => i.isUnread).length +
+        staffosOnboard.filter((i) => i.isUnread).length,
     };
   }
 
@@ -2045,6 +2060,36 @@ async function getEmployeeCommentNotifications(employeeId: string) {
   }));
 }
 
+const STAFFOS_ONBOARD_NOTIFICATION_TYPES = [
+  "candidate_application_confirmed",
+  "candidate_staffos_invite_expired",
+] as const;
+
+async function getEmployeeStaffosOnboardNotifications(employeeId: string) {
+  const { notifications: notificationsTable } = await import("@shared/schema");
+  const rows = await db
+    .select()
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.userId, employeeId),
+        inArray(notificationsTable.type, [...STAFFOS_ONBOARD_NOTIFICATION_TYPES]),
+        eq(notificationsTable.status, "unread"),
+      ),
+    )
+    .orderBy(desc(notificationsTable.createdAt))
+    .limit(50);
+
+  return rows.map((row) => ({
+    id: row.id,
+    line: row.message || row.title || "StaffOS application update",
+    createdAt: row.createdAt,
+    isUnread: row.status === "unread",
+    applicationId: row.relatedJobId,
+    notificationType: row.type,
+  }));
+}
+
 async function collectTalentAdvisorRequirementIds(
   employee: { id: string; name?: string | null },
 ): Promise<Set<string>> {
@@ -2617,11 +2662,14 @@ async function enrichCandidateApplicationsWithJd<T extends { requirementId?: str
     const requirement = app.requirementId ? byId.get(app.requirementId) : undefined;
     if (!requirement) return { ...app };
     const jd = enrichRequirementWithJdExtras(requirement);
+    const visibility = parseRequirementJdVisibility(requirement);
     const rawJdFile = jd.jdFile ?? requirement.jdFile ?? null;
     return {
       ...app,
-      jdFile: buildJdFileServeUrl(rawJdFile, httpReq) ?? rawJdFile,
-      jdText: jd.jdText ?? requirement.jdText ?? null,
+      jdFile: visibility.showToCandidate
+        ? buildJdFileServeUrl(rawJdFile, httpReq) ?? rawJdFile
+        : null,
+      jdText: visibility.showToCandidate ? jd.jdText ?? requirement.jdText ?? null : null,
       primarySkills: jd.primarySkills ?? null,
       secondarySkills: jd.secondarySkills ?? null,
       knowledgeOnly: jd.knowledgeOnly ?? null,
@@ -8040,6 +8088,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({ status: "read", readAt: new Date().toISOString() })
           .where(eq(notificationsTable.id, id));
       }
+      if (kind === "staffosOnboard") {
+        const { notifications: notificationsTable } = await import("@shared/schema");
+        await db
+          .update(notificationsTable)
+          .set({ status: "read", readAt: new Date().toISOString() })
+          .where(eq(notificationsTable.id, id));
+      }
       res.json({ ok: true });
     } catch (error) {
       console.error("Dismiss notification error:", error);
@@ -9939,6 +9994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const enriched = enrichRequirementWithJdExtrasForApi(req, requirement);
+      const visibility = parseRequirementJdVisibility(requirement);
       res.json({
         jdFile: enriched.jdFile ?? null,
         jdText: requirement.jdText ?? null,
@@ -9946,10 +10002,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secondarySkills: enriched.secondarySkills ?? null,
         knowledgeOnly: enriched.knowledgeOnly ?? null,
         specialInstructions: enriched.specialInstructions ?? null,
+        jdVisibilityToCandidate: visibility.showToCandidate,
+        jdVisibilityUpdatedByRole: visibility.updatedByRole,
+        jdVisibilityUpdatedByName: visibility.updatedByName,
+        jdVisibilityUpdatedAt: visibility.updatedAt,
       });
     } catch (error) {
       console.error("Get requirement JD view error:", error);
       res.status(500).json({ message: "Failed to load job description" });
+    }
+  });
+
+  app.patch("/api/requirements/:id/jd-visibility", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const normalizedRole = String(employee.role || "").toLowerCase();
+      if (normalizedRole !== "team_leader" && normalizedRole !== "recruiter") {
+        return res.status(403).json({ message: "Only TL/TA can update JD visibility" });
+      }
+
+      const lookupId = String(req.params.id || "").replace(/^recent-closed-/, "");
+      if (!lookupId) {
+        return res.status(400).json({ message: "Requirement id is required" });
+      }
+      const requirement = await storage.getRequirementById(lookupId);
+      if (!requirement) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      const showToCandidate = req.body?.showToCandidate;
+      if (typeof showToCandidate !== "boolean") {
+        return res.status(400).json({ message: "showToCandidate must be true/false" });
+      }
+
+      const sourceDetails = mergeRequirementJdVisibilityInSourceDetails(
+        requirement.sourceDetails as string | null | undefined,
+        {
+          showToCandidate,
+          updatedByRole: normalizedRole === "team_leader" ? "TL" : "TA",
+          updatedByName: employee.name || null,
+          updatedAt: new Date().toISOString(),
+        },
+      );
+
+      const updated = await storage.updateRequirement(lookupId, { sourceDetails });
+      if (!updated) {
+        return res.status(500).json({ message: "Failed to update JD visibility" });
+      }
+
+      const visibility = parseRequirementJdVisibility(updated);
+      return res.json({
+        success: true,
+        jdVisibilityToCandidate: visibility.showToCandidate,
+        jdVisibilityUpdatedByRole: visibility.updatedByRole,
+        jdVisibilityUpdatedByName: visibility.updatedByName,
+        jdVisibilityUpdatedAt: visibility.updatedAt,
+      });
+    } catch (error) {
+      console.error("Update JD visibility error:", error);
+      return res.status(500).json({ message: "Failed to update JD visibility" });
     }
   });
 
@@ -16722,13 +16836,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requirement = requirementRows[0] || null;
       }
 
+      const roleFilters = getFilterValues(filters.role);
+
       // Calculate scores for each candidate
       const scoredCandidates = candidatesList.map(candidate => {
         return calculateRelevanceScore(
           candidate,
           searchQuery,
           searchSkills,
-          requirement
+          requirement,
+          roleFilters,
         );
       });
 
@@ -19828,7 +19945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Upload JD File — Client Admin and Client Member
-  app.post("/api/client/upload-jd-file", requireClientAuth, upload.single('jdFile'), async (req, res) => {
+  app.post("/api/client/upload-jd-file", requireClientAuth, chatUpload.single('jdFile'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -19876,12 +19993,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Parse JD - Extract information from JD file or text
-  // Client Parse JD - Extract information from JD file or text
   app.post("/api/client/parse-jd", requireClientAuth, (req, res, next) => {
     // Check if it's a file upload or JSON
     const contentType = req.headers['content-type'] || '';
     if (contentType.includes('multipart/form-data')) {
-      upload.single('jdFile')(req, res, (err: any) => {
+      chatUpload.single('jdFile')(req, res, (err: any) => {
         if (err) {
           console.error('Multer error in parse-jd:', err);
           return res.status(400).json({ success: false, message: "File upload error: " + (err.message || 'Unknown error') });
@@ -19896,15 +20012,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let jdText = '';
 
+      const resolveJdMimeType = (file: Express.Multer.File) => {
+        const lowerName = file.originalname.toLowerCase();
+        if (file.mimetype && file.mimetype !== "application/octet-stream") {
+          return file.mimetype;
+        }
+        if (lowerName.endsWith(".pdf")) return "application/pdf";
+        if (lowerName.endsWith(".docx")) {
+          return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        }
+        if (lowerName.endsWith(".doc")) return "application/msword";
+        return file.mimetype;
+      };
+
       // If file uploaded, extract text
       if (req.file) {
         const filePath = req.file.path;
-        const mimeType = req.file.mimetype;
+        const mimeType = resolveJdMimeType(req.file);
 
         try {
-          // Use resume parser to extract text from JD file
-          const parsed = await parseResumeFile(filePath, mimeType);
-          jdText = parsed.rawText;
+          jdText = await extractTextFromFile(filePath, mimeType);
 
           // Clean up file
           if (fs.existsSync(filePath)) {
@@ -19912,51 +20039,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (error) {
           console.error('JD file parsing error:', error);
-          // Continue with empty text
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+          return res.status(400).json({
+            success: false,
+            message: "Could not read text from this JD file. Please upload a readable PDF or DOCX.",
+          });
         }
       } else if (req.body.jdText) {
         jdText = req.body.jdText;
       }
 
-      if (!jdText || jdText.trim().length < 10) {
-        return res.json({
-          success: true,
-          data: {
-            position: null,
-            primarySkills: null,
-            secondarySkills: null,
-            knowledgeOnly: null
+      const readParsedText = (...values: unknown[]): string | null => {
+        for (const value of values) {
+          if (value == null) continue;
+          if (Array.isArray(value)) {
+            const joined = value
+              .map((item) => String(item ?? "").trim())
+              .filter(Boolean)
+              .join(", ");
+            if (joined) return joined;
+            continue;
           }
-        });
+          const normalized = String(value).trim();
+          if (normalized) return normalized;
+        }
+        return null;
+      };
+
+      const buildParsedJdResponse = (parsed: Record<string, unknown>) => ({
+        success: true,
+        data: {
+          position: readParsedText(parsed.position, parsed.role, parsed.jobTitle, parsed.job_title),
+          primarySkills: readParsedText(
+            parsed.primarySkills,
+            parsed.primary_skills,
+            parsed.coreSkills,
+            parsed.core_skills,
+          ),
+          secondarySkills: readParsedText(
+            parsed.secondarySkills,
+            parsed.secondary_skills,
+            parsed.preferredSkills,
+            parsed.preferred_skills,
+          ),
+          knowledgeOnly: readParsedText(
+            parsed.knowledgeOnly,
+            parsed.knowledge_only,
+            parsed.tools,
+            parsed.domains,
+          ),
+          experience: readParsedText(parsed.experience, parsed.experienceRange, parsed.experience_range),
+          location: readParsedText(parsed.location, parsed.workMode, parsed.work_mode),
+          jdText,
+        },
+      });
+
+      if (!jdText || jdText.trim().length < 10) {
+        return res.json(buildParsedJdResponse({}));
       }
 
       // Extract information using AI
       const aiParsed = await parseJDWithAI(jdText);
-      
-      if (aiParsed) {
-        return res.json({
-          success: true,
-          data: {
-            position: aiParsed.position || null,
-            primarySkills: aiParsed.primarySkills || null,
-            secondarySkills: aiParsed.secondarySkills || null,
-            knowledgeOnly: aiParsed.knowledgeOnly || null,
-            experience: aiParsed.experience || null,
-            location: aiParsed.location || null
-          }
-        });
-      }
+      const fallbackParsed = extractBasicJdFieldsFromText(jdText);
+      const mergedParsed = {
+        ...fallbackParsed,
+        ...(aiParsed || {}),
+      };
 
-      // Fallback to basic extraction if AI fails
-      return res.json({
-        success: true,
-        data: {
-          position: null,
-          primarySkills: null,
-          secondarySkills: null,
-          knowledgeOnly: null
-        }
-      });
+      return res.json(buildParsedJdResponse(mergedParsed));
     } catch (error: any) {
       console.error('Parse JD error:', error);
       res.status(500).json({

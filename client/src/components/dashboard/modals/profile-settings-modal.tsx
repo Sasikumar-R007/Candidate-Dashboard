@@ -315,14 +315,17 @@ export function ProfileSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-hidden border-0 bg-[#f5f7fb] p-0 shadow-2xl md:max-w-5xl md:w-full">
-        <DialogHeader className="border-b border-slate-200 bg-white px-4 py-4 md:px-6 md:py-5">
-          <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
-            <div>
-              <DialogTitle className="text-xl font-semibold text-slate-900">
+      <DialogContent
+        overlayClassName="bg-black/50 backdrop-blur-[1px]"
+        className="profile-settings-modal max-h-[min(88vh,720px)] w-[calc(100%-1.5rem)] max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl md:max-h-[min(92vh,800px)] md:max-w-5xl md:rounded-2xl md:w-[calc(100%-2rem)]"
+      >
+        <DialogHeader className="border-b border-slate-200 bg-white px-4 py-3.5 md:px-6 md:py-5">
+          <div className="flex items-start justify-between gap-3 pr-8">
+            <div className="min-w-0">
+              <DialogTitle className="text-base font-semibold text-slate-900 md:text-xl">
                 {activeView === "settings" ? "System Settings" : "Account Profile"}
               </DialogTitle>
-              <DialogDescription className="text-sm text-slate-500">
+              <DialogDescription className="mt-1 text-xs leading-relaxed text-slate-500 md:text-sm">
                 {activeView === "settings"
                   ? "Manage core admin preferences and the welcome message used for new user onboarding."
                   : "Review your account details, profile photo, and edit access from one place."}
@@ -333,7 +336,7 @@ export function ProfileSettingsModal({
               <button
                 type="button"
                 onClick={() => setActiveView((prev) => (prev === "profile" ? "settings" : "profile"))}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 md:h-11 md:w-11 md:rounded-2xl"
                 aria-label={activeView === "profile" ? "Open settings" : "Open profile"}
               >
                 {activeView === "profile" ? <Settings className="h-4 w-4" /> : <UserCircle className="h-4 w-4" />}
@@ -342,24 +345,24 @@ export function ProfileSettingsModal({
           </div>
         </DialogHeader>
 
-        <div className="grid max-h-[calc(92vh-86px)] gap-0 overflow-y-auto overflow-x-hidden lg:grid-cols-[280px_1fr] lg:overflow-hidden">
-          <div className="overflow-y-auto border-b border-slate-200 bg-[#eef3fb] px-4 py-5 md:px-6 md:py-6 lg:border-b-0 lg:border-r">
-            <div className="flex flex-col items-center text-center">
-              <div className="relative">
+        <div className="grid max-h-[calc(88vh-4.5rem)] gap-0 overflow-y-auto overflow-x-hidden md:max-h-[calc(92vh-5.5rem)] lg:max-h-[calc(92vh-86px)] lg:grid-cols-[280px_1fr] lg:overflow-hidden">
+          <div className="overflow-y-auto border-b border-slate-200 bg-white px-4 py-3 lg:border-b-0 lg:border-r lg:bg-[#eef3fb] lg:px-6 lg:py-6">
+            <div className="flex flex-row items-start gap-3 text-left lg:flex-col lg:items-center lg:text-center">
+              <div className="relative shrink-0">
                 {profileImage ? (
-                  <img src={profileImage} alt="Profile" className="h-24 w-24 rounded-[28px] object-cover shadow-md" />
+                  <img src={profileImage} alt="Profile" className="h-14 w-14 rounded-xl object-cover shadow-md lg:h-24 lg:w-24 lg:rounded-[28px]" />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-500 to-cyan-500 text-3xl font-semibold text-white shadow-md">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 text-lg font-semibold text-white shadow-md lg:h-24 lg:w-24 lg:rounded-[28px] lg:text-3xl">
                     {(formData.name || "A").trim().charAt(0).toUpperCase()}
                   </div>
                 )}
                 <Label
                   htmlFor="profile-image"
-                  className={`absolute -bottom-2 right-0 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg transition ${
+                  className={`absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-white shadow-lg transition lg:-bottom-2 lg:h-10 lg:w-10 lg:rounded-2xl ${
                     isEditingProfile ? "cursor-pointer hover:bg-slate-700" : "cursor-not-allowed opacity-60"
                   }`}
                 >
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 </Label>
                 <Input
                   id="profile-image"
@@ -378,117 +381,125 @@ export function ProfileSettingsModal({
                   size="sm"
                   onClick={handleRemoveProfilePicture}
                   disabled={isRemovingProfile || isSavingProfile}
-                  className="mt-3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  className="mt-3 hidden border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 lg:inline-flex"
                 >
                   {isRemovingProfile ? "Removing..." : "Remove photo"}
                 </Button>
               ) : null}
 
-              <div className="mt-5 space-y-2">
-                <h3 className="text-lg font-semibold text-slate-900">{formData.name || "User"}</h3>
+              <div className="min-w-0 flex-1 space-y-1 lg:mt-4 lg:w-full lg:flex-none lg:space-y-2">
+                <h3 className="truncate text-sm font-semibold text-slate-900 lg:text-lg">{formData.name || "User"}</h3>
                 {showProfileId ? (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Profile ID
-                    </p>
-                    <span
-                      className="mt-1 inline-flex rounded-[4px] border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-900"
-                      data-testid="text-account-profile-id"
-                    >
-                      {formData.employeeId}
-                    </span>
-                  </div>
+                  <span
+                    className="inline-flex rounded-[4px] border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-900 lg:mt-1"
+                    data-testid="text-account-profile-id"
+                  >
+                    {formData.employeeId}
+                  </span>
                 ) : null}
-                <p className="text-sm font-medium text-slate-600">{displayRole}</p>
-              </div>
-
-              <div className="mt-6 grid w-full gap-3">
-                <Card className="border-slate-200 bg-white/80 shadow-none">
-                  <CardContent className="flex items-start gap-3 p-4 text-left">
-                    <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Email</div>
-                      <div className="mt-1 text-sm font-medium text-slate-700">{formData.email || "-"}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200 bg-white/80 shadow-none">
-                  <CardContent className="flex items-start gap-3 p-4 text-left">
-                    <Shield className="mt-0.5 h-4 w-4 text-slate-400" />
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Role</div>
-                      <div className="mt-1 text-sm font-medium text-slate-700">{displayRole}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200 bg-white/80 shadow-none">
-                  <CardContent className="flex items-start gap-3 p-4 text-left">
-                    <UserCircle className="mt-0.5 h-4 w-4 text-slate-400" />
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Joined</div>
-                      <div className="mt-1 text-sm font-medium text-slate-700">{formData.joiningDate || "-"}</div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <p className="text-xs font-medium text-slate-600">{displayRole}</p>
+                <p className="truncate text-xs text-slate-500 lg:hidden">{formData.email || "-"}</p>
+                {canRemoveProfilePhoto ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemoveProfilePicture}
+                    disabled={isRemovingProfile || isSavingProfile}
+                    className="mt-1.5 h-7 border-red-200 px-2 text-[11px] text-red-600 hover:bg-red-50 hover:text-red-700 lg:hidden"
+                  >
+                    {isRemovingProfile ? "Removing..." : "Remove photo"}
+                  </Button>
+                ) : null}
               </div>
             </div>
+
+            <div className="mt-3 hidden w-full gap-2 lg:mt-6 lg:grid lg:gap-3">
+                <Card className="border-slate-200 bg-white/80 shadow-none">
+                  <CardContent className="flex items-start gap-2.5 p-3 text-left md:gap-3 md:p-4">
+                    <Mail className="mt-0.5 h-3.5 w-3.5 text-slate-400 md:h-4 md:w-4" />
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 md:text-[11px] md:tracking-[0.18em]">Email</div>
+                      <div className="mt-0.5 text-xs font-medium text-slate-700 md:mt-1 md:text-sm">{formData.email || "-"}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200 bg-white/80 shadow-none">
+                  <CardContent className="flex items-start gap-2.5 p-3 text-left md:gap-3 md:p-4">
+                    <Shield className="mt-0.5 h-3.5 w-3.5 text-slate-400 md:h-4 md:w-4" />
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 md:text-[11px] md:tracking-[0.18em]">Role</div>
+                      <div className="mt-0.5 text-xs font-medium text-slate-700 md:mt-1 md:text-sm">{displayRole}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200 bg-white/80 shadow-none">
+                  <CardContent className="flex items-start gap-2.5 p-3 text-left md:gap-3 md:p-4">
+                    <UserCircle className="mt-0.5 h-3.5 w-3.5 text-slate-400 md:h-4 md:w-4" />
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 md:text-[11px] md:tracking-[0.18em]">Joined</div>
+                      <div className="mt-0.5 text-xs font-medium text-slate-700 md:mt-1 md:text-sm">{formData.joiningDate || "-"}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
           </div>
 
-          <div className="overflow-y-auto px-4 py-5 md:px-6 md:py-6">
+          <div className="overflow-y-auto bg-white px-4 py-4 md:px-6 md:py-6">
             {activeView === "profile" ? (
-              <div className="space-y-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900">Profile Details</h3>
-                    <p className="text-sm text-slate-500">Use the edit button to unlock changes for your account information.</p>
+              <div className="space-y-4 md:space-y-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-slate-900 md:text-lg">Profile Details</h3>
+                    <p className="mt-0.5 text-xs text-slate-500 md:text-sm">Tap edit to update your account information.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsEditingProfile((prev) => !prev)}
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl border transition ${
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition md:h-11 md:w-11 md:rounded-2xl ${
                       isEditingProfile
                         ? "border-slate-900 bg-slate-900 text-white"
                         : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                     aria-label="Toggle profile edit"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </button>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Full Name</Label>
+                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700 md:text-sm">Full Name</Label>
                     <Input
                       value={formData.name}
                       onChange={(e) => handleFormChange("name", e.target.value)}
                       disabled={!isEditingProfile}
-                      className="h-11 bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                      className="h-9 bg-white text-sm disabled:bg-slate-100 disabled:text-slate-500 md:h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Phone</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700 md:text-sm">Phone</Label>
                     <Input
                       value={formData.phone}
                       onChange={(e) => handleFormChange("phone", e.target.value)}
                       disabled={!isEditingProfile}
-                      className="h-11 bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                      className="h-9 bg-white text-sm disabled:bg-slate-100 disabled:text-slate-500 md:h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Department</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700 md:text-sm">Department</Label>
                     <Input
                       value={formData.department}
                       onChange={(e) => handleFormChange("department", e.target.value)}
                       disabled={!isEditingProfile}
-                      className="h-11 bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                      className="h-9 bg-white text-sm disabled:bg-slate-100 disabled:text-slate-500 md:h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Email</Label>
-                    <Input value={formData.email} readOnly className="h-11 bg-slate-100 text-slate-500" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-700 md:text-sm">Email</Label>
+                    <Input value={formData.email} readOnly className="h-9 bg-slate-100 text-sm text-slate-500 md:h-11" />
                   </div>
                 </div>
 
@@ -497,7 +508,7 @@ export function ProfileSettingsModal({
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 rounded-xl"
+                      className="h-9 rounded-lg text-xs md:h-11 md:rounded-xl md:text-sm"
                       onClick={() => {
                         setIsEditingProfile(false);
                         setSelectedProfileFile(null);
@@ -516,7 +527,7 @@ export function ProfileSettingsModal({
                   <Button
                     onClick={handleSaveProfile}
                     disabled={isSavingProfile || !isEditingProfile}
-                    className="h-11 rounded-xl bg-slate-900 px-5 text-white hover:bg-slate-800"
+                    className="h-9 rounded-lg bg-slate-900 px-4 text-xs text-white hover:bg-slate-800 md:h-11 md:rounded-xl md:px-5 md:text-sm"
                   >
                     {isSavingProfile ? "Saving..." : "Save Profile"}
                   </Button>
@@ -527,25 +538,25 @@ export function ProfileSettingsModal({
                 ) : null}
               </div>
             ) : (
-              <div className="space-y-6">
-                <LegalPoliciesSettingsCard variant="modal" queryEnabled={open} className="rounded-2xl" />
+              <div className="space-y-4 md:space-y-6">
+                <LegalPoliciesSettingsCard variant="modal" queryEnabled={open} className="rounded-xl md:rounded-2xl" />
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">System Settings</h3>
-                  <p className="text-sm text-slate-500">Keep this focused on the few admin settings that actually affect daily operations.</p>
+                  <h3 className="text-base font-semibold text-slate-900 md:text-lg">System Settings</h3>
+                  <p className="text-xs text-slate-500 md:text-sm">Keep this focused on the few admin settings that actually affect daily operations.</p>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
                   <Card className="border-slate-200 bg-white shadow-none">
-                    <CardContent className="space-y-4 p-5">
+                    <CardContent className="space-y-3 p-3 md:space-y-4 md:p-5">
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-900">Pipeline Refresh</h4>
-                        <p className="text-sm text-slate-500">Control how frequently the admin pipeline refreshes.</p>
+                        <h4 className="text-xs font-semibold text-slate-900 md:text-sm">Pipeline Refresh</h4>
+                        <p className="text-xs text-slate-500 md:text-sm">Control how frequently the admin pipeline refreshes.</p>
                       </div>
 
                       <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3">
                         <div>
-                          <div className="text-sm font-medium text-slate-800">Auto-refresh pipeline</div>
-                          <div className="text-xs text-slate-500">Keeps pipeline data updated in the admin dashboard.</div>
+                          <div className="text-xs font-medium text-slate-800 md:text-sm">Auto-refresh pipeline</div>
+                          <div className="text-[11px] text-slate-500 md:text-xs">Keeps pipeline data updated in the admin dashboard.</div>
                         </div>
                         <button
                           type="button"
@@ -568,7 +579,7 @@ export function ProfileSettingsModal({
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-700">Refresh interval in seconds</Label>
+                        <Label className="text-xs font-medium text-slate-700 md:text-sm">Refresh interval in seconds</Label>
                         <Input
                           type="number"
                           min={5}
@@ -580,17 +591,17 @@ export function ProfileSettingsModal({
                               pipelineRefreshSeconds: e.target.value,
                             }))
                           }
-                          className="h-11 bg-white"
+                          className="h-9 bg-white text-sm md:h-11"
                         />
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card className="border-slate-200 bg-white shadow-none">
-                    <CardContent className="space-y-4 p-5">
+                    <CardContent className="space-y-3 p-3 md:space-y-4 md:p-5">
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-900">Performance Defaults</h4>
-                        <p className="text-sm text-slate-500">Choose the default period used when the admin performance page opens.</p>
+                        <h4 className="text-xs font-semibold text-slate-900 md:text-sm">Performance Defaults</h4>
+                        <p className="text-xs text-slate-500 md:text-sm">Choose the default period used when the admin performance page opens.</p>
                       </div>
 
                       <div className="grid grid-cols-3 gap-2">
@@ -604,7 +615,7 @@ export function ProfileSettingsModal({
                                 adminDefaultPerformancePeriod: period,
                               }))
                             }
-                            className={`rounded-2xl border px-3 py-3 text-sm font-medium capitalize transition ${
+                            className={`rounded-xl border px-2.5 py-2.5 text-xs font-medium capitalize transition md:rounded-2xl md:px-3 md:py-3 md:text-sm ${
                               systemSettings.adminDefaultPerformancePeriod === period
                                 ? "border-slate-900 bg-slate-900 text-white"
                                 : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
@@ -615,15 +626,15 @@ export function ProfileSettingsModal({
                         ))}
                       </div>
 
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <div className="text-sm font-medium text-slate-800">Notification defaults</div>
-                        <div className="mt-3 space-y-3">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:rounded-2xl md:px-4 md:py-3">
+                        <div className="text-xs font-medium text-slate-800 md:text-sm">Notification defaults</div>
+                        <div className="mt-2 space-y-2.5 md:mt-3 md:space-y-3">
                           {[
                             { key: "email", label: "Email updates" },
                             { key: "inApp", label: "In-app updates" },
                           ].map((item) => (
                             <div key={item.key} className="flex items-center justify-between">
-                              <span className="text-sm text-slate-600">{item.label}</span>
+                              <span className="text-xs text-slate-600 md:text-sm">{item.label}</span>
                               <button
                                 type="button"
                                 onClick={() =>
@@ -652,10 +663,10 @@ export function ProfileSettingsModal({
 
                 {isAdmin ? (
                   <Card className="border-slate-200 bg-white shadow-none">
-                    <CardContent className="space-y-3 p-5">
+                    <CardContent className="space-y-2.5 p-3 md:space-y-3 md:p-5">
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-900">Agreement &amp; consent logs</h4>
-                        <p className="text-sm text-slate-500">
+                        <h4 className="text-xs font-semibold text-slate-900 md:text-sm">Agreement &amp; consent logs</h4>
+                        <p className="text-xs text-slate-500 md:text-sm">
                           Open the read-only audit page for platform, job, client, and employee agreement acceptances.
                         </p>
                       </div>
@@ -667,10 +678,10 @@ export function ProfileSettingsModal({
                 ) : null}
 
                 <Card className="border-slate-200 bg-white shadow-none">
-                  <CardContent className="space-y-4 p-5">
+                  <CardContent className="space-y-3 p-3 md:space-y-4 md:p-5">
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-900">Welcome Mail Message</h4>
-                      <p className="text-sm text-slate-500">
+                      <h4 className="text-xs font-semibold text-slate-900 md:text-sm">Welcome Mail Message</h4>
+                      <p className="text-xs text-slate-500 md:text-sm">
                         This text is used in the employee welcome email. Login credentials are still added automatically by the system.
                       </p>
                     </div>
@@ -683,7 +694,7 @@ export function ProfileSettingsModal({
                           employeeWelcomeMessage: e.target.value,
                         }))
                       }
-                      className="min-h-[220px] resize-none rounded-2xl border-slate-200 bg-slate-50 text-sm"
+                      className="min-h-[160px] resize-none rounded-xl border-slate-200 bg-slate-50 text-xs md:min-h-[220px] md:rounded-2xl md:text-sm"
                     />
                   </CardContent>
                 </Card>
@@ -692,7 +703,7 @@ export function ProfileSettingsModal({
                   <Button
                     onClick={handleSaveSystemSettings}
                     disabled={isSavingSystemSettings}
-                    className="h-11 rounded-xl bg-slate-900 px-5 text-white hover:bg-slate-800"
+                    className="h-9 rounded-lg bg-slate-900 px-4 text-xs text-white hover:bg-slate-800 md:h-11 md:rounded-xl md:px-5 md:text-sm"
                   >
                     {isSavingSystemSettings ? "Saving..." : "Save Settings"}
                   </Button>

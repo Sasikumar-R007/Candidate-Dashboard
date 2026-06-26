@@ -5,6 +5,11 @@
 // semantic matching, and advanced scoring
 
 import { candidates, profiles } from "@shared/schema";
+import {
+  calculateRequirementMatchScore,
+  calculateRecencyScore,
+  SOURCE_RESUME_MATCH_WEIGHTS,
+} from "@shared/source-resume-match";
 import { sql, and, or, ilike, desc, asc, not } from "drizzle-orm";
 
 // ============================================
@@ -128,7 +133,7 @@ function hasTextFilter(value: unknown) {
   return typeof value === 'string' && value.trim() !== '' && value.trim().toLowerCase() !== 'any';
 }
 
-function getFilterValues(value: unknown): string[] {
+export function getFilterValues(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
       .map((entry) => String(entry).trim())
@@ -425,7 +430,8 @@ export function calculateRelevanceScore(
   candidate: any,
   searchQuery: string,
   searchSkills: string[],
-  requirement?: any
+  requirement?: any,
+  roleFilters: string[] = [],
 ): CandidateScore {
   const matchedTerms: string[] = [];
   const fieldMatches: Record<string, number> = {};
@@ -433,15 +439,17 @@ export function calculateRelevanceScore(
   const hasSearchSkills = searchSkills.length > 0;
   const trimmedQuery = (searchQuery || '').trim();
   const hasSearchQuery = trimmedQuery.length > 0;
+  const hasRoleFilters = roleFilters.length > 0;
 
   const scoreParts: number[] = [];
   const weights: number[] = [];
+  const relevanceWeights = SOURCE_RESUME_MATCH_WEIGHTS.relevance;
 
   if (hasSearchSkills) {
     const skillSynergy = calculateSkillSynergy(candidateSkills, searchSkills);
     const skillScore = skillSynergy * 100;
     scoreParts.push(skillScore);
-    weights.push(0.65);
+    weights.push(relevanceWeights.specificSkills);
     fieldMatches.skills = skillScore;
 
     for (const searchSkill of searchSkills) {
@@ -449,6 +457,15 @@ export function calculateRelevanceScore(
         matchedTerms.push(searchSkill);
       }
     }
+  }
+
+  if (hasRoleFilters) {
+    const title = (candidate.designation || candidate.currentRole || candidate.title || '').toLowerCase();
+    const roleScore =
+      Math.max(...roleFilters.map((role) => calculateSimilarity(title, role.toLowerCase()))) * 100;
+    scoreParts.push(roleScore);
+    weights.push(relevanceWeights.role);
+    fieldMatches.role = roleScore;
   }
 
   if (hasSearchQuery) {
@@ -476,12 +493,16 @@ export function calculateRelevanceScore(
     const titleBonus = calculateSimilarity(title, trimmedQuery.toLowerCase()) * 20;
     queryScore = Math.min(100, queryScore + titleBonus);
     scoreParts.push(queryScore);
-    weights.push(hasSearchSkills ? 0.35 : 1);
+    weights.push(relevanceWeights.searchQuery);
     fieldMatches.query = queryScore;
   }
 
   let relevanceScore = 0;
   if (scoreParts.length > 0) {
+    const recencyScore = calculateRecencyScore(candidate);
+    scoreParts.push(recencyScore);
+    weights.push(relevanceWeights.recency);
+
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
     relevanceScore = Math.round(
       scoreParts.reduce((sum, score, i) => sum + score * weights[i], 0) / totalWeight,
@@ -490,7 +511,7 @@ export function calculateRelevanceScore(
 
   let matchPercentage: number | undefined;
   if (requirement) {
-    matchPercentage = calculateRequirementMatch(candidate, requirement, candidateSkills);
+    matchPercentage = calculateRequirementMatchScore(candidate, requirement);
   }
 
   return {
@@ -500,60 +521,6 @@ export function calculateRelevanceScore(
     matchedTerms: [...new Set(matchedTerms)],
     fieldMatches,
   };
-}
-
-/**
- * Calculate requirement match percentage
- */
-function calculateRequirementMatch(candidate: any, requirement: any, candidateSkills: string[]): number {
-  let matchScore = 0;
-  let totalWeight = 0;
-  
-  // Skills match (40% weight)
-  if (requirement.skills || requirement.requiredSkills) {
-    const reqSkills = (requirement.skills || requirement.requiredSkills || [])
-      .map((s: string) => normalizeSkill(s));
-    const skillSynergy = calculateSkillSynergy(candidateSkills, reqSkills);
-    matchScore += skillSynergy * 100 * 0.4;
-    totalWeight += 0.4;
-  }
-  
-  // Experience match (20% weight)
-  if (requirement.experience) {
-    const reqExp = parseFloat(String(requirement.experience).replace(/[^\d.]/g, '') || '0');
-    const candidateExp = parseFloat(candidate.experience?.replace(/[^\d.]/g, '') || '0');
-    const expDiff = Math.abs(candidateExp - reqExp);
-    const expScore = Math.max(0, 100 - (expDiff * 10));
-    matchScore += expScore * 0.2;
-    totalWeight += 0.2;
-  }
-  
-  // Location match (15% weight)
-  if (requirement.location) {
-    const locationMatch = 
-      (candidate.location || '').toLowerCase().includes(requirement.location.toLowerCase()) ||
-      (candidate.preferredLocation || '').toLowerCase().includes(requirement.location.toLowerCase());
-    matchScore += (locationMatch ? 100 : 0) * 0.15;
-    totalWeight += 0.15;
-  }
-  
-  // Title/Role match (15% weight)
-  if (requirement.position || requirement.jobTitle) {
-    const reqTitle = (requirement.position || requirement.jobTitle || '').toLowerCase();
-    const candidateTitle = (candidate.designation || candidate.currentRole || candidate.title || '').toLowerCase();
-    const titleSimilarity = calculateSimilarity(candidateTitle, reqTitle);
-    matchScore += titleSimilarity * 100 * 0.15;
-    totalWeight += 0.15;
-  }
-  
-  // Education match (10% weight)
-  if (requirement.education) {
-    const eduMatch = (candidate.education || '').toLowerCase().includes(requirement.education.toLowerCase());
-    matchScore += (eduMatch ? 100 : 0) * 0.1;
-    totalWeight += 0.1;
-  }
-  
-  return totalWeight > 0 ? Math.round(matchScore / totalWeight) : 0;
 }
 
 // ============================================
@@ -690,6 +657,32 @@ export function buildSearchQuery(filters: any) {
     }
   }
 
+  // Priority 2: Role / designation
+  const roleValues = getFilterValues(filters.role);
+  if (roleValues.length > 0) {
+    conditions.push(
+      or(
+        ...roleValues.map((role) =>
+          or(
+            ilike(candidates.designation, `%${role}%`),
+            ilike(candidates.currentRole, `%${role}%`),
+            ilike(candidates.position, `%${role}%`),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Priority 3: Must-have specific skills
+  if (filters.specificSkills && filters.specificSkills.length > 0) {
+    const normalizedSkills = normalizeSkills(filters.specificSkills);
+    const skillConditions = normalizedSkills.map((skill) =>
+      ilike(candidates.skills, `%${skill}%`),
+    );
+    conditions.push(and(...skillConditions));
+  }
+
+  // Priority 4: Keyword filters
   if (filters.keywords && Array.isArray(filters.keywords) && filters.keywords.length > 0) {
     const keywordConditions = filters.keywords
       .map((keyword: string) => keyword?.trim().toLowerCase())
@@ -700,14 +693,11 @@ export function buildSearchQuery(filters: any) {
       conditions.push(and(...keywordConditions));
     }
   }
-  
-  // Experience filter - only apply if not default [0, 15]
-  // This allows showing all candidates when filters are reset
+
+  // Priority 5: Experience
   if (filters.experience && filters.experience.length === 2) {
     const [minExp, maxExp] = filters.experience;
-    // Only apply filter if it's not the default range [0, 15]
     if (minExp !== 0 || maxExp !== 15) {
-      // Parse experience from string format, handle NULL/empty values by including them
       conditions.push(
         sql`(
           ${candidates.experience} IS NULL OR 
@@ -716,25 +706,12 @@ export function buildSearchQuery(filters: any) {
             CAST(REGEXP_REPLACE(${candidates.experience}, '[^0-9.]', '', 'g') AS FLOAT) >= ${minExp} AND 
             CAST(REGEXP_REPLACE(${candidates.experience}, '[^0-9.]', '', 'g') AS FLOAT) <= ${maxExp}
           )
-        )`
+        )`,
       );
     }
   }
 
-  if (hasTextFilter(filters.ctcMin) || hasTextFilter(filters.ctcMax)) {
-    const minCtc = hasTextFilter(filters.ctcMin) ? Number(filters.ctcMin) : null;
-    const maxCtc = hasTextFilter(filters.ctcMax) ? Number(filters.ctcMax) : null;
-    const ctcExpression = sql<number>`COALESCE(${buildNumericTextField(candidates.ectc)}, ${buildNumericTextField(candidates.ctc)})`;
-
-    if (minCtc !== null && Number.isFinite(minCtc)) {
-      conditions.push(sql`${ctcExpression} >= ${minCtc}`);
-    }
-    if (maxCtc !== null && Number.isFinite(maxCtc)) {
-      conditions.push(sql`${ctcExpression} <= ${maxCtc}`);
-    }
-  }
-  
-  // Location filter — match any selected location
+  // Priority 6: Location
   const locationValues = getFilterValues(filters.location);
   if (locationValues.length > 0) {
     conditions.push(
@@ -742,7 +719,6 @@ export function buildSearchQuery(filters: any) {
     );
   }
 
-  // Preferred location filter — stored on profiles, linked by candidate_id or email
   const preferredLocationValues = getFilterValues(filters.preferredLocation);
   if (preferredLocationValues.length > 0) {
     conditions.push(
@@ -762,53 +738,7 @@ export function buildSearchQuery(filters: any) {
     );
   }
 
-  // Role filter — match any selected role
-  const roleValues = getFilterValues(filters.role);
-  if (roleValues.length > 0) {
-    conditions.push(
-      or(
-        ...roleValues.map((role) =>
-          or(
-            ilike(candidates.designation, `%${role}%`),
-            ilike(candidates.currentRole, `%${role}%`),
-            ilike(candidates.position, `%${role}%`),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Company filter — match any selected company
-  const companyValues = getFilterValues(filters.company);
-  if (companyValues.length > 0) {
-    conditions.push(
-      or(...companyValues.map((company) => ilike(candidates.company, `%${company}%`))),
-    );
-  }
-  
-  // Education filter — match any selected UG/PG course
-  const ugCourses = getFilterValues(filters.educationUG);
-  if (ugCourses.length > 0) {
-    conditions.push(
-      or(...ugCourses.map((course) => ilike(candidates.education, `%${course}%`))),
-    );
-  }
-  const pgCourses = getFilterValues(filters.educationPG);
-  if (pgCourses.length > 0) {
-    conditions.push(
-      or(...pgCourses.map((course) => ilike(candidates.education, `%${course}%`))),
-    );
-  }
-  
-  // Skills filter: all requested skills should be present for stronger matching
-  if (filters.specificSkills && filters.specificSkills.length > 0) {
-    const normalizedSkills = normalizeSkills(filters.specificSkills);
-    const skillConditions = normalizedSkills.map(skill => 
-      ilike(candidates.skills, `%${skill}%`)
-    );
-    conditions.push(and(...skillConditions));
-  }
-
+  // Priority 7: Notice period
   if (hasTextFilter(filters.noticePeriod)) {
     const maxNoticeDays = normalizeNoticePeriodToDays(filters.noticePeriod);
     if (maxNoticeDays !== null) {
@@ -824,22 +754,57 @@ export function buildSearchQuery(filters: any) {
     }
   }
 
+  // Priority 8: Education
+  const ugCourses = getFilterValues(filters.educationUG);
+  if (ugCourses.length > 0) {
+    conditions.push(
+      or(...ugCourses.map((course) => ilike(candidates.education, `%${course}%`))),
+    );
+  }
+  const pgCourses = getFilterValues(filters.educationPG);
+  if (pgCourses.length > 0) {
+    conditions.push(
+      or(...pgCourses.map((course) => ilike(candidates.education, `%${course}%`))),
+    );
+  }
+
+  // Priority 9: Company
+  const companyValues = getFilterValues(filters.company);
+  if (companyValues.length > 0) {
+    conditions.push(
+      or(...companyValues.map((company) => ilike(candidates.company, `%${company}%`))),
+    );
+  }
+
+  // Priority 10: CTC
+  if (hasTextFilter(filters.ctcMin) || hasTextFilter(filters.ctcMax)) {
+    const minCtc = hasTextFilter(filters.ctcMin) ? Number(filters.ctcMin) : null;
+    const maxCtc = hasTextFilter(filters.ctcMax) ? Number(filters.ctcMax) : null;
+    const ctcExpression = sql<number>`COALESCE(${buildNumericTextField(candidates.ectc)}, ${buildNumericTextField(candidates.ctc)})`;
+
+    if (minCtc !== null && Number.isFinite(minCtc)) {
+      conditions.push(sql`${ctcExpression} >= ${minCtc}`);
+    }
+    if (maxCtc !== null && Number.isFinite(maxCtc)) {
+      conditions.push(sql`${ctcExpression} <= ${maxCtc}`);
+    }
+  }
+
   if (hasTextFilter(filters.employmentType)) {
     conditions.push(ilike(candidates.employmentType, `%${filters.employmentType}%`));
   }
-  
-  // Excluded keywords
+
+  // Priority 13: Exclusions
   if (filters.excludedKeywords && filters.excludedKeywords.length > 0) {
     const excludeConditions = filters.excludedKeywords.map((keyword: string) =>
-      sql`NOT (${candidates.fullName} ILIKE ${`%${keyword}%`} OR ${candidates.skills} ILIKE ${`%${keyword}%`} OR ${candidates.resumeText} ILIKE ${`%${keyword}%`})`
+      sql`NOT (${candidates.fullName} ILIKE ${`%${keyword}%`} OR ${candidates.skills} ILIKE ${`%${keyword}%`} OR ${candidates.resumeText} ILIKE ${`%${keyword}%`})`,
     );
     conditions.push(and(...excludeConditions));
   }
-  
-  // Excluded companies
+
   if (filters.excludedCompanies && filters.excludedCompanies.length > 0) {
     const excludeCompanyConditions = filters.excludedCompanies.map((company: string) =>
-      sql`NOT ${candidates.company} ILIKE ${`%${company}%`}`
+      sql`NOT ${candidates.company} ILIKE ${`%${company}%`}`,
     );
     conditions.push(and(...excludeCompanyConditions));
   }

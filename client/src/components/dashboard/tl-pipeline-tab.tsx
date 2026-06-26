@@ -5,22 +5,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { PipelineCandidateSessionShell } from "@/components/dashboard/pipeline-candidate-session-shell";
 import { PipelineKanbanBoard } from "@/components/dashboard/pipeline-kanban-board";
 import { PipelineWorkspace } from "@/components/dashboard/pipeline-workspace";
 import type { PipelineStageKey } from "@shared/pipeline-stages";
 import { PipelineStatsSidebar } from "@/components/dashboard/pipeline-stats-sidebar";
-import {
-  PIPELINE_BUTTON_RADIUS_PX,
-  PIPELINE_FILTER_RADIUS_PX,
-} from "@/lib/pipeline-ui-tokens";
+import { EmployeePipelineMobileFilters } from "@/components/dashboard/employee-pipeline-mobile-filters";
+import { PIPELINE_FILTER_RADIUS_PX } from "@/lib/pipeline-ui-tokens";
 import { isSameDay } from "date-fns";
-import { Users } from "lucide-react";
-import type { ReactNode } from "react";
+import { BarChart3, Users } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const filterRadiusStyle = { borderRadius: PIPELINE_FILTER_RADIUS_PX };
-const buttonRadiusStyle = { borderRadius: PIPELINE_BUTTON_RADIUS_PX };
 
 function formatPipelineDaysAgo(dateString: string | null | undefined): string {
   if (!dateString || dateString === "N/A") return "N/A";
@@ -80,62 +77,39 @@ export function TlPipelineTab({
   pipelineView = "board",
   candidateSession = null,
 }: TlPipelineTabProps) {
+  const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
+  const isMobile = useIsMobile();
   const isTodayActive =
     pipelineDate !== null && isSameDay(pipelineDate, new Date());
   const isAllDatesActive = pipelineDate === null;
 
   const pipelineFilters = (
-    <div className="flex flex-wrap items-center justify-end gap-4">
-      <Select value={selectedRecruiter} onValueChange={onRecruiterChange}>
-        <SelectTrigger
-          style={filterRadiusStyle}
-          className="h-9 w-52 min-w-[12rem] border-gray-200 bg-gray-50 text-sm shadow-none hover:bg-gray-100"
-          data-testid="select-pipeline-recruiter"
-        >
-          <SelectValue placeholder="All" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
-          {Array.isArray(teamMembers) &&
-            teamMembers.map((member: any) => (
-              <SelectItem key={member.id} value={String(member.id)}>
-                {member.name}
-              </SelectItem>
-            ))}
-        </SelectContent>
-      </Select>
-      <StandardDatePicker
-        value={pipelineDate || undefined}
-        onChange={(date) => onPipelineDateChange(date || null)}
-        placeholder="dd-mm-yyyy"
-        className="h-9 w-36 border-gray-200 bg-white text-sm rounded-[6px]"
-        data-testid="button-pipeline-date-picker"
-      />
-      <button
-        type="button"
-        style={buttonRadiusStyle}
-        className={`h-9 border px-4 text-sm font-medium transition-colors ${
-          isTodayActive
-            ? "border-blue-600 bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-        }`}
-        onClick={() => onPipelineDateChange(new Date())}
-      >
-        Today
-      </button>
-      <button
-        type="button"
-        style={buttonRadiusStyle}
-        className={`h-9 border px-4 text-sm font-medium transition-colors ${
-          isAllDatesActive
-            ? "border-blue-600 bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-        }`}
-        onClick={() => onPipelineDateChange(null)}
-      >
-        All
-      </button>
-    </div>
+    <EmployeePipelineMobileFilters
+      pipelineDate={pipelineDate}
+      onPipelineDateChange={onPipelineDateChange}
+      isTodayActive={isTodayActive}
+      isAllDatesActive={isAllDatesActive}
+      primaryFilter={
+        <Select value={selectedRecruiter} onValueChange={onRecruiterChange}>
+          <SelectTrigger
+            style={filterRadiusStyle}
+            className="h-9 min-w-0 w-full border-gray-200 bg-gray-50 text-sm shadow-none hover:bg-gray-100 md:w-52 md:min-w-[12rem]"
+            data-testid="select-pipeline-recruiter"
+          >
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            {Array.isArray(teamMembers) &&
+              teamMembers.map((member: any) => (
+                <SelectItem key={member.id} value={String(member.id)}>
+                  {member.name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      }
+    />
   );
 
   const isSessionOpen =
@@ -146,18 +120,30 @@ export function TlPipelineTab({
       className="pipeline-admin-session flex h-full min-h-0 flex-col overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm"
       data-testid="pipeline-session-panel"
     >
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 px-5 py-3">
-        <h2
-          className="shrink-0 text-xl font-semibold text-gray-900 dark:text-white"
-          data-testid="text-pipeline-header"
-        >
-          Pipeline
-        </h2>
+      <div className="flex shrink-0 flex-col gap-2 border-b border-gray-200 px-3 py-2.5 md:gap-3 md:py-3 md:flex-row md:items-center md:justify-between md:gap-4 md:px-5">
+        <div className="flex items-center justify-between gap-2 md:contents">
+          <h2
+            className="shrink-0 text-base font-semibold text-gray-900 md:text-xl"
+            data-testid="text-pipeline-header"
+          >
+            Pipeline
+          </h2>
+          <button
+            type="button"
+            onClick={() => setMobileStatsOpen((open) => !open)}
+            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[11px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 md:hidden"
+            aria-expanded={mobileStatsOpen}
+            aria-label={mobileStatsOpen ? "Hide pipeline stats" : "Show pipeline stats"}
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Stats
+          </button>
+        </div>
         {pipelineFilters}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="pipeline-session-board-body min-h-0 flex-1 overflow-hidden">
         {isLoading ? (
-          <div className="flex h-full min-h-[320px] items-center justify-center">
+          <div className="flex h-full min-h-[240px] items-center justify-center md:min-h-[320px]">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
             <span className="ml-3 text-gray-500">Loading pipeline data...</span>
           </div>
@@ -166,10 +152,10 @@ export function TlPipelineTab({
             Failed to load pipeline data
           </div>
         ) : isEmpty ? (
-          <div className="flex h-full min-h-[320px] flex-col items-center justify-center">
-            <Users className="mb-4 h-16 w-16 text-gray-300" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">No Pipeline Data</h3>
-            <p className="max-w-md text-center text-gray-500">
+          <div className="flex h-full min-h-[240px] flex-col items-center justify-center px-4 md:min-h-[320px]">
+            <Users className="mb-4 h-12 w-12 text-gray-300 md:h-16 md:w-16" />
+            <h3 className="mb-2 text-base font-semibold text-gray-900 md:text-lg">No Pipeline Data</h3>
+            <p className="max-w-md text-center text-sm text-gray-500 md:text-base">
               When recruiters tag candidates to requirements and update their statuses,
               they will appear here automatically.
             </p>
@@ -179,7 +165,7 @@ export function TlPipelineTab({
             embedded
             naturalScroll
             cardVariant="classic"
-            className="h-full min-h-0"
+            className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
             groupedByStage={groupedByStage}
             onCandidateClick={onCandidateClick}
             getCandidateName={(c) => c.name || c.candidateName || "N/A"}
@@ -203,13 +189,22 @@ export function TlPipelineTab({
 
   return (
     <div
-      className={`relative flex h-full min-h-0 w-full overflow-hidden${
+      className={`employee-pipeline-mobile-root relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden${
         isSessionOpen ? " pipeline-tab-session-open" : ""
-      }`}
+      }${mobileStatsOpen ? " employee-pipeline-stats-open" : ""}`}
     >
+      {mobileStatsOpen && (
+        <button
+          type="button"
+          className="fixed bottom-[4.25rem] left-0 top-[3.25rem] z-[90] bg-black/25 md:hidden"
+          style={{ width: "calc(100% - 13.75rem)" }}
+          onClick={() => setMobileStatsOpen(false)}
+          aria-label="Close pipeline stats"
+        />
+      )}
       <PipelineCandidateSessionShell
         fullscreen
-        className="h-full min-h-0 w-full"
+        className="flex min-h-0 w-full flex-1 flex-col overflow-hidden md:overflow-hidden"
         mode={isSessionOpen ? "candidate-session" : "board"}
         board={
           <PipelineWorkspace
@@ -222,7 +217,7 @@ export function TlPipelineTab({
                 variant="admin"
               />
             }
-            footer={closureReportsFooter}
+            footer={isMobile ? undefined : closureReportsFooter}
           >
             {pipelineBoard}
           </PipelineWorkspace>

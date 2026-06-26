@@ -47,6 +47,7 @@ type NotificationPanelProps = {
   onDismiss: (row: NotificationPanelRow) => void;
   onNavigate: (section: NotificationNavigateSection, row: NotificationPanelRow) => void;
   onActOnNudge?: (row: NotificationPanelRow) => void;
+  onReplyToComment?: (row: NotificationPanelRow) => void;
   showActButton?: boolean;
   previewLimit?: number;
   /** Optional root class (e.g. candidate portal panel surface) */
@@ -164,6 +165,7 @@ function NotificationCard({
   onDismiss,
   onNavigate,
   onAct,
+  onReply,
   showDismissAlways = false,
   now = new Date(),
 }: {
@@ -173,6 +175,7 @@ function NotificationCard({
   onDismiss: (row: NotificationPanelRow) => void;
   onNavigate: (section: NotificationNavigateSection, row: NotificationPanelRow) => void;
   onAct?: (row: NotificationPanelRow) => void;
+  onReply?: (row: NotificationPanelRow) => void;
   showDismissAlways?: boolean;
   now?: Date;
 }) {
@@ -215,6 +218,18 @@ function NotificationCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
+          {row.kind === "candidateComment" && row.applicationId && onReply && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReply(row);
+              }}
+              className="rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              Reply
+            </button>
+          )}
           {section.showActButton && onAct && (
             <button
               type="button"
@@ -256,6 +271,7 @@ function NotificationSectionBlock({
   onDismiss,
   onNavigate,
   onAct,
+  onReply,
   showDismissAlways,
   now,
 }: {
@@ -266,6 +282,7 @@ function NotificationSectionBlock({
   onDismiss: (row: NotificationPanelRow) => void;
   onNavigate: (section: NotificationNavigateSection, row: NotificationPanelRow) => void;
   onAct?: (row: NotificationPanelRow) => void;
+  onReply?: (row: NotificationPanelRow) => void;
   showDismissAlways?: boolean;
   now: Date;
 }) {
@@ -290,6 +307,7 @@ function NotificationSectionBlock({
             onDismiss={onDismiss}
             onNavigate={onNavigate}
             onAct={section.showActButton ? onAct : undefined}
+            onReply={onReply}
             showDismissAlways={showDismissAlways}
             now={now}
           />
@@ -332,6 +350,7 @@ export default function NotificationPanel({
   onDismiss,
   onNavigate,
   onActOnNudge,
+  onReplyToComment,
   previewLimit = 3,
   className,
   showDismissAlways = false,
@@ -441,6 +460,16 @@ export default function NotificationPanel({
     }, 220);
   };
 
+  const handleReply = (row: NotificationPanelRow) => {
+    if (!onReplyToComment) return;
+    addExitingKey(row.key);
+    window.setTimeout(() => {
+      onDismiss(row);
+      onReplyToComment(row);
+      removeExitingKey(row.key);
+    }, 220);
+  };
+
   const totalCount = rows.length;
 
   return (
@@ -504,6 +533,7 @@ export default function NotificationPanel({
                 onDismiss={handleDismissWithAnimation}
                 onNavigate={handleNavigateWithDismiss}
                 onAct={onActOnNudge ? handleAct : undefined}
+                onReply={onReplyToComment ? handleReply : undefined}
                 showDismissAlways={showDismissAlways}
                 now={now}
               />

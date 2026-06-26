@@ -85,6 +85,7 @@ export const requirementSearchSelect = {
   id: requirements.id,
   position: requirements.position,
   sourceDetails: requirements.sourceDetails,
+  jdText: requirements.jdText,
   criticality: requirements.criticality,
   toughness: requirements.toughness,
 };
