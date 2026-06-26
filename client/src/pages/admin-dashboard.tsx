@@ -26,6 +26,7 @@ import HoldUserModal, { type HoldUserPayload } from '@/components/dashboard/moda
 import { UserHoldRowTooltip } from '@/components/dashboard/user-hold-row-tooltip';
 import { runAdminHoldCountdown } from '@/lib/admin-hold-countdown';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
+import { StaffOsV2DisabledSection } from '@/components/dashboard/staffos-v2-disabled-section';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import NudgeLogsTab from "@/components/dashboard/tabs/nudges-tab";
@@ -2422,7 +2423,7 @@ export default function AdminDashboard() {
     sidebarTab === "performance" ? performancePageMetrics : performanceMetrics;
 
   // Fetch team performance data from API
-  const { data: teamPerformanceData = [], isLoading: isLoadingTeamPerformance } = useQuery<Array<{
+  const { data: teamPerformanceData = [], isLoading: isLoadingTeamPerformance, isError: isTeamPerformanceError } = useQuery<Array<{
     id: string;
     talentAdvisor: string;
     joiningDate: string;
@@ -5336,6 +5337,7 @@ export default function AdminDashboard() {
       {/* Messages and Meetings Section */}
       <div className="grid grid-cols-2 gap-6 h-fit">
         {/* Pending Meetings */}
+        <StaffOsV2DisabledSection>
         <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
           <CardHeader className="pb-3 pt-4 px-6">
             <div className="flex items-center justify-between">
@@ -5576,8 +5578,10 @@ export default function AdminDashboard() {
           </CardContent>
           )}
         </Card>
+        </StaffOsV2DisabledSection>
 
         {/* Message Status */}
+        <StaffOsV2DisabledSection>
         <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
           <CardHeader className="pb-3 pt-4 px-6">
             <div className="flex items-center justify-between">
@@ -5677,6 +5681,7 @@ export default function AdminDashboard() {
           </CardContent>
           )}
         </Card>
+        </StaffOsV2DisabledSection>
       </div>
     </div>
   );
@@ -6529,6 +6534,12 @@ export default function AdminDashboard() {
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
                               Loading team performance data...
+                            </td>
+                          </tr>
+                        ) : isTeamPerformanceError ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-red-500 dark:text-red-400">
+                              Failed to load team performance. Check server logs or try refreshing.
                             </td>
                           </tr>
                         ) : teamPerformanceData.length === 0 ? (
@@ -8057,7 +8068,19 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {teamPerformanceData.length === 0 ? (
+                        {isLoadingTeamPerformance ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              Loading team performance data...
+                            </td>
+                          </tr>
+                        ) : isTeamPerformanceError ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-red-500 dark:text-red-400">
+                              Failed to load team performance. Check server logs or try refreshing.
+                            </td>
+                          </tr>
+                        ) : teamPerformanceData.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
                               No team performance data available

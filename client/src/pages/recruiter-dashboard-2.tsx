@@ -9,6 +9,7 @@ import JobDescriptionDetailsModal from '@/components/dashboard/modals/job-descri
 import { JdVisibilityModal } from '@/components/dashboard/modals/jd-visibility-modal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
+import { StaffOsV2DisabledSection } from '@/components/dashboard/staffos-v2-disabled-section';
 import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +52,8 @@ import {
   parseRejectedMeta,
   parseTerminalOutcome,
   isWithinClosureGracePeriod,
+  shouldAutoArchiveApplication,
+  shouldExcludeFromEmployeePipeline,
   type TerminalOutcome,
 } from "@/lib/pipeline-session-utils";
 import { useOpenCommentSessionListener } from "@/lib/open-comment-session";
@@ -1000,6 +1003,7 @@ export default function RecruiterDashboard2() {
         statusNote: app.statusNote || null,
         rejectionReason: app.rejectionReason || null,
         hasUnreadComments: Boolean(app.hasUnreadComments),
+        updatedAt: app.updatedAt || app.appliedDate || null,
       };
     });
   }, [allApplications]);
@@ -1014,10 +1018,19 @@ export default function RecruiterDashboard2() {
   const [updatingApplicantId, setUpdatingApplicantId] = useState<string | null>(null);
 
   const getPipelineCandidatesByStage = useMemo(() => {
-    let effectiveApplicants = applicantData.map((a) => ({
-      ...a,
-      currentStatus: applicantStatusOverrides[a.id] || a.currentStatus,
-    })).filter((a) => applicantStatusOverrides[a.id] !== "Archived");
+    let effectiveApplicants = applicantData
+      .map((a) => ({
+        ...a,
+        currentStatus: applicantStatusOverrides[a.id] || a.currentStatus,
+      }))
+      .filter((a) => {
+        if (applicantStatusOverrides[a.id] === "Archived") return false;
+        return !shouldExcludeFromEmployeePipeline(
+          a.rawStatus || a.currentStatus,
+          a.statusNote,
+          a.updatedAt ?? a.appliedDate,
+        );
+      });
 
     if (pipelineDate) {
       const filterDate = format(pipelineDate, "yyyy-MM-dd");
@@ -1049,55 +1062,26 @@ export default function RecruiterDashboard2() {
   }, [applicantData, applicantStatusOverrides, pipelineDate]);
 
   useEffect(() => {
-    const now = Date.now();
-    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
-
     applicantData.forEach((candidate: any) => {
       if (candidate.canUpdateStatus === false) return;
-
-      const effectiveStatus = applicantStatusOverrides[candidate.id] || candidate.currentStatus;
-
-      if (effectiveStatus === "Closure") {
-        if (autoArchivedIds.has(candidate.id)) return;
-        const meta = parseClosureMeta(candidate.statusNote);
-        const closureAtIso =
-          meta.closureAt || closureAtOverrides[candidate.id] || candidate.appliedDate;
-        if (!closureAtIso) return;
-        const closureAtTs = new Date(closureAtIso).getTime();
-        if (Number.isNaN(closureAtTs)) return;
-
-        if (now - closureAtTs >= twentyFourHoursMs) {
-          setApplicantStatusOverrides((prev) => ({ ...prev, [candidate.id]: "Archived" }));
-          setAutoArchivedIds((prev) => new Set(prev).add(candidate.id));
-          updateStatusMutation.mutate({
-            id: candidate.id,
-            status: "Archived",
-            silent: true,
-          });
-        }
-        return;
-      }
-
-      if (effectiveStatus !== "Screened Out" && effectiveStatus !== "Rejected") return;
       if (autoArchivedIds.has(candidate.id)) return;
 
-      const meta = parseRejectedMeta(candidate.statusNote);
-      const rejectedAtIso = meta.rejectedAt || rejectedAtOverrides[candidate.id];
-      if (!rejectedAtIso) return;
-      const rejectedAtTs = new Date(rejectedAtIso).getTime();
-      if (Number.isNaN(rejectedAtTs)) return;
+      const dueForArchive = shouldAutoArchiveApplication({
+        status: candidate.rawStatus || candidate.currentStatus,
+        statusNote: candidate.statusNote,
+        updatedAt: candidate.updatedAt ?? candidate.appliedDate,
+      });
+      if (!dueForArchive) return;
 
-      if (now - rejectedAtTs >= twentyFourHoursMs) {
-        setApplicantStatusOverrides(prev => ({ ...prev, [candidate.id]: 'Archived' }));
-        setAutoArchivedIds(prev => new Set(prev).add(candidate.id));
-        updateStatusMutation.mutate({
-          id: candidate.id,
-          status: 'Archived',
-          silent: true,
-        });
-      }
+      setApplicantStatusOverrides((prev) => ({ ...prev, [candidate.id]: "Archived" }));
+      setAutoArchivedIds((prev) => new Set(prev).add(candidate.id));
+      updateStatusMutation.mutate({
+        id: candidate.id,
+        status: "Archived",
+        silent: true,
+      });
     });
-  }, [applicantData, applicantStatusOverrides, autoArchivedIds, rejectedAtOverrides, closureAtOverrides, updateStatusMutation]);
+  }, [applicantData, autoArchivedIds, updateStatusMutation]);
 
   const pipelineSessionList = useMemo(
     () =>
@@ -2267,7 +2251,7 @@ export default function RecruiterDashboard2() {
               </div>
 
               {/* Interview Tracker */}
-              <div className="border-t pt-6">
+              <StaffOsV2DisabledSection className="border-t pt-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-4">Interview Tracker</h3>
 
                 <div className="space-y-4">
@@ -2299,7 +2283,7 @@ export default function RecruiterDashboard2() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </StaffOsV2DisabledSection>
             </div>
           </div>
         </div>
@@ -2963,8 +2947,8 @@ export default function RecruiterDashboard2() {
     }
 
     return (
-      <div className="employee-pipeline-tab-layout flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="ml-16 flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
+      <div className="employee-pipeline-tab-layout flex h-screen min-h-0 flex-col overflow-hidden">
+        <div className="ml-16 flex h-full min-h-0 flex-col overflow-hidden bg-gray-50">
           <AdminTopHeader companyName="Advisory Workspace" hideHelpButton={true} />
           <div className="employee-pipeline-tab-scroll flex min-h-0 flex-1 flex-col overflow-hidden">
             {pipelineTab}
@@ -3392,7 +3376,9 @@ export default function RecruiterDashboard2() {
             onTabChange={setSidebarTab}
             chatUnreadCount={totalUnreadCount}
           />
-          {renderMainContent()}
+          <div className="min-h-0 overflow-hidden">
+            {renderMainContent()}
+          </div>
         </>
       )}
 

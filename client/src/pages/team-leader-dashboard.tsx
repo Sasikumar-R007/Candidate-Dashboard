@@ -12,6 +12,7 @@ import { JdVisibilityModal } from '@/components/dashboard/modals/jd-visibility-m
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
+import { StaffOsV2DisabledSection } from '@/components/dashboard/staffos-v2-disabled-section';
 import NudgesTab from '@/components/dashboard/tabs/nudges-tab';
 import ActiveNudgesTable from "@/components/dashboard/active-nudges-table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -51,7 +52,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, ExternalLink, Eye, Search, ArrowUp, Flag, Trophy } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -586,9 +587,19 @@ export default function TeamLeaderDashboard() {
     chartData: { quarter: string; resumesDelivered: number; closures: number }[];
     selectedMemberId: string;
   }>({
-    queryKey: [`/api/team-leader/team-performance-graph?memberId=${selectedPerformanceMember}`],
+    queryKey: ['/api/team-leader/team-performance-graph', selectedPerformanceMember],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('memberId', selectedPerformanceMember);
+      const response = await apiRequest('GET', `/api/team-leader/team-performance-graph?${params}`);
+      return response.json();
+    },
     enabled: !!employee,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
+  const showPerformanceGraphLoading =
+    isLoadingPerformanceGraph && !performanceGraphData?.chartData?.length;
 
   useEffect(() => {
     const handleProfileUpdated = () => {
@@ -1176,15 +1187,11 @@ export default function TeamLeaderDashboard() {
 
   useOpenCommentSessionListener(openCommentSessionFromNotification);
   
-  // Handle immediate refetch when switching to pipeline tab
+  // Refresh pipeline when user opens the pipeline tab (single fetch — avoid refetch + invalidate together)
   useEffect(() => {
     if (sidebarTab !== 'pipeline' || !employee) return;
-    
-    // Immediately refetch when switching to pipeline tab
     refetchPipeline();
-    queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline-counts'] });
-  }, [sidebarTab, employee, refetchPipeline, queryClient]);
+  }, [sidebarTab, employee, refetchPipeline]);
 
   // Check authentication - wait for loading to complete
   useEffect(() => {
@@ -1663,7 +1670,7 @@ export default function TeamLeaderDashboard() {
               </Card>
 
               {/* Bottom Section - Meetings and CEO Commands */}
-              <div className="grid grid-cols-2 gap-6">
+              <StaffOsV2DisabledSection className="grid grid-cols-2 gap-6">
                 {/* Pending Meetings */}
                 <Card className="bg-white border border-gray-200">
                   <CardHeader className="pb-3 pt-4">
@@ -1763,7 +1770,7 @@ export default function TeamLeaderDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
+              </StaffOsV2DisabledSection>
             </div>
             
             {/* Team Members Sidebar - Right Section (Non-scrollable) */}
@@ -2531,8 +2538,8 @@ export default function TeamLeaderDashboard() {
     }
 
     return (
-      <div className="employee-pipeline-tab-layout flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="ml-16 flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
+      <div className="employee-pipeline-tab-layout flex h-screen min-h-0 flex-col overflow-hidden">
+        <div className="ml-16 flex h-full min-h-0 flex-col overflow-hidden bg-gray-50">
           <AdminTopHeader
             companyName="Delivery Workspace"
             onHelpClick={() => setIsHelpChatOpen(true)}
@@ -2582,7 +2589,7 @@ export default function TeamLeaderDashboard() {
                 </Select>
               </CardHeader>
               <CardContent className="p-4">
-                {isLoadingPerformanceGraph ? (
+                {showPerformanceGraphLoading ? (
                   <div className="flex items-center justify-center h-64">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
                   </div>
@@ -3605,7 +3612,7 @@ export default function TeamLeaderDashboard() {
                 </Select>
               </CardHeader>
               <CardContent>
-                {isLoadingPerformanceGraph ? (
+                {showPerformanceGraphLoading ? (
                   <div className="h-[300px] flex items-center justify-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
                   </div>
@@ -3851,7 +3858,9 @@ export default function TeamLeaderDashboard() {
             activeTab={sidebarTab}
             onTabChange={setSidebarTab}
           />
-          {renderMainContent()}
+          <div className="min-h-0 overflow-hidden">
+            {renderMainContent()}
+          </div>
         </>
       )}
 

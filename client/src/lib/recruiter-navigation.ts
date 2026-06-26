@@ -19,10 +19,16 @@ export function navigateToRecruiterSatellitePage(
   navigate(path);
 }
 
-/** Return to the TA dashboard without polluting browser history. */
+/** Return to the TA dashboard; prefer one step back so browser history stays usable. */
 export function navigateBackToRecruiterDashboard(navigate: RecruiterNavigate) {
   if (!sessionStorage.getItem(RECRUITER_DASHBOARD_TAB_KEY)) {
     saveRecruiterDashboardTab("dashboard");
   }
-  navigate("/recruiter", { replace: true });
+
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+
+  navigate("/recruiter");
 }

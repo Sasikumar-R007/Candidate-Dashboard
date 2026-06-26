@@ -394,6 +394,7 @@ function SalaryDetailsSection({
       : `/api/recruiter/applications/${encodedId}/salary`;
 
   const saveMutation = useMutation({
+    meta: { skipOperationalInvalidation: true },
     mutationFn: async () => {
       const res = await apiRequest("PATCH", salaryEndpoint, {
         currentCtc: draftCurrent,
@@ -657,6 +658,7 @@ export function CandidateCommentsSession({
   const [mobileSessionTab, setMobileSessionTab] = useState<"details" | "comments">("details");
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const prevApplicationIdRef = useRef(applicationId);
+  const markedCommentsReadForRef = useRef<string | null>(null);
 
   const encodedApplicationId = encodeURIComponent(applicationId);
   const apiBase =
@@ -694,20 +696,11 @@ export function CandidateCommentsSession({
       return res.json();
     },
     enabled: !!applicationId,
+    staleTime: 60_000,
     placeholderData: (previous) => previous,
   });
 
-  const { data: sessionMembersData } = useQuery<{ members: ChatSessionMember[] }>({
-    queryKey: [...sessionQueryKey, "members"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `${apiBase}/session/members`);
-      return res.json();
-    },
-    enabled: !!applicationId,
-    staleTime: 30_000,
-  });
-
-  const { data: comments = [], isLoading: commentsLoading, isFetching: commentsFetching } =
+  const { data: comments = [], isLoading: commentsLoading } =
     useQuery<ApplicationComment[]>({
       queryKey: commentsQueryKey,
       queryFn: async () => {
@@ -715,6 +708,7 @@ export function CandidateCommentsSession({
         return res.json();
       },
       enabled: !!applicationId,
+      staleTime: 30_000,
       placeholderData: (previous) => previous,
     });
 
@@ -753,20 +747,27 @@ export function CandidateCommentsSession({
 
   useEffect(() => {
     if (!applicationId) return;
-    void apiRequest("POST", `${apiBase}/comments/read`, {}).catch(() => {
-      // non-blocking
-    });
-    void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
-    void queryClient.invalidateQueries({ queryKey: [...sessionQueryKey, "members"] });
-    void queryClient.invalidateQueries({ queryKey: ["/api/recruiter/applications"] });
-    void queryClient.invalidateQueries({ queryKey: ["/api/team-leader/pipeline"] });
-    void queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
-    void queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline"] });
-    void queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
-    void queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications-feed"] });
-  }, [applicationId, apiMode, apiBase, queryClient]);
+    if (markedCommentsReadForRef.current === applicationId) return;
+    markedCommentsReadForRef.current = applicationId;
+
+    void apiRequest("POST", `${apiBase}/comments/read`, {})
+      .then(() => {
+        void queryClient.invalidateQueries({
+          queryKey: ["/api/employee/notifications-feed"],
+          refetchType: "active",
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["/api/admin/notifications-feed"],
+          refetchType: "active",
+        });
+      })
+      .catch(() => {
+        // non-blocking
+      });
+  }, [applicationId, apiBase, queryClient]);
 
   const postCommentMutation = useMutation({
+    meta: { skipOperationalInvalidation: true },
     mutationFn: async (body: string) => {
       const res = await apiRequest("POST", `${apiBase}/comments`, { body });
       return res.json();
@@ -775,14 +776,14 @@ export function CandidateCommentsSession({
       setCommentText("");
       setMentionQuery(null);
       queryClient.invalidateQueries({ queryKey: commentsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
-      void queryClient.invalidateQueries({ queryKey: [...sessionQueryKey, "members"] });
-      void queryClient.invalidateQueries({ queryKey: ["/api/recruiter/applications"] });
-      void queryClient.invalidateQueries({ queryKey: ["/api/team-leader/pipeline"] });
-      void queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
-      void queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline"] });
-      void queryClient.invalidateQueries({ queryKey: ["/api/employee/notifications-feed"] });
-      void queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications-feed"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["/api/employee/notifications-feed"],
+        refetchType: "active",
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["/api/admin/notifications-feed"],
+        refetchType: "active",
+      });
       setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     },
     onError: (error: Error) => {
@@ -839,7 +840,7 @@ export function CandidateCommentsSession({
   const showSalarySection = apiMode !== "client" || canViewSalaryDetails;
   const clientRejectionReason = getClientRejectionReason(app);
 
-  const showContentFade = isSwitching || sessionFetching || commentsFetching;
+  const showContentFade = isSwitching;
 
   const displayComments = useMemo(() => {
     const seenRejectionBodies = new Set<string>();
@@ -904,10 +905,7 @@ export function CandidateCommentsSession({
             : employee?.role || "Member";
 
   const sessionMembers = useMemo(() => {
-    const accessMembers =
-      sessionData?.members?.length
-        ? sessionData.members
-        : sessionMembersData?.members ?? [];
+    const accessMembers = sessionData?.members ?? [];
 
     const map = new Map<string, ChatSessionMember>();
 
@@ -945,7 +943,6 @@ export function CandidateCommentsSession({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [
     sessionData?.members,
-    sessionMembersData?.members,
     displayComments,
     currentUserId,
     posterName,
@@ -1019,6 +1016,7 @@ export function CandidateCommentsSession({
   };
 
   const builtInClientRejectMutation = useMutation({
+    meta: { skipOperationalInvalidation: true },
     mutationFn: async (reason: string) => {
       const trimmed = reason.trim();
       if (!trimmed) {
@@ -1087,8 +1085,14 @@ export function CandidateCommentsSession({
 
       await queryClient.refetchQueries({ queryKey: commentsQueryKey });
       void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
-      void queryClient.invalidateQueries({ queryKey: ["/api/client/pipeline"] });
-      void queryClient.invalidateQueries({ queryKey: ["/api/client/dashboard-stats"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["/api/client/pipeline"],
+        refetchType: "active",
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["/api/client/dashboard-stats"],
+        refetchType: "active",
+      });
 
       onClientRejected?.(data.reason);
       clientReject?.onReject?.(data.reason);
@@ -1356,7 +1360,7 @@ export function CandidateCommentsSession({
                   <CandidateProfilePhoto
                     name={displayName}
                     imageUrl={profilePictureUrl}
-                    className="h-12 w-12 shrink-0 sm:h-14 sm:w-14"
+                    className="h-12 w-12 shrink-0 md:h-24 md:w-24"
                     compact
                   />
                   <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">

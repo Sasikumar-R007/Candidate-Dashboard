@@ -198,6 +198,142 @@ export function parseClosureMeta(statusNote?: string | null) {
 
 const CLOSURE_GRACE_MS = 24 * 60 * 60 * 1000;
 
+/** Shared 24h grace before terminal pipeline outcomes move to archive. */
+export const PIPELINE_TERMINAL_GRACE_MS = CLOSURE_GRACE_MS;
+
+export function parseRejectedMeta(statusNote?: string | null) {
+  const note = statusNote || "";
+  const stageMatch = note.match(/\[\[REJECT_STAGE:([^\]]+)\]\]/);
+  const atMatch = note.match(/\[\[REJECTED_AT:([^\]]+)\]\]/);
+  return {
+    rejectedFromStage: stageMatch ? stageMatch[1] : null,
+    rejectedAt: atMatch ? atMatch[1] : null,
+  };
+}
+
+export function resolveTerminalAtIso(
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): string | null {
+  const { rejectedAt } = parseRejectedMeta(statusNote);
+  if (rejectedAt) return rejectedAt;
+  if (!updatedAt) return null;
+  const parsed = updatedAt instanceof Date ? updatedAt : new Date(updatedAt);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+export function isArchivedPipelineStatus(status?: string | null): boolean {
+  return (status || "").trim().toLowerCase() === "archived";
+}
+
+export function isClosurePipelineStatus(status?: string | null): boolean {
+  return (status || "").trim().toLowerCase() === "closure";
+}
+
+export function isPastTerminalGracePeriod(
+  status?: string | null,
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): boolean {
+  if (isArchivedPipelineStatus(status)) return false;
+
+  if (isClosurePipelineStatus(status)) {
+    const { closureAt } = parseClosureMeta(statusNote);
+    const tsSource = closureAt || updatedAt;
+    if (!tsSource) return false;
+    const ts = new Date(tsSource).getTime();
+    return !Number.isNaN(ts) && Date.now() - ts >= PIPELINE_TERMINAL_GRACE_MS;
+  }
+
+  if (!isTerminalRejectedStatus(status, statusNote)) return false;
+  const at = resolveTerminalAtIso(statusNote, updatedAt);
+  if (!at) return false;
+  const ts = new Date(at).getTime();
+  return !Number.isNaN(ts) && Date.now() - ts >= PIPELINE_TERMINAL_GRACE_MS;
+}
+
+export function isWithinTerminalGracePeriod(
+  status?: string | null,
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): boolean {
+  if (isArchivedPipelineStatus(status)) return false;
+  if (isClosurePipelineStatus(status)) {
+    return !isPastTerminalGracePeriod(status, statusNote, updatedAt);
+  }
+  if (!isTerminalRejectedStatus(status, statusNote)) return false;
+  return !isPastTerminalGracePeriod(status, statusNote, updatedAt);
+}
+
+export function shouldIncludeInEmployeeArchive(
+  status?: string | null,
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): boolean {
+  if (isArchivedPipelineStatus(status)) return true;
+  return isPastTerminalGracePeriod(status, statusNote, updatedAt);
+}
+
+export function shouldExcludeFromEmployeePipeline(
+  status?: string | null,
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): boolean {
+  if (isArchivedPipelineStatus(status)) return true;
+  return isPastTerminalGracePeriod(status, statusNote, updatedAt);
+}
+
+export function shouldShowInCandidatePipeline(
+  status?: string | null,
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): boolean {
+  if (isArchivedPipelineStatus(status)) return false;
+  if (isTerminalRejectedStatus(status, statusNote)) {
+    return isWithinTerminalGracePeriod(status, statusNote, updatedAt);
+  }
+  return true;
+}
+
+export function shouldShowInCandidateArchive(
+  status?: string | null,
+  statusNote?: string | null,
+  updatedAt?: string | Date | null,
+): boolean {
+  if (isArchivedPipelineStatus(status)) return true;
+  if (isTerminalRejectedStatus(status, statusNote)) {
+    return isPastTerminalGracePeriod(status, statusNote, updatedAt);
+  }
+  return false;
+}
+
+export function shouldAutoArchiveApplication(app: {
+  status?: string | null;
+  statusNote?: string | null;
+  updatedAt?: string | Date | null;
+  appliedDate?: string | Date | null;
+}): boolean {
+  const updatedAt = app.updatedAt ?? app.appliedDate ?? null;
+  if (isArchivedPipelineStatus(app.status)) return false;
+  return isPastTerminalGracePeriod(app.status, app.statusNote, updatedAt);
+}
+
+export function appendRejectedTimestampNote(
+  existingNote?: string | null,
+  fromStage?: string | null,
+): string {
+  let result = (existingNote || "").trim();
+  if (fromStage && !/\[\[REJECT_STAGE:/.test(result)) {
+    const stageStamp = `[[REJECT_STAGE:${fromStage}]]`;
+    result = result ? `${result}\n${stageStamp}` : stageStamp;
+  }
+  if (!/\[\[REJECTED_AT:/.test(result)) {
+    const atStamp = `[[REJECTED_AT:${new Date().toISOString()}]]`;
+    result = result ? `${result}\n${atStamp}` : atStamp;
+  }
+  return result;
+}
+
 /** Closure records stay visible on TA views for 24h before archiving. */
 export function isWithinClosureGracePeriod(
   status?: string | null,

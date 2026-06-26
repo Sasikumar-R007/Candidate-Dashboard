@@ -521,6 +521,20 @@
   overscroll-behavior-y: none;
 }
 
+/* Employee pipeline page shell (TA / TL desktop) */
+.employee-pipeline-tab-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.employee-pipeline-tab-layout .employee-pipeline-tab-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* Admin / TL / TA / Client pipeline: middle column scrolls; right rail full viewport height */
 .pipeline-workspace--admin .admin-pipeline-board-slot,
 .pipeline-workspace--tl .admin-pipeline-board-slot,

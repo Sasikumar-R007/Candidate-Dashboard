@@ -41,6 +41,10 @@ import {
   getProfileCompletionApplyBlockedMessage,
 } from '@/lib/profile-utils';
 import { formatJobAppliedDate, PIPELINE_COLUMN_STYLES, getArchiveStatusLabel, getArchiveTerminalMeta, mapCandidateApplicationStage, getApplicationNudgeDisplayState } from '@/lib/candidate-pipeline-utils';
+import {
+  shouldShowInCandidateArchive,
+  shouldShowInCandidatePipeline,
+} from '@shared/pipeline-stages';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -367,21 +371,33 @@ export default function MyJobsTab({
     [jobApplications]
   );
 
+  const activePipelineApplications = useMemo(
+    () =>
+      confirmedApplications.filter((app) =>
+        shouldShowInCandidatePipeline(
+          app.status,
+          app.statusNote,
+          (app as any).updatedAt ?? app.appliedDate,
+        ),
+      ),
+    [confirmedApplications],
+  );
+
   const mobileExpandedContext = useMemo(() => {
     if (!expandedJobId || !isBelowLg) return null;
-    const job = confirmedApplications.find((j) => j.id === expandedJobId);
+    const job = activePipelineApplications.find((j) => j.id === expandedJobId);
     if (!job) return null;
     return { job, stage: mapStatusToStage(job.status) };
-  }, [expandedJobId, isBelowLg, confirmedApplications]);
+  }, [expandedJobId, isBelowLg, activePipelineApplications]);
 
   const archivedApplications = useMemo(
     () =>
-      jobApplications.filter(
-        (app) =>
-          app.status === "Withdrawn" ||
-          app.status === "Archived" ||
-          mapStatusToStage(app.status) === "Screened Out" ||
-          (app.statusNote || "").includes("[[TERMINAL:WITHDRAW]]"),
+      jobApplications.filter((app) =>
+        shouldShowInCandidateArchive(
+          app.status,
+          app.statusNote,
+          (app as any).updatedAt ?? app.appliedDate,
+        ),
       ),
     [jobApplications],
   );
@@ -752,7 +768,7 @@ export default function MyJobsTab({
             
             <div className="flex gap-3 overflow-x-auto pb-4 min-h-[320px] lg:min-h-[400px] custom-scrollbar max-lg:gap-2 max-lg:-mx-1 max-lg:px-1 max-lg:snap-x max-lg:snap-mandatory">
               {PIPELINE_STAGES.map((stage) => {
-                const stageApplications = confirmedApplications.filter(app => mapStatusToStage(app.status) === stage);
+                const stageApplications = activePipelineApplications.filter(app => mapStatusToStage(app.status) === stage);
                 const columnStyle = PIPELINE_COLUMN_STYLES[stage] ?? PIPELINE_COLUMN_STYLES.Applied;
                 
                 return (
@@ -1010,7 +1026,7 @@ export default function MyJobsTab({
               })}
             </div>
 
-            {confirmedApplications.length === 0 && pendingConfirmations.length === 0 && (
+            {activePipelineApplications.length === 0 && pendingConfirmations.length === 0 && (
               <div className="text-center py-20 text-gray-500">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
                   <Archive className="w-8 h-8 text-gray-300" />

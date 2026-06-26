@@ -833,11 +833,54 @@ export function getSortOrder(sortOption: string) {
       return desc(sql`CAST(REGEXP_REPLACE(${candidates.experience}, '[^0-9.]', '', 'g') AS FLOAT)`);
     case 'experience-low':
       return asc(sql`CAST(REGEXP_REPLACE(${candidates.experience}, '[^0-9.]', '', 'g') AS FLOAT)`);
+    case 'ctc-high':
+      return desc(
+        sql`COALESCE(NULLIF(REGEXP_REPLACE(COALESCE(${candidates.ctc}, ${candidates.ectc}, '0'), '[^0-9.]', '', 'g'), '')::float, 0)`,
+      );
+    case 'ctc-low':
+      return asc(
+        sql`COALESCE(NULLIF(REGEXP_REPLACE(COALESCE(${candidates.ctc}, ${candidates.ectc}, '0'), '[^0-9.]', '', 'g'), '')::float, 0)`,
+      );
+    case 'notice-period':
+      return asc(
+        sql`COALESCE(NULLIF(REGEXP_REPLACE(COALESCE(${candidates.noticePeriod}, '999'), '[^0-9]', '', 'g'), '')::int, 999)`,
+      );
     case 'recently-updated':
       return desc(candidates.createdAt);
     case 'alphabetical':
       return asc(candidates.fullName);
     default:
-      return desc(candidates.createdAt); // Default: most recent
+      return desc(candidates.createdAt);
   }
+}
+
+/** Max candidates scored in memory when relevance ranking is required. */
+export const SOURCE_RESUME_SCORE_POOL_MAX = 2000;
+
+/**
+ * Browse-all with default relevance sort does not need to load the full table.
+ * Only rank in memory when there is something to score against.
+ */
+export function sourceResumeNeedsInMemoryScoring(options: {
+  searchQuery: string;
+  booleanMode: boolean;
+  filters: Record<string, any>;
+  sortOption: string;
+  requirementId: string | null;
+  searchSkills: string[];
+}): boolean {
+  const { searchQuery, booleanMode, sortOption, requirementId, searchSkills, filters } =
+    options;
+
+  if (sortOption !== "relevance") {
+    return false;
+  }
+
+  if (requirementId) return true;
+  if (booleanMode && searchQuery.trim()) return true;
+  if (searchQuery.trim()) return true;
+  if (searchSkills.length > 0) return true;
+  if (getFilterValues(filters.role).length > 0) return true;
+
+  return false;
 }

@@ -31,15 +31,27 @@ export function isPipelineApplicationSessionId(id: string | null | undefined): b
   return Boolean(id) && !String(id).startsWith("submission-");
 }
 
-export function parseRejectedMeta(statusNote?: string | null) {
-  const note = statusNote || "";
-  const stageMatch = note.match(/\[\[REJECT_STAGE:([^\]]+)\]\]/);
-  const atMatch = note.match(/\[\[REJECTED_AT:([^\]]+)\]\]/);
-  return {
-    rejectedFromStage: stageMatch ? stageMatch[1] : null,
-    rejectedAt: atMatch ? atMatch[1] : null,
-  };
-}
+import {
+  parseRejectedMeta,
+  shouldAutoArchiveApplication,
+  shouldExcludeFromEmployeePipeline,
+  shouldIncludeInEmployeeArchive,
+  shouldShowInCandidateArchive,
+  shouldShowInCandidatePipeline,
+  isPastTerminalGracePeriod,
+  isWithinTerminalGracePeriod,
+} from "@shared/pipeline-stages";
+
+export {
+  parseRejectedMeta,
+  shouldAutoArchiveApplication,
+  shouldExcludeFromEmployeePipeline,
+  shouldIncludeInEmployeeArchive,
+  shouldShowInCandidateArchive,
+  shouldShowInCandidatePipeline,
+  isPastTerminalGracePeriod,
+  isWithinTerminalGracePeriod,
+} from "@shared/pipeline-stages";
 
 export {
   parseClosureMeta,

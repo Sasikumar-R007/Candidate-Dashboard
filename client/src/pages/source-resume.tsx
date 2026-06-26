@@ -1874,21 +1874,6 @@ const SourceResume = () => {
   }
   
   const [view, setView] = useState<'search' | 'results'>('search');
-  
-  // Trigger initial search if we're already in results view (e.g., page refresh)
-  useEffect(() => {
-    // Check if we should be in results view (e.g., from URL or session)
-    // For now, we'll trigger search when component mounts if view is results
-    if (view === 'results' && searchResults === null && !isSearching) {
-      const timer = setTimeout(() => {
-        if (performSearchRef.current) {
-          console.log('Initial search trigger on mount');
-          performSearchRef.current(1);
-        }
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, []); // Only run on mount
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [keywordInput, setKeywordInput] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDisplay | null>(null);
@@ -3054,7 +3039,9 @@ const SourceResume = () => {
   }, [resultsSearchQuery]);
 
   // Perform server-side search - use refs to avoid recreation
+  const searchRequestIdRef = useRef(0);
   const performSearch = useCallback(async (page: number = 1) => {
+    const requestId = ++searchRequestIdRef.current;
     setIsSearching(true);
     try {
       const currentFilters = filtersRef.current;
@@ -3101,10 +3088,13 @@ const SourceResume = () => {
 
       const response = await apiRequest('POST', '/api/source-resume/search', searchParams);
       const data = await response.json();
+
+      if (requestId !== searchRequestIdRef.current) return;
       
       setSearchResults(data);
       setCurrentPage(page);
     } catch (error: any) {
+      if (requestId !== searchRequestIdRef.current) return;
       console.error('Search error:', error);
       toast({
         title: "Search failed",
@@ -3112,7 +3102,9 @@ const SourceResume = () => {
         variant: "destructive",
       });
     } finally {
-      setIsSearching(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsSearching(false);
+      }
     }
   }, [candidatesPerPage, toast]);
 
@@ -3133,10 +3125,10 @@ const SourceResume = () => {
     setView('results');
     setCurrentPage(1);
     setShowSavedProfiles(false);
-    hasPerformedInitialSearch.current = false; // Reset flag
+    hasPerformedInitialSearch.current = true;
     
     // Perform server-side search (even with empty query to show all candidates)
-    skipNextFilterChange.current = true; // Skip the filter change trigger
+    skipNextFilterChange.current = true;
     performSearch(1);
   };
   

@@ -23,8 +23,11 @@ import {
 } from "@shared/requirement-jd-extras";
 import {
   appendClosureTimestampNote,
+  appendRejectedTimestampNote,
   normalizePipelineDisplayStatus,
   resolvePipelineGroupingStatus,
+  shouldExcludeFromEmployeePipeline,
+  shouldIncludeInEmployeeArchive,
 } from "@shared/pipeline-stages";
 import {
   calculateProfileCompletion,
@@ -230,6 +233,7 @@ import {
   recordCandidateStaffOSLogin,
 } from "./staffos-onboard-server";
 import { startStaffosInviteReminderScheduler } from "./staffos-invite-reminders";
+import { processPipelineAutoArchive, startPipelineAutoArchiveScheduler } from "./pipeline-auto-archive";
 import { applyCorsHeaders } from "./cors-config";
 import { parseJDWithAI, extractBasicJdFieldsFromText } from "./ai-jd-parser";
 import {
@@ -250,6 +254,8 @@ import {
   normalizeSkills,
   parseAndNormalizeSkills,
   candidateMatchesBooleanQuery,
+  sourceResumeNeedsInMemoryScoring,
+  SOURCE_RESUME_SCORE_POOL_MAX,
 } from "./source-resume-search";
 import { buildIncentiveMappingContext } from "./incentive-mapping-context";
 import {
@@ -618,13 +624,12 @@ function isTalentAdvisorRole(role: string | null | undefined): boolean {
 }
 
 const ARCHIVED_CANDIDATE_STATUSES = new Set([
-  "screened out",
-  "rejected",
   "archived",
-  "offer drop",
-  "declined",
-  "withdrawn",
 ]);
+
+function getApplicationArchiveTimestamp(app: any): string | Date | null {
+  return app.updatedAt ?? app.appliedDate ?? null;
+}
 
 function mapArchivedCandidateRow(app: any) {
   return {
@@ -634,6 +639,7 @@ function mapArchivedCandidateRow(app: any) {
     jobTitle: app.jobTitle || app.roleApplied || "N/A",
     company: app.company || "N/A",
     status: app.status || app.currentStatus || "Rejected",
+    statusNote: app.statusNote ?? null,
     appliedDate: app.appliedDate || app.updatedAt || null,
     requirementId: app.requirementId || null,
   };
@@ -641,11 +647,25 @@ function mapArchivedCandidateRow(app: any) {
 
 function filterArchivedCandidates(applications: any[]): any[] {
   return applications
-    .filter((app: any) => {
-      const status = (app.status || app.currentStatus || "").trim().toLowerCase();
-      return ARCHIVED_CANDIDATE_STATUSES.has(status) || status.includes("reject");
-    })
+    .filter((app: any) =>
+      shouldIncludeInEmployeeArchive(
+        app.status || app.currentStatus,
+        app.statusNote,
+        getApplicationArchiveTimestamp(app),
+      ),
+    )
     .map(mapArchivedCandidateRow);
+}
+
+function filterApplicationsForEmployeePipeline(applications: any[]): any[] {
+  return applications.filter(
+    (app: any) =>
+      !shouldExcludeFromEmployeePipeline(
+        app.status || app.currentStatus,
+        app.statusNote,
+        getApplicationArchiveTimestamp(app),
+      ),
+  );
 }
 
 function getRecruitersForTeamLead(
@@ -5031,6 +5051,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let candidateJobApplications = await loadCandidateJobApplications(candidate, req);
 
+      const archivedCount = await processPipelineAutoArchive(storage, candidateJobApplications);
+      if (archivedCount > 0) {
+        candidateJobApplications = await loadCandidateJobApplications(candidate, req);
+      }
+
       // If candidate has already confirmed at least one StaffOS-tagged application,
       // auto-confirm other pending tagged rows to avoid repeated consent prompts.
       const hasRecruiterConsent = candidateJobApplications.some(
@@ -6718,10 +6743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Interview Scheduled' // Maps to L1
       ]);
 
-      const pipelineApplications = allPipelineApplications.filter((app: any) => {
-        const status = (app.status || "").trim().toLowerCase();
-        return status !== "archived" && status !== "";
-      });
+      const pipelineApplications = filterApplicationsForEmployeePipeline(allPipelineApplications);
 
       const profilePictureLookup = await buildProfilePictureLookup(
         pipelineApplications.map((app: any) => app.profileId),
@@ -13715,9 +13737,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const allEmployees = await storage.getAllEmployees();
-      const teamRoles = new Set(["recruiter", "team_leader", "talent_advisor", "ta"]);
       let teamMembers = allEmployees.filter(
-        (emp) => teamRoles.has((emp.role || "").toLowerCase()) && emp.isActive !== false,
+        (emp) =>
+          (isTalentAdvisorRole(emp.role) || isTeamLeaderRole(emp.role)) &&
+          emp.isActive !== false,
       );
 
       const teamIdParam = req.query.teamId as string | undefined;
@@ -13754,7 +13777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // All placement rows (TA closure reports + Revenue Data)
         const memberClosures = allRevenueMappings.filter(rm =>
           rm.talentAdvisorId === member.id ||
-          rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase()
+          String(rm.talentAdvisorName || "").toLowerCase() === member.name.toLowerCase()
         );
 
         const joiningDateRaw = member.joiningDate || null;
@@ -13775,7 +13798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const memberRevenueData = revenueDataMappings.filter(
           (rm) =>
             rm.talentAdvisorId === member.id ||
-            rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase(),
+            String(rm.talentAdvisorName || "").toLowerCase() === member.name.toLowerCase(),
         );
 
         const enrichedMemberTargets = memberTargets.map((tm) =>
@@ -14583,28 +14606,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (resolvedRoleId) {
+        const normalizedRoleId = String(resolvedRoleId).trim().toUpperCase();
         const existingJobs = await storage.getAllRecruiterJobs();
-        const activeJobsWithRequirement = existingJobs.filter(
-          (job) =>
-            job.status !== "Closed" &&
-            job.requirementId &&
-            String(job.requirementId).trim() !== String(resolvedRequirementId || "").trim(),
+        const activeJobs = existingJobs.filter(
+          (job) => job.status !== "Closed" && job.requirementId,
         );
 
-        if (activeJobsWithRequirement.length > 0) {
-          const linkedRequirements = await Promise.all(
-            activeJobsWithRequirement.map((job) => storage.getRequirementById(String(job.requirementId))),
-          );
-          const duplicateRequirement = linkedRequirements.find(
-            (req) =>
-              req &&
-              String(resolveDisplayRoleId(req)).trim().toUpperCase() ===
-                String(resolvedRoleId).trim().toUpperCase(),
-          );
-          if (duplicateRequirement) {
-            return res.status(409).json({
-              message: `Job already Posted for this JD (${duplicateRequirement.position || resolvedRoleId})`,
-            });
+        if (activeJobs.length > 0) {
+          const activeRequirements = await storage.getRequirements();
+          const archivedRequirements = await storage.getArchivedRequirements();
+          const requirementById = new Map<string, (typeof activeRequirements)[number]>();
+          for (const req of [...activeRequirements, ...archivedRequirements]) {
+            requirementById.set(String(req.id), req);
+          }
+
+          for (const job of activeJobs) {
+            const linkedReq =
+              requirementById.get(String(job.requirementId)) ||
+              (await storage.getRequirementById(String(job.requirementId)));
+            if (!linkedReq) continue;
+            const jobRoleId = String(resolveDisplayRoleId(linkedReq)).trim().toUpperCase();
+            if (jobRoleId === normalizedRoleId) {
+              return res.status(409).json({
+                message: `Job already Posted for this JD (${linkedReq.position || resolvedRoleId})`,
+              });
+            }
           }
         }
       }
@@ -15382,6 +15408,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      await processPipelineAutoArchive(storage, filteredApplications);
+
       res.json(await attachHasUnreadComments(employee.id, filteredApplications));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -16124,6 +16152,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
+      const normalizedStatus = (status || "").trim().toLowerCase();
+      if (normalizedStatus === "screened out" || normalizedStatus === "rejected") {
+        effectiveStatusNote = appendRejectedTimestampNote(
+          effectiveStatusNote ?? existingApplication.statusNote,
+          existingApplication.status,
+        );
+      }
+
       // Update the application status in the database
       const application = await storage.updateJobApplicationStatus(
         id,
@@ -16473,10 +16509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Offer Drop', 'Declined',
         'Interview Scheduled'
       ]);
-      const pipelineSourceApps = dedupedPipelineApps.filter((app: any) => {
-        const status = String(app.status || "").trim().toLowerCase();
-        return status !== "archived" && status !== "";
-      });
+      const pipelineSourceApps = filterApplicationsForEmployeePipeline(dedupedPipelineApps);
 
       const profilePictureLookup = await buildProfilePictureLookup(
         pipelineSourceApps.map((app: any) => app.profileId),
@@ -16778,12 +16811,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const SOURCE_RESUME_MAX_PAGE_SIZE = 50;
-      const inMemoryScoreSorts = new Set([
-        "relevance",
-        "ctc-high",
-        "ctc-low",
-        "notice-period",
-      ]);
+      const needsInMemoryScoring = sourceResumeNeedsInMemoryScoring({
+        searchQuery,
+        booleanMode,
+        filters,
+        sortOption,
+        requirementId,
+        searchSkills,
+      });
 
       const [countRow] = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -16798,16 +16833,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const offset = (page - 1) * pageSize;
 
-      const isInMemorySort = inMemoryScoreSorts.has(sortOption);
-
       let filteredCandidatesQuery = db.select(candidateListSelect).from(candidates).where(whereClause);
 
-      if (!isInMemorySort) {
-        filteredCandidatesQuery = filteredCandidatesQuery.orderBy(getSortOrder(sortOption));
-        filteredCandidatesQuery = filteredCandidatesQuery.limit(pageSize).offset(offset);
+      if (!needsInMemoryScoring) {
+        filteredCandidatesQuery = filteredCandidatesQuery
+          .orderBy(getSortOrder(sortOption))
+          .limit(pageSize)
+          .offset(offset);
       } else {
-        // Score against the full SQL-filtered dataset, then paginate in memory.
-        filteredCandidatesQuery = filteredCandidatesQuery.orderBy(desc(candidates.createdAt));
+        filteredCandidatesQuery = filteredCandidatesQuery
+          .orderBy(desc(candidates.createdAt))
+          .limit(SOURCE_RESUME_SCORE_POOL_MAX);
       }
 
       let candidatesList;
@@ -16824,7 +16860,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw queryError;
       }
 
-      const totalCount = matchedCount;
+      const totalCount =
+        needsInMemoryScoring && booleanMode && searchQuery.trim()
+          ? candidatesList.length
+          : matchedCount;
 
       // Get requirement if provided
       let requirement = null;
@@ -16838,7 +16877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const roleFilters = getFilterValues(filters.role);
 
-      // Calculate scores for each candidate
+      // Calculate scores for each candidate (page only when using SQL pagination)
       const scoredCandidates = candidatesList.map(candidate => {
         return calculateRelevanceScore(
           candidate,
@@ -16849,11 +16888,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       });
 
-      // Sort by relevance if needed (or other in-memory sorts)
       let sortedCandidates = scoredCandidates;
-      if (sortOption === 'relevance') {
+      if (needsInMemoryScoring && sortOption === 'relevance') {
         sortedCandidates = scoredCandidates.sort((a, b) => {
-          // If requirement match exists, prioritize it
           if (requirement) {
             const aMatch = a.matchPercentage || 0;
             const bMatch = b.matchPercentage || 0;
@@ -16861,27 +16898,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           return b.relevanceScore - a.relevanceScore;
         });
-      } else if (sortOption === 'ctc-high' || sortOption === 'ctc-low') {
-        sortedCandidates = scoredCandidates.sort((a, b) => {
-          const aCtc = parseFloat((a.candidate.ctc || a.candidate.ectc || '0').replace(/[^\d.]/g, '')) || 0;
-          const bCtc = parseFloat((b.candidate.ctc || b.candidate.ectc || '0').replace(/[^\d.]/g, '')) || 0;
-          return sortOption === 'ctc-high' ? bCtc - aCtc : aCtc - bCtc;
-        });
-      } else if (sortOption === 'notice-period') {
-        sortedCandidates = scoredCandidates.sort((a, b) => {
-          const aNotice = parseInt((a.candidate.noticePeriod || '999').match(/\d+/)?.[0] || '999');
-          const bNotice = parseInt((b.candidate.noticePeriod || '999').match(/\d+/)?.[0] || '999');
-          return aNotice - bNotice;
-        });
       }
 
-      const paginatedCandidates = isInMemorySort
+      const paginatedCandidates = needsInMemoryScoring
         ? sortedCandidates.slice(offset, offset + pageSize)
         : sortedCandidates;
 
-      // Calculate analytics for the scored pool returned by this search path.
       const analytics = calculateAnalytics(
-        (isInMemorySort ? sortedCandidates : candidatesList).map(
+        (needsInMemoryScoring ? sortedCandidates : paginatedCandidates).map(
           (sc) => ("candidate" in sc ? sc.candidate : sc),
         ),
       );
@@ -18717,7 +18741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
 
       // Transform applications to pipeline data format with TA information
-      const pipelineData = applications.map((app: any) => {
+      const pipelineData = filterApplicationsForEmployeePipeline(applications).map((app: any) => {
         const currentStatus = resolvePipelineGroupingStatus(app.status, app.statusNote);
 
         // Find requirement and TA information
@@ -18836,32 +18860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { applications: scopedApplications } =
         await getJobApplicationsScopedToClient(employee);
 
-      const archivedStatuses = new Set([
-        "screened out",
-        "rejected",
-        "archived",
-        "offer drop",
-        "declined",
-        "withdrawn",
-      ]);
-
-      const archivedCandidates = scopedApplications
-        .filter((app: any) => {
-          const status = (app.status || app.currentStatus || "")
-            .trim()
-            .toLowerCase();
-          return archivedStatuses.has(status) || status.includes("reject");
-        })
-        .map((app: any) => ({
-          id: app.id,
-          candidateName: app.candidateName || "Unknown",
-          candidateEmail: app.candidateEmail || "N/A",
-          jobTitle: app.jobTitle || app.roleApplied || "N/A",
-          company: app.company || "N/A",
-          status: app.status || app.currentStatus || "Rejected",
-          appliedDate: app.appliedDate || app.updatedAt || null,
-          requirementId: app.requirementId || null,
-        }));
+      const archivedCandidates = filterArchivedCandidates(scopedApplications);
 
       res.json(archivedCandidates);
     } catch (error) {
@@ -21241,6 +21240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   (app as any).broadcastToRoom = broadcastToRoom;
 
   startStaffosInviteReminderScheduler(storage);
+  startPipelineAutoArchiveScheduler(storage);
 
   return httpServer;
 }

@@ -241,6 +241,10 @@ export default function PostJobModal({
     [postableRequirements, selectedClientCompany, selectedRoleId],
   );
 
+  const hasMultipleRequirementOptions = filteredRequirements.length > 1;
+  const singleMatchedRequirement =
+    filteredRequirements.length === 1 ? filteredRequirements[0] : null;
+
   const requiresRequirementLink = Boolean(linkableRequirements?.length) && !formData.id;
 
   const getInvalidPostJobFields = (): Set<string> => {
@@ -761,38 +765,95 @@ const deriveLocationType = (workMode: string): string => {
                   </div>
 
                   <div className="space-y-1.5 px-1">
-                    <Label className="text-xs text-gray-600">Requirement</Label>
-                    <Select
-                      value={formData.requirementId || ""}
-                      onValueChange={handleRequirementSelect}
-                      disabled={!selectedRoleId}
-                    >
-                      <SelectTrigger
-                        className={fieldBorder(
-                          "linkRequirement",
-                          "bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0",
+                    {hasMultipleRequirementOptions ? (
+                      <>
+                        <Label className="text-xs text-gray-600">
+                          Split assignment (required when Role ID has multiple TAs)
+                        </Label>
+                        <Select
+                          value={formData.requirementId || ""}
+                          onValueChange={handleRequirementSelect}
+                          disabled={!selectedRoleId}
+                        >
+                          <SelectTrigger
+                            className={fieldBorder(
+                              "linkRequirement",
+                              "bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0",
+                            )}
+                            data-testid="select-linked-requirement"
+                          >
+                            <SelectValue placeholder="Select TA / split row" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filteredRequirements.map((req) => (
+                              <SelectItem key={req.id} value={req.id}>
+                                {req.talentAdvisor || "Unassigned TA"} ·{" "}
+                                {resolveRequirementDisplayId(req, req.displayRequirementId ?? undefined)} ·{" "}
+                                {req.position}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[11px] text-slate-500">
+                          This Role ID is split across multiple TAs — pick which assignment you are posting for.
+                        </p>
+                      </>
+                    ) : singleMatchedRequirement ? (
+                      <>
+                        <Label className="text-xs text-gray-600">Requirement</Label>
+                        <div
+                          className="flex h-10 items-center rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-800"
+                          data-testid="text-linked-requirement-auto"
+                        >
+                          {(singleMatchedRequirement.talentAdvisor || "TA") +
+                            " · " +
+                            resolveRequirementDisplayId(
+                              singleMatchedRequirement,
+                              singleMatchedRequirement.displayRequirementId ?? undefined,
+                            ) +
+                            " · " +
+                            (singleMatchedRequirement.position || "Role")}
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Linked automatically from Role ID — no extra selection needed.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Label className="text-xs text-gray-600">Requirement</Label>
+                        <Select
+                          value={formData.requirementId || ""}
+                          onValueChange={handleRequirementSelect}
+                          disabled={!selectedRoleId}
+                        >
+                          <SelectTrigger
+                            className={fieldBorder(
+                              "linkRequirement",
+                              "bg-slate-100 border-slate-300 h-10 disabled:bg-slate-200 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0",
+                            )}
+                            data-testid="select-linked-requirement"
+                          >
+                            <SelectValue placeholder="Select Requirement" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filteredRequirements.length === 0 ? (
+                              <SelectItem value="__none" disabled>
+                                No matching requirements
+                              </SelectItem>
+                            ) : (
+                              filteredRequirements.map((req) => (
+                                <SelectItem key={req.id} value={req.id}>
+                                  {resolveRequirementDisplayId(req, req.displayRequirementId ?? undefined)} ·{" "}
+                                  {req.position}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {!selectedRoleId && (
+                          <p className="text-[11px] text-slate-500">Choose Client and Role ID first.</p>
                         )}
-                        data-testid="select-linked-requirement"
-                      >
-                        <SelectValue placeholder="Select Requirement" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredRequirements.length === 0 ? (
-                          <SelectItem value="__none" disabled>
-                            No matching requirements
-                          </SelectItem>
-                        ) : (
-                          filteredRequirements.map((req) => (
-                            <SelectItem key={req.id} value={req.id}>
-                              {resolveRequirementDisplayId(req, req.displayRequirementId ?? undefined)} ·{" "}
-                              {req.position}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {!selectedRoleId && (
-                      <p className="text-[11px] text-slate-500">Choose Client and Role ID first.</p>
+                      </>
                     )}
                   </div>
                 </div>

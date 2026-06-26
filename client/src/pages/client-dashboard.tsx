@@ -218,6 +218,7 @@ export default function ClientDashboard() {
   const [knowledgeOnly, setKnowledgeOnly] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isParsingJd, setIsParsingJd] = useState(false);
+  const [isSubmittingJd, setIsSubmittingJd] = useState(false);
   const [isJdPreviewModalOpen, setIsJdPreviewModalOpen] = useState(false);
   const [jdPosition, setJdPosition] = useState('');
   const [jdPositionsInput, setJdPositionsInput] = useState('1');
@@ -2947,14 +2948,18 @@ export default function ClientDashboard() {
             <Button
               variant="outline"
               onClick={() => setIsJdPreviewModalOpen(false)}
+              disabled={isSubmittingJd}
               className="rounded"
             >
               Cancel
             </Button>
             <Button
+              disabled={isSubmittingJd}
               onClick={async () => {
+                if (isSubmittingJd) return;
                 try {
                   if (!validateJdUploadForm()) return;
+                  setIsSubmittingJd(true);
 
                   let jdFileUrl = null;
 
@@ -3007,11 +3012,20 @@ export default function ClientDashboard() {
                     description: error.message || "Failed to submit job description. Please try again.",
                     variant: "destructive"
                   });
+                } finally {
+                  setIsSubmittingJd(false);
                 }
               }}
-              className="bg-cyan-400 hover:bg-cyan-500 text-black rounded"
+              className="bg-cyan-400 hover:bg-cyan-500 text-black rounded min-w-[120px]"
             >
-              Submit
+              {isSubmittingJd ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Submitting…
+                </>
+              ) : (
+                'Submit'
+              )}
             </Button>
           </div>
         </DialogContent>
