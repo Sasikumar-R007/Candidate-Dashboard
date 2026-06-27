@@ -10150,6 +10150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         generateNextRequirementRoleId,
         buildSplitRequirementSourceDetails,
+        findConflictingRequirementForRoleId,
       } = await import("./requirement-role-id");
 
       const createdRequirements = [];
@@ -10166,6 +10167,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const singleDisplayRoleId = !isSplitCreate
         ? preservedRoleId || (await generateNextRequirementRoleId(storage))
         : null;
+
+      if (!isSplitCreate && singleDisplayRoleId) {
+        const roleConflict = await findConflictingRequirementForRoleId(
+          storage,
+          singleDisplayRoleId,
+          {
+            excludeRequirementIds: preservedRoleId ? [preservedRoleId] : [],
+          },
+        );
+        if (roleConflict) {
+          return res.status(409).json({
+            message: `Role ID ${singleDisplayRoleId} is already used by "${roleConflict.position}" (${roleConflict.company}). Each separate requirement must have its own Role ID — only admin TL splits may share one.`,
+          });
+        }
+      }
 
       for (let index = 0; index < teamLeadsToCreate.length; index++) {
         const teamLeadName = teamLeadsToCreate[index];

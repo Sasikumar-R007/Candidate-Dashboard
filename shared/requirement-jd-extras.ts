@@ -259,13 +259,6 @@ export function resolveDisplayRoleId(
       if (displayRoleId && STR_ROLE_ID_PATTERN.test(String(displayRoleId))) {
         return String(displayRoleId);
       }
-      const displayRequirementId = parsed.displayRequirementId;
-      if (
-        displayRequirementId &&
-        STR_ROLE_ID_PATTERN.test(String(displayRequirementId))
-      ) {
-        return String(displayRequirementId);
-      }
     } catch {
       // ignore invalid JSON
     }

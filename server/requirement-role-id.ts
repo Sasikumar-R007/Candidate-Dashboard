@@ -2,10 +2,118 @@ import type { IStorage } from "./storage";
 import type { RecruiterJob } from "@shared/schema";
 import {
   extractStreqId,
+  getRequirementTlSplitMeta,
   isValidStrRoleId,
   normalizeStrRoleId,
   resolveDisplayRoleId,
 } from "@shared/requirement-jd-extras";
+
+type RequirementRoleRef = {
+  id: string;
+  company?: string | null;
+  position?: string | null;
+  sourceDetails?: string | null;
+  isArchived?: boolean | null;
+  managementReason?: string | null;
+};
+
+/** True when two requirements belong to the same admin TL split (shared Role ID by design). */
+export function requirementsShareJobPostingRoleGroup(
+  a: RequirementRoleRef,
+  b: RequirementRoleRef,
+): boolean {
+  if (String(a.id) === String(b.id)) return true;
+  const metaA = getRequirementTlSplitMeta(a);
+  const metaB = getRequirementTlSplitMeta(b);
+  if (!metaA?.roleId || !metaB?.roleId) return false;
+  return (
+    normalizeStrRoleId(metaA.roleId) === normalizeStrRoleId(metaB.roleId) &&
+    String(a.company || "").trim().toLowerCase() ===
+      String(b.company || "").trim().toLowerCase()
+  );
+}
+
+async function loadAllRequirementsForRoleIdIndex(
+  storage: IStorage,
+): Promise<RequirementRoleRef[]> {
+  const active = await storage.getRequirements();
+  const archived = await storage.getArchivedRequirements();
+  const byId = new Map<string, RequirementRoleRef>();
+
+  for (const req of active) {
+    byId.set(String(req.id), req);
+  }
+  for (const archivedReq of archived) {
+    const originalId = String(archivedReq.originalId || archivedReq.id);
+    if (!byId.has(originalId)) {
+      byId.set(originalId, {
+        id: originalId,
+        company: archivedReq.company,
+        position: archivedReq.position,
+        sourceDetails: archivedReq.sourceDetails,
+        isArchived: true,
+        managementReason: archivedReq.managementReason,
+      });
+    }
+  }
+  return Array.from(byId.values());
+}
+
+function collectUsedStrRoleIdsFromList(
+  requirements: Array<{ id?: string | null; sourceDetails?: string | null }>,
+): Set<string> {
+  const used = new Set<string>();
+  for (const req of requirements) {
+    if (req.id && isValidStrRoleId(req.id)) {
+      used.add(String(req.id).trim().toUpperCase());
+    }
+    const resolved = normalizeStrRoleId(resolveDisplayRoleId(req));
+    if (resolved) used.add(resolved);
+  }
+  return used;
+}
+
+/** Find another active requirement already using this Role ID (excluding intentional TL splits). */
+export async function findConflictingRequirementForRoleId(
+  storage: IStorage,
+  roleId: string,
+  options?: {
+    excludeRequirementIds?: string[];
+    allowSharedRoleIdForSplitGroup?: string | null;
+  },
+): Promise<RequirementRoleRef | null> {
+  const normalized = normalizeStrRoleId(roleId);
+  if (!normalized) return null;
+
+  const exclude = new Set(
+    (options?.excludeRequirementIds || []).map((id) => String(id)),
+  );
+  const allRequirements = await loadAllRequirementsForRoleIdIndex();
+
+  for (const req of allRequirements) {
+    if (exclude.has(String(req.id))) continue;
+    if (req.isArchived) continue;
+    if (req.managementReason === "Split among Talent Advisors") continue;
+
+    const reqRoleId = normalizeStrRoleId(resolveDisplayRoleId(req));
+    if (reqRoleId !== normalized) continue;
+
+    if (options?.allowSharedRoleIdForSplitGroup) {
+      const splitMeta = getRequirementTlSplitMeta(req);
+      if (
+        splitMeta?.roleId &&
+        normalizeStrRoleId(splitMeta.roleId) ===
+          normalizeStrRoleId(options.allowSharedRoleIdForSplitGroup)
+      ) {
+        continue;
+      }
+    }
+
+    return req;
+  }
+
+  return null;
+}
 
 export type DuplicateJobBlockInfo = {
   jobId: string;
@@ -138,6 +246,18 @@ export async function findDuplicateRecruiterJobForPosting(
     const jobRoleId = normalizeStrRoleId(resolveDisplayRoleId(linkedReq));
     if (!jobRoleId || jobRoleId !== normalizedRoleId) continue;
 
+    // Only block on shared Role ID for intentional admin TL splits — not accidental duplicates.
+    if (
+      !requirementsShareJobPostingRoleGroup(params.requirement, {
+        id: jobRequirementId,
+        company: linkedReq.company,
+        position: linkedReq.position,
+        sourceDetails: linkedReq.sourceDetails,
+      })
+    ) {
+      continue;
+    }
+
     const jobCompany = String(linkedReq.company || "").trim().toLowerCase();
     if (targetCompany && jobCompany && jobCompany !== targetCompany) continue;
 
@@ -147,19 +267,6 @@ export async function findDuplicateRecruiterJobForPosting(
   return null;
 }
 
-function collectUsedStrRoleIds(
-  requirements: Array<{ id?: string | null; sourceDetails?: string | null }>,
-): Set<string> {
-  const used = new Set<string>();
-  for (const req of requirements) {
-    if (req.id && isValidStrRoleId(req.id)) {
-      used.add(String(req.id).trim().toUpperCase());
-    }
-    const resolved = normalizeStrRoleId(resolveDisplayRoleId(req));
-    if (resolved) used.add(resolved);
-  }
-  return used;
-}
 
 /** Resolve STREQ display id consistently with client buildStreqDisplayMap. */
 export async function resolveStreqDisplayIdForRequirement(
@@ -218,9 +325,9 @@ export async function generateNextRequirementRoleId(
   storage: IStorage,
 ): Promise<string> {
   const currentYear = new Date().getFullYear().toString().slice(-2);
-  const allRequirements = await storage.getRequirements();
+  const allRequirements = await loadAllRequirementsForRoleIdIndex(storage);
   const prefix = `STR${currentYear}`;
-  const usedRoleIds = collectUsedStrRoleIds(allRequirements);
+  const usedRoleIds = collectUsedStrRoleIdsFromList(allRequirements);
 
   let maxNumber = 0;
   for (const roleId of usedRoleIds) {
