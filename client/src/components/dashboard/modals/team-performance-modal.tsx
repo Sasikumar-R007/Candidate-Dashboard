@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { ADMIN_MODAL_SEARCH_INPUT_CLASS } from "@/lib/revenue-mapping-utils";
 
 interface TeamPerformanceTableModalProps {
@@ -32,9 +33,8 @@ export default function TeamPerformanceTableModal({ isOpen, onClose, teamId = "a
         params.append("teamId", teamId);
       }
       const url = `/api/admin/team-performance${params.toString() ? `?${params.toString()}` : ""}`;
-      const response = await fetch(url, { credentials: "include" });
-      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-      return response.json();
+      const response = await apiRequest("GET", url);
+      return await response.json();
     },
     enabled: isOpen,
   });

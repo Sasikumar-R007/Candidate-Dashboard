@@ -188,8 +188,16 @@ export default function PostJobModal({
       resetForm();
     },
     onError: (error: any) => {
-      toast({ title: 'Failed to post job', description: error.message || 'Please try again.', variant: 'destructive' });
-      setFormError(error.message || 'Failed to post job. Please try again.');
+      const message = error.message || 'Please try again.';
+      const isDuplicateJob =
+        error.message?.toLowerCase().includes('already posted') ||
+        error.message?.toLowerCase().includes('already posted for');
+      toast({
+        title: isDuplicateJob ? 'Job already posted' : 'Failed to post job',
+        description: message,
+        variant: isDuplicateJob ? 'warning' : 'destructive',
+      });
+      setFormError(message);
     }
   });
 
@@ -642,7 +650,16 @@ const deriveLocationType = (workMode: string): string => {
               <div className="text-sm text-red-500 mb-4">* Required fields</div>
               
               {formError && (
-                <p className="text-sm text-red-600">{formError}</p>
+                <p
+                  className={cn(
+                    "text-sm",
+                    formError.toLowerCase().includes("already posted")
+                      ? "rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900"
+                      : "text-red-600",
+                  )}
+                >
+                  {formError}
+                </p>
               )}
 
               {requiresRequirementLink && (

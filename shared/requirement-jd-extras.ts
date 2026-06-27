@@ -19,6 +19,15 @@ export type ClientJdSourceDetails = RequirementJdExtras & {
 
 const STR_ROLE_ID_PATTERN = /^STR\d{5}$/;
 const STREQ_ID_PATTERN = /^STREQ\d+$/i;
+
+export function isValidStrRoleId(roleId: string | null | undefined): boolean {
+  return Boolean(roleId && STR_ROLE_ID_PATTERN.test(String(roleId).trim().toUpperCase()));
+}
+
+export function normalizeStrRoleId(roleId: string | null | undefined): string | null {
+  if (!isValidStrRoleId(roleId)) return null;
+  return String(roleId).trim().toUpperCase();
+}
 const UUID_LIKE_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

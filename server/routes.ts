@@ -13777,7 +13777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // All placement rows (TA closure reports + Revenue Data)
         const memberClosures = allRevenueMappings.filter(rm =>
           rm.talentAdvisorId === member.id ||
-          String(rm.talentAdvisorName || "").toLowerCase() === member.name.toLowerCase()
+          String(rm.talentAdvisorName || "").toLowerCase() === String(member.name || "").toLowerCase()
         );
 
         const joiningDateRaw = member.joiningDate || null;
@@ -13798,7 +13798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const memberRevenueData = revenueDataMappings.filter(
           (rm) =>
             rm.talentAdvisorId === member.id ||
-            String(rm.talentAdvisorName || "").toLowerCase() === member.name.toLowerCase(),
+            String(rm.talentAdvisorName || "").toLowerCase() === String(member.name || "").toLowerCase(),
         );
 
         const enrichedMemberTargets = memberTargets.map((tm) =>
@@ -14543,9 +14543,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let assignedTaName: string | null = null;
       let resolvedRequirementId: string | null = linkedRequirementId || null;
       let resolvedRoleId: string | null = null;
+      let linkedRequirement: Awaited<ReturnType<typeof storage.getRequirementById>>;
 
       if (linkedRequirementId) {
-        const linkedRequirement = await storage.getRequirementById(linkedRequirementId);
+        linkedRequirement = await storage.getRequirementById(linkedRequirementId);
         if (!linkedRequirement) {
           return res.status(404).json({ message: "Linked requirement not found" });
         }
@@ -14606,32 +14607,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (resolvedRoleId) {
-        const normalizedRoleId = String(resolvedRoleId).trim().toUpperCase();
-        const existingJobs = await storage.getAllRecruiterJobs();
-        const activeJobs = existingJobs.filter(
-          (job) => job.status !== "Closed" && job.requirementId,
-        );
+        const { findDuplicateRecruiterJobForPosting } = await import("./requirement-role-id");
+        const allEmployees = await storage.getAllEmployees();
+        const duplicateJob =
+          linkedRequirementId && linkedRequirement
+            ? await findDuplicateRecruiterJobForPosting(
+                storage,
+                {
+                  requirementId: linkedRequirementId,
+                  requirement: linkedRequirement,
+                  resolvedRoleId,
+                },
+                allEmployees,
+              )
+            : null;
 
-        if (activeJobs.length > 0) {
-          const activeRequirements = await storage.getRequirements();
-          const archivedRequirements = await storage.getArchivedRequirements();
-          const requirementById = new Map<string, (typeof activeRequirements)[number]>();
-          for (const req of [...activeRequirements, ...archivedRequirements]) {
-            requirementById.set(String(req.id), req);
-          }
-
-          for (const job of activeJobs) {
-            const linkedReq =
-              requirementById.get(String(job.requirementId)) ||
-              (await storage.getRequirementById(String(job.requirementId)));
-            if (!linkedReq) continue;
-            const jobRoleId = String(resolveDisplayRoleId(linkedReq)).trim().toUpperCase();
-            if (jobRoleId === normalizedRoleId) {
-              return res.status(409).json({
-                message: `Job already Posted for this JD (${linkedReq.position || resolvedRoleId})`,
-              });
-            }
-          }
+        if (duplicateJob) {
+          const roleLabel = duplicateJob.roleId || resolvedRoleId;
+          return res.status(409).json({
+            message: `Job already posted for ${duplicateJob.position} (Role ID: ${roleLabel}) by ${duplicateJob.postedBy}.`,
+            code: "JOB_ALREADY_POSTED",
+            postedBy: duplicateJob.postedBy,
+            roleId: roleLabel,
+            position: duplicateJob.position,
+          });
         }
       }
 

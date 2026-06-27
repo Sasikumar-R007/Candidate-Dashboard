@@ -1,5 +1,165 @@
 import type { IStorage } from "./storage";
-import { extractStreqId } from "@shared/requirement-jd-extras";
+import type { RecruiterJob } from "@shared/schema";
+import {
+  extractStreqId,
+  isValidStrRoleId,
+  normalizeStrRoleId,
+  resolveDisplayRoleId,
+} from "@shared/requirement-jd-extras";
+
+export type DuplicateJobBlockInfo = {
+  jobId: string;
+  postedBy: string;
+  roleId: string;
+  position: string;
+  requirementId: string;
+};
+
+function resolveJobPosterName(
+  job: RecruiterJob,
+  employeesById: Map<string, { name: string }>,
+): string {
+  const owner = job.ownerEmployeeId
+    ? employeesById.get(job.ownerEmployeeId)?.name
+    : undefined;
+  if (owner) return owner;
+  const recruiter = job.recruiterId
+    ? employeesById.get(job.recruiterId)?.name
+    : undefined;
+  if (recruiter) return recruiter;
+  if (job.assignedTaName?.trim()) return job.assignedTaName.trim();
+  return "Another team member";
+}
+
+function shouldIgnoreRequirementForDuplicateCheck(
+  requirement:
+    | {
+        isArchived?: boolean | null;
+        managementReason?: string | null;
+      }
+    | null
+    | undefined,
+): boolean {
+  if (!requirement) return true;
+  if (requirement.isArchived) return true;
+  if (requirement.managementReason === "Split among Talent Advisors") return true;
+  return false;
+}
+
+/** Returns an existing active job that should block posting for this requirement / Role ID. */
+export async function findDuplicateRecruiterJobForPosting(
+  storage: IStorage,
+  params: {
+    requirementId: string;
+    requirement: {
+      id: string;
+      company?: string | null;
+      position?: string | null;
+      sourceDetails?: string | null;
+      isArchived?: boolean | null;
+      managementReason?: string | null;
+    };
+    resolvedRoleId: string | null | undefined;
+  },
+  employees: Array<{ id: string; name: string }>,
+): Promise<DuplicateJobBlockInfo | null> {
+  const normalizedRoleId = normalizeStrRoleId(params.resolvedRoleId);
+  const targetCompany = String(params.requirement.company || "").trim().toLowerCase();
+
+  const existingJobs = await storage.getAllRecruiterJobs();
+  const activeJobs = existingJobs.filter(
+    (job) => job.status !== "Closed" && job.requirementId,
+  );
+  if (activeJobs.length === 0) return null;
+
+  const activeRequirements = await storage.getRequirements();
+  const archivedRequirements = await storage.getArchivedRequirements();
+  const requirementById = new Map<
+    string,
+    {
+      id: string;
+      company?: string | null;
+      position?: string | null;
+      sourceDetails?: string | null;
+      isArchived?: boolean | null;
+      managementReason?: string | null;
+    }
+  >();
+
+  for (const req of activeRequirements) {
+    requirementById.set(String(req.id), req);
+  }
+  for (const archived of archivedRequirements) {
+    const originalId = String(archived.originalId || archived.id);
+    if (!requirementById.has(originalId)) {
+      requirementById.set(originalId, {
+        id: originalId,
+        company: archived.company,
+        position: archived.position,
+        sourceDetails: archived.sourceDetails,
+        isArchived: true,
+        managementReason: archived.managementReason,
+      });
+    }
+  }
+
+  const employeesById = new Map(employees.map((emp) => [emp.id, emp]));
+
+  for (const job of activeJobs) {
+    const jobRequirementId = String(job.requirementId);
+    let linkedReq =
+      requirementById.get(jobRequirementId) ||
+      (await storage.getRequirementById(jobRequirementId));
+
+    if (!linkedReq) continue;
+
+    const postedBy = resolveJobPosterName(job, employeesById);
+    const buildInfo = (
+      roleId: string,
+      requirement: { position?: string | null },
+    ): DuplicateJobBlockInfo => ({
+      jobId: job.id,
+      postedBy,
+      roleId,
+      position: String(requirement.position || "this role").trim(),
+      requirementId: jobRequirementId,
+    });
+
+    if (jobRequirementId === params.requirementId) {
+      return buildInfo(
+        normalizedRoleId || resolveDisplayRoleId(params.requirement),
+        linkedReq,
+      );
+    }
+
+    if (shouldIgnoreRequirementForDuplicateCheck(linkedReq)) continue;
+    if (!normalizedRoleId) continue;
+
+    const jobRoleId = normalizeStrRoleId(resolveDisplayRoleId(linkedReq));
+    if (!jobRoleId || jobRoleId !== normalizedRoleId) continue;
+
+    const jobCompany = String(linkedReq.company || "").trim().toLowerCase();
+    if (targetCompany && jobCompany && jobCompany !== targetCompany) continue;
+
+    return buildInfo(jobRoleId, linkedReq);
+  }
+
+  return null;
+}
+
+function collectUsedStrRoleIds(
+  requirements: Array<{ id?: string | null; sourceDetails?: string | null }>,
+): Set<string> {
+  const used = new Set<string>();
+  for (const req of requirements) {
+    if (req.id && isValidStrRoleId(req.id)) {
+      used.add(String(req.id).trim().toUpperCase());
+    }
+    const resolved = normalizeStrRoleId(resolveDisplayRoleId(req));
+    if (resolved) used.add(resolved);
+  }
+  return used;
+}
 
 /** Resolve STREQ display id consistently with client buildStreqDisplayMap. */
 export async function resolveStreqDisplayIdForRequirement(
@@ -60,11 +220,12 @@ export async function generateNextRequirementRoleId(
   const currentYear = new Date().getFullYear().toString().slice(-2);
   const allRequirements = await storage.getRequirements();
   const prefix = `STR${currentYear}`;
+  const usedRoleIds = collectUsedStrRoleIds(allRequirements);
 
   let maxNumber = 0;
-  for (const req of allRequirements) {
-    if (!req.id || !req.id.startsWith(prefix)) continue;
-    const suffix = req.id.slice(prefix.length);
+  for (const roleId of usedRoleIds) {
+    if (!roleId.startsWith(prefix)) continue;
+    const suffix = roleId.slice(prefix.length);
     const match = suffix.match(/^(\d{3})/);
     if (match) {
       const num = parseInt(match[1], 10);
@@ -73,11 +234,10 @@ export async function generateNextRequirementRoleId(
   }
 
   let attempts = 0;
-  while (attempts < 20) {
+  while (attempts < 50) {
     const nextNumber = String(maxNumber + 1 + attempts).padStart(3, "0");
     const roleId = `${prefix}${nextNumber}`;
-    const exists = allRequirements.some((r) => r.id === roleId);
-    if (!exists) return roleId;
+    if (!usedRoleIds.has(roleId)) return roleId;
     attempts++;
   }
 

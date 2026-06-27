@@ -2439,9 +2439,8 @@ export default function AdminDashboard() {
         params.append('teamId', selectedPerformanceTeam);
       }
       const url = `/api/admin/team-performance${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-      return response.json();
+      const response = await apiRequest('GET', url);
+      return await response.json();
     },
   });
 

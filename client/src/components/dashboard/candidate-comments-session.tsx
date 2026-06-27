@@ -656,6 +656,7 @@ export function CandidateCommentsSession({
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const [mobileSessionTab, setMobileSessionTab] = useState<"details" | "comments">("details");
+  const [resumePreviewLoading, setResumePreviewLoading] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const prevApplicationIdRef = useRef(applicationId);
   const markedCommentsReadForRef = useRef<string | null>(null);
@@ -811,6 +812,17 @@ export function CandidateCommentsSession({
     app?.skills ?? (fallbackApplicant?.skills?.length ? fallbackApplicant.skills : []),
   );
   const resumeUrl = normalizeResumeUrl(app?.resumeFile || fallbackApplicant?.resumeFile);
+  const isResumeSessionLoading =
+    isSwitching || ((sessionLoading || sessionFetching) && !app);
+
+  useEffect(() => {
+    if (resumeUrl) {
+      setResumePreviewLoading(true);
+    } else {
+      setResumePreviewLoading(false);
+    }
+  }, [resumeUrl, applicationId]);
+
   const profilePictureUrl = normalizeProfilePictureUrl(
     app?.profilePicture || fallbackApplicant?.profilePicture,
   );
@@ -1576,16 +1588,35 @@ export function CandidateCommentsSession({
                   ) : null
                 }
               >
-                {resumeUrl ? (
+                {isResumeSessionLoading ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                    <p className="text-sm text-gray-500">Loading resume…</p>
+                  </div>
+                ) : resumeUrl ? (
                   isPdf ? (
-                    <iframe
-                      title="Resume preview"
-                      src={resumeUrl}
-                      className={cn(
-                        "h-[min(280px,42vh)] w-full border border-gray-200 bg-white sm:h-[min(360px,45vh)] md:h-[min(420px,45vh)]",
-                        BTN_RADIUS,
-                      )}
-                    />
+                    <div className="relative">
+                      {resumePreviewLoading ? (
+                        <div
+                          className={cn(
+                            "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/90",
+                            BTN_RADIUS,
+                          )}
+                        >
+                          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                          <p className="text-sm text-gray-500">Loading resume preview…</p>
+                        </div>
+                      ) : null}
+                      <iframe
+                        title="Resume preview"
+                        src={resumeUrl}
+                        onLoad={() => setResumePreviewLoading(false)}
+                        className={cn(
+                          "h-[min(280px,42vh)] w-full border border-gray-200 bg-white sm:h-[min(360px,45vh)] md:h-[min(420px,45vh)]",
+                          BTN_RADIUS,
+                        )}
+                      />
+                    </div>
                   ) : (
                     <p className="text-sm text-gray-500">
                       Preview is available for PDF files. Use &quot;Open in new tab&quot; for other formats.
