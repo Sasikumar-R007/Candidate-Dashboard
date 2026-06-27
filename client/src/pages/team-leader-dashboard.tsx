@@ -1670,7 +1670,8 @@ export default function TeamLeaderDashboard() {
               </Card>
 
               {/* Bottom Section - Meetings and CEO Commands */}
-              <StaffOsV2DisabledSection className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <StaffOsV2DisabledSection>
                 {/* Pending Meetings */}
                 <Card className="bg-white border border-gray-200">
                   <CardHeader className="pb-3 pt-4">
@@ -1714,7 +1715,9 @@ export default function TeamLeaderDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+                </StaffOsV2DisabledSection>
 
+                <StaffOsV2DisabledSection>
                 {/* CEO Commands */}
                 <Card className="bg-white border border-gray-200">
                   <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between gap-2">
@@ -1770,7 +1773,8 @@ export default function TeamLeaderDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </StaffOsV2DisabledSection>
+                </StaffOsV2DisabledSection>
+              </div>
             </div>
             
             {/* Team Members Sidebar - Right Section (Non-scrollable) */}

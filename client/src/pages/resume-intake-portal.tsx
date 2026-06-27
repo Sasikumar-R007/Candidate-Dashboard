@@ -11,8 +11,6 @@ import {
   LogOut,
   Minimize2,
   User,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -166,12 +164,11 @@ export default function ResumeIntakePortal() {
   });
 
   const { data: recentUploadsData } = useQuery<RecentUploadsResponse>({
-    queryKey: ["/api/data-entry/recent-uploads", recentUploadsPage],
+    queryKey: ["/api/data-entry/recent-uploads"],
     queryFn: async () => {
-      const offset = recentUploadsPage * RECENT_UPLOADS_PAGE_SIZE;
       const response = await fetch(
         createApiUrl(
-          `/api/data-entry/recent-uploads?limit=${RECENT_UPLOADS_PAGE_SIZE}&offset=${offset}`,
+          `/api/data-entry/recent-uploads?limit=${RECENT_UPLOADS_PAGE_SIZE}`,
         ),
         { credentials: "include" },
       );
@@ -184,19 +181,6 @@ export default function ResumeIntakePortal() {
   });
 
   const recentUploads = recentUploadsData?.rows ?? [];
-  const recentUploadsTotal = recentUploadsData?.total ?? 0;
-  const recentUploadsTotalPages = Math.max(
-    1,
-    Math.ceil(recentUploadsTotal / RECENT_UPLOADS_PAGE_SIZE),
-  );
-
-  useEffect(() => {
-    if (recentUploadsPage > 0 && recentUploadsPage >= recentUploadsTotalPages) {
-      setRecentUploadsPage(Math.max(0, recentUploadsTotalPages - 1));
-    }
-  }, [recentUploadsPage, recentUploadsTotalPages]);
-
-  const showRecentUploadsPagination = recentUploadsTotal > 0;
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -303,7 +287,6 @@ export default function ResumeIntakePortal() {
 
       setImportResults(aggregated);
       setImportStep("result");
-      setRecentUploadsPage(0);
       queryClient.invalidateQueries({ queryKey: ["/api/data-entry/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/data-entry/recent-uploads"] });
 
@@ -496,54 +479,8 @@ export default function ResumeIntakePortal() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
+          <CardHeader className="pb-4">
             <CardTitle className="text-lg">Recent uploads</CardTitle>
-            {showRecentUploadsPagination && (
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  disabled={recentUploadsPage === 0}
-                  onClick={() => setRecentUploadsPage((page) => Math.max(0, page - 1))}
-                  aria-label="Previous page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex items-center gap-1 overflow-x-auto">
-                  {Array.from({ length: recentUploadsTotalPages }, (_, index) => (
-                    <Button
-                      key={index}
-                      type="button"
-                      variant={recentUploadsPage === index ? "default" : "outline"}
-                      size="sm"
-                      className="h-8 min-w-8 px-2.5"
-                      onClick={() => setRecentUploadsPage(index)}
-                      aria-label={`Page ${index + 1}`}
-                      aria-current={recentUploadsPage === index ? "page" : undefined}
-                    >
-                      {index + 1}
-                    </Button>
-                  ))}
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  disabled={recentUploadsPage >= recentUploadsTotalPages - 1}
-                  onClick={() =>
-                    setRecentUploadsPage((page) =>
-                      Math.min(recentUploadsTotalPages - 1, page + 1),
-                    )
-                  }
-                  aria-label="Next page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
