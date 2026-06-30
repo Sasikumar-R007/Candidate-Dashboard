@@ -327,6 +327,8 @@ export async function ensureRequirementManagementColumns() {
     ADD COLUMN IF NOT EXISTS "department" text,
     ADD COLUMN IF NOT EXISTS "joining_date" text,
     ADD COLUMN IF NOT EXISTS "employment_status" text,
+    ADD COLUMN IF NOT EXISTS "employment_type" text,
+    ADD COLUMN IF NOT EXISTS "work_mode" text,
     ADD COLUMN IF NOT EXISTS "esic" text,
     ADD COLUMN IF NOT EXISTS "epfo" text,
     ADD COLUMN IF NOT EXISTS "esic_no" text,
@@ -427,6 +429,12 @@ export async function ensureRequirementManagementColumns() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_candidate_application_comments_application_id
     ON candidate_application_comments (application_id)
+  `);
+
+  await pool.query(`
+    ALTER TABLE candidate_application_comments
+    ADD COLUMN IF NOT EXISTS edited_at timestamp,
+    ADD COLUMN IF NOT EXISTS deleted_at timestamp
   `);
 
   await pool.query(`

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import staffosLogo from "@/assets/staffos logo 2.png";
+import { APP_VERSION_LABEL } from "@shared/app-version";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -92,7 +93,12 @@ export default function AdminSidebar({ activeTab, onTabChange, hasUnreadNudges =
             className="w-10 h-10 object-cover rounded-full flex-shrink-0"
           />
           {isExpanded && (
-            <span className="text-lg font-bold whitespace-nowrap opacity-100 transition-opacity duration-300">StaffOS</span>
+            <div className="min-w-0 opacity-100 transition-opacity duration-300">
+              <span className="block text-lg font-bold whitespace-nowrap">StaffOS</span>
+              <span className="block text-[10px] font-normal text-slate-400 tracking-wide pl-0.5">
+                {APP_VERSION_LABEL}
+              </span>
+            </div>
           )}
         </div>
 

@@ -160,6 +160,8 @@ export const candidateApplicationComments = pgTable("candidate_application_comme
   authorRole: text("author_role").notNull(),
   body: text("body").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  editedAt: timestamp("edited_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const nudges = pgTable("nudges", {
@@ -341,7 +343,9 @@ export const employees = pgTable("employees", {
   phone: text("phone"),
   department: text("department"),
   joiningDate: text("joining_date"),
-  employmentStatus: text("employment_status"), // Active, Inactive, etc
+  employmentStatus: text("employment_status"), // legacy — prefer employmentType
+  employmentType: text("employment_type"), // Permanent, Temporary, External Consultant
+  workMode: text("work_mode"), // Work from Office, Work from Home, Hybrid
 
   // ESIC & EPFO
   esic: text("esic"), // Yes/No dropdown

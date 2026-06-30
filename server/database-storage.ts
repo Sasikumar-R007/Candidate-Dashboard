@@ -121,6 +121,8 @@ function normalizeEmployee(emp: any): Employee {
     employeeId: emp.employee_id || emp.employeeId,
     joiningDate: emp.joining_date || emp.joiningDate,
     employmentStatus: emp.employment_status || emp.employmentStatus,
+    employmentType: emp.employment_type || emp.employmentType,
+    workMode: emp.work_mode || emp.workMode,
     esicNo: emp.esic_no || emp.esicNo,
     epfoNo: emp.epfo_no || emp.epfoNo,
     fatherName: emp.father_name || emp.fatherName,
@@ -2394,6 +2396,40 @@ export class DatabaseStorage implements IStorage {
     comment: InsertCandidateApplicationComment,
   ): Promise<CandidateApplicationComment> {
     const [row] = await db.insert(candidateApplicationComments).values(comment).returning();
+    return row;
+  }
+
+  async getCandidateApplicationCommentById(
+    commentId: string,
+  ): Promise<CandidateApplicationComment | undefined> {
+    const [row] = await db
+      .select()
+      .from(candidateApplicationComments)
+      .where(eq(candidateApplicationComments.id, commentId))
+      .limit(1);
+    return row;
+  }
+
+  async updateCandidateApplicationCommentBody(
+    commentId: string,
+    body: string,
+  ): Promise<CandidateApplicationComment | undefined> {
+    const [row] = await db
+      .update(candidateApplicationComments)
+      .set({ body, editedAt: new Date() })
+      .where(eq(candidateApplicationComments.id, commentId))
+      .returning();
+    return row;
+  }
+
+  async softDeleteCandidateApplicationComment(
+    commentId: string,
+  ): Promise<CandidateApplicationComment | undefined> {
+    const [row] = await db
+      .update(candidateApplicationComments)
+      .set({ deletedAt: new Date() })
+      .where(eq(candidateApplicationComments.id, commentId))
+      .returning();
     return row;
   }
 

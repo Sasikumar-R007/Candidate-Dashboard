@@ -14,6 +14,7 @@ import { apiRequest, apiFileUpload, queryClient } from "@/lib/queryClient";
 import { isClientPortalRole } from "@shared/client-roles";
 import { formatEmployeeRoleDisplay, shouldShowEmployeeProfileId } from "@/lib/employee-display";
 import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
+import { APP_VERSION_LABEL } from "@shared/app-version";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -698,6 +699,13 @@ export function ProfileSettingsModal({
                     />
                   </CardContent>
                 </Card>
+
+                {isAdmin ? (
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 md:text-sm">
+                    <span>StaffOS release</span>
+                    <span className="font-mono text-slate-700">{APP_VERSION_LABEL}</span>
+                  </div>
+                ) : null}
 
                 <div className="flex justify-end">
                   <Button

@@ -9,6 +9,12 @@ import { Mail, Phone, Calendar } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  EMPLOYMENT_TYPE_OPTIONS,
+  WORK_MODE_OPTIONS,
+  EMPLOYEE_CURRENT_STATUS_OPTIONS,
+  getAppraisedYearOptions,
+} from "@shared/employee-master-data";
 
 interface EmployeeDetailsModalProps {
   open: boolean;
@@ -24,7 +30,8 @@ interface EmployeeDetailsModalProps {
     ctc?: string;
     address?: string;
     designation?: string;
-    employmentStatus?: string;
+    employmentType?: string;
+    workMode?: string;
     esic?: string;
     epfo?: string;
     esicNo?: string;
@@ -60,7 +67,8 @@ export default function EmployeeDetailsModal({ open, onOpenChange, employee }: E
     address: "",
     designation: "",
     joiningDate: "",
-    employmentStatus: "",
+    employmentType: "",
+    workMode: "",
     esic: "",
     epfo: "",
     esicNo: "",
@@ -96,7 +104,8 @@ export default function EmployeeDetailsModal({ open, onOpenChange, employee }: E
         address: employee.address || "",
         designation: employee.designation || "",
         joiningDate: employee.joiningDate || "",
-        employmentStatus: employee.employmentStatus || "",
+        employmentType: employee.employmentType || employee.employmentStatus || "",
+        workMode: employee.workMode || "",
         esic: employee.esic || "",
         epfo: employee.epfo || "",
         esicNo: employee.esicNo || "",
@@ -134,7 +143,8 @@ export default function EmployeeDetailsModal({ open, onOpenChange, employee }: E
         address: data.address,
         designation: data.designation,
         joiningDate: data.joiningDate,
-        employmentStatus: data.employmentStatus,
+        employmentType: data.employmentType,
+        workMode: data.workMode,
         esic: data.esic,
         epfo: data.epfo,
         esicNo: data.esicNo,
@@ -299,29 +309,30 @@ export default function EmployeeDetailsModal({ open, onOpenChange, employee }: E
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Employment Details</h3>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="joiningDate" className="text-sm font-medium flex items-center gap-2">
-                  <Calendar className="w-4 h-4" /> Date of Joining
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <Label htmlFor="joiningDate" className="text-sm font-medium whitespace-nowrap shrink-0 flex items-center gap-1">
+                  <Calendar className="w-4 h-4" /> Joining Date:
                 </Label>
                 <StandardDatePicker
                   value={formData.joiningDate ? new Date(formData.joiningDate) : undefined}
                   onChange={handleDateChange}
                   placeholder="DD-MM-YYYY"
                   maxDate={new Date()}
+                  className="flex-1 min-w-0"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="employmentStatus" className="text-sm font-medium">Employment Status</Label>
-                <Select value={formData.employmentStatus} onValueChange={(value) => handleInputChange("employmentStatus", value)}>
+                <Label htmlFor="employmentType" className="text-sm font-medium">Employment Type</Label>
+                <Select value={formData.employmentType} onValueChange={(value) => handleInputChange("employmentType", value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Employment Status" />
+                    <SelectValue placeholder="Select Employment Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="On Leave">On Leave</SelectItem>
+                    {EMPLOYMENT_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -329,20 +340,35 @@ export default function EmployeeDetailsModal({ open, onOpenChange, employee }: E
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="workMode" className="text-sm font-medium">Work Mode</Label>
+                <Select value={formData.workMode} onValueChange={(value) => handleInputChange("workMode", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Work Mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORK_MODE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="currentStatus" className="text-sm font-medium">Current Status</Label>
                 <Select value={formData.currentStatus} onValueChange={(value) => handleInputChange("currentStatus", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Current Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Probation">Probation</SelectItem>
-                    <SelectItem value="Notice Period">Notice Period</SelectItem>
-                    <SelectItem value="Resigned">Resigned</SelectItem>
+                    {EMPLOYEE_CURRENT_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="incrementCount" className="text-sm font-medium">Increment Count</Label>
                 <Select value={formData.incrementCount} onValueChange={(value) => handleInputChange("incrementCount", value)}>
@@ -561,10 +587,9 @@ export default function EmployeeDetailsModal({ open, onOpenChange, employee }: E
                     <SelectValue placeholder="Select Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2025">2025</SelectItem>
-                    <SelectItem value="2024">2024</SelectItem>
-                    <SelectItem value="2023">2023</SelectItem>
-                    <SelectItem value="2022">2022</SelectItem>
+                    {getAppraisedYearOptions().map((year) => (
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
