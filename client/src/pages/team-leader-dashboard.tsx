@@ -729,7 +729,7 @@ export default function TeamLeaderDashboard() {
                     setPendingJobStatusById((prev) => ({ ...prev, [job.id]: value }))
                   }
                 >
-                  <SelectTrigger className="mt-1 h-8 w-full text-xs border-slate-200 bg-slate-50">
+                  <SelectTrigger className="mt-1 h-8 w-full text-xs border-slate-200 bg-white">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -738,9 +738,16 @@ export default function TeamLeaderDashboard() {
                     <SelectItem value="Closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+              <span className="text-[11px] text-slate-500 font-medium">
+                {job.assignedTaName ? `Assigned to ${job.assignedTaName}` : 'Assigned to —'}
+              </span>
+              <div className="flex shrink-0 items-center gap-2">
                 <Button
                   size="sm"
-                  className="mt-2 h-7 w-full rounded bg-blue-600 px-2 text-[11px] text-white hover:bg-blue-700"
+                  className="h-8 rounded-md bg-blue-600 px-3 text-xs text-white hover:bg-blue-700"
                   onClick={() => {
                     const nextStatus = pendingJobStatusById[job.id] ?? String(job.status || "Active");
                     updateRecruiterJobMutation.mutate(
@@ -760,20 +767,15 @@ export default function TeamLeaderDashboard() {
                 >
                   Save Changes
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex h-8 items-center gap-1 rounded-md text-blue-600 border-blue-200 hover:bg-blue-50"
+                  onClick={() => handleEditJob(job)}
+                >
+                  <EditIcon className="w-4 h-4" /> Edit
+                </Button>
               </div>
-            </div>
-            <div className="mt-4 flex justify-between items-center">
-              <span className="text-[11px] text-slate-500 font-medium">
-                {job.assignedTaName ? `Assigned to ${job.assignedTaName}` : 'Assigned to —'}
-              </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1 rounded-[4px] text-blue-600 border-blue-200 hover:bg-blue-50"
-                onClick={() => handleEditJob(job)}
-              >
-                <EditIcon className="w-4 h-4" /> Edit
-              </Button>
             </div>
           </div>
         ))}
@@ -1920,7 +1922,7 @@ export default function TeamLeaderDashboard() {
                                 ) : isReassigned ? (
                                   <span className="text-xs text-gray-400">—</span>
                                 ) : (
-                                  <DropdownMenu>
+                                  <DropdownMenu modal={false}>
                                     <DropdownMenuTrigger asChild>
                                       <Button
                                         variant="ghost"
@@ -1931,10 +1933,11 @@ export default function TeamLeaderDashboard() {
                                         <MoreVertical className="h-4 w-4 text-gray-600" />
                                       </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-52">
+                                    <DropdownMenuContent align="end" className="z-[100] w-52">
                                       <DropdownMenuItem
                                         className="cursor-pointer"
-                                        onClick={() => {
+                                        onSelect={(e) => {
+                                          e.preventDefault();
                                           setSelectedJD(requirement);
                                           setIsJDPreviewModalOpen(true);
                                         }}
@@ -1944,14 +1947,20 @@ export default function TeamLeaderDashboard() {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         className="cursor-pointer"
-                                        onClick={() => openJdVisibilityModal(requirement)}
+                                        onSelect={(e) => {
+                                          e.preventDefault();
+                                          openJdVisibilityModal(requirement);
+                                        }}
                                       >
                                         <Eye className="mr-2 h-4 w-4" />
                                         JD Visibility
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         className="cursor-pointer"
-                                        onClick={() => handleAssign(requirement)}
+                                        onSelect={(e) => {
+                                          e.preventDefault();
+                                          handleAssign(requirement);
+                                        }}
                                         data-testid={`button-assign-ta-${requirement.id}`}
                                       >
                                         <UserRound className="mr-2 h-4 w-4" />

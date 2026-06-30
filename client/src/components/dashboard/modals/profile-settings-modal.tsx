@@ -6,6 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Camera, Mail, Pencil, Settings, Shield, UserCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LegalPoliciesSettingsCard } from "@/components/dashboard/legal-policies-settings-card";
 import { Link } from "wouter";
 import { useAuth, useCandidateAuth, useEmployeeAuth } from "@/contexts/auth-context";
@@ -57,6 +67,7 @@ export function ProfileSettingsModal({
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showRemovePhotoConfirm, setShowRemovePhotoConfirm] = useState(false);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(defaultNotifications);
   const [formData, setFormData] = useState({
     name: "",
@@ -251,6 +262,7 @@ export function ProfileSettingsModal({
     if (selectedProfileFile) {
       setSelectedProfileFile(null);
       setProfilePreview(resolveProfilePictureUrl(profileData?.profilePicture) || null);
+      setShowRemovePhotoConfirm(false);
       return;
     }
 
@@ -263,6 +275,7 @@ export function ProfileSettingsModal({
       setProfileData(updatedProfile);
       setProfilePreview(null);
       syncProfileContext(updatedProfile);
+      setShowRemovePhotoConfirm(false);
       toast({
         title: "Profile photo removed",
         description: "Your default profile avatar is now in use.",
@@ -315,6 +328,7 @@ export function ProfileSettingsModal({
   const showProfileId = shouldShowEmployeeProfileId(employee?.role ?? formData.role, formData.employeeId);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         overlayClassName="bg-black/50 backdrop-blur-[1px]"
@@ -380,7 +394,7 @@ export function ProfileSettingsModal({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleRemoveProfilePicture}
+                  onClick={() => setShowRemovePhotoConfirm(true)}
                   disabled={isRemovingProfile || isSavingProfile}
                   className="mt-3 hidden border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 lg:inline-flex"
                 >
@@ -405,7 +419,7 @@ export function ProfileSettingsModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleRemoveProfilePicture}
+                    onClick={() => setShowRemovePhotoConfirm(true)}
                     disabled={isRemovingProfile || isSavingProfile}
                     className="mt-1.5 h-7 border-red-200 px-2 text-[11px] text-red-600 hover:bg-red-50 hover:text-red-700 lg:hidden"
                   >
@@ -458,18 +472,21 @@ export function ProfileSettingsModal({
                     <h3 className="text-sm font-semibold text-slate-900 md:text-lg">Profile Details</h3>
                     <p className="mt-0.5 text-xs text-slate-500 md:text-sm">Tap edit to update your account information.</p>
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    variant={isEditingProfile ? "default" : "outline"}
+                    size="sm"
                     onClick={() => setIsEditingProfile((prev) => !prev)}
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition md:h-11 md:w-11 md:rounded-2xl ${
+                    className={`h-8 shrink-0 gap-1.5 rounded-lg px-3 text-xs md:h-10 md:rounded-xl md:px-4 md:text-sm ${
                       isEditingProfile
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
-                    aria-label="Toggle profile edit"
+                    aria-label={isEditingProfile ? "Editing profile" : "Edit profile"}
                   >
                     <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                  </button>
+                    {isEditingProfile ? "Editing" : "Edit"}
+                  </Button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 md:gap-4">
@@ -719,5 +736,32 @@ export function ProfileSettingsModal({
         </div>
       </DialogContent>
     </Dialog>
+
+      <AlertDialog open={showRemovePhotoConfirm} onOpenChange={setShowRemovePhotoConfirm}>
+        <AlertDialogContent className="max-w-md rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove profile photo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedProfileFile
+                ? "This will discard the photo you selected. Your current saved profile photo will stay unchanged until you save."
+                : "Your profile photo will be removed and the default avatar will be used instead."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemovingProfile}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleRemoveProfilePicture();
+              }}
+              disabled={isRemovingProfile}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {isRemovingProfile ? "Removing..." : "Remove photo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

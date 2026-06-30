@@ -101,6 +101,7 @@ export function extractRequirementMatchContext(
   const jdText = String(requirement.jdText || "").trim();
   const sourceDetailsRaw = requirement.sourceDetails;
   let education = "";
+  let parsedAllSkills: string[] = [];
 
   if (typeof sourceDetailsRaw === "string" && sourceDetailsRaw.trim()) {
     try {
@@ -108,15 +109,33 @@ export function extractRequirementMatchContext(
       if (typeof parsed.education === "string") {
         education = parsed.education;
       }
+      if (Array.isArray(parsed.allSkills)) {
+        parsedAllSkills = parsed.allSkills
+          .map((skill) => String(skill).trim())
+          .filter(Boolean);
+      }
     } catch {
       // ignore invalid JSON
     }
   }
 
+  let primarySkills = splitSkillsCsv(extras.primarySkills);
+  let secondarySkills = [
+    ...splitSkillsCsv(extras.secondarySkills),
+    ...splitSkillsCsv(extras.knowledgeOnly),
+  ];
+
+  if (primarySkills.length === 0 && parsedAllSkills.length > 0) {
+    primarySkills = parsedAllSkills.slice(0, Math.min(8, parsedAllSkills.length));
+  }
+  if (secondarySkills.length === 0 && parsedAllSkills.length > primarySkills.length) {
+    secondarySkills = parsedAllSkills.slice(primarySkills.length);
+  }
+
   return {
     position: String(requirement.position || requirement.jobTitle || ""),
-    primarySkills: splitSkillsCsv(extras.primarySkills),
-    secondarySkills: splitSkillsCsv(extras.secondarySkills),
+    primarySkills,
+    secondarySkills,
     experienceRange: extractExperienceRangeFromJd(jdText),
     location: extractLocationFromJd(jdText),
     education,
@@ -331,8 +350,11 @@ export function mergeRequirementIntoFilters<T extends SourceResumeFilterSnapshot
   if (ctx.primarySkills.length > 0 && prev.specificSkills.length === 0) {
     next.specificSkills = ctx.primarySkills.slice(0, 12);
   }
-  if (ctx.secondarySkills.length > 0 && prev.keywords.length === 0) {
-    next.keywords = ctx.secondarySkills.slice(0, 10);
+  const mergedKeywordSkills = Array.from(
+    new Set([...ctx.primarySkills, ...ctx.secondarySkills].map((s) => s.trim()).filter(Boolean)),
+  );
+  if (mergedKeywordSkills.length > 0 && prev.keywords.length === 0) {
+    next.keywords = mergedKeywordSkills.slice(0, 12);
   }
   if (
     ctx.experienceRange &&

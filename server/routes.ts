@@ -2781,9 +2781,18 @@ function enrichRequirementWithJdExtrasForApi<T extends Record<string, unknown>>(
   const enriched = enrichRequirementWithJdExtras(requirement);
   const rawJdFile =
     typeof enriched.jdFile === "string" ? enriched.jdFile : (requirement.jdFile as string | null | undefined);
+  const servedJdFile = buildJdFileServeUrl(rawJdFile, httpReq);
+  const trimmedRawJdFile = typeof rawJdFile === "string" ? rawJdFile.trim() : "";
+  const jdFile =
+    servedJdFile ??
+    (trimmedRawJdFile &&
+    !trimmedRawJdFile.startsWith("blob:") &&
+    !trimmedRawJdFile.startsWith("data:")
+      ? trimmedRawJdFile
+      : null);
   return {
     ...enriched,
-    jdFile: buildJdFileServeUrl(rawJdFile, httpReq) ?? rawJdFile ?? null,
+    jdFile,
   };
 }
 
@@ -10066,11 +10075,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((c: { brandName: string; logo: string | null }) => [c.brandName, c.logo] as const),
       );
       res.json(
-        enriched.map((reqRow: { company?: string; jdFile?: string | null }) => ({
-          ...reqRow,
-          companyLogo: reqRow.company ? logoByCompany.get(reqRow.company) ?? null : null,
-          jdFile: buildJdFileServeUrl(reqRow.jdFile, req) ?? reqRow.jdFile ?? null,
-        })),
+        enriched.map((reqRow: { company?: string; jdFile?: string | null }) => {
+          const servedJdFile = buildJdFileServeUrl(reqRow.jdFile, req);
+          const trimmedJdFile =
+            typeof reqRow.jdFile === "string" ? reqRow.jdFile.trim() : "";
+          const jdFile =
+            servedJdFile ??
+            (trimmedJdFile &&
+            !trimmedJdFile.startsWith("blob:") &&
+            !trimmedJdFile.startsWith("data:")
+              ? trimmedJdFile
+              : null);
+          return {
+            ...reqRow,
+            companyLogo: reqRow.company ? logoByCompany.get(reqRow.company) ?? null : null,
+            jdFile,
+          };
+        }),
       );
       console.timeEnd("requirements:admin");
     } catch (error) {
@@ -10176,6 +10197,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertRequirementSchema.parse(requirementBody);
       const { clientAdminEmployeeId, ...requirementFields } = validatedData;
+
+      if (
+        typeof requirementFields.jdFile === "string" &&
+        /^(blob:|data:)/i.test(requirementFields.jdFile.trim())
+      ) {
+        return res.status(400).json({
+          message: "JD file must be uploaded to the server before saving the requirement.",
+        });
+      }
 
       const { resolveAdminRequirementClientFields } = await import(
         "./requirement-client-link"
@@ -10392,6 +10422,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unknown
       >;
       const updates = { ...bodyRest } as Record<string, unknown>;
+
+      if (
+        typeof updates.jdFile === "string" &&
+        /^(blob:|data:)/i.test(updates.jdFile.trim())
+      ) {
+        return res.status(400).json({
+          message: "JD file must be uploaded to the server before saving the requirement.",
+        });
+      }
 
       if (specialInstructionsRaw !== undefined) {
         const requirement = (await storage.getRequirements()).find(
@@ -11578,11 +11617,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
               WHERE added_by IS NULL
                 OR TRIM(added_by) = ''
                 OR LOWER(TRIM(added_by)) IN ('admin', 'bulk upload')
+                OR added_by IN (
+                  SELECT name FROM employees
+                  WHERE LOWER(TRIM(role)) = 'data_entry'
+                    AND name IS NOT NULL
+                    AND TRIM(name) <> ''
+                )
             )::int AS direct_uploads,
             COUNT(*) FILTER (
               WHERE added_by IS NOT NULL
                 AND TRIM(added_by) <> ''
                 AND LOWER(TRIM(added_by)) NOT IN ('admin', 'bulk upload')
+                AND added_by NOT IN (
+                  SELECT name FROM employees
+                  WHERE LOWER(TRIM(role)) = 'data_entry'
+                    AND name IS NOT NULL
+                    AND TRIM(name) <> ''
+                )
             )::int AS recruiter_uploads
           FROM candidates
         `);

@@ -7,12 +7,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFileUpload, apiRequest } from "@/lib/queryClient";
 import { parseRequirementJdExtras } from "@shared/requirement-jd-extras";
 import { isClientAdminRole } from "@shared/client-roles";
 import { Check, FileText, Upload, X, Plus, Trash2 } from "lucide-react";
 
 const SPOC_NONE = "__none__";
+
+function isPersistedJdUrl(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  const trimmed = url.trim();
+  return !trimmed.startsWith("blob:") && !trimmed.startsWith("data:");
+}
+
+function getJdDisplayFileName(file: File | null, previewUrl: string | null): string {
+  if (file?.name) return file.name;
+  if (previewUrl && isPersistedJdUrl(previewUrl)) {
+    try {
+      const segment = previewUrl.split("/").pop() || "";
+      return decodeURIComponent(segment.split("?")[0]) || "JD document";
+    } catch {
+      return previewUrl.split("/").pop() || "JD document";
+    }
+  }
+  return "JD document";
+}
 
 const fieldInputClass =
   "rounded-[6px] bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500";
@@ -363,32 +382,18 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     }
 
     try {
-      let jdFileUrl = null;
-      
-      // If JD file URL is already available (from shared JD), use it directly
-      if (jdFilePreviewUrl) {
-        jdFileUrl = jdFilePreviewUrl;
-      } 
-      // Otherwise, upload JD file if present
-      else if (jdFile) {
+      let jdFileUrl: string | null = null;
+
+      if (jdFile) {
         setIsUploadingJd(true);
         try {
           const formDataUpload = new FormData();
-          formDataUpload.append('jdFile', jdFile);
-          
-          const uploadResponse = await fetch('/api/admin/upload/jd-file', {
-            method: 'POST',
-            body: formDataUpload,
-            credentials: 'include'
-          });
-          
-          if (!uploadResponse.ok) {
-            throw new Error('Failed to upload JD file');
-          }
-          
+          formDataUpload.append("jdFile", jdFile);
+
+          const uploadResponse = await apiFileUpload("/api/admin/upload/jd-file", formDataUpload);
           const uploadData = await uploadResponse.json();
           jdFileUrl = uploadData.url;
-        } catch (error) {
+        } catch {
           toast({
             title: "Upload Error",
             description: "Failed to upload JD file. Please try again.",
@@ -399,6 +404,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         } finally {
           setIsUploadingJd(false);
         }
+      } else if (jdFilePreviewUrl && isPersistedJdUrl(jdFilePreviewUrl)) {
+        jdFileUrl = jdFilePreviewUrl;
       }
 
       const payload = {
@@ -955,9 +962,13 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   <div className="flex items-center gap-3">
                     <FileText className="h-12 w-12 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">JD Files.pdf</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[220px]" title={getJdDisplayFileName(jdFile, jdFilePreviewUrl)}>
+                        {getJdDisplayFileName(jdFile, jdFilePreviewUrl)}
+                      </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {jdFile ? `${(jdFile.size / 1024).toFixed(0)}KB of 128 KB` : '89KB of 128 KB'}
+                        {jdFile
+                          ? `${(jdFile.size / 1024).toFixed(0)} KB`
+                          : "Uploaded document"}
                       </p>
                     </div>
                   </div>
