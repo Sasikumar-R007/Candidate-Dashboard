@@ -86,6 +86,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import EditCandidateModal from "@/components/dashboard/modals/edit-candidate-modal";
 import { ResumePreviewPanel } from "@/components/source-resume/resume-preview-panel";
+import staffosLogo from "@/assets/staffos logo 2.png";
 
 // Location data (same as Upload Resume)
 const locations = [
@@ -297,6 +298,83 @@ const allSkills = [
   "PyTorch",
   "Machine Learning",
   "Data Science",
+  "HTML",
+  "CSS",
+  "SCSS",
+  "Tailwind CSS",
+  "Next.js",
+  "Nuxt.js",
+  "GraphQL",
+  "REST API",
+  "Microservices",
+  "CI/CD",
+  "Jenkins",
+  "Git",
+  "GitHub",
+  "GitLab",
+  "Jira",
+  "Agile",
+  "Scrum",
+  "SAP",
+  "Salesforce",
+  "Power BI",
+  "Tableau",
+  "Snowflake",
+  "Spark",
+  "Hadoop",
+  "Elasticsearch",
+  "Kafka",
+  "RabbitMQ",
+  "NestJS",
+  "FastAPI",
+  "Azure",
+  "GCP",
+  "Linux",
+  "Shell Scripting",
+  "Selenium",
+  "Cypress",
+  "JUnit",
+  "Manual Testing",
+  "Automation Testing",
+  "DevSecOps",
+  "Blockchain",
+  "Solidity",
+  "Android",
+  "iOS",
+  "React Native",
+  "Figma",
+  "UI Design",
+  "UX Research",
+];
+
+const COLLEGE_TIER_OPTIONS = ["Tier 1", "Tier 2", "Tier 3"];
+
+const PREDEFINED_COLLEGE_NAMES = [
+  "IIT Madras",
+  "IIT Delhi",
+  "IIT Bombay",
+  "IIT Kanpur",
+  "IIT Kharagpur",
+  "IIT Roorkee",
+  "IIT Guwahati",
+  "NIT Trichy",
+  "NIT Warangal",
+  "NIT Surathkal",
+  "Anna University",
+  "VIT Vellore",
+  "SRM Institute of Science and Technology",
+  "BITS Pilani",
+  "PSG College of Technology",
+  "SSN College of Engineering",
+  "Coimbatore Institute of Technology",
+  "Delhi Technological University",
+  "Jadavpur University",
+  "Manipal Institute of Technology",
+  "Pune Institute of Computer Technology",
+  "Sathyabama Institute of Science and Technology",
+  "Sri Krishna College of Engineering and Technology",
+  "Kumaraguru College of Technology",
+  "Thiagarajar College of Engineering",
 ];
 
 // Utility function to highlight search terms in text
@@ -1359,6 +1437,46 @@ interface ExcludeKeywordsFilterPanelProps {
   compact?: boolean;
 }
 
+function OptionalFieldToggle({
+  label,
+  isOpen,
+  onOpen,
+  onClose,
+  size = "sm",
+}: {
+  label: string;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  size?: "sm" | "xs";
+}) {
+  const textClass = size === "xs" ? "text-xs" : "text-sm";
+  if (!isOpen) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className={`${textClass} text-blue-700 hover:text-blue-800`}
+      >
+        + {label}
+      </button>
+    );
+  }
+  return (
+    <span className={`inline-flex items-center gap-1 ${textClass} text-gray-700`}>
+      {label}
+      <button
+        type="button"
+        onClick={onClose}
+        className="text-red-500 hover:text-red-700"
+        aria-label={`Close ${label}`}
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </span>
+  );
+}
+
 function ExcludeKeywordsFilterPanel({
   keywords,
   input,
@@ -1372,7 +1490,7 @@ function ExcludeKeywordsFilterPanel({
     : "inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-sm font-medium";
 
   return (
-    <div className={compact ? "mt-2 space-y-2" : "mt-4 space-y-2"}>
+    <div className={compact ? "mt-2" : "mt-3"}>
       <div className="flex flex-wrap gap-2 mb-2">
         {keywords.map((keyword) => (
           <span key={keyword} className={chipClass}>
@@ -1433,7 +1551,7 @@ function SpecificSkillsFilterPanel({
     : "inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-800 rounded-full text-sm font-medium";
 
   return (
-    <div className={compact ? "mt-2 space-y-2" : "mt-4 space-y-2"}>
+    <div className={compact ? "mt-2" : "mt-3"}>
       <div className="flex flex-wrap gap-2 mb-2">
         {skills.map((skill) => (
           <span key={skill} className={chipClass}>
@@ -2204,9 +2322,20 @@ const SourceResume = () => {
       timestamp: Date.now(),
     };
     
-    const updated = [newSearch, ...recentSearches].slice(0, 3); // Keep only last 3
+    const updated = [newSearch, ...recentSearches].slice(0, 6);
     setRecentSearches(updated);
     localStorage.setItem('sourceResumeRecentSearches', JSON.stringify(updated));
+  };
+
+  const removeRecentSearch = (searchId: string) => {
+    const updated = recentSearches.filter((search) => search.id !== searchId);
+    setRecentSearches(updated);
+    localStorage.setItem('sourceResumeRecentSearches', JSON.stringify(updated));
+  };
+
+  const clearAllRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('sourceResumeRecentSearches');
   };
 
   // Apply recent search filters
@@ -2274,21 +2403,30 @@ const SourceResume = () => {
     }
 
     const requirement = requirements.find((r: { id: string }) => r.id === requirementId);
-    setFilters((prev) => {
-      if (!requirement) {
-        return { ...prev, selectedRequirementId: requirementId };
-      }
-      return mergeRequirementIntoFilters(
-        requirement,
-        { ...prev, selectedRequirementId: requirementId },
-        { experience: initialFilters.experience },
-      );
-    });
+    const nextFilters = requirement
+      ? mergeRequirementIntoFilters(
+          requirement,
+          { ...filters, selectedRequirementId: requirementId },
+          { experience: initialFilters.experience },
+        )
+      : { ...filters, selectedRequirementId: requirementId };
+
+    setFilters(nextFilters);
+    if (nextFilters.specificSkills.length > 0) {
+      setShowSpecificSkills(true);
+    }
+    if (nextFilters.excludedKeywords.length > 0) {
+      setShowExcludeKeywords(true);
+    }
     setSortOption("relevance");
+    const skillCount =
+      nextFilters.specificSkills.length + nextFilters.keywords.length;
     toast({
       title: "AI Match Mode Enabled",
       description: requirement
-        ? "Filters updated from requirement where empty. Candidates ranked by requirement fit."
+        ? skillCount > 0
+          ? `Role and ${skillCount} skill filter${skillCount === 1 ? "" : "s"} applied from the requirement. Candidates ranked by requirement fit.`
+          : "Role applied from requirement. No structured skills were found on this requirement to auto-fill."
         : "Candidates will be scored against this requirement",
     });
   };
@@ -3008,26 +3146,17 @@ const SourceResume = () => {
     return allCandidates.map(c => mapDatabaseCandidateToDisplay(c, currentTime));
   }, [allCandidates, currentTime]);
 
-  const allCollegeTiers = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          allDisplayCandidates
-            .map((c) => c.pedigreeLevel?.trim())
-            .filter((v): v is string => Boolean(v)),
-        ),
-      ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
-    [allDisplayCandidates],
-  );
+  const allCollegeTiers = COLLEGE_TIER_OPTIONS;
 
   const allCollegeNames = useMemo(
     () =>
       Array.from(
-        new Set(
-          allDisplayCandidates
+        new Set([
+          ...PREDEFINED_COLLEGE_NAMES,
+          ...allDisplayCandidates
             .map((c) => c.university?.trim())
             .filter((v): v is string => Boolean(v)),
-        ),
+        ]),
       ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
     [allDisplayCandidates],
   );
@@ -3624,6 +3753,20 @@ const SourceResume = () => {
     return pool.filter((skill) => skill.toLowerCase().includes(q)).slice(0, 8);
   }, [filters.booleanMode, filters.keywords, keywordInput, suggestedKeywords]);
 
+  const recentKeywordSuggestions = useMemo(() => {
+    const fromHistory = recentSearches.flatMap((search) => search.keywords);
+    return Array.from(new Set(fromHistory))
+      .filter((keyword) => keyword && !filters.keywords.includes(keyword))
+      .slice(0, 6);
+  }, [recentSearches, filters.keywords]);
+
+  const canAddCustomKeyword =
+    !filters.booleanMode &&
+    keywordInput.trim().length > 0 &&
+    !filters.keywords.some(
+      (kw) => kw.toLowerCase() === keywordInput.trim().toLowerCase(),
+    );
+
   // Results View
   if (view === 'results') {
     return (
@@ -3714,21 +3857,21 @@ const SourceResume = () => {
               <label className="mb-2 block text-sm font-semibold text-gray-700">
                 Skills
               </label>
-              <div className="mb-2 flex flex-col items-start gap-1">
-                <button
-                  type="button"
-                  onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
-                  className="text-xs text-blue-700 hover:text-blue-800"
-                >
-                  + Exclude Keywords
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSpecificSkills(!showSpecificSkills)}
-                  className="text-xs text-blue-700 hover:text-blue-800"
-                >
-                  + Add Specific Skills
-                </button>
+              <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <OptionalFieldToggle
+                  label="Exclude Keywords"
+                  isOpen={showExcludeKeywords}
+                  onOpen={() => setShowExcludeKeywords(true)}
+                  onClose={() => setShowExcludeKeywords(false)}
+                  size="xs"
+                />
+                <OptionalFieldToggle
+                  label="Add Specific Skills"
+                  isOpen={showSpecificSkills}
+                  onOpen={() => setShowSpecificSkills(true)}
+                  onClose={() => setShowSpecificSkills(false)}
+                  size="xs"
+                />
               </div>
               {showExcludeKeywords && (
                 <ExcludeKeywordsFilterPanel
@@ -3939,6 +4082,11 @@ const SourceResume = () => {
                 options={allCollegeTiers}
                 placeholder="Any tier"
               />
+              {filters.collegeTiers.length > 0 && (
+                <p className="mt-2 rounded-md border border-red-100 bg-red-50 px-2 py-1.5 text-[11px] leading-relaxed text-red-700">
+                  This database contains AI-parsed resumes. Tier-based sourcing may not always be accurate.
+                </p>
+              )}
             </div>
 
             <div>
@@ -5097,26 +5245,52 @@ const SourceResume = () => {
 
   // Search Form View
   return (
-    <div className="source-resume-page flex h-screen bg-gray-50">
-      {/* Main Content Area - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-6 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Source Resume</h1>
-              <p className="text-gray-600 mt-1">
-                Find the perfect candidates for your requirements
-              </p>
+    <div className="source-resume-page flex h-screen flex-col bg-gray-50">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* StaffOS brand — aligned with filter column */}
+          <header className="z-50 shrink-0 border-b border-gray-200 bg-white px-6 py-3">
+            <div className="mx-auto flex max-w-6xl items-center gap-3">
+              <img
+                src={staffosLogo}
+                alt="StaffOS Logo"
+                className="h-9 w-9 shrink-0 rounded-full object-cover"
+              />
+              <span className="text-lg font-bold text-gray-900">StaffOS</span>
             </div>
-            <button
-              onClick={resetFilters}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              title="Reset filters"
-            >
-              <RotateCw className="w-5 h-5 text-gray-600" />
-            </button>
+          </header>
+
+          {/* Session bar — fixed while filters scroll */}
+          <div className="z-40 shrink-0 border-b border-gray-200 bg-white/95 px-6 py-4 shadow-sm backdrop-blur-sm">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-gray-900">Source Resume</h1>
+                <p className="mt-1 text-gray-600">
+                  Find the perfect candidates for your requirements
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <button
+                  onClick={resetFilters}
+                  className="rounded-full p-2 transition-colors hover:bg-gray-100"
+                  title="Reset filters"
+                >
+                  <RotateCw className="h-5 w-5 text-gray-600" />
+                </button>
+                <button
+                  onClick={handleSourceResume}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:from-purple-700 hover:to-blue-700 hover:shadow-purple-500/30"
+                >
+                  <span>Source Resume</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Scrollable filters */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-6xl space-y-6 p-6">
 
           {/* AI Match Mode */}
           <div className={SR_SECTION_CARD}>
@@ -5196,16 +5370,16 @@ const SourceResume = () => {
               </div>
             )}
 
-            {/* Suggested Keywords */}
-            {!filters.booleanMode && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {suggestedKeywords.slice(0, 6).map((skill) => (
+            {/* Recent keyword quick picks */}
+            {!filters.booleanMode && recentKeywordSuggestions.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {recentKeywordSuggestions.map((keyword) => (
                   <button
-                    key={skill}
-                    onClick={() => handleSkillAdd(skill)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+                    key={keyword}
+                    onClick={() => handleKeywordAdd(keyword)}
+                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
                   >
-                    {skill}
+                    {keyword}
                   </button>
                 ))}
               </div>
@@ -5215,21 +5389,19 @@ const SourceResume = () => {
             <div className="relative mb-2">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <span className="text-sm font-semibold text-gray-700">Keywords Search</span>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
-                    className="text-sm text-blue-700 hover:text-blue-800"
-                  >
-                    + Exclude Keywords
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSpecificSkills(!showSpecificSkills)}
-                    className="text-sm text-blue-700 hover:text-blue-800"
-                  >
-                    + Add Specific Skills
-                  </button>
+                <div className="flex flex-wrap items-center gap-4">
+                  <OptionalFieldToggle
+                    label="Exclude Keywords"
+                    isOpen={showExcludeKeywords}
+                    onOpen={() => setShowExcludeKeywords(true)}
+                    onClose={() => setShowExcludeKeywords(false)}
+                  />
+                  <OptionalFieldToggle
+                    label="Add Specific Skills"
+                    isOpen={showSpecificSkills}
+                    onOpen={() => setShowSpecificSkills(true)}
+                    onClose={() => setShowSpecificSkills(false)}
+                  />
                 </div>
               </div>
               <input
@@ -5263,8 +5435,22 @@ const SourceResume = () => {
                     : "Enter skills, company, designation..."
                 }
               />
-              {!filters.booleanMode && showMainKeywordSuggestions && mainKeywordSuggestions.length > 0 && (
+              {!filters.booleanMode && showMainKeywordSuggestions && (mainKeywordSuggestions.length > 0 || canAddCustomKeyword) && (
                 <div className="absolute left-0 top-full z-50 mt-1 w-full max-w-md overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+                  <div className="max-h-44 overflow-y-auto">
+                  {canAddCustomKeyword && (
+                    <button
+                      type="button"
+                      className="block w-full border-b border-gray-100 px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleKeywordAdd(keywordInput.trim());
+                        setShowMainKeywordSuggestions(false);
+                      }}
+                    >
+                      Add &quot;{keywordInput.trim()}&quot;
+                    </button>
+                  )}
                   {mainKeywordSuggestions.map((skill) => (
                     <button
                       key={skill}
@@ -5279,6 +5465,7 @@ const SourceResume = () => {
                       {skill}
                     </button>
                   ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -5314,7 +5501,7 @@ const SourceResume = () => {
           {/* Employee Details */}
           <div className={SR_SECTION_CARD}>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700">Experience</label>
                 <div className="flex gap-2 items-center">
@@ -5409,7 +5596,7 @@ const SourceResume = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
               {/* Role */}
               <div className="space-y-2">
@@ -5447,6 +5634,11 @@ const SourceResume = () => {
                   options={allCollegeTiers}
                   placeholder="Any tier"
                 />
+                {filters.collegeTiers.length > 0 && (
+                  <p className="rounded-md border border-red-100 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-700">
+                    This database contains AI-parsed resumes. Tier-based sourcing may not always be accurate.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -5488,15 +5680,15 @@ const SourceResume = () => {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2">
-              <button 
-                onClick={() => setShowExcludeCompany(!showExcludeCompany)}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                + Exclude Company
-              </button>
-              
-              {/* Exclude Company Input */}
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <OptionalFieldToggle
+                label="Exclude Company"
+                isOpen={showExcludeCompany}
+                onOpen={() => setShowExcludeCompany(true)}
+                onClose={() => setShowExcludeCompany(false)}
+              />
+            </div>
+
               {showExcludeCompany && (
                 <div className="mt-2">
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -5537,7 +5729,6 @@ const SourceResume = () => {
                   </div>
                 </div>
               )}
-            </div>
           </div>
 
           {/* Education Details */}
@@ -5569,15 +5760,15 @@ const SourceResume = () => {
                 />
               </div>
             </div>
-            <div className="mt-4 space-y-2">
-              <button 
-                onClick={() => setShowAddDegree(!showAddDegree)}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                + Add More degree or certificates
-              </button>
-              
-              {/* Additional Degrees Input */}
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <OptionalFieldToggle
+                label="Add More degree or certificates"
+                isOpen={showAddDegree}
+                onOpen={() => setShowAddDegree(true)}
+                onClose={() => setShowAddDegree(false)}
+              />
+            </div>
+
               {showAddDegree && (
                 <div className="mt-2">
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -5618,7 +5809,6 @@ const SourceResume = () => {
                   </div>
                 </div>
               )}
-            </div>
           </div>
 
           {/* Work Details */}
@@ -5709,18 +5899,39 @@ const SourceResume = () => {
 
         </div>
       </div>
+    </div>
 
-      {/* Recent Searches Sidebar - Static (Not Scrollable) */}
-      <div className="w-80 bg-white border-l border-gray-200 p-6 flex flex-col">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Searches</h2>
+        {/* Recent Searches Sidebar */}
+      <div className="flex w-80 shrink-0 flex-col border-l border-gray-200 bg-white p-6">
+        <div className="mb-6 flex items-center justify-between gap-2">
+          <h2 className="text-xl font-bold text-gray-900">Recent Searches</h2>
+          {recentSearches.length > 0 && (
+            <button
+              type="button"
+              onClick={clearAllRecentSearches}
+              className="text-xs font-medium text-red-600 hover:text-red-700"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
 
-        <div className="space-y-4 flex-1 overflow-y-auto">
+        <div className="flex-1 space-y-4 overflow-y-auto">
           {recentSearches.length === 0 ? (
             <p className="text-sm text-gray-500">No recent searches</p>
           ) : (
             recentSearches.map((search) => (
-              <div key={search.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="space-y-3">
+              <div key={search.id} className="relative rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <button
+                  type="button"
+                  onClick={() => removeRecentSearch(search.id)}
+                  className="absolute right-3 top-3 text-red-500 hover:text-red-700"
+                  aria-label="Remove recent search"
+                  title="Remove"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <div className="space-y-3 pr-6">
                   {/* Keywords */}
                   {search.keywords.length > 0 && (
                     <div>
@@ -5803,15 +6014,8 @@ const SourceResume = () => {
           )}
         </div>
       </div>
+      </div>
 
-      {/* Fixed Source Resume Button - Bottom Right */}
-      <button
-        onClick={handleSourceResume}
-        className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
-      >
-        <span>Source Resume</span>
-        <ArrowRight className="w-5 h-5" />
-      </button>
       {tagConfirmDialog}
     </div>
   );

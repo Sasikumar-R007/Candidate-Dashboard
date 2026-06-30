@@ -278,6 +278,37 @@ export function resolveDisplayRoleId(
   return "N/A";
 }
 
+/**
+ * Role ID for TL job-post linking dropdowns.
+ * Prefers STR role ids; falls back to STREQ / STR record id when unresolved.
+ */
+export function resolvePostJobLinkRoleId(
+  requirement:
+    | {
+        id?: string | null;
+        sourceDetails?: string | null;
+        displayRequirementId?: string | null;
+      }
+    | null
+    | undefined,
+): string {
+  const roleId = resolveDisplayRoleId(requirement);
+  if (roleId && roleId !== "N/A") return roleId;
+
+  if (requirement && typeof requirement === "object") {
+    const displayReqId = requirement.displayRequirementId?.trim();
+    if (displayReqId) return displayReqId.toUpperCase();
+
+    const id = requirement.id?.trim();
+    if (id) {
+      if (STR_ROLE_ID_PATTERN.test(id)) return id.toUpperCase();
+      if (STREQ_ID_PATTERN.test(id)) return id.toUpperCase();
+    }
+  }
+
+  return "N/A";
+}
+
 /** @deprecated Use resolveDisplayRoleId — kept for call sites that only pass id string. */
 export function formatRoleIdShort(id?: string | null): string {
   return resolveDisplayRoleId(id);

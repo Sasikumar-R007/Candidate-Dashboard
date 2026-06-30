@@ -13,7 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { mapRequirementToJobForm } from '@shared/requirement-to-job-form';
 import {
   formatRoleIdDropdownLabel,
-  resolveDisplayRoleId,
+  getRequirementTaSplitMeta,
+  resolvePostJobLinkRoleId,
   resolveRequirementDisplayId,
 } from '@shared/requirement-jd-extras';
 import { cn } from '@/lib/utils';
@@ -204,12 +205,15 @@ export default function PostJobModal({
   const postableRequirements = useMemo(() => {
     if (!linkableRequirements?.length) return [];
     return linkableRequirements.filter(
-      (req) =>
-        !req.isRecentlyClosed &&
-        req.managementStatus !== "closed" &&
-        (req.talentAdvisorId || req.talentAdvisor),
+      (req) => !req.isRecentlyClosed && req.managementStatus !== "closed",
     );
   }, [linkableRequirements]);
+
+  const requirementHasAssignedTa = (req: PostJobRequirementOption) =>
+    Boolean(req.talentAdvisorId || req.talentAdvisor);
+
+  const getLinkRoleId = (req: PostJobRequirementOption) =>
+    resolvePostJobLinkRoleId(req);
 
   const clientOptions = useMemo(
     () =>
@@ -228,7 +232,8 @@ export default function PostJobModal({
     for (const req of postableRequirements) {
       const company = String(req.company || "").trim();
       if (!company || (selectedClientCompany && company !== selectedClientCompany)) continue;
-      const roleId = resolveDisplayRoleId(req);
+      const roleId = getLinkRoleId(req);
+      if (roleId === "N/A") continue;
       const position = String(req.position || "Role");
       if (!byRole.has(roleId)) {
         byRole.set(roleId, { roleId, position });
@@ -241,7 +246,7 @@ export default function PostJobModal({
     () =>
       postableRequirements.filter((req) => {
         const company = String(req.company || "").trim();
-        const roleId = resolveDisplayRoleId(req);
+        const roleId = getLinkRoleId(req);
         if (selectedClientCompany && company !== selectedClientCompany) return false;
         if (selectedRoleId && roleId !== selectedRoleId) return false;
         return true;
@@ -249,7 +254,9 @@ export default function PostJobModal({
     [postableRequirements, selectedClientCompany, selectedRoleId],
   );
 
-  const hasMultipleRequirementOptions = filteredRequirements.length > 1;
+  const hasMultipleRequirementOptions =
+    filteredRequirements.length > 1 &&
+    filteredRequirements.some((req) => getRequirementTaSplitMeta(req));
   const singleMatchedRequirement =
     filteredRequirements.length === 1 ? filteredRequirements[0] : null;
 
@@ -306,7 +313,7 @@ export default function PostJobModal({
     if (!requirement) return;
     const mapped = mapRequirementToJobForm(requirement);
     setSelectedClientCompany(String(requirement.company || "").trim());
-    setSelectedRoleId(resolveDisplayRoleId(requirement));
+    setSelectedRoleId(getLinkRoleId(requirement));
     setFormData({
       ...formData,
       ...mapped,
@@ -327,7 +334,7 @@ export default function PostJobModal({
   ) => {
     const matches = postableRequirements.filter((req) => {
       const company = String(req.company || "").trim();
-      return company === clientCompany && resolveDisplayRoleId(req) === roleId;
+      return company === clientCompany && getLinkRoleId(req) === roleId;
     });
     if (matches.length > 0) {
       applyRequirementSelection(matches[0].id);
@@ -381,7 +388,7 @@ export default function PostJobModal({
     const selectedReq = postableRequirements.find((req) => req.id === formData.requirementId);
     if (!selectedReq) return;
     setSelectedClientCompany(String(selectedReq.company || "").trim());
-    setSelectedRoleId(resolveDisplayRoleId(selectedReq));
+    setSelectedRoleId(getLinkRoleId(selectedReq));
   }, [formData.requirementId, postableRequirements]);
 
   const sanitizeSalaryInput = (value: string) => {
@@ -510,6 +517,23 @@ const deriveLocationType = (workMode: string): string => {
         variant: "destructive",
       });
       return;
+    }
+
+    if (requiresRequirementLink && formData.requirementId) {
+      const linkedRequirement = postableRequirements.find(
+        (req) => req.id === formData.requirementId,
+      );
+      if (linkedRequirement && !requirementHasAssignedTa(linkedRequirement)) {
+        const message =
+          "Assign a Talent Advisor to this requirement before posting a job.";
+        setFormError(message);
+        toast({
+          title: "Talent Advisor required",
+          description: message,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setInvalidFields(new Set());
@@ -834,6 +858,11 @@ const deriveLocationType = (workMode: string): string => {
                         <p className="text-[11px] text-slate-500">
                           Linked automatically from Role ID — no extra selection needed.
                         </p>
+                        {!requirementHasAssignedTa(singleMatchedRequirement) && (
+                          <p className="text-[11px] text-amber-700">
+                            Assign a Talent Advisor to this requirement before you can post the job.
+                          </p>
+                        )}
                       </>
                     ) : (
                       <>

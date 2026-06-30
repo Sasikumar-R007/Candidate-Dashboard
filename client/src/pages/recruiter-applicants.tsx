@@ -38,7 +38,7 @@ export default function RecruiterApplicants() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedJobId, setSelectedJobId] = useState<string>('');
+  const [selectedJobId, setSelectedJobId] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
@@ -64,7 +64,7 @@ export default function RecruiterApplicants() {
     queryKey: ['/api/recruiter/applications', selectedJobId, statusFilter, dateFrom, dateTo],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedJobId) params.append('jobId', selectedJobId);
+      if (selectedJobId && selectedJobId !== 'all') params.append('jobId', selectedJobId);
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
@@ -164,7 +164,7 @@ export default function RecruiterApplicants() {
   );
 
   const handleClearFilters = () => {
-    setSelectedJobId('');
+    setSelectedJobId('all');
     setStatusFilter('all');
     setDateFrom('');
     setDateTo('');
@@ -249,7 +249,7 @@ export default function RecruiterApplicants() {
               <SelectValue placeholder="All Jobs" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Jobs</SelectItem>
+              <SelectItem value="all">All Jobs</SelectItem>
               {allJobs.map((job) => (
                 <SelectItem key={job.id} value={job.id}>
                   {job.role} - {job.companyName}
@@ -289,7 +289,7 @@ export default function RecruiterApplicants() {
             />
           </div>
 
-          {(selectedJobId || statusFilter !== 'all' || dateFrom || dateTo) && (
+          {(selectedJobId !== 'all' || statusFilter !== 'all' || dateFrom || dateTo) && (
             <Button
               variant="outline"
               size="sm"
@@ -311,7 +311,7 @@ export default function RecruiterApplicants() {
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No Applicants Found</h2>
             <p className="text-gray-500 text-center max-w-md">
-              {selectedJobId
+              {selectedJobId !== 'all'
                 ? "There are no applications for this job yet. When candidates apply to this job from the Job Board, they will appear here."
                 : statusFilter !== 'all' || dateFrom || dateTo
                 ? "No applicants match your current filters. Try adjusting your search criteria."

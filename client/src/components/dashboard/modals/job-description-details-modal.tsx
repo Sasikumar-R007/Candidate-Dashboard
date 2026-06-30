@@ -20,12 +20,13 @@ import {
 } from "@/lib/candidate-ui-preferences";
 import { cn } from "@/lib/utils";
 import { resolveJdFileUrl as resolveStoredJdFileUrl, resolveJdPreviewUrl } from "@/lib/resolve-upload-url";
+import { apiRequest } from "@/lib/queryClient";
 
-const API_BASE_URL = (
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_BACKEND_URL ||
-  ""
-).trim();
+function isPersistedJdReference(jdFile?: string | null): boolean {
+  if (!jdFile?.trim()) return false;
+  const trimmed = jdFile.trim();
+  return !trimmed.startsWith("blob:") && !trimmed.startsWith("data:");
+}
 
 type JdViewPayload = {
   jdFile?: string | null;
@@ -382,9 +383,9 @@ function JdDocumentPanel({
         </div>
       )}
 
-      {!loading && !jdFileUrl && jdFile?.trim() && (
+      {!loading && !jdFileUrl && jdFile?.trim() && isPersistedJdReference(jdFile) && (
         <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-5 text-sm leading-relaxed text-amber-900">
-          The job description file reference is invalid or expired. Use the text below if available, or re-upload the JD.
+          The job description document could not be loaded for preview. Use the text below if available.
         </p>
       )}
 
@@ -440,11 +441,8 @@ export default function JobDescriptionDetailsModal({
     setJdLoading(true);
     setJdView(null);
 
-    const apiBase = API_BASE_URL.replace(/\/+$/, "");
-    fetch(`${apiBase}/api/requirements/${encodeURIComponent(lookupId)}/jd-view`, {
-      credentials: "include",
-    })
-      .then((res) => (res.ok ? res.json() : null))
+    apiRequest("GET", `/api/requirements/${encodeURIComponent(lookupId)}/jd-view`)
+      .then((res) => res.json())
       .then((payload: JdViewPayload | null) => {
         if (!cancelled) setJdView(payload);
       })
@@ -462,7 +460,12 @@ export default function JobDescriptionDetailsModal({
 
   if (!data) return null;
 
-  const displayJdFile = jdView?.jdFile ?? data.jdFile ?? null;
+  const displayJdFile = (() => {
+    const fromView = jdView?.jdFile;
+    if (fromView && isPersistedJdReference(fromView)) return fromView;
+    if (data.jdFile && isPersistedJdReference(data.jdFile)) return data.jdFile;
+    return null;
+  })();
   const displayJdText = jdView?.jdText ?? data.jdText ?? null;
   const jdExtras = parseRequirementJdExtras({
     ...data,
