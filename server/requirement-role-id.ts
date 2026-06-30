@@ -88,7 +88,7 @@ export async function findConflictingRequirementForRoleId(
   const exclude = new Set(
     (options?.excludeRequirementIds || []).map((id) => String(id)),
   );
-  const allRequirements = await loadAllRequirementsForRoleIdIndex();
+  const allRequirements = await loadAllRequirementsForRoleIdIndex(storage);
 
   for (const req of allRequirements) {
     if (exclude.has(String(req.id))) continue;
