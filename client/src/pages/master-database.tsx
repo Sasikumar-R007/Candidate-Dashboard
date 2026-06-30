@@ -540,7 +540,8 @@ interface EmployeeData {
   address?: string;
   designation?: string;
   joiningDate?: string;
-  employmentStatus?: string;
+  employmentType?: string;
+  workMode?: string;
   esic?: string;
   epfo?: string;
   esicNo?: string;
@@ -745,7 +746,7 @@ export default function MasterDatabase() {
         experience: '-',
         skills: employee.department || '-',
         source: 'Admin',
-        status: (employee.isActive ? 'Active' : (employee.employmentStatus === 'Resigned' ? 'Resigned' : 'Inactive')) as EmployeeStatus,
+        status: (employee.isActive ? 'Active' : (employee.currentStatus === 'Resigned' ? 'Resigned' : 'Inactive')) as EmployeeStatus,
         uploadedDate: formatDate(employee.joiningDate || employee.createdAt),
         email: employee.email,
         phone: employee.phone,
@@ -754,7 +755,8 @@ export default function MasterDatabase() {
         address: employee.address,
         designation: employee.designation,
         joiningDate: employee.joiningDate,
-        employmentStatus: employee.employmentStatus,
+        employmentType: employee.employmentType || employee.employmentStatus,
+        workMode: employee.workMode,
         esic: employee.esic,
         epfo: employee.epfo,
         esicNo: employee.esicNo,
@@ -1551,7 +1553,8 @@ export default function MasterDatabase() {
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Email</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Phone</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Date of Joining</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Employment Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Employment Type</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Work Mode</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">ESIC</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">EPFO</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">ESIC No</th>
@@ -1683,7 +1686,10 @@ export default function MasterDatabase() {
                               {'joiningDate' in item ? ((item as any).joiningDate ? formatDate((item as any).joiningDate) : '-') : '-'}
                             </td>
                             <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                              {'employmentStatus' in item ? (item as any).employmentStatus || '-' : '-'}
+                              {'employmentType' in item ? (item as any).employmentType || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'workMode' in item ? (item as any).workMode || '-' : '-'}
                             </td>
                             <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
                               {'esic' in item ? (item as any).esic || '-' : '-'}
@@ -2623,7 +2629,8 @@ export default function MasterDatabase() {
             address: (itemToEdit as EmployeeData).address || '',
             designation: (itemToEdit as EmployeeData).designation || '',
             joiningDate: (itemToEdit as EmployeeData).joiningDate || '',
-            employmentStatus: (itemToEdit as EmployeeData).employmentStatus || '',
+            employmentType: (itemToEdit as EmployeeData).employmentType || '',
+            workMode: (itemToEdit as EmployeeData).workMode || '',
             esic: (itemToEdit as EmployeeData).esic || '',
             epfo: (itemToEdit as EmployeeData).epfo || '',
             esicNo: (itemToEdit as EmployeeData).esicNo || '',

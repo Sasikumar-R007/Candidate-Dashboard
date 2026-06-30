@@ -696,7 +696,7 @@ export function buildGeneralReportBody(
       formatReportRoleLabel(emp.role),
       emp.department || "-",
       emp.joiningDate || "-",
-      emp.employmentStatus || (emp.isActive === false ? "Inactive" : "Active"),
+      emp.employmentType || emp.employmentStatus || (emp.isActive === false ? "Inactive" : "Active"),
     ]);
     return section(
       "Employee Master",

@@ -305,6 +305,8 @@ export type SourceResumeFilterSnapshot = {
   role: string[];
   noticePeriod: string;
   preferredLocation: string[];
+  collegeTiers: string[];
+  collegeNames: string[];
   company: string[];
   excludedCompanies: string[];
   educationUG: string[];
@@ -394,6 +396,12 @@ export function buildActiveFilterChips(
   }
   for (const loc of filters.preferredLocation) {
     chips.push({ id: `pref-${loc}`, label: loc, category: "Preferred location" });
+  }
+  for (const tier of filters.collegeTiers) {
+    chips.push({ id: `tier-${tier}`, label: tier, category: "College tier" });
+  }
+  for (const college of filters.collegeNames) {
+    chips.push({ id: `college-${college}`, label: college, category: "College name" });
   }
   if (filters.noticePeriod.trim()) {
     chips.push({

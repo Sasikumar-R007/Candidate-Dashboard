@@ -1,6 +1,6 @@
 {
   "name": "rest-express",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -21,7 +21,9 @@
     "migrate-profiles": "tsx server/scripts/migrate-existing-profiles.ts",
     "migrate-profile-media-r2": "tsx server/scripts/migrate-profile-media-to-r2.ts",
     "apply-avatar-url-schema": "tsx server/scripts/apply-avatar-url-schema.ts",
-    "debug-candidates": "tsx server/scripts/debug-candidate-data.ts"
+    "debug-candidates": "tsx server/scripts/debug-candidate-data.ts",
+    "production-reset-keep-resumes:dry-run": "tsx server/scripts/production-reset-keep-resumes.ts --dry-run",
+    "production-reset-keep-resumes:confirm": "tsx server/scripts/production-reset-keep-resumes.ts --confirm"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1067.0",

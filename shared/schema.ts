@@ -160,6 +160,8 @@ export const candidateApplicationComments = pgTable("candidate_application_comme
   authorRole: text("author_role").notNull(),
   body: text("body").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  editedAt: timestamp("edited_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const nudges = pgTable("nudges", {
@@ -276,6 +278,8 @@ export const requirements = pgTable("requirements", {
   criticality: text("criticality").notNull(), // HIGH, MEDIUM, LOW
   toughness: text("toughness").notNull().default("Medium"), // Easy, Medium, Tough
   company: text("company").notNull(),
+  /** Master Data clients.id — stable link for admin-created requirements */
+  clientCompanyId: varchar("client_company_id"),
   spoc: text("spoc").notNull(),
   talentAdvisor: text("talent_advisor"),
   talentAdvisorId: varchar("talent_advisor_id"), // Stable ID-based linkage to employees table
@@ -341,7 +345,9 @@ export const employees = pgTable("employees", {
   phone: text("phone"),
   department: text("department"),
   joiningDate: text("joining_date"),
-  employmentStatus: text("employment_status"), // Active, Inactive, etc
+  employmentStatus: text("employment_status"), // legacy — prefer employmentType
+  employmentType: text("employment_type"), // Permanent, Temporary, External Consultant
+  workMode: text("work_mode"), // Work from Office, Work from Home, Hybrid
 
   // ESIC & EPFO
   esic: text("esic"), // Yes/No dropdown
@@ -787,6 +793,11 @@ export const insertCeoCommentSchema = createInsertSchema(ceoComments).omit({
 
 export const insertRequirementSchema = createInsertSchema(requirements).omit({
   id: true,
+}).extend({
+  company: z.string().optional().nullable(),
+  clientCompanyId: z.string().optional().nullable(),
+  clientAdminEmployeeId: z.string().optional().nullable(),
+  spoc: z.string().optional().nullable(),
 });
 
 export const insertArchivedRequirementSchema = createInsertSchema(archivedRequirements).omit({

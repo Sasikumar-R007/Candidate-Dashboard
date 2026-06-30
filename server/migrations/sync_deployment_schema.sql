@@ -88,6 +88,10 @@ CREATE TABLE IF NOT EXISTS candidate_application_comments (
 CREATE INDEX IF NOT EXISTS idx_candidate_application_comments_application_id
   ON candidate_application_comments (application_id);
 
+ALTER TABLE candidate_application_comments
+  ADD COLUMN IF NOT EXISTS edited_at timestamp,
+  ADD COLUMN IF NOT EXISTS deleted_at timestamp;
+
 CREATE INDEX IF NOT EXISTS idx_requirement_assignments_requirement_id
   ON requirement_assignments (requirement_id);
 

@@ -2584,6 +2584,8 @@ function serializeApplicationComment(comment: {
   authorRole: string;
   body: string;
   createdAt: Date | string | null;
+  editedAt?: Date | string | null;
+  deletedAt?: Date | string | null;
 }) {
   const raw = comment.createdAt;
   let createdAt: string;
@@ -2595,7 +2597,81 @@ function serializeApplicationComment(comment: {
   } else {
     createdAt = new Date().toISOString();
   }
-  return { ...comment, createdAt };
+  const toIso = (value: Date | string | null | undefined) => {
+    if (!value) return null;
+    if (value instanceof Date) return value.toISOString();
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  };
+  return {
+    ...comment,
+    createdAt,
+    editedAt: toIso(comment.editedAt),
+    deletedAt: toIso(comment.deletedAt),
+  };
+}
+
+const CLIENT_REJECTION_COMMENT_PREFIX = "Reason from Client for Rejection:";
+
+function isSystemRejectionCommentBody(body: string): boolean {
+  return body.trim().startsWith(CLIENT_REJECTION_COMMENT_PREFIX);
+}
+
+async function mutateOwnApplicationComment(params: {
+  applicationId: string;
+  commentId: string;
+  employeeId: string;
+  action: "edit";
+  body: string;
+}): Promise<{ ok: true; comment: ReturnType<typeof serializeApplicationComment> } | { ok: false; status: number; message: string }>;
+async function mutateOwnApplicationComment(params: {
+  applicationId: string;
+  commentId: string;
+  employeeId: string;
+  action: "delete";
+}): Promise<{ ok: true; comment: ReturnType<typeof serializeApplicationComment> } | { ok: false; status: number; message: string }>;
+async function mutateOwnApplicationComment(params: {
+  applicationId: string;
+  commentId: string;
+  employeeId: string;
+  action: "edit" | "delete";
+  body?: string;
+}): Promise<{ ok: true; comment: ReturnType<typeof serializeApplicationComment> } | { ok: false; status: number; message: string }> {
+  const comment = await storage.getCandidateApplicationCommentById(params.commentId);
+  if (!comment || comment.applicationId !== params.applicationId) {
+    return { ok: false, status: 404, message: "Comment not found" };
+  }
+  if (comment.authorEmployeeId !== params.employeeId) {
+    return { ok: false, status: 403, message: "You can only change your own messages" };
+  }
+  if (comment.deletedAt) {
+    return { ok: false, status: 400, message: "This message was already unsent" };
+  }
+  if (isSystemRejectionCommentBody(comment.body)) {
+    return { ok: false, status: 400, message: "This message cannot be changed" };
+  }
+
+  if (params.action === "delete") {
+    const updated = await storage.softDeleteCandidateApplicationComment(params.commentId);
+    if (!updated) {
+      return { ok: false, status: 500, message: "Failed to unsend message" };
+    }
+    return { ok: true, comment: serializeApplicationComment(updated) };
+  }
+
+  const trimmed = (params.body || "").trim();
+  if (!trimmed) {
+    return { ok: false, status: 400, message: "Message cannot be empty" };
+  }
+  if (trimmed.length > 5000) {
+    return { ok: false, status: 400, message: "Message is too long" };
+  }
+
+  const updated = await storage.updateCandidateApplicationCommentBody(params.commentId, trimmed);
+  if (!updated) {
+    return { ok: false, status: 500, message: "Failed to update message" };
+  }
+  return { ok: true, comment: serializeApplicationComment(updated) };
 }
 
 async function clientCanAccessJobApplication(
@@ -10099,12 +10175,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body as Record<string, unknown>;
 
       const validatedData = insertRequirementSchema.parse(requirementBody);
+      const { clientAdminEmployeeId, ...requirementFields } = validatedData;
+
+      const { resolveAdminRequirementClientFields } = await import(
+        "./requirement-client-link"
+      );
+      let resolvedClientFields;
+      try {
+        resolvedClientFields = await resolveAdminRequirementClientFields(
+          storage,
+          {
+            clientCompanyId: requirementFields.clientCompanyId,
+            clientAdminEmployeeId,
+            company: requirementFields.company,
+            spoc: requirementFields.spoc,
+          },
+          { requireClientCompanyId: true },
+        );
+      } catch (linkError) {
+        const message =
+          linkError instanceof Error ? linkError.message : "Invalid client company";
+        return res.status(400).json({ message });
+      }
+
+      const validatedForInsert = {
+        ...requirementFields,
+        clientCompanyId: resolvedClientFields.clientCompanyId,
+        company: resolvedClientFields.company,
+        spoc: resolvedClientFields.spoc,
+      };
+
       const {
         mergeRequirementInstructionsInSourceDetails,
         mergeDisplayRoleIdInSourceDetails,
       } = await import("@shared/requirement-jd-extras");
       const sourceDetailsWithInstructions = mergeRequirementInstructionsInSourceDetails(
-        validatedData.sourceDetails ?? null,
+        validatedForInsert.sourceDetails ?? null,
         typeof specialInstructionsRaw === "string"
           ? specialInstructionsRaw
           : specialInstructionsRaw != null
@@ -10118,12 +10224,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : [];
 
       const primaryTeamLead =
-        validatedData.teamLead && validatedData.teamLead !== "Unassigned"
-          ? validatedData.teamLead
+        validatedForInsert.teamLead && validatedForInsert.teamLead !== "Unassigned"
+          ? validatedForInsert.teamLead
           : null;
 
       const isSplitCreate =
-        Boolean(validatedData.splitRequirement) && additionalTeamLeads.length > 0;
+        Boolean(validatedForInsert.splitRequirement) && additionalTeamLeads.length > 0;
 
       const teamLeadsToCreate = isSplitCreate
         ? [primaryTeamLead, ...additionalTeamLeads].filter(
@@ -10202,9 +10308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Split rows use auto-generated UUID ids so they appear in Requirements, not
         // the client-JD list (STR* ids are reserved for unassigned client submissions).
         const requirement = await storage.createRequirement({
-          ...validatedData,
+          ...validatedForInsert,
           teamLead: teamLeadName,
-          splitRequirement: isSplitCreate ? true : validatedData.splitRequirement ?? false,
+          splitRequirement: isSplitCreate ? true : validatedForInsert.splitRequirement ?? false,
           sourceDetails,
           talentAdvisor: null,
           talentAdvisorId: null,
@@ -10304,7 +10410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // If teamLead is being updated, handle reassignment tracking
       if (updates.teamLead) {
         const { requirementAssignments } = await import("@shared/schema");
         const requirement = (await storage.getRequirements()).find((req: any) => req.id === id);
@@ -10345,6 +10450,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+
+      const patchClientAdminEmployeeId = updates.clientAdminEmployeeId;
+      if (
+        updates.clientCompanyId !== undefined ||
+        patchClientAdminEmployeeId !== undefined ||
+        updates.spoc !== undefined
+      ) {
+        const { resolveAdminRequirementClientFields } = await import(
+          "./requirement-client-link"
+        );
+        const requirement = (await storage.getRequirements()).find(
+          (reqItem: { id: string }) => reqItem.id === id,
+        );
+        if (!requirement) {
+          return res.status(404).json({ message: "Requirement not found" });
+        }
+
+        try {
+          const resolved = await resolveAdminRequirementClientFields(storage, {
+            clientCompanyId:
+              updates.clientCompanyId !== undefined
+                ? (updates.clientCompanyId as string | null)
+                : requirement.clientCompanyId,
+            clientAdminEmployeeId:
+              patchClientAdminEmployeeId !== undefined
+                ? (patchClientAdminEmployeeId as string | null)
+                : null,
+            company:
+              updates.clientCompanyId !== undefined
+                ? null
+                : requirement.company,
+            spoc:
+              updates.spoc !== undefined
+                ? (updates.spoc as string | null)
+                : patchClientAdminEmployeeId
+                  ? null
+                  : requirement.spoc,
+          });
+          updates.clientCompanyId = resolved.clientCompanyId;
+          updates.company = resolved.company;
+          updates.spoc = resolved.spoc;
+        } catch (linkError) {
+          const message =
+            linkError instanceof Error ? linkError.message : "Invalid client company";
+          return res.status(400).json({ message });
+        }
+      }
+      delete updates.clientAdminEmployeeId;
 
       const updatedRequirement = await storage.updateRequirement(id, updates);
       if (!updatedRequirement) {
@@ -12116,6 +12269,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create employee OR attach login credentials to an existing Master Data employee
   app.post("/api/admin/employees", requireAdminAuth, async (req, res) => {
     try {
+      const LOGIN_ROLES = new Set([
+        "recruiter",
+        "team_leader",
+        "client",
+        "client_admin",
+        "data_entry",
+        "admin",
+      ]);
+
+      const pickMasterDataUpdates = (data: Record<string, unknown>) => {
+        const fields = [
+          "name",
+          "address",
+          "designation",
+          "phone",
+          "department",
+          "joiningDate",
+          "employmentType",
+          "workMode",
+          "esic",
+          "epfo",
+          "esicNo",
+          "epfoNo",
+          "fatherName",
+          "motherName",
+          "fatherNumber",
+          "motherNumber",
+          "offeredCtc",
+          "currentStatus",
+          "incrementCount",
+          "appraisedQuarter",
+          "appraisedAmount",
+          "appraisedYear",
+          "yearlyCTC",
+          "currentMonthlyCTC",
+          "nameAsPerBank",
+          "accountNumber",
+          "ifscCode",
+          "bankName",
+          "branch",
+          "city",
+        ];
+        const updates: Record<string, unknown> = {};
+        for (const key of fields) {
+          const value = data[key];
+          if (value !== undefined && value !== null && value !== "") {
+            updates[key] = value;
+          }
+        }
+        return updates;
+      };
+
       // Always generate employee ID on backend (SCE001, SCE002, etc.) for brand new employees
       const generatedEmployeeId = await storage.generateNextEmployeeId(req.body.role || 'employee');
 
@@ -12133,9 +12338,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const existingEmployee = await storage.getEmployeeByEmail(employeeData.email);
 
         if (existingEmployee) {
+          const masterDataUpdates = pickMasterDataUpdates(employeeData as Record<string, unknown>);
+          const wantsNewLogin =
+            Boolean(employeeData.role) &&
+            LOGIN_ROLES.has(employeeData.role) &&
+            !existingEmployee.password;
+
           if (!rawPassword) {
-            return res.status(400).json({
-              message: "Password is required to create or update a login for an existing employee record",
+            if (wantsNewLogin) {
+              return res.status(400).json({
+                message: "Password is required to create login credentials for this employee",
+              });
+            }
+
+            const updatedEmployee = await storage.updateEmployee(
+              existingEmployee.id,
+              masterDataUpdates,
+            );
+
+            return res.status(200).json({
+              message: "Employee master data updated successfully",
+              employee: updatedEmployee || existingEmployee,
             });
           }
 
@@ -12144,6 +12367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const hashedPassword = await bcrypt.hash(rawPassword, saltRounds);
 
           const updatedEmployee = await storage.updateEmployee(existingEmployee.id, {
+            ...masterDataUpdates,
             password: hashedPassword,
             // Set / update role for login users (team_leader / recruiter / client, etc.)
             role: employeeData.role || existingEmployee.role,
@@ -15993,6 +16217,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/recruiter/applications/:id/comments/:commentId", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id, commentId } = req.params;
+      const bodySchema = z.object({
+        body: z.string().trim().min(1, "Message cannot be empty").max(5000),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid message",
+          errors: parsed.error.errors,
+        });
+      }
+
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const result = await mutateOwnApplicationComment({
+        applicationId: id,
+        commentId,
+        employeeId: employee.id,
+        action: "edit",
+        body: parsed.data.body,
+      });
+      if (!result.ok) {
+        return res.status(result.status).json({ message: result.message });
+      }
+      return res.json(result.comment);
+    } catch (error) {
+      console.error("Update application comment error:", error);
+      return res.status(500).json({ message: "Failed to update message" });
+    }
+  });
+
+  app.delete("/api/recruiter/applications/:id/comments/:commentId", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id, commentId } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const application = await storage.getJobApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const result = await mutateOwnApplicationComment({
+        applicationId: id,
+        commentId,
+        employeeId: employee.id,
+        action: "delete",
+      });
+      if (!result.ok) {
+        return res.status(result.status).json({ message: result.message });
+      }
+      return res.json(result.comment);
+    } catch (error) {
+      console.error("Delete application comment error:", error);
+      return res.status(500).json({ message: "Failed to unsend message" });
+    }
+  });
+
   app.post("/api/recruiter/applications/:id/comments/read", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
@@ -19075,6 +19377,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/client/applications/:id/comments/:commentId", requireClientAuth, async (req, res) => {
+    try {
+      const { id, commentId } = req.params;
+      const bodySchema = z.object({
+        body: z.string().trim().min(1, "Message cannot be empty").max(5000),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid message",
+          errors: parsed.error.errors,
+        });
+      }
+
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed } = await clientCanAccessJobApplication(employee, id);
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const result = await mutateOwnApplicationComment({
+        applicationId: id,
+        commentId,
+        employeeId: employee.id,
+        action: "edit",
+        body: parsed.data.body,
+      });
+      if (!result.ok) {
+        return res.status(result.status).json({ message: result.message });
+      }
+      return res.json(result.comment);
+    } catch (error) {
+      console.error("Update client application comment error:", error);
+      return res.status(500).json({ message: "Failed to update message" });
+    }
+  });
+
+  app.delete("/api/client/applications/:id/comments/:commentId", requireClientAuth, async (req, res) => {
+    try {
+      const { id, commentId } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const { allowed } = await clientCanAccessJobApplication(employee, id);
+      if (!allowed) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const result = await mutateOwnApplicationComment({
+        applicationId: id,
+        commentId,
+        employeeId: employee.id,
+        action: "delete",
+      });
+      if (!result.ok) {
+        return res.status(result.status).json({ message: result.message });
+      }
+      return res.json(result.comment);
+    } catch (error) {
+      console.error("Delete client application comment error:", error);
+      return res.status(500).json({ message: "Failed to unsend message" });
+    }
+  });
+
   app.post("/api/client/applications/:id/comments/read", requireClientAuth, async (req, res) => {
     try {
       const { id } = req.params;
@@ -20205,6 +20577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         criticality: 'Medium' as const,
         toughness: 'Medium' as const,
         company: companyName,
+        clientCompanyId: client?.id ?? null,
         spoc: employee.name,
         talentAdvisor: null,
         talentAdvisorId: null,

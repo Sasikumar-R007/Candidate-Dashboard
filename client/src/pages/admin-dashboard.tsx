@@ -1,5 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { type Employee, type TargetMappings } from '@shared/schema';
+import {
+  EMPLOYMENT_TYPE_OPTIONS,
+  WORK_MODE_OPTIONS,
+  EMPLOYEE_CURRENT_STATUS_OPTIONS,
+  getAppraisedYearOptions,
+} from '@shared/employee-master-data';
 import { EMPTY_IMPACT_METRICS } from '@shared/impact-metrics-defaults';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
@@ -1712,7 +1718,8 @@ export default function AdminDashboard() {
     email: '',
     phone: '',
     joiningDate: '',
-    employmentStatus: '',
+    employmentType: '',
+    workMode: '',
     esic: '',
     epfo: '',
     esicNo: '',
@@ -2190,7 +2197,9 @@ export default function AdminDashboard() {
       emp.name?.toLowerCase().includes(search) ||
       emp.email?.toLowerCase().includes(search) ||
       emp.designation?.toLowerCase().includes(search) ||
-      emp.employmentStatus?.toLowerCase().includes(search)
+      emp.employmentType?.toLowerCase().includes(search) ||
+      emp.workMode?.toLowerCase().includes(search) ||
+      emp.currentStatus?.toLowerCase().includes(search)
     );
   }, [hrEmployees, employeeMasterSearch]);
 
@@ -3039,11 +3048,11 @@ export default function AdminDashboard() {
       const response = await apiRequest('POST', '/api/admin/employees', employeeData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
       toast({
         title: "Success",
-        description: "Employee created successfully!",
+        description: data?.message || "Employee saved successfully!",
         className: "bg-green-50 border-green-200 text-green-800",
       });
       setIsEmployeeModalOpen(false);
@@ -3055,7 +3064,8 @@ export default function AdminDashboard() {
         email: '',
         phone: '',
         joiningDate: '',
-        employmentStatus: '',
+        employmentType: '',
+        workMode: '',
         esic: '',
         epfo: '',
         esicNo: '',
@@ -5043,7 +5053,7 @@ export default function AdminDashboard() {
         if (generalReportType === 'employee-master') {
           csvContent = 'Employee ID,Name,Email,Phone,Role,Department,Joining Date,Status\n';
           operationsEmployeesForReport.forEach((emp: any) => {
-            csvContent += `"${emp.employeeId || ''}","${emp.name || ''}","${emp.email || ''}","${emp.phone || ''}","${formatEmployeeStatusLabel(emp.role)}","${emp.department || ''}","${emp.joiningDate || ''}","${emp.employmentStatus || (emp.isActive === false ? 'Inactive' : 'Active')}"\n`;
+            csvContent += `"${emp.employeeId || ''}","${emp.name || ''}","${emp.email || ''}","${emp.phone || ''}","${formatEmployeeStatusLabel(emp.role)}","${emp.department || ''}","${emp.joiningDate || ''}","${emp.employmentType || emp.employmentStatus || (emp.isActive === false ? 'Inactive' : 'Active')}"\n`;
           });
         } else if (generalReportType === 'client-master') {
           csvContent = 'Record Type,ID,Name,Email,Phone,Role,Company,Location,Status\n';
@@ -12164,37 +12174,52 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Row 4 - Date of Joining and Employment Status */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col w-full">
-                <Label className="text-sm font-medium text-gray-700 mb-1">Joining Date :</Label>
+            {/* Row 4 - Joining Date and Employment Type */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <Label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">Joining Date:</Label>
                 <StandardDatePicker
                   value={employeeForm.joiningDate ? new Date(employeeForm.joiningDate) : undefined}
                   onChange={(date) => setEmployeeForm({ ...employeeForm, joiningDate: date ? date.toISOString().split('T')[0] : '' })}
                   placeholder="dd-mm-yyyy"
                   maxDate={new Date()}
-                  className="input-styled w-full rounded"
+                  className="flex-1 min-w-0 rounded"
                 />
               </div>
-              <div className="flex flex-col w-full">
+              <div>
                 <Select
-                  value={employeeForm.employmentStatus}
-                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, employmentStatus: value })}
+                  value={employeeForm.employmentType}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, employmentType: value })}
                 >
-                  <SelectTrigger className="input-styled rounded w-full" data-testid="select-employment-status">
-                    <SelectValue placeholder="Employment Status" />
+                  <SelectTrigger className="input-styled rounded w-full" data-testid="select-employment-type">
+                    <SelectValue placeholder="Employment Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="On Leave">On Leave</SelectItem>
+                    {EMPLOYMENT_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Row 5 - ESIC and EPFO */}
+            {/* Row 5 - Work Mode and ESIC */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Select
+                  value={employeeForm.workMode}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, workMode: value })}
+                >
+                  <SelectTrigger className="input-styled rounded w-full" data-testid="select-work-mode">
+                    <SelectValue placeholder="Work Mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORK_MODE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Select
                   value={employeeForm.esic}
@@ -12209,6 +12234,10 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Row 6 - EPFO and ESIC.No */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Select
                   value={employeeForm.epfo}
@@ -12223,10 +12252,6 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Row 6 - ESIC.No and EPFO.No */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
                   placeholder="ESIC.No"
@@ -12236,6 +12261,10 @@ export default function AdminDashboard() {
                   data-testid="input-esic-no"
                 />
               </div>
+            </div>
+
+            {/* Row 7 - EPFO.No and Date of Birth */}
+            <div className="grid grid-cols-2 gap-4 items-center">
               <div>
                 <Input
                   placeholder="EPFO.No"
@@ -12245,21 +12274,21 @@ export default function AdminDashboard() {
                   data-testid="input-epfo-no"
                 />
               </div>
-            </div>
-
-            {/* Row 7 - DoB and Mother Name */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col w-full">
-                <Label className="text-sm font-medium text-gray-700 mb-1">Date of Birth :</Label>
+              <div className="flex items-center gap-2 min-w-0">
+                <Label className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">Date of Birth:</Label>
                 <StandardDatePicker
                   value={employeeForm.fatherName ? new Date(employeeForm.fatherName) : undefined}
                   onChange={(date) => setEmployeeForm({ ...employeeForm, fatherName: date ? date.toISOString().split('T')[0] : '' })}
                   placeholder="dd-mm-yyyy"
                   maxDate={new Date()}
-                  className="w-full"
+                  className="flex-1 min-w-0 rounded"
                 />
               </div>
-              <div className="flex flex-col w-full">
+            </div>
+
+            {/* Row 8 - Mother Name and Father's contact number */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Input
                   type="text"
                   placeholder="Mother Name"
@@ -12269,10 +12298,6 @@ export default function AdminDashboard() {
                   data-testid="input-mother-name"
                 />
               </div>
-            </div>
-
-            {/* Row 8 - Father's contact number and Mother's Number */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
                   placeholder="Father's Contact Number"
@@ -12282,6 +12307,10 @@ export default function AdminDashboard() {
                   data-testid="input-father-number"
                 />
               </div>
+            </div>
+
+            {/* Row 9 - Mother's Number and Offered CTC */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
                   placeholder="Mother's Contact Number"
@@ -12291,10 +12320,6 @@ export default function AdminDashboard() {
                   data-testid="input-mother-number"
                 />
               </div>
-            </div>
-
-            {/* Row 9 - Offered CTC and Current Status */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
                   placeholder="Offered CTC"
@@ -12304,6 +12329,10 @@ export default function AdminDashboard() {
                   data-testid="input-offered-ctc"
                 />
               </div>
+            </div>
+
+            {/* Row 10 - Current Status and Increment Count */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Select
                   value={employeeForm.currentStatus}
@@ -12313,17 +12342,12 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Current Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Probation">Probation</SelectItem>
-                    <SelectItem value="Notice Period">Notice Period</SelectItem>
-                    <SelectItem value="Resigned">Resigned</SelectItem>
+                    {EMPLOYEE_CURRENT_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Row 10 - Increment Count and Appraised Quarter */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Select
                   value={employeeForm.incrementCount}
@@ -12342,6 +12366,10 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Row 11 - Appraised Quarter and Appraised Amount */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Select
                   value={employeeForm.appraisedQuarter}
@@ -12358,10 +12386,6 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Row 11 - Appraised Amount and Appraised Year */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
                   placeholder="Appraised Amount"
@@ -12371,6 +12395,10 @@ export default function AdminDashboard() {
                   data-testid="input-appraised-amount"
                 />
               </div>
+            </div>
+
+            {/* Row 12 - Appraised Year, Yearly CTC and Current Monthly CTC */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Select
                   value={employeeForm.appraisedYear}
@@ -12380,17 +12408,12 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Appraised Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2025">2025</SelectItem>
-                    <SelectItem value="2024">2024</SelectItem>
-                    <SelectItem value="2023">2023</SelectItem>
-                    <SelectItem value="2022">2022</SelectItem>
+                    {getAppraisedYearOptions().map((year) => (
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Row 12 - Yearly CTC and Current Monthly CTC */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
                   placeholder="Yearly CTC"
@@ -12400,6 +12423,9 @@ export default function AdminDashboard() {
                   data-testid="input-yearly-ctc"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
                   placeholder="Current Monthly CTC"
@@ -12409,6 +12435,7 @@ export default function AdminDashboard() {
                   data-testid="input-current-monthly-ctc"
                 />
               </div>
+              <div aria-hidden="true" />
             </div>
 
             {/* Bank Details Section */}

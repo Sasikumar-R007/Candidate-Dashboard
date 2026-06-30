@@ -9,7 +9,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { parseRequirementJdExtras } from "@shared/requirement-jd-extras";
+import { isClientAdminRole } from "@shared/client-roles";
 import { Check, FileText, Upload, X, Plus, Trash2 } from "lucide-react";
+
+const SPOC_NONE = "__none__";
+
+const fieldInputClass =
+  "rounded-[6px] bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500";
+const fieldSelectClass =
+  "rounded-[6px] bg-gray-50 border-slate-200 data-[placeholder]:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:data-[placeholder]:text-slate-500";
+const fieldTextareaClass =
+  "resize-y rounded-[6px] bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500";
 
 interface AddRequirementModalProps {
   isOpen: boolean;
@@ -22,6 +32,7 @@ interface AddRequirementModalProps {
     criticality?: string;
     toughness?: string;
     company?: string;
+    clientCompanyId?: string;
     spoc?: string;
     talentAdvisor?: string;
     teamLead?: string;
@@ -51,6 +62,14 @@ interface Employee {
   email: string;
   role: string;
   employeeId: string;
+  clientCompanyId?: string | null;
+}
+
+interface MasterClient {
+  id: string;
+  clientCode: string;
+  brandName: string;
+  isLoginOnly?: boolean | null;
 }
 
 export default function AddRequirementModal({ isOpen, onClose, initialData, onSuccess, jdIdToDelete }: AddRequirementModalProps) {
@@ -62,7 +81,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     splitRequirement: initialData?.splitRequirement || false,
     criticality: '',
     toughness: '',
-    company: initialData?.company || '',
+    clientCompanyId: initialData?.clientCompanyId || '',
+    clientAdminEmployeeId: '',
     spoc: initialData?.spoc || '',
     talentAdvisor: '',
     teamLead: ''
@@ -86,7 +106,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         splitRequirement: initialData.splitRequirement || false,
         criticality: initialData.criticality || prev.criticality,
         toughness: initialData.toughness || prev.toughness,
-        company: initialData.company || prev.company,
+        clientCompanyId: initialData.clientCompanyId || prev.clientCompanyId,
         spoc: initialData.spoc || prev.spoc,
         talentAdvisor: initialData.talentAdvisor || prev.talentAdvisor,
         teamLead: initialData.teamLead || prev.teamLead,
@@ -109,7 +129,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         splitRequirement: false,
         criticality: '',
         toughness: '',
-        company: '',
+        clientCompanyId: '',
+        clientAdminEmployeeId: '',
         spoc: '',
         talentAdvisor: '',
         teamLead: ''
@@ -129,6 +150,52 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     enabled: isOpen,
   });
 
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<MasterClient[]>({
+    queryKey: ['/api/admin/clients'],
+    enabled: isOpen,
+  });
+
+  const masterDataClients = clients.filter((client) => !client.isLoginOnly);
+
+  const clientAdminsForCompany = employees.filter(
+    (emp) =>
+      isClientAdminRole(emp.role) &&
+      formData.clientCompanyId &&
+      emp.clientCompanyId === formData.clientCompanyId,
+  );
+
+  // Resolve client + SPOC when editing or pre-filling from shared JD
+  useEffect(() => {
+    if (!isOpen || !initialData) return;
+
+    let resolvedClientId = initialData.clientCompanyId || '';
+    if (!resolvedClientId && initialData.company && masterDataClients.length > 0) {
+      const companyLower = initialData.company.trim().toLowerCase();
+      const matched = masterDataClients.find(
+        (client) => client.brandName.trim().toLowerCase() === companyLower,
+      );
+      resolvedClientId = matched?.id || '';
+    }
+
+    let resolvedAdminId = '';
+    if (resolvedClientId && initialData.spoc && initialData.spoc !== 'Admin managed') {
+      const matchedAdmin = employees.find(
+        (emp) =>
+          isClientAdminRole(emp.role) &&
+          emp.clientCompanyId === resolvedClientId &&
+          emp.name === initialData.spoc,
+      );
+      resolvedAdminId = matchedAdmin?.id || '';
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      clientCompanyId: resolvedClientId || prev.clientCompanyId,
+      clientAdminEmployeeId: resolvedAdminId,
+      spoc: initialData.spoc || prev.spoc,
+    }));
+  }, [isOpen, initialData, masterDataClients, employees]);
+
   // Filter team leads from employees
   const teamLeads = employees.filter(emp => emp.role === 'team_leader');
 
@@ -145,6 +212,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     ) => {
       const response = await apiRequest("POST", "/api/admin/requirements", {
         ...data,
+        clientCompanyId: data.clientCompanyId,
+        clientAdminEmployeeId: data.clientAdminEmployeeId || null,
         talentAdvisor: null,
         teamLead: data.teamLead === "Unassigned" ? null : data.teamLead,
         jdFile: data.jdFile || null,
@@ -203,6 +272,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     mutationFn: async (data: typeof formData & { jdFile?: string | null; jdText?: string | null; sourceType?: string | null; sourceDetails?: string | null; specialInstructions?: string | null }) => {
       const response = await apiRequest('PATCH', `/api/admin/requirements/${initialData?.id}`, {
         ...data,
+        clientCompanyId: data.clientCompanyId,
+        clientAdminEmployeeId: data.clientAdminEmployeeId || null,
         teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
         jdFile: data.jdFile || null,
         jdText: data.jdText || null,
@@ -237,10 +308,18 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.position || !formData.criticality || !formData.toughness || !formData.company || !formData.spoc || !formData.teamLead || formData.teamLead === 'Unassigned') {
+    if (!formData.position || !formData.criticality || !formData.toughness || !formData.clientCompanyId || !formData.teamLead || formData.teamLead === 'Unassigned') {
       toast({
         title: "Missing Fields",
-        description: "Please fill in all required fields including Team Leader.",
+        description: "Please fill in all required fields including Client Company and Team Leader.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.clientAdminEmployeeId && !formData.spoc.trim()) {
+      toast({
+        title: "Missing SPOC",
+        description: "Enter SPOC name when Client Admin is not selected.",
         variant: "destructive",
       });
       return;
@@ -324,6 +403,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
 
       const payload = {
         ...formData,
+        clientAdminEmployeeId: formData.clientAdminEmployeeId || null,
+        spoc: formData.spoc.trim(),
         noOfPositions: Number(formData.noOfPositions) || 1,
         splitRequirement: formData.splitRequirement,
         additionalTeamLeads: formData.splitRequirement
@@ -357,7 +438,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       splitRequirement: false,
       criticality: '',
       toughness: '',
-      company: '',
+      clientCompanyId: '',
+      clientAdminEmployeeId: '',
       spoc: '',
       talentAdvisor: '',
       teamLead: ''
@@ -412,6 +494,25 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       URL.revokeObjectURL(jdFilePreviewUrl);
     }
     setJdFilePreviewUrl(null);
+  };
+
+  const handleClientCompanyChange = (clientCompanyId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      clientCompanyId,
+      clientAdminEmployeeId: '',
+      spoc: '',
+    }));
+  };
+
+  const handleClientAdminChange = (value: string) => {
+    const selectedAdminId = value === SPOC_NONE ? '' : value;
+    const selectedAdmin = clientAdminsForCompany.find((admin) => admin.id === selectedAdminId);
+    setFormData((prev) => ({
+      ...prev,
+      clientAdminEmployeeId: selectedAdminId,
+      spoc: selectedAdmin?.name || '',
+    }));
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -511,7 +612,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="max-h-[85vh] overflow-y-auto px-6 py-5 space-y-6">
+        <form onSubmit={handleSubmit} className="modal-thin-scrollbar max-h-[85vh] overflow-y-auto px-6 py-5 space-y-6">
           {initialData?.sourceType === 're_require' && initialData?.reRequirementContext && (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 dark:border-rose-900/40 dark:bg-rose-950/20">
               <div className="flex items-center gap-2">
@@ -546,41 +647,86 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 value={formData.position}
                 onChange={(e) => handleInputChange('position', e.target.value)}
                 placeholder="HR"
-                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                className={fieldInputClass}
                 required
                 data-testid="input-position"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="company" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Company *
+              <Label htmlFor="clientCompany" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Client Company *
               </Label>
-              <Input
-                id="company"
-                type="text"
-                value={formData.company}
-                onChange={(e) => handleInputChange('company', e.target.value)}
-                placeholder="Gumlet Marketing Private Limited"
-                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+              <Select
+                value={formData.clientCompanyId}
+                onValueChange={handleClientCompanyChange}
+                disabled={isLoadingClients}
                 required
-                data-testid="input-company"
-              />
+              >
+                <SelectTrigger className={fieldSelectClass} data-testid="select-client-company">
+                  <SelectValue placeholder={isLoadingClients ? "Loading clients..." : "Select client company"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterDataClients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.clientCode} — {client.brandName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="spoc" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                SPOC *
+              <Label htmlFor="clientAdmin" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Client Admin
+              </Label>
+              <Select
+                value={formData.clientAdminEmployeeId || SPOC_NONE}
+                onValueChange={handleClientAdminChange}
+                disabled={!formData.clientCompanyId || isLoadingEmployees}
+              >
+                <SelectTrigger className={fieldSelectClass} data-testid="select-spoc">
+                  <SelectValue
+                    placeholder={
+                      !formData.clientCompanyId
+                        ? "Select a client company first"
+                        : clientAdminsForCompany.length === 0
+                          ? "No Client Admin yet (optional)"
+                          : "Select Client Admin (optional)"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SPOC_NONE}>None</SelectItem>
+                  {clientAdminsForCompany.map((admin) => (
+                    <SelectItem key={admin.id} value={admin.id}>
+                      {admin.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formData.clientCompanyId && clientAdminsForCompany.length === 0 && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  No Client Admin exists for this company yet. You can still create the requirement.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="spocName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                SPOC Name *
               </Label>
               <Input
-                id="spoc"
+                id="spocName"
                 type="text"
                 value={formData.spoc}
                 onChange={(e) => handleInputChange('spoc', e.target.value)}
-                placeholder="Dheena"
-                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                placeholder="Enter SPOC name"
+                className={fieldInputClass}
                 required
-                data-testid="input-spoc"
+                readOnly={Boolean(formData.clientAdminEmployeeId)}
+                disabled={!formData.clientCompanyId}
+                data-testid="input-spoc-name"
               />
             </div>
 
@@ -597,7 +743,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 onChange={(e) => handlePositionsChange(e.target.value)}
                 onBlur={handlePositionsBlur}
                 placeholder="1"
-                className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                className={fieldInputClass}
                 required
                 data-testid="input-no-of-positions"
               />
@@ -612,7 +758,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 onValueChange={(value) => handleInputChange('criticality', value)}
                 required
               >
-                <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-criticality">
+                <SelectTrigger className={fieldSelectClass} data-testid="select-criticality">
                   <SelectValue placeholder="Select criticality" />
                 </SelectTrigger>
                 <SelectContent>
@@ -632,7 +778,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 onValueChange={(value) => handleInputChange('toughness', value)}
                 required
               >
-                <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-toughness">
+                <SelectTrigger className={fieldSelectClass} data-testid="select-toughness">
                   <SelectValue placeholder="Select toughness" />
                 </SelectTrigger>
                 <SelectContent>
@@ -652,7 +798,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 onValueChange={(value) => handleInputChange('teamLead', value)}
                 disabled={isLoadingEmployees}
               >
-                <SelectTrigger className="h-10 bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-team-lead">
+                <SelectTrigger className={`h-10 ${fieldSelectClass}`} data-testid="select-team-lead">
                   <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team leader"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -674,7 +820,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 onClick={handleSplitRequirementToggle}
                 disabled={isEditMode}
                 title={isEditMode ? "Split teams are set when creating a requirement" : "Assign this requirement to multiple team leaders as separate records"}
-                className={`flex h-10 w-full items-center gap-2 rounded-md border px-3 text-left transition-colors ${
+                className={`flex h-10 w-full items-center gap-2 rounded-[6px] border px-3 text-left transition-colors ${
                   isEditMode
                     ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500'
                     : formData.splitRequirement
@@ -715,7 +861,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                       disabled={isLoadingEmployees}
                     >
                       <SelectTrigger
-                        className="bg-white border-slate-200 dark:bg-gray-800 dark:border-slate-700"
+                        className={`bg-white border-slate-200 dark:bg-gray-800 dark:border-slate-700 ${fieldSelectClass}`}
                         data-testid={`select-team-lead-${index + 2}`}
                       >
                         <SelectValue placeholder="Select team leader" />
@@ -769,7 +915,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
               onChange={(e) => setInstructions(e.target.value)}
               placeholder="Notes or instructions for the team working on this requirement..."
               rows={3}
-              className="resize-y bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700"
+              className={fieldTextareaClass}
               data-testid="textarea-instructions"
             />
           </div>
@@ -794,7 +940,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 onChange={(e) => setJdText(e.target.value)}
                 placeholder="Paste or type the job description here..."
                 rows={5}
-                className="resize-y bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700"
+                className={fieldTextareaClass}
                 data-testid="textarea-jd-text"
               />
             </div>
@@ -804,7 +950,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 JD Document
               </Label>
             {jdFilePreviewUrl ? (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+              <div className="rounded-[6px] border-2 border-dashed border-gray-300 p-4 bg-gray-50 dark:bg-gray-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FileText className="h-12 w-12 text-gray-400" />
@@ -837,7 +983,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 />
                 <label
                   htmlFor="jdFile"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors bg-gray-50 dark:bg-gray-800"
+                  className="flex flex-col items-center justify-center w-full h-32 rounded-[6px] border-2 border-dashed border-gray-300 cursor-pointer hover:border-gray-400 transition-colors bg-gray-50 dark:bg-gray-800"
                 >
                   <Upload className="h-8 w-8 text-gray-400 mb-2" />
                   <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Click to upload JD file</p>

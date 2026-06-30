@@ -14,6 +14,7 @@ import { apiRequest, apiFileUpload, queryClient } from "@/lib/queryClient";
 import { isClientPortalRole } from "@shared/client-roles";
 import { formatEmployeeRoleDisplay, shouldShowEmployeeProfileId } from "@/lib/employee-display";
 import { resolveProfilePictureUrl } from "@/lib/resolve-media-url";
+import { AppVersionBadge } from "@/components/dashboard/app-version-badge";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -445,6 +446,8 @@ export function ProfileSettingsModal({
                   </CardContent>
                 </Card>
               </div>
+
+              <AppVersionBadge className="mt-4 hidden rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 lg:flex" />
           </div>
 
           <div className="overflow-y-auto bg-white px-4 py-4 md:px-6 md:py-6">
@@ -698,6 +701,8 @@ export function ProfileSettingsModal({
                     />
                   </CardContent>
                 </Card>
+
+                <AppVersionBadge className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs md:text-sm" />
 
                 <div className="flex justify-end">
                   <Button
