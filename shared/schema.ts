@@ -794,6 +794,7 @@ export const insertCeoCommentSchema = createInsertSchema(ceoComments).omit({
 export const insertRequirementSchema = createInsertSchema(requirements).omit({
   id: true,
 }).extend({
+  company: z.string().optional().nullable(),
   clientCompanyId: z.string().optional().nullable(),
   clientAdminEmployeeId: z.string().optional().nullable(),
   spoc: z.string().optional().nullable(),

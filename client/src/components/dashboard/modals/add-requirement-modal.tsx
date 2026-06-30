@@ -15,11 +15,11 @@ import { Check, FileText, Upload, X, Plus, Trash2 } from "lucide-react";
 const SPOC_NONE = "__none__";
 
 const fieldInputClass =
-  "rounded-[6px] bg-gray-50 border-slate-200 placeholder:text-slate-200 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-600";
+  "rounded-[6px] bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500";
 const fieldSelectClass =
-  "rounded-[6px] bg-gray-50 border-slate-200 data-[placeholder]:text-slate-200 dark:bg-gray-800 dark:border-slate-700 dark:data-[placeholder]:text-slate-600";
+  "rounded-[6px] bg-gray-50 border-slate-200 data-[placeholder]:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:data-[placeholder]:text-slate-500";
 const fieldTextareaClass =
-  "resize-y rounded-[6px] bg-gray-50 border-slate-200 placeholder:text-slate-200 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-600";
+  "resize-y rounded-[6px] bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500";
 
 interface AddRequirementModalProps {
   isOpen: boolean;
