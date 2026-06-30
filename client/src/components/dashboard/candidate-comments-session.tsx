@@ -18,6 +18,7 @@ import {
   Pencil,
   Phone,
   SendHorizontal,
+  Trash2,
   Users,
 } from "lucide-react";
 import {
@@ -45,6 +46,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useEmployeeAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   getPipelineStageBadgeClass,
   isTerminalRejectedStatus,
@@ -69,6 +71,8 @@ type ApplicationComment = {
   authorRole: string;
   body: string;
   createdAt: string;
+  editedAt?: string | null;
+  deletedAt?: string | null;
 };
 
 const CHAT_MEMBER_PALETTE = [
@@ -646,10 +650,14 @@ export function CandidateCommentsSession({
   const { toast } = useToast();
   const employee = useEmployeeAuth();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [commentText, setCommentText] = useState("");
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionAnchor, setMentionAnchor] = useState(0);
   const [mentionHighlightIndex, setMentionHighlightIndex] = useState(0);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
+  const [unsendCommentId, setUnsendCommentId] = useState<string | null>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -719,6 +727,9 @@ export function CandidateCommentsSession({
       setIsSwitching(true);
       setCommentText("");
       setMentionQuery(null);
+      setEditingCommentId(null);
+      setEditingCommentText("");
+      setUnsendCommentId(null);
       setRejectReason("");
       setShowRejectForm(false);
       setConfirmRejectOpen(false);
@@ -790,6 +801,61 @@ export function CandidateCommentsSession({
     onError: (error: Error) => {
       toast({
         title: "Could not post comment",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateCommentMutation = useMutation({
+    meta: { skipOperationalInvalidation: true },
+    mutationFn: async ({ commentId, body }: { commentId: string; body: string }) => {
+      const res = await apiRequest(
+        "PATCH",
+        `${apiBase}/comments/${encodeURIComponent(commentId)}`,
+        { body },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to update message" }));
+        throw new Error(data.message || "Failed to update message");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setEditingCommentId(null);
+      setEditingCommentText("");
+      queryClient.invalidateQueries({ queryKey: commentsQueryKey });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not update message",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    meta: { skipOperationalInvalidation: true },
+    mutationFn: async (commentId: string) => {
+      const res = await apiRequest(
+        "DELETE",
+        `${apiBase}/comments/${encodeURIComponent(commentId)}`,
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ message: "Failed to unsend message" }));
+        throw new Error(data.message || "Failed to unsend message");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setUnsendCommentId(null);
+      queryClient.invalidateQueries({ queryKey: commentsQueryKey });
+      toast({ title: "Message unsent" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not unsend message",
         description: error.message || "Please try again.",
         variant: "destructive",
       });
@@ -1159,6 +1225,37 @@ export function CandidateCommentsSession({
     const trimmed = commentText.trim();
     if (!trimmed || postCommentMutation.isPending) return;
     postCommentMutation.mutate(trimmed);
+  };
+
+  const canManageComment = (comment: ApplicationComment) => {
+    if (!isOwnComment(comment)) return false;
+    if (comment.deletedAt) return false;
+    if (isClientRejectionComment(comment.body, comment.authorRole)) return false;
+    return true;
+  };
+
+  const startEditingComment = (comment: ApplicationComment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentText(comment.body);
+  };
+
+  const cancelEditingComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentText("");
+  };
+
+  const saveEditingComment = () => {
+    if (!editingCommentId) return;
+    const trimmed = editingCommentText.trim();
+    if (!trimmed) {
+      toast({
+        title: "Message required",
+        description: "Please enter a message or unsend instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateCommentMutation.mutate({ commentId: editingCommentId, body: trimmed });
   };
 
   const navigateApplicant = (direction: "prev" | "next") => {
@@ -1747,6 +1844,15 @@ export function CandidateCommentsSession({
                           comment={comment}
                           isOwn={isOwnComment(comment)}
                           members={sessionMembers}
+                          canManage={canManageComment(comment)}
+                          isEditing={editingCommentId === comment.id}
+                          editingText={editingCommentId === comment.id ? editingCommentText : ""}
+                          onEditingTextChange={setEditingCommentText}
+                          onStartEdit={() => startEditingComment(comment)}
+                          onCancelEdit={cancelEditingComment}
+                          onSaveEdit={saveEditingComment}
+                          onRequestUnsend={() => setUnsendCommentId(comment.id)}
+                          isSavingEdit={updateCommentMutation.isPending}
                         />
                       ))}
                     </div>
@@ -1763,12 +1869,17 @@ export function CandidateCommentsSession({
               taCommentsRail ? "px-3 py-2.5" : "px-3 py-3 sm:px-4",
             )}
           >
-            <div className="mb-2 hidden md:block">
-              <p className={cn("text-[11px] text-gray-600")}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className={cn("hidden text-[11px] text-gray-600 md:block")}>
                 {apiMode === "client"
                   ? "Shared with your hiring team on this application."
                   : "Visible to your team on this application."}
               </p>
+              {isMobile ? (
+                <p className="text-[10px] text-gray-500 md:hidden">
+                  Enter for a new line · Tap send to post
+                </p>
+              ) : null}
             </div>
             <div className="relative">
               {mentionQuery !== null && mentionCandidates.length > 0 && (
@@ -1845,7 +1956,7 @@ export function CandidateCommentsSession({
                         return;
                       }
                     }
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === "Enter" && !e.shiftKey && !isMobile) {
                       e.preventDefault();
                       handleSubmitComment();
                     }
@@ -1918,6 +2029,32 @@ export function CandidateCommentsSession({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <AlertDialog open={!!unsendCommentId} onOpenChange={(open) => !open && setUnsendCommentId(null)}>
+        <AlertDialogContent className={cn("mx-auto w-[calc(100vw-1.5rem)] max-w-md sm:w-full", BTN_RADIUS)}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsend this message?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Everyone in this session will see that the message was removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteCommentMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteCommentMutation.isPending || !unsendCommentId}
+              onClick={(e) => {
+                e.preventDefault();
+                if (unsendCommentId) {
+                  deleteCommentMutation.mutate(unsendCommentId);
+                }
+              }}
+            >
+              {deleteCommentMutation.isPending ? "Removing…" : "Unsend"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -2306,34 +2443,111 @@ function CommentChatBubble({
   comment,
   isOwn,
   members,
+  canManage = false,
+  isEditing = false,
+  editingText = "",
+  onEditingTextChange,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onRequestUnsend,
+  isSavingEdit = false,
 }: {
   comment: ApplicationComment;
   isOwn: boolean;
   members: ChatSessionMember[];
+  canManage?: boolean;
+  isEditing?: boolean;
+  editingText?: string;
+  onEditingTextChange?: (value: string) => void;
+  onStartEdit?: () => void;
+  onCancelEdit?: () => void;
+  onSaveEdit?: () => void;
+  onRequestUnsend?: () => void;
+  isSavingEdit?: boolean;
 }) {
   const memberId = comment.authorEmployeeId || comment.authorName;
   const palette = memberPaletteForId(memberId);
   const isRejection = isClientRejectionComment(comment.body, comment.authorRole);
+  const isDeleted = Boolean(comment.deletedAt);
   const timeLabel = formatCommentTime(comment.createdAt);
+  const editedLabel = comment.editedAt ? " · edited" : "";
+
+  const bubbleContent = isDeleted ? (
+    <span className="italic text-gray-500">Message unsent</span>
+  ) : isRejection ? (
+    comment.body
+  ) : (
+    renderCommentBody(comment.body, members)
+  );
+
+  const manageActions =
+    canManage && !isEditing ? (
+      <div className="mt-1 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onStartEdit}
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 hover:text-blue-900"
+        >
+          <Pencil className="h-3 w-3" />
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={onRequestUnsend}
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-red-600 hover:text-red-800"
+        >
+          <Trash2 className="h-3 w-3" />
+          Unsend
+        </button>
+      </div>
+    ) : null;
 
   if (isOwn) {
     return (
-      <article
-        className="flex flex-col items-end"
-        data-testid={`comment-${comment.id}`}
-      >
-        <span className="mb-1 text-[11px] text-gray-500">{timeLabel}</span>
-        <div
-          className={cn(
-            "max-w-[88%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
-            BTN_RADIUS,
-            isRejection
-              ? "border border-red-200 bg-red-50 text-red-800"
-              : "border border-blue-200 bg-blue-100 text-gray-900",
-          )}
-        >
-          {isRejection ? comment.body : renderCommentBody(comment.body, members)}
-        </div>
+      <article className="flex flex-col items-end" data-testid={`comment-${comment.id}`}>
+        <span className="mb-1 text-[11px] text-gray-500">
+          {timeLabel}
+          {editedLabel}
+        </span>
+        {isEditing ? (
+          <div className={cn("w-full max-w-[88%] space-y-2", BTN_RADIUS)}>
+            <textarea
+              value={editingText}
+              onChange={(e) => onEditingTextChange?.(e.target.value)}
+              rows={3}
+              className={cn(
+                "w-full resize-none border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-400",
+                BTN_RADIUS,
+              )}
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={onCancelEdit} disabled={isSavingEdit}>
+                Cancel
+              </Button>
+              <Button type="button" size="sm" onClick={onSaveEdit} disabled={isSavingEdit || !editingText.trim()}>
+                {isSavingEdit ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              className={cn(
+                "max-w-[88%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
+                BTN_RADIUS,
+                isDeleted
+                  ? "border border-gray-200 bg-gray-50 text-gray-500"
+                  : isRejection
+                    ? "border border-red-200 bg-red-50 text-red-800"
+                    : "border border-blue-200 bg-blue-100 text-gray-900",
+              )}
+            >
+              {bubbleContent}
+            </div>
+            {manageActions}
+          </>
+        )}
       </article>
     );
   }
@@ -2353,16 +2567,23 @@ function CommentChatBubble({
           >
             {comment.authorRole}
           </span>
-          <span className="text-[11px] text-gray-500">{timeLabel}</span>
+          <span className="text-[11px] text-gray-500">
+            {timeLabel}
+            {editedLabel}
+          </span>
         </div>
         <div
           className={cn(
-            "whitespace-pre-wrap border px-3.5 py-2.5 text-sm leading-relaxed text-gray-800 shadow-sm",
+            "whitespace-pre-wrap border px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
             BTN_RADIUS,
-            isRejection ? "border-red-200 bg-red-50 text-red-800" : palette.bubble,
+            isDeleted
+              ? "border border-gray-200 bg-gray-50 text-gray-500"
+              : isRejection
+                ? "border-red-200 bg-red-50 text-red-800"
+                : cn(palette.bubble, "text-gray-800"),
           )}
         >
-          {isRejection ? comment.body : renderCommentBody(comment.body, members)}
+          {bubbleContent}
         </div>
       </div>
     </article>

@@ -788,7 +788,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRequirement(insertRequirement: InsertRequirement & { id?: string }): Promise<Requirement> {
-    const { id, ...requirementDataWithoutId } = insertRequirement as any;
+    const { id, clientAdminEmployeeId: _clientAdminEmployeeId, ...requirementDataWithoutId } =
+      insertRequirement as InsertRequirement & { id?: string; clientAdminEmployeeId?: string };
     const requirementData: any = {
       ...requirementDataWithoutId,
       noOfPositions: insertRequirement.noOfPositions ?? 1,

@@ -244,7 +244,8 @@ export async function ensureRequirementManagementColumns() {
     ADD COLUMN IF NOT EXISTS "source_details" text,
     ADD COLUMN IF NOT EXISTS "management_status" text NOT NULL DEFAULT 'active',
     ADD COLUMN IF NOT EXISTS "management_reason" text,
-    ADD COLUMN IF NOT EXISTS "managed_at" text
+    ADD COLUMN IF NOT EXISTS "managed_at" text,
+    ADD COLUMN IF NOT EXISTS "client_company_id" varchar(255)
   `);
 
   if (await publicTableExists("archived_requirements")) {

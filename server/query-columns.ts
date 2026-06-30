@@ -57,6 +57,7 @@ export const requirementListSelect = {
   criticality: requirements.criticality,
   toughness: requirements.toughness,
   company: requirements.company,
+  clientCompanyId: requirements.clientCompanyId,
   spoc: requirements.spoc,
   talentAdvisor: requirements.talentAdvisor,
   talentAdvisorId: requirements.talentAdvisorId,

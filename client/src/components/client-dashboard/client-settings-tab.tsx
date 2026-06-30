@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { KeyRound, UserCircle } from "lucide-react";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
 import ChangePasswordModal from "@/components/dashboard/modals/ChangePasswordModal";
+import { AppVersionBadge } from "@/components/dashboard/app-version-badge";
 
 type ClientSettingsTabProps = {
   companyName?: string;
@@ -52,6 +53,8 @@ export function ClientSettingsTab({
             </Button>
           </CardContent>
         </Card>
+
+        <AppVersionBadge className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm" />
       </div>
 
       <ProfileSettingsModal open={profileOpen} onOpenChange={setProfileOpen} />

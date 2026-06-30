@@ -278,6 +278,8 @@ export const requirements = pgTable("requirements", {
   criticality: text("criticality").notNull(), // HIGH, MEDIUM, LOW
   toughness: text("toughness").notNull().default("Medium"), // Easy, Medium, Tough
   company: text("company").notNull(),
+  /** Master Data clients.id — stable link for admin-created requirements */
+  clientCompanyId: varchar("client_company_id"),
   spoc: text("spoc").notNull(),
   talentAdvisor: text("talent_advisor"),
   talentAdvisorId: varchar("talent_advisor_id"), // Stable ID-based linkage to employees table
@@ -791,6 +793,10 @@ export const insertCeoCommentSchema = createInsertSchema(ceoComments).omit({
 
 export const insertRequirementSchema = createInsertSchema(requirements).omit({
   id: true,
+}).extend({
+  clientCompanyId: z.string().optional().nullable(),
+  clientAdminEmployeeId: z.string().optional().nullable(),
+  spoc: z.string().optional().nullable(),
 });
 
 export const insertArchivedRequirementSchema = createInsertSchema(archivedRequirements).omit({

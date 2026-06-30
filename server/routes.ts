@@ -10175,12 +10175,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body as Record<string, unknown>;
 
       const validatedData = insertRequirementSchema.parse(requirementBody);
+      const { clientAdminEmployeeId, ...requirementFields } = validatedData;
+
+      const { resolveAdminRequirementClientFields } = await import(
+        "./requirement-client-link"
+      );
+      let resolvedClientFields;
+      try {
+        resolvedClientFields = await resolveAdminRequirementClientFields(
+          storage,
+          {
+            clientCompanyId: requirementFields.clientCompanyId,
+            clientAdminEmployeeId,
+            company: requirementFields.company,
+            spoc: requirementFields.spoc,
+          },
+          { requireClientCompanyId: true },
+        );
+      } catch (linkError) {
+        const message =
+          linkError instanceof Error ? linkError.message : "Invalid client company";
+        return res.status(400).json({ message });
+      }
+
+      const validatedForInsert = {
+        ...requirementFields,
+        clientCompanyId: resolvedClientFields.clientCompanyId,
+        company: resolvedClientFields.company,
+        spoc: resolvedClientFields.spoc,
+      };
+
       const {
         mergeRequirementInstructionsInSourceDetails,
         mergeDisplayRoleIdInSourceDetails,
       } = await import("@shared/requirement-jd-extras");
       const sourceDetailsWithInstructions = mergeRequirementInstructionsInSourceDetails(
-        validatedData.sourceDetails ?? null,
+        validatedForInsert.sourceDetails ?? null,
         typeof specialInstructionsRaw === "string"
           ? specialInstructionsRaw
           : specialInstructionsRaw != null
@@ -10194,12 +10224,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : [];
 
       const primaryTeamLead =
-        validatedData.teamLead && validatedData.teamLead !== "Unassigned"
-          ? validatedData.teamLead
+        validatedForInsert.teamLead && validatedForInsert.teamLead !== "Unassigned"
+          ? validatedForInsert.teamLead
           : null;
 
       const isSplitCreate =
-        Boolean(validatedData.splitRequirement) && additionalTeamLeads.length > 0;
+        Boolean(validatedForInsert.splitRequirement) && additionalTeamLeads.length > 0;
 
       const teamLeadsToCreate = isSplitCreate
         ? [primaryTeamLead, ...additionalTeamLeads].filter(
@@ -10278,9 +10308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Split rows use auto-generated UUID ids so they appear in Requirements, not
         // the client-JD list (STR* ids are reserved for unassigned client submissions).
         const requirement = await storage.createRequirement({
-          ...validatedData,
+          ...validatedForInsert,
           teamLead: teamLeadName,
-          splitRequirement: isSplitCreate ? true : validatedData.splitRequirement ?? false,
+          splitRequirement: isSplitCreate ? true : validatedForInsert.splitRequirement ?? false,
           sourceDetails,
           talentAdvisor: null,
           talentAdvisorId: null,
@@ -10380,7 +10410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // If teamLead is being updated, handle reassignment tracking
       if (updates.teamLead) {
         const { requirementAssignments } = await import("@shared/schema");
         const requirement = (await storage.getRequirements()).find((req: any) => req.id === id);
@@ -10421,6 +10450,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+
+      const patchClientAdminEmployeeId = updates.clientAdminEmployeeId;
+      if (
+        updates.clientCompanyId !== undefined ||
+        patchClientAdminEmployeeId !== undefined ||
+        updates.spoc !== undefined
+      ) {
+        const { resolveAdminRequirementClientFields } = await import(
+          "./requirement-client-link"
+        );
+        const requirement = (await storage.getRequirements()).find(
+          (reqItem: { id: string }) => reqItem.id === id,
+        );
+        if (!requirement) {
+          return res.status(404).json({ message: "Requirement not found" });
+        }
+
+        try {
+          const resolved = await resolveAdminRequirementClientFields(storage, {
+            clientCompanyId:
+              updates.clientCompanyId !== undefined
+                ? (updates.clientCompanyId as string | null)
+                : requirement.clientCompanyId,
+            clientAdminEmployeeId:
+              patchClientAdminEmployeeId !== undefined
+                ? (patchClientAdminEmployeeId as string | null)
+                : null,
+            company:
+              updates.clientCompanyId !== undefined
+                ? null
+                : requirement.company,
+            spoc:
+              updates.spoc !== undefined
+                ? (updates.spoc as string | null)
+                : patchClientAdminEmployeeId
+                  ? null
+                  : requirement.spoc,
+          });
+          updates.clientCompanyId = resolved.clientCompanyId;
+          updates.company = resolved.company;
+          updates.spoc = resolved.spoc;
+        } catch (linkError) {
+          const message =
+            linkError instanceof Error ? linkError.message : "Invalid client company";
+          return res.status(400).json({ message });
+        }
+      }
+      delete updates.clientAdminEmployeeId;
 
       const updatedRequirement = await storage.updateRequirement(id, updates);
       if (!updatedRequirement) {
@@ -20500,6 +20577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         criticality: 'Medium' as const,
         toughness: 'Medium' as const,
         company: companyName,
+        clientCompanyId: client?.id ?? null,
         spoc: employee.name,
         talentAdvisor: null,
         talentAdvisorId: null,

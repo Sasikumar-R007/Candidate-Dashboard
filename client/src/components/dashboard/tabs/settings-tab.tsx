@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { LegalPoliciesSettingsCard } from "@/components/dashboard/legal-policies-settings-card";
+import { APP_VERSION_LABEL } from "@shared/app-version";
 import { cn } from "@/lib/utils";
 import {
   CANDIDATE_DESKTOP_DIALOG_CLASSES,
@@ -525,7 +526,7 @@ export default function SettingsTab({ onOpenSupport }: SettingsTabProps) {
 
       <div className="pt-10 flex flex-col items-center gap-4 text-center">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-          StaffOS Candidate Portal • Version 2.4.1
+          StaffOS Candidate Portal • {APP_VERSION_LABEL}
         </p>
       </div>
     </div>

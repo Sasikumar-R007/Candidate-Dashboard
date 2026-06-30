@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import staffosLogo from "@/assets/staffos logo 2.png";
+import { APP_VERSION_LABEL } from "@shared/app-version";
 import {
   getClientPortalNav,
   normalizeClientPortalTab,
@@ -173,7 +174,10 @@ export default function ClientMainSidebar({
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-700 px-4">
               <div className="flex min-w-0 items-center gap-2">
                 <img src={staffosLogo} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+              <div className="flex min-w-0 flex-col">
                 <h2 className="truncate text-sm font-semibold leading-tight">Client Workspace</h2>
+                <span className="text-[10px] font-normal text-slate-400">{APP_VERSION_LABEL}</span>
+              </div>
               </div>
               <button
                 type="button"
@@ -264,7 +268,10 @@ export default function ClientMainSidebar({
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-700 px-4">
               <div className="flex min-w-0 items-center gap-2">
                 <img src={staffosLogo} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+              <div className="flex min-w-0 flex-col">
                 <h2 className="truncate text-sm font-semibold leading-tight">Client Workspace</h2>
+                <span className="text-[10px] font-normal text-slate-400">{APP_VERSION_LABEL}</span>
+              </div>
               </div>
             </div>
 

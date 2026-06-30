@@ -837,6 +837,8 @@ interface FilterState {
   role: string[];
   noticePeriod: string;
   preferredLocation: string[];
+  collegeTiers: string[];
+  collegeNames: string[];
   company: string[];
   excludedCompanies: string[];
   educationUG: string[];
@@ -891,6 +893,8 @@ const initialFilters: FilterState = {
   role: [],
   noticePeriod: "",
   preferredLocation: [],
+  collegeTiers: [],
+  collegeNames: [],
   company: [],
   excludedCompanies: [],
   educationUG: [],
@@ -1908,6 +1912,9 @@ const SourceResume = () => {
   const [compareCandidates, setCompareCandidates] = useState<CandidateDisplay[]>([]);
   const [useInfiniteScroll, setUseInfiniteScroll] = useState(false);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [experienceMinInput, setExperienceMinInput] = useState(String(initialFilters.experience[0]));
+  const [experienceMaxInput, setExperienceMaxInput] = useState(String(initialFilters.experience[1]));
+  const [showMainKeywordSuggestions, setShowMainKeywordSuggestions] = useState(false);
   const [tagConfirmOpen, setTagConfirmOpen] = useState(false);
   const [tagDropdownCandidateId, setTagDropdownCandidateId] = useState<string | null>(null);
   const [pendingTag, setPendingTag] = useState<{
@@ -1916,6 +1923,52 @@ const SourceResume = () => {
   } | null>(null);
   
   const { toast } = useToast();
+
+  useEffect(() => {
+    setExperienceMinInput(String(filters.experience[0]));
+    setExperienceMaxInput(String(filters.experience[1]));
+  }, [filters.experience[0], filters.experience[1]]);
+
+  const sanitizeIntegerInput = (value: string) => value.replace(/[^\d]/g, "");
+
+  const handleExperienceInputChange = (bound: "min" | "max", raw: string) => {
+    const next = sanitizeIntegerInput(raw);
+    if (bound === "min") {
+      setExperienceMinInput(next);
+    } else {
+      setExperienceMaxInput(next);
+    }
+    if (next === "") return;
+
+    const parsed = Number.parseInt(next, 10);
+    if (Number.isNaN(parsed)) return;
+
+    setFilters((prev) => ({
+      ...prev,
+      experience:
+        bound === "min"
+          ? updateExperienceMin(prev.experience, parsed)
+          : updateExperienceMax(prev.experience, parsed),
+    }));
+  };
+
+  const commitExperienceInput = (bound: "min" | "max") => {
+    if (bound === "min") {
+      if (experienceMinInput === "") {
+        setFilters((prev) => ({ ...prev, experience: updateExperienceMin(prev.experience, 0) }));
+        setExperienceMinInput("0");
+      }
+      return;
+    }
+
+    if (experienceMaxInput === "") {
+      setFilters((prev) => ({
+        ...prev,
+        experience: updateExperienceMax(prev.experience, initialFilters.experience[1]),
+      }));
+      setExperienceMaxInput(String(initialFilters.experience[1]));
+    }
+  };
   
   // Debounce search query
   useEffect(() => {
@@ -2124,6 +2177,8 @@ const SourceResume = () => {
       filters.role.length > 0 ||
       filters.noticePeriod.trim() !== "" ||
       filters.preferredLocation.length > 0 ||
+      filters.collegeTiers.length > 0 ||
+      filters.collegeNames.length > 0 ||
       filters.company.length > 0 ||
       filters.excludedCompanies.length > 0 ||
       filters.educationUG.length > 0 ||
@@ -2283,6 +2338,16 @@ const SourceResume = () => {
         ...prev,
         preferredLocation: prev.preferredLocation.filter((l) => l !== value),
       }));
+      return;
+    }
+    if (chip.id.startsWith("tier-")) {
+      const value = chip.id.slice(5);
+      setFilters((prev) => ({ ...prev, collegeTiers: prev.collegeTiers.filter((t) => t !== value) }));
+      return;
+    }
+    if (chip.id.startsWith("college-")) {
+      const value = chip.id.slice(8);
+      setFilters((prev) => ({ ...prev, collegeNames: prev.collegeNames.filter((c) => c !== value) }));
       return;
     }
     if (chip.id.startsWith("ug-")) {
@@ -2509,6 +2574,16 @@ const SourceResume = () => {
       // Preferred Location filter — match any selected location
       if (normalizeFilterValues(filters.preferredLocation).length > 0) {
         if (!matchAnyTextFilter(candidate.preferredLocation, filters.preferredLocation)) return false;
+      }
+
+      // College tier filter
+      if (normalizeFilterValues(filters.collegeTiers).length > 0) {
+        if (!matchAnyTextFilter(candidate.pedigreeLevel, filters.collegeTiers)) return false;
+      }
+
+      // College name filter
+      if (normalizeFilterValues(filters.collegeNames).length > 0) {
+        if (!matchAnyTextFilter(candidate.university, filters.collegeNames)) return false;
       }
 
       // Role filter — match any selected role
@@ -2932,6 +3007,30 @@ const SourceResume = () => {
   const allDisplayCandidates = useMemo(() => {
     return allCandidates.map(c => mapDatabaseCandidateToDisplay(c, currentTime));
   }, [allCandidates, currentTime]);
+
+  const allCollegeTiers = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allDisplayCandidates
+            .map((c) => c.pedigreeLevel?.trim())
+            .filter((v): v is string => Boolean(v)),
+        ),
+      ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+    [allDisplayCandidates],
+  );
+
+  const allCollegeNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allDisplayCandidates
+            .map((c) => c.university?.trim())
+            .filter((v): v is string => Boolean(v)),
+        ),
+      ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+    [allDisplayCandidates],
+  );
 
   const candidatesPerPage = 10;
   const totalPages = searchResults?.pagination?.totalPages || Math.ceil(displayCandidates.length / candidatesPerPage);
@@ -3517,6 +3616,13 @@ const SourceResume = () => {
   const suggestedKeywords = allSkills.filter(
     (skill) => !filters.keywords.includes(skill)
   );
+  const mainKeywordSuggestions = useMemo(() => {
+    if (filters.booleanMode) return [];
+    const q = keywordInput.trim().toLowerCase();
+    const pool = suggestedKeywords.filter((skill) => !filters.keywords.includes(skill));
+    if (!q) return pool.slice(0, 8);
+    return pool.filter((skill) => skill.toLowerCase().includes(q)).slice(0, 8);
+  }, [filters.booleanMode, filters.keywords, keywordInput, suggestedKeywords]);
 
   // Results View
   if (view === 'results') {
@@ -3753,50 +3859,44 @@ const SourceResume = () => {
               <div className="flex gap-2 items-center">
                 <div className="relative flex-1">
                   <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={filters.experience[0]}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        experience: updateExperienceMin(
-                          filters.experience,
-                          parseNonNegativeExperience(e.target.value, filters.experience[0]),
-                        ),
-                      })
-                    }
+                    type="text"
+                    inputMode="numeric"
+                    value={experienceMinInput}
+                    onChange={(e) => handleExperienceInputChange("min", e.target.value)}
+                    onBlur={() => commitExperienceInput("min")}
                     className={`w-full ${SR_INPUT_COMPACT} pr-7`}
                   />
-                  {filters.experience[0] !== 0 && (
+                  {experienceMinInput !== "" && filters.experience[0] !== 0 && (
                     <X
                       className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setFilters({ ...filters, experience: [0, filters.experience[1]] })}
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          experience: updateExperienceMin(prev.experience, 0),
+                        }))
+                      }
                     />
                   )}
                 </div>
                 <span className="text-gray-500">-</span>
                 <div className="relative flex-1">
                   <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={filters.experience[1]}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        experience: updateExperienceMax(
-                          filters.experience,
-                          parseNonNegativeExperience(e.target.value, filters.experience[1]),
-                        ),
-                      })
-                    }
+                    type="text"
+                    inputMode="numeric"
+                    value={experienceMaxInput}
+                    onChange={(e) => handleExperienceInputChange("max", e.target.value)}
+                    onBlur={() => commitExperienceInput("max")}
                     className={`w-full ${SR_INPUT_COMPACT} pr-7`}
                   />
-                  {filters.experience[1] !== initialFilters.experience[1] && (
+                  {experienceMaxInput !== "" && filters.experience[1] !== initialFilters.experience[1] && (
                     <X
                       className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => setFilters({ ...filters, experience: [filters.experience[0], initialFilters.experience[1]] })}
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          experience: updateExperienceMax(prev.experience, initialFilters.experience[1]),
+                        }))
+                      }
                     />
                   )}
                 </div>
@@ -3826,6 +3926,30 @@ const SourceResume = () => {
                 onChange={(values) => setFilters({ ...filters, preferredLocation: values })}
                 options={locations.map(l => l.label)}
                 placeholder="Any location"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                College Tier
+              </label>
+              <MultiFilterableDropdown
+                values={filters.collegeTiers}
+                onChange={(values) => setFilters({ ...filters, collegeTiers: values })}
+                options={allCollegeTiers}
+                placeholder="Any tier"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                College Name
+              </label>
+              <MultiFilterableDropdown
+                values={filters.collegeNames}
+                onChange={(values) => setFilters({ ...filters, collegeNames: values })}
+                options={allCollegeNames}
+                placeholder="Any college"
               />
             </div>
 
@@ -5110,19 +5234,27 @@ const SourceResume = () => {
               </div>
               <input
                 type="text"
-                list="source-keyword-suggestions"
                 value={filters.booleanMode ? filters.searchQuery : keywordInput}
                 onChange={(e) => {
                   if (filters.booleanMode) {
                     setFilters({ ...filters, searchQuery: e.target.value });
                   } else {
                     setKeywordInput(e.target.value);
+                    setShowMainKeywordSuggestions(true);
                   }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !filters.booleanMode && keywordInput.trim()) {
+                    e.preventDefault();
                     handleKeywordAdd(keywordInput.trim());
+                    setShowMainKeywordSuggestions(false);
                   }
+                }}
+                onFocus={() => {
+                  if (!filters.booleanMode) setShowMainKeywordSuggestions(true);
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => setShowMainKeywordSuggestions(false), 120);
                 }}
                 className={`w-full max-w-md ${SR_INPUT_STANDARD} border`}
                 placeholder={
@@ -5131,12 +5263,25 @@ const SourceResume = () => {
                     : "Enter skills, company, designation..."
                 }
               />
+              {!filters.booleanMode && showMainKeywordSuggestions && mainKeywordSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full z-50 mt-1 w-full max-w-md overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+                  {mainKeywordSuggestions.map((skill) => (
+                    <button
+                      key={skill}
+                      type="button"
+                      className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleKeywordAdd(skill);
+                        setShowMainKeywordSuggestions(false);
+                      }}
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <datalist id="source-keyword-suggestions">
-              {suggestedKeywords.map((skill) => (
-                <option key={skill} value={skill} />
-              ))}
-            </datalist>
 
             {filters.booleanMode && (
               <p className="text-xs text-gray-500 mb-2">
@@ -5175,50 +5320,44 @@ const SourceResume = () => {
                 <div className="flex gap-2 items-center">
                   <div className="relative">
                     <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={filters.experience[0]}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          experience: updateExperienceMin(
-                            filters.experience,
-                            parseNonNegativeExperience(e.target.value, filters.experience[0]),
-                          ),
-                        })
-                      }
+                      type="text"
+                      inputMode="numeric"
+                      value={experienceMinInput}
+                      onChange={(e) => handleExperienceInputChange("min", e.target.value)}
+                      onBlur={() => commitExperienceInput("min")}
                       className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
                     />
-                    {filters.experience[0] !== 0 && (
+                    {experienceMinInput !== "" && filters.experience[0] !== 0 && (
                       <X
                         className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                        onClick={() => setFilters({ ...filters, experience: [0, filters.experience[1]] })}
+                        onClick={() =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            experience: updateExperienceMin(prev.experience, 0),
+                          }))
+                        }
                       />
                     )}
                   </div>
                   <span className="text-gray-500">to</span>
                   <div className="relative">
                     <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={filters.experience[1]}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          experience: updateExperienceMax(
-                            filters.experience,
-                            parseNonNegativeExperience(e.target.value, filters.experience[1]),
-                          ),
-                        })
-                      }
+                      type="text"
+                      inputMode="numeric"
+                      value={experienceMaxInput}
+                      onChange={(e) => handleExperienceInputChange("max", e.target.value)}
+                      onBlur={() => commitExperienceInput("max")}
                       className={`w-20 ${SR_INPUT_STANDARD} pr-7 border`}
                     />
-                    {filters.experience[1] !== initialFilters.experience[1] && (
+                    {experienceMaxInput !== "" && filters.experience[1] !== initialFilters.experience[1] && (
                       <X
                         className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                        onClick={() => setFilters({ ...filters, experience: [filters.experience[0], initialFilters.experience[1]] })}
+                        onClick={() =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            experience: updateExperienceMax(prev.experience, initialFilters.experience[1]),
+                          }))
+                        }
                       />
                     )}
                   </div>
@@ -5270,7 +5409,7 @@ const SourceResume = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
 
               {/* Role */}
               <div className="space-y-2">
@@ -5297,6 +5436,26 @@ const SourceResume = () => {
                   onChange={(values) => setFilters({ ...filters, preferredLocation: values })}
                   options={locations.map(l => l.label)}
                   placeholder="Any location"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">College Tier</label>
+                <MultiFilterableDropdown
+                  values={filters.collegeTiers}
+                  onChange={(values) => setFilters({ ...filters, collegeTiers: values })}
+                  options={allCollegeTiers}
+                  placeholder="Any tier"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">College Name</label>
+                <MultiFilterableDropdown
+                  values={filters.collegeNames}
+                  onChange={(values) => setFilters({ ...filters, collegeNames: values })}
+                  options={allCollegeNames}
+                  placeholder="Any college"
                 />
               </div>
 
