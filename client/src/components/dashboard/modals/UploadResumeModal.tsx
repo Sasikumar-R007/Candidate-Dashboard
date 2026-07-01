@@ -35,6 +35,7 @@ interface ResumeFormData {
   portfolio3: string;
   companyDomain: string;
   companyLevel: string;
+  expectedCtc: string;
   skills: string[];
 }
 
@@ -139,6 +140,23 @@ function normalizeParsedSkills(skills: unknown): string[] {
   return [];
 }
 
+function normalizeSalaryAmount(value: string): string | null {
+  const raw = value.trim().replace(/[^\d.]/g, "");
+  return raw || null;
+}
+
+const uploadResumeInputClass =
+  "bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 rounded focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-0";
+
+const uploadResumeSelectClass =
+  "bg-white border-gray-300 text-gray-900 rounded focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-0 data-[placeholder]:text-gray-500";
+
+const uploadResumeComboboxClass = (hasValue: boolean) =>
+  cn(
+    "w-full justify-between bg-white border border-gray-300 rounded focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-0 h-10 font-normal",
+    hasValue ? "text-gray-900" : "text-gray-500",
+  );
+
 export default function UploadResumeModal({
   isOpen,
   onClose,
@@ -195,6 +213,7 @@ export default function UploadResumeModal({
       portfolio3: '',
       companyDomain: '',
       companyLevel: '',
+      expectedCtc: '',
       skills: ['', '', '', '', '']
     });
     setResumeFile(null);
@@ -495,6 +514,7 @@ export default function UploadResumeModal({
           experience: candidateData.experience,
           skills: candidateData.skills,
           location: candidateData.location,
+          expectedCtc: candidateData.ectc,
         });
       }
 
@@ -540,6 +560,7 @@ export default function UploadResumeModal({
         portfolio3: '',
         companyDomain: '',
         companyLevel: '',
+        expectedCtc: '',
         skills: ['', '', '', '', '']
       });
       setResumeFile(null);
@@ -637,6 +658,7 @@ export default function UploadResumeModal({
       pedigreeLevel: formData.pedigreeLevel || null,
       companyLevel: formData.companyLevel || null,
       companyDomain: formData.companyDomain || null,
+      ectc: normalizeSalaryAmount(formData.expectedCtc),
       pipelineStatus: 'New',
       addedBy: 'Recruiter', // Will be replaced with actual recruiter name from session
       isActive: true,
@@ -714,14 +736,14 @@ export default function UploadResumeModal({
               <Input
                 value={formData.firstName}
                 onChange={(e) => handleNameChange('firstName', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="First Name *"
                 data-testid="input-first-name"
               />
               <Input
                 value={formData.lastName}
                 onChange={(e) => handleNameChange('lastName', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Last Name *"
                 data-testid="input-last-name"
               />
@@ -733,7 +755,7 @@ export default function UploadResumeModal({
                 type="tel"
                 value={formData.mobileNumber}
                 onChange={(e) => handlePhoneChange('mobileNumber', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Mobile Number *"
                 data-testid="input-mobile-number"
               />
@@ -741,7 +763,7 @@ export default function UploadResumeModal({
                 type="tel"
                 value={formData.whatsappNumber}
                 onChange={(e) => handlePhoneChange('whatsappNumber', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="WhatsApp Number"
                 data-testid="input-whatsapp-number"
               />
@@ -762,7 +784,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.primaryEmail ? "text-foreground" : "placeholder:text-gray-300 dark:placeholder:text-gray-600"}`}
+                className={uploadResumeInputClass}
                 placeholder="Primary Email *"
                 data-testid="input-primary-email"
               />
@@ -779,7 +801,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.secondaryEmail ? "text-foreground" : "placeholder:text-gray-300 dark:placeholder:text-gray-600"}`}
+                className={uploadResumeInputClass}
                 placeholder="Secondary Email"
                 data-testid="input-secondary-email"
               />
@@ -788,7 +810,7 @@ export default function UploadResumeModal({
             {/* Row 4: Highest Qualification, College Name */}
             <div className="grid grid-cols-2 gap-4">
               <Select value={formData.highestQualification} onValueChange={(value) => setFormData({...formData, highestQualification: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600">
+                <SelectTrigger className={uploadResumeSelectClass}>
                   <SelectValue placeholder="Highest Qualification *" />
                 </SelectTrigger>
                 <SelectContent>
@@ -802,7 +824,7 @@ export default function UploadResumeModal({
               <Input
                 value={formData.collegeName}
                 onChange={(e) => setFormData({...formData, collegeName: e.target.value})}
-                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.collegeName ? "text-foreground" : "placeholder:text-gray-300 dark:placeholder:text-gray-600"}`}
+                className={uploadResumeInputClass}
                 placeholder="College Name *"
                 data-testid="input-college-name"
               />
@@ -822,12 +844,12 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.linkedin ? "text-foreground" : "placeholder:text-gray-300 dark:placeholder:text-gray-600"}`}
+                className={uploadResumeInputClass}
                 placeholder="LinkedIn Profile"
                 data-testid="input-linkedin"
               />
               <Select value={formData.pedigreeLevel} onValueChange={(value) => setFormData({...formData, pedigreeLevel: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600">
+                <SelectTrigger className={uploadResumeSelectClass}>
                   <SelectValue placeholder="Pedigree Level *" />
                 </SelectTrigger>
                 <SelectContent>
@@ -849,7 +871,7 @@ export default function UploadResumeModal({
                     variant="outline"
                     role="combobox"
                     aria-expanded={locationOpen}
-                    className="w-full justify-between bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 h-10 font-normal"
+                    className={uploadResumeComboboxClass(Boolean(formData.currentLocation))}
                   >
                     {formData.currentLocation
                       ? locations.find((loc) => loc.value === formData.currentLocation)?.label || formData.currentLocation
@@ -931,7 +953,7 @@ export default function UploadResumeModal({
                 </PopoverContent>
               </Popover>
               <Select value={formData.noticePeriod} onValueChange={(value) => setFormData({...formData, noticePeriod: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600">
+                <SelectTrigger className={uploadResumeSelectClass}>
                   <SelectValue placeholder="Notice Period" />
                 </SelectTrigger>
                 <SelectContent>
@@ -942,6 +964,24 @@ export default function UploadResumeModal({
                   <SelectItem value="3months">3 Months</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Expected CTC */}
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={formData.expectedCtc}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    expectedCtc: e.target.value.replace(/[^\d]/g, ""),
+                  })
+                }
+                className={uploadResumeInputClass}
+                placeholder="Expected CTC (₹ per annum)"
+                data-testid="input-expected-ctc"
+              />
             </div>
 
             {/* Row 7: Website, Portfolio 1 */}
@@ -958,7 +998,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Website URL"
                 data-testid="input-website"
               />
@@ -974,7 +1014,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Portfolio 1 URL"
                 data-testid="input-portfolio1"
               />
@@ -985,7 +1025,7 @@ export default function UploadResumeModal({
               <Input
                 value={formData.currentCompany}
                 onChange={(e) => setFormData({...formData, currentCompany: e.target.value})}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Current Company"
                 data-testid="input-current-company"
               />
@@ -1001,7 +1041,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Portfolio 2 URL"
                 data-testid="input-portfolio2"
               />
@@ -1012,7 +1052,7 @@ export default function UploadResumeModal({
               <Input
                 value={formData.currentRole}
                 onChange={(e) => setFormData({...formData, currentRole: e.target.value})}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Current Role"
                 data-testid="input-current-role"
               />
@@ -1028,7 +1068,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                className={uploadResumeInputClass}
                 placeholder="Portfolio 3 URL"
                 data-testid="input-portfolio3"
               />
@@ -1045,7 +1085,7 @@ export default function UploadResumeModal({
                     variant="outline"
                     role="combobox"
                     aria-expanded={domainOpen}
-                    className="w-full justify-between bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 h-10 font-normal"
+                    className={uploadResumeComboboxClass(Boolean(formData.companyDomain))}
                   >
                     {formData.companyDomain
                       ? domains.find((dom) => dom.value === formData.companyDomain)?.label || formData.companyDomain
@@ -1127,7 +1167,7 @@ export default function UploadResumeModal({
                 </PopoverContent>
               </Popover>
               <Select value={formData.companyLevel} onValueChange={(value) => setFormData({...formData, companyLevel: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300 dark:placeholder:text-gray-600">
+                <SelectTrigger className={uploadResumeSelectClass}>
                   <SelectValue placeholder="Company Level" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1153,7 +1193,7 @@ export default function UploadResumeModal({
                         newSkills[index] = e.target.value;
                         setFormData({...formData, skills: newSkills});
                       }}
-                      className="bg-gray-50 rounded w-32 text-sm focus-visible:ring-1 focus-visible:ring-offset-0 pr-8"
+                      className={cn(uploadResumeInputClass, "w-32 text-sm pr-8")}
                       placeholder={`Skill ${index + 1}`}
                       data-testid={`input-skill-${index}`}
                     />
@@ -1207,7 +1247,7 @@ export default function UploadResumeModal({
                 disabled={!deliverToRequirement}
               >
                 <SelectTrigger 
-                  className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 w-80 ${!deliverToRequirement ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={cn(uploadResumeSelectClass, "w-80", !deliverToRequirement && "opacity-50 cursor-not-allowed")}
                   data-testid="select-requirement"
                 >
                   <SelectValue placeholder="Select Requirement" />

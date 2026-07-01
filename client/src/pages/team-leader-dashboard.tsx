@@ -1074,6 +1074,7 @@ export default function TeamLeaderDashboard() {
     portfolio3: '',
     companyDomain: '',
     companyLevel: '',
+    expectedCtc: '',
     skills: ['', '', '', '', '']
   });
 

@@ -56,8 +56,13 @@ export async function requestVerifySession(options?: {
     return cached.data;
   }
 
-  if (inflight) {
+  // After login the session cookie may lag; forced checks must not reuse a pre-login in-flight request.
+  if (!force && inflight) {
     return inflight;
+  }
+
+  if (force) {
+    cached = null;
   }
 
   inflight = (async () => {
@@ -76,4 +81,32 @@ export async function requestVerifySession(options?: {
   })();
 
   return inflight;
+}
+
+/** Delays after login before re-checking session (cookie + Postgres session store). */
+const POST_AUTH_VERIFY_DELAYS_MS = [0, 250, 600, 1200];
+
+/**
+ * Retry verify-session after auth login. Handles brief cookie/session propagation delays
+ * without clearing the client user when the server session is still settling.
+ */
+export async function confirmSessionAfterAuth(): Promise<VerifySessionResponse | null> {
+  clearVerifySessionCache();
+
+  for (const delay of POST_AUTH_VERIFY_DELAYS_MS) {
+    if (delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    clearVerifySessionCache();
+    try {
+      const data = await requestVerifySession({ force: true });
+      if (data.authenticated) {
+        return data;
+      }
+    } catch {
+      // try again
+    }
+  }
+
+  return null;
 }

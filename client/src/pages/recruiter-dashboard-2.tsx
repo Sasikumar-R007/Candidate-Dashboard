@@ -282,6 +282,7 @@ export default function RecruiterDashboard2() {
   const [applicantSearchQuery, setApplicantSearchQuery] = useState('');
   const [isInviteConfirmModalOpen, setIsInviteConfirmModalOpen] = useState(false);
   const [applicantToInvite, setApplicantToInvite] = useState<any>(null);
+  const [invitePendingApplicationId, setInvitePendingApplicationId] = useState<string | null>(null);
   const [pipelineView, setPipelineView] = useState<"board" | "candidate-session">("board");
   const [sessionApplicationId, setSessionApplicationId] = useState<string | null>(null);
   const [sessionApplicantSnapshot, setSessionApplicantSnapshot] =
@@ -379,6 +380,7 @@ export default function RecruiterDashboard2() {
     portfolio3: '',
     companyDomain: '',
     companyLevel: '',
+    expectedCtc: '',
     skills: ['', '', '', '', '']
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -534,8 +536,31 @@ export default function RecruiterDashboard2() {
       const response = await apiRequest('POST', `/api/recruiter/applications/${applicant.id}/invite`, {});
       return response.json();
     },
-    onSuccess: (_data, applicant) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+    onMutate: (applicant) => {
+      setInvitePendingApplicationId(applicant.id);
+    },
+    onSuccess: (data, applicant) => {
+      const inviteSentAt =
+        typeof data?.staffosInviteSentAt === "string"
+          ? data.staffosInviteSentAt
+          : new Date().toISOString();
+
+      queryClient.setQueryData(['/api/recruiter/applications'], (previous: any[] | undefined) => {
+        if (!Array.isArray(previous)) return previous;
+        return previous.map((row) => {
+          if (row?.id !== applicant.id) return row;
+          return {
+            ...row,
+            staffosInviteSentAt: inviteSentAt,
+            isCandidateConfirmed: false,
+            canSendOnboardInvite: false,
+            onboardInvitePending: true,
+            awaitingCandidateAcceptance: true,
+          };
+        });
+      });
+
+      void queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
       toast({
         title: "Invite Sent",
         description: `Welcome email with temporary login password sent to ${applicant.candidateName}.`,
@@ -547,6 +572,9 @@ export default function RecruiterDashboard2() {
         description: error?.message || "Could not send invite email. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      setInvitePendingApplicationId(null);
     },
   });
 
@@ -1909,7 +1937,10 @@ export default function RecruiterDashboard2() {
                                           size="sm"
                                           className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 w-8 p-0"
                                           onClick={() => handleInviteClick(applicant)}
-                                          disabled={!applicant.canSendOnboardInvite}
+                                          disabled={
+                                            !applicant.canSendOnboardInvite ||
+                                            invitePendingApplicationId === applicant.id
+                                          }
                                           data-testid={`button-onboard-${applicant.id}`}
                                         >
                                           <PaperPlaneNudgeIcon className="h-4 w-4 shrink-0" />
@@ -4064,7 +4095,10 @@ export default function RecruiterDashboard2() {
                                     size="sm"
                                     className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-8 w-8 p-0"
                                     onClick={() => handleInviteClick(applicant)}
-                                    disabled={!applicant.canSendOnboardInvite}
+                                    disabled={
+                                      !applicant.canSendOnboardInvite ||
+                                      invitePendingApplicationId === applicant.id
+                                    }
                                     data-testid={`button-onboard-modal-${applicant.id}`}
                                   >
                                     <PaperPlaneNudgeIcon className="h-4 w-4 shrink-0" />

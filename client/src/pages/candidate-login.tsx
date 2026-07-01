@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { formatApiErrorMessage } from "@/lib/api-error-message";
 import { apiRequest } from "@/lib/queryClient";
+import { confirmSessionAfterAuth } from "@/lib/verify-session-client";
+import type { Candidate } from "@shared/schema";
 import { BrainCircuit, Briefcase, Target, Rocket, Shield, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import staffosLogo3 from "@/assets/staffos logo 3.png";
@@ -36,7 +38,7 @@ export default function CandidateLogin() {
   const [isLogin, setIsLogin] = useState(true);
   const [showOTP, setShowOTP] = useState(false);
   const [, setLocation] = useLocation();
-  const { setUser, verifySession } = useAuth();
+  const { setUser } = useAuth();
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const {
@@ -104,22 +106,29 @@ export default function CandidateLogin() {
         });
       } else if (response.success && response.candidate) {
         sessionStorage.removeItem("staffos.candidate.helpFabHidden");
-        setUser({
-          type: 'candidate',
-          data: response.candidate
-        });
+        const loginUser = {
+          type: 'candidate' as const,
+          data: response.candidate as Candidate,
+        };
+        setUser(loginUser);
 
-        const sessionOk = await verifySession({ force: true });
-        if (!sessionOk) {
-          toast({
-            title: "Connection Issue",
-            description: "Logged in, but the server could not confirm your session. If pages fail to load, wait a moment and refresh.",
-            variant: "destructive",
+        const sessionData = await confirmSessionAfterAuth();
+        if (sessionData?.authenticated && sessionData.user) {
+          setUser({
+            type: 'candidate',
+            data: sessionData.user as Candidate,
           });
-        } else {
           toast({
             title: "Login Successful",
             description: "Welcome back!",
+          });
+        } else {
+          // Keep login user in memory — do not call verifySession() here (it clears user on failure).
+          setUser(loginUser);
+          toast({
+            title: "Login Successful",
+            description:
+              "Signed in. If the dashboard does not load, wait a few seconds and refresh this page once.",
           });
         }
 

@@ -18,8 +18,10 @@ import suitcaseIcon from "@/assets/Icons/suitcase.png";
 import securityIcon from "@/assets/Icons/security.png";
 import lineChartIcon from "@/assets/Icons/line-chart.png";
 import { PaperPlaneNudgeIcon } from "@/components/landing/paper-plane-nudge-icon";
-import { useAuth } from "@/contexts/auth-context";
+import { confirmSessionAfterAuth } from "@/lib/verify-session-client";
+import type { Employee } from "@shared/schema";
 import { getDefaultRouteForAuthUser } from "@/lib/auth-routing";
+import { useAuth } from "@/contexts/auth-context";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +51,7 @@ export default function EmployerLogin() {
   const [heldLoginInfo, setHeldLoginInfo] = useState<HeldLoginInfo | null>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { user, isLoading: isAuthLoading, isVerified, verifySession } = useAuth();
+  const { user, isLoading: isAuthLoading, isVerified, setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
   const {
@@ -97,9 +99,20 @@ export default function EmployerLogin() {
       }
 
       if (result.success && result.employee) {
-        const sessionOk = await verifySession({ force: true });
-        if (!sessionOk) {
-          throw new Error("Session could not be verified after login. Please try again.");
+        const loginUser = {
+          type: "employee" as const,
+          data: result.employee as Employee,
+        };
+        setUser(loginUser);
+
+        const sessionData = await confirmSessionAfterAuth();
+        if (sessionData?.authenticated && sessionData.user) {
+          setUser({
+            type: "employee",
+            data: sessionData.user as Employee,
+          });
+        } else {
+          setUser(loginUser);
         }
 
         toast({
