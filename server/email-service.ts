@@ -297,7 +297,7 @@ Team StaffOS
       ${nextStepsHtml}
       
       <center>
-        <a href="${data.loginUrl}" class="cta-button">Login to Your Account</a>
+        <a href="${data.loginUrl}" style="color: white;" class="cta-button">Login to Your Account</a>
       </center>
       
       <p>Our team is committed to providing you with a transparent and seamless job search experience. If you have any questions or need assistance, feel free to reach out to our support team.</p>
