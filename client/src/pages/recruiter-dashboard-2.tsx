@@ -379,6 +379,7 @@ export default function RecruiterDashboard2() {
     portfolio3: '',
     companyDomain: '',
     companyLevel: '',
+    expectedCtc: '',
     skills: ['', '', '', '', '']
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);

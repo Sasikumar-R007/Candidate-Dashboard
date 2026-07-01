@@ -703,6 +703,14 @@ export class DatabaseStorage implements IStorage {
     setIfAvailable("status_note", (insertApplication as any).statusNote ?? null);
     setIfAvailable("rejection_reason", (insertApplication as any).rejectionReason ?? null);
     setIfAvailable("is_candidate_confirmed", (insertApplication as any).isCandidateConfirmed ?? undefined);
+    setIfAvailable(
+      "application_expected_ctc",
+      (insertApplication as any).applicationExpectedCtc ?? undefined,
+    );
+    setIfAvailable(
+      "application_current_ctc",
+      (insertApplication as any).applicationCurrentCtc ?? undefined,
+    );
 
     if (!columns.includes("profile_id") || !columns.includes("job_title") || !columns.includes("company")) {
       throw new Error("Missing required job application fields for insert");

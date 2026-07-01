@@ -2479,10 +2479,28 @@ async function resolveApplicationCandidateDetails(application: {
     profileRow?.noticePeriod ||
     null;
 
-  const applicationCurrentCtc =
-    (application as { applicationCurrentCtc?: string }).applicationCurrentCtc ?? "0";
-  const applicationExpectedCtc =
-    (application as { applicationExpectedCtc?: string }).applicationExpectedCtc ?? "0";
+  const normalizeSalaryAmount = (value: string | number | null | undefined) => {
+    const raw = String(value ?? "").trim().replace(/[^\d.]/g, "");
+    return raw || "0";
+  };
+
+  const resolveApplicationSalary = (
+    applicationValue: string | null | undefined,
+    candidateValue: string | null | undefined,
+  ) => {
+    const appAmount = normalizeSalaryAmount(applicationValue);
+    if (appAmount !== "0") return appAmount;
+    return normalizeSalaryAmount(candidateValue);
+  };
+
+  const applicationCurrentCtc = resolveApplicationSalary(
+    (application as { applicationCurrentCtc?: string }).applicationCurrentCtc,
+    candidateRow?.ctc,
+  );
+  const applicationExpectedCtc = resolveApplicationSalary(
+    (application as { applicationExpectedCtc?: string }).applicationExpectedCtc,
+    candidateRow?.ectc,
+  );
 
   const preferredLocation =
     profileRow?.preferredLocation ||
@@ -15110,7 +15128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const recruiterName = employee.name;
 
-      const { fullName, email, phone, designation, experience, skills, location, company, education, highestQualification, linkedinUrl, websiteUrl, portfolioUrl, noticePeriod, pedigreeLevel, companyLevel, companyDomain, resumeFile } = req.body;
+      const { fullName, email, phone, designation, experience, skills, location, company, education, highestQualification, linkedinUrl, websiteUrl, portfolioUrl, noticePeriod, pedigreeLevel, companyLevel, companyDomain, resumeFile, ectc } = req.body;
 
       if (!fullName || !email) {
         return res.status(400).json({ message: "Full name and email are required" });
@@ -15143,6 +15161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pedigreeLevel: pedigreeLevel || null,
         companyLevel: companyLevel || null,
         companyDomain: companyDomain || null,
+        ectc: ectc || null,
         resumeFile: resumeFile || null,
         ownerEmployeeId: employee.id,
         ownerRole,
@@ -15811,8 +15830,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requirementId,
         experience,
         skills,
-        location
+        location,
+        expectedCtc,
+        applicationExpectedCtc,
       } = req.body;
+
+      const normalizedExpectedCtc = (() => {
+        const raw = String(expectedCtc ?? applicationExpectedCtc ?? "").trim().replace(/[^\d.]/g, "");
+        return raw || null;
+      })();
 
       // Validate required fields
       if (!candidateName || !jobTitle || !company) {
@@ -15940,6 +15966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         experience: experience?.toString() || null,
         skills: Array.isArray(skills) ? JSON.stringify(skills) : (skills || null),
         location: location?.trim() || null,
+        applicationExpectedCtc: normalizedExpectedCtc,
         appliedDate: new Date(),
       };
 
@@ -15987,21 +16014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
 
-      // Ownership check: actor can invite only for owned records
-      let hasAccess =
-        application.ownerEmployeeId === employee.id &&
-        application.ownerRole === ownerRole;
-
-      if (!hasAccess && application.recruiterJobId) {
-        const job = await storage.getRecruiterJobById(application.recruiterJobId);
-        if (job) {
-          hasAccess =
-            (job.ownerEmployeeId === employee.id && job.ownerRole === ownerRole) ||
-            job.recruiterId === employee.id;
-        }
-      }
-
-      if (!hasAccess) {
+      if (!(await employeeCanAccessRecruiterApplication(employee, application))) {
         return res.status(403).json({ message: "Access denied. This application does not belong to you." });
       }
 
