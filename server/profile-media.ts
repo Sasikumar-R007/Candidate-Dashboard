@@ -105,6 +105,16 @@ export function buildJdFileServeUrl(
   return buildStoredFileServeUrlFromStorageUrl(trimmed, "jds", req);
 }
 
+export function buildLogoServeUrl(
+  logoUrl: string | null | undefined,
+  req?: Request,
+): string | null {
+  const trimmed = logoUrl?.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
+  return buildStoredFileServeUrlFromStorageUrl(trimmed, "logos", req);
+}
+
 export async function persistProfilePictureUpload(
   file: Express.Multer.File,
   req?: Request,
