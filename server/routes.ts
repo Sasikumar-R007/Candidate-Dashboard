@@ -300,6 +300,7 @@ import {
   fetchProfileMediaData,
   buildAvatarServeUrl,
   buildJdFileServeUrl,
+  buildLogoServeUrl,
 } from "./profile-media";
 import { storeResumeFile, prepareResumeParsePath } from "./resume-file-storage";
 import { storeR2FolderFile, getR2FileByFolderAndName } from "./r2-file-storage";
@@ -7200,19 +7201,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }),
       );
 
+      const allClients = await storage.getAllClients();
+      const { resolveRequirementCompanyLogoFromClients } = await import(
+        "./requirement-client-link"
+      );
+
       const enrichedRequirements = allRequirementsForResume.map((requirement: any) => {
         const lookupId = requirement.isRecentlyClosed ? requirement.id.replace(/^recent-closed-/, "") : requirement.id;
         const target = getTarget(requirement);
         const delivered =
           allSubmissionsForResume.filter((s: any) => s.requirementId === lookupId).length +
           allTaggedForResume.filter((app: any) => app.requirementId === lookupId).length;
-        return enrichRequirementWithJdExtrasForApi(req, {
+        const enriched = enrichRequirementWithJdExtrasForApi(req, {
           ...requirement,
           displayRequirementId: streqDisplayMap.get(lookupId) ?? null,
           resumeCount: padResumeCount(delivered, target),
           resumeDelivered: delivered,
           resumeTarget: target,
         });
+        return {
+          ...enriched,
+          companyLogo: resolveRequirementCompanyLogoFromClients(requirement, allClients, req),
+        };
       });
 
       res.json(enrichedRequirements);
@@ -10050,16 +10060,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get client code from company name
         const allClients = await storage.getAllClients();
-        const clientRecord = allClients.find((c: any) =>
-          c.brandName === requirement.company && !c.isLoginOnly
-        );
+        const clientRecord = requirement.clientCompanyId
+          ? allClients.find((c: any) => c.id === requirement.clientCompanyId && !c.isLoginOnly)
+          : allClients.find((c: any) =>
+              c.brandName === requirement.company && !c.isLoginOnly,
+            );
         const clientId = clientRecord?.clientCode || requirement.company;
 
         return {
           id: requirement.id, // Role ID (STR format)
           clientId: clientId, // Client code (e.g., STCL001)
           company: clientRecord?.brandName || requirement.company || 'N/A', // Company name (brandName)
-          companyLogo: clientRecord?.logo || null,
+          companyLogo: clientRecord?.logo
+            ? buildLogoServeUrl(clientRecord.logo, req) ?? clientRecord.logo
+            : null,
           spocName: spocName,
           role: requirement.position,
           sharedDate: requirement.createdAt ? new Date(requirement.createdAt).toLocaleDateString('en-GB', {
@@ -10093,13 +10107,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const enriched = await enrichRequirementsWithResumeCount(adminRequirements);
       const allClients = await storage.getAllClients();
-      const logoByCompany = new Map(
-        allClients
-          .filter((c: { brandName?: string; logo?: string | null }) => c.brandName && c.logo)
-          .map((c: { brandName: string; logo: string | null }) => [c.brandName, c.logo] as const),
+      const { resolveRequirementCompanyLogoFromClients } = await import(
+        "./requirement-client-link"
       );
       res.json(
-        enriched.map((reqRow: { company?: string; jdFile?: string | null }) => {
+        enriched.map((reqRow: { company?: string; clientCompanyId?: string | null; jdFile?: string | null }) => {
           const servedJdFile = buildJdFileServeUrl(reqRow.jdFile, req);
           const trimmedJdFile =
             typeof reqRow.jdFile === "string" ? reqRow.jdFile.trim() : "";
@@ -10112,7 +10124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : null);
           return {
             ...reqRow,
-            companyLogo: reqRow.company ? logoByCompany.get(reqRow.company) ?? null : null,
+            companyLogo: resolveRequirementCompanyLogoFromClients(reqRow, allClients, req),
             jdFile,
           };
         }),
@@ -10138,6 +10150,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const enriched = enrichRequirementWithJdExtrasForApi(req, requirement);
       const visibility = parseRequirementJdVisibility(requirement);
+      const allClients = await storage.getAllClients();
+      const { resolveRequirementCompanyLogoFromClients } = await import(
+        "./requirement-client-link"
+      );
       res.json({
         jdFile: enriched.jdFile ?? null,
         jdText: requirement.jdText ?? null,
@@ -10145,6 +10161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secondarySkills: enriched.secondarySkills ?? null,
         knowledgeOnly: enriched.knowledgeOnly ?? null,
         specialInstructions: enriched.specialInstructions ?? null,
+        companyLogo: resolveRequirementCompanyLogoFromClients(requirement, allClients, req),
         jdVisibilityToCandidate: visibility.showToCandidate,
         jdVisibilityUpdatedByRole: visibility.updatedByRole,
         jdVisibilityUpdatedByName: visibility.updatedByName,
@@ -12541,11 +12558,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       });
 
+      if (validatedData.logo?.trim().startsWith("blob:")) {
+        return res.status(400).json({ message: "Invalid logo URL. Please upload the logo file again." });
+      }
+
+      const persistedLogo = await persistCompanyLogoValue(validatedData.logo);
+
       // Create client record (without password)
       const { password, ...clientDataWithoutPassword } = validatedData;
       // Ensure clientCode is included in the data and explicitly set isLoginOnly to false for Master Database
       const clientDataToInsert = {
         ...clientDataWithoutPassword,
+        logo: persistedLogo,
         clientCode,
         isLoginOnly: false  // This is a Master Database client, not a User Management login-only client
       };
@@ -18391,6 +18415,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validatedData = updateSchema.parse(req.body);
+
+      if (validatedData.logo?.trim().startsWith("blob:")) {
+        return res.status(400).json({ message: "Invalid logo URL. Please upload the logo file again." });
+      }
+
+      if (validatedData.logo !== undefined) {
+        validatedData.logo = (await persistCompanyLogoValue(validatedData.logo)) ?? undefined;
+      }
 
       const updatedClient = await storage.updateClient(id, validatedData);
 

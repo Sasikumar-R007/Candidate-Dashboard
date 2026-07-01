@@ -94,7 +94,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFileUpload, apiRequest } from "@/lib/queryClient";
 import { adminCandidatesQueryOptions } from "@/lib/admin-candidates-query";
 import { useStaggeredDashboardLoad } from "@/lib/use-staggered-dashboard-load";
 import {
@@ -3010,6 +3010,8 @@ export default function AdminDashboard() {
         className: "bg-green-50 border-green-200 text-green-800",
       });
       setIsClientModalOpen(false);
+      setClientLogoFile(null);
+      setClientLogoPreview(null);
       setClientForm({
         brandName: '',
         incorporatedName: '',
@@ -12067,26 +12069,24 @@ export default function AdminDashboard() {
                     return;
                   }
                   
-                  // If logo file is selected, upload it first
                   let logoUrl = clientForm.logo;
                   if (clientLogoFile) {
                     try {
-                      const formData = new FormData();
-                      formData.append('logo', clientLogoFile);
-                      const uploadResponse = await fetch('/api/admin/upload-logo', {
-                        method: 'POST',
-                        credentials: 'include',
-                        body: formData
+                      const uploadFormData = new FormData();
+                      uploadFormData.append("logo", clientLogoFile);
+                      const uploadResponse = await apiFileUpload("/api/admin/upload-logo", uploadFormData);
+                      const uploadData = await uploadResponse.json();
+                      logoUrl = uploadData.url;
+                    } catch {
+                      toast({
+                        title: "Logo upload failed",
+                        description: "Could not upload the company logo. The client was not created.",
+                        variant: "destructive",
                       });
-                      if (uploadResponse.ok) {
-                        const uploadData = await uploadResponse.json();
-                        logoUrl = uploadData.url;
-                      }
-                    } catch (error) {
-                      console.error('Logo upload error:', error);
+                      return;
                     }
                   }
-                  
+
                   createClientMutation.mutate({ ...clientForm, logo: logoUrl });
                 }}
                 disabled={createClientMutation.isPending}

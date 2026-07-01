@@ -35,6 +35,7 @@ type JdViewPayload = {
   secondarySkills?: string | null;
   knowledgeOnly?: string | null;
   specialInstructions?: string | null;
+  companyLogo?: string | null;
 };
 
 function isPdfJd(jdFile?: string | null, jdFileUrl?: string | null): boolean {
@@ -489,6 +490,7 @@ export default function JobDescriptionDetailsModal({
     data.displayRequirementId ?? undefined,
   );
   const spocLabel = data.spocName || data.spoc || "N/A";
+  const displayCompanyLogo = jdView?.companyLogo ?? data.companyLogo ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -514,7 +516,7 @@ export default function JobDescriptionDetailsModal({
               <div className="rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5 shadow-sm dark:border-cyan-900 dark:from-cyan-950/30 dark:to-blue-950/30">
                 <div className="flex items-center gap-3">
                   <CompanyBrandAvatar
-                    logoUrl={data.companyLogo}
+                    logoUrl={displayCompanyLogo}
                     companyName={data.company}
                     size="lg"
                   />

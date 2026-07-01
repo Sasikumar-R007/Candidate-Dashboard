@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Filter, Search, MoreVertical, X, Download, Loader2, Upload, FileText, CheckCircle, XCircle, Minimize2 } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, apiFileUpload } from "@/lib/queryClient";
 import { createApiUrl, BULK_IMPORT_BATCH_SIZE } from "@/lib/bulk-resume-import-config";
 import { useBulkResumeImport } from "@/contexts/bulk-resume-import-context";
 import { useToast } from "@/hooks/use-toast";
@@ -139,14 +139,7 @@ function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpen
       try {
         const uploadFormData = new FormData();
         uploadFormData.append("logo", logoFile);
-        const uploadResponse = await fetch(createApiUrl("/api/admin/upload-logo"), {
-          method: "POST",
-          credentials: "include",
-          body: uploadFormData,
-        });
-        if (!uploadResponse.ok) {
-          throw new Error("Logo upload failed");
-        }
+        const uploadResponse = await apiFileUpload("/api/admin/upload-logo", uploadFormData);
         const uploadData = await uploadResponse.json();
         logoUrl = uploadData.url;
       } catch {

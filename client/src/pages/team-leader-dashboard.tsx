@@ -4062,16 +4062,30 @@ export default function TeamLeaderDashboard() {
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Company</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">SPOC</th>
                     <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Talent Advisor</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Status</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300 w-[72px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRequirementsData.map((requirement: any, index) => {
+                  {visibleRequirementsData.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-6 text-center text-gray-600 border border-gray-300">
+                        No requirements assigned to you yet.
+                      </td>
+                    </tr>
+                  ) : (
+                  visibleRequirementsData.map((requirement: any, index) => {
+                    const isReassigned = requirement.assignmentStatus === "reassigned";
+                    const isOnHold = requirement.managementStatus === "hold";
+                    const isRecentlyClosed = requirement.managementStatus === "closed" && requirement.isRecentlyClosed;
                     const positionCount = requirement.noOfPositions ?? 1;
                     const taSplitMeta = getRequirementTaSplitMeta(requirement);
                     const splitBadge = getRequirementSplitBadgeLabel(requirement);
                     return (
-                    <tr key={requirement.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                    <tr
+                      key={requirement.id}
+                      className={`border border-gray-300 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : isRecentlyClosed ? 'bg-red-100' : isOnHold ? 'bg-yellow-100/80' : index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
+                      title={isReassigned ? "Reassigned to another TA" : isRecentlyClosed ? "Requirement was closed and will leave this list after 24 hours" : isOnHold ? "Requirement is on Hold" : undefined}
+                    >
                       <td className="p-3 w-[88px] text-xs font-semibold text-slate-600 border border-gray-300 whitespace-nowrap">
                         {getRequirementDisplayId(requirement)}
                       </td>
@@ -4089,6 +4103,9 @@ export default function TeamLeaderDashboard() {
                               • {splitBadge.label}
                             </span>
                           )}
+                          {taSplitMeta?.totalSplits
+                            ? ` (${taSplitMeta.splitIndex}/${taSplitMeta.totalSplits})`
+                            : ''}
                         </p>
                       </td>
                       <td className="p-3 border border-gray-300">
@@ -4112,17 +4129,73 @@ export default function TeamLeaderDashboard() {
                       </td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.company}</td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.spoc || '-'}</td>
-                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.talentAdvisor || 'Unassigned'}</td>
-                      <td className="p-3 border border-gray-300">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                          requirement.talentAdvisor ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {requirement.talentAdvisor ? 'Assigned' : 'Open'}
-                        </span>
+                      <td className="p-3 text-gray-900 border border-gray-300">
+                        {requirement.needsTalentAdvisorReassignment && requirement.talentAdvisor ? (
+                          <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                            {requirement.talentAdvisor}
+                          </span>
+                        ) : (
+                          requirement.talentAdvisor || 'not-assigned'
+                        )}
+                      </td>
+                      <td className="p-3 border border-gray-300 w-[72px]">
+                        {isRecentlyClosed ? (
+                          <span className="text-xs text-red-700 font-medium">Archived</span>
+                        ) : isReassigned ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                data-testid={`button-requirement-actions-modal-${requirement.id}`}
+                              >
+                                <MoreVertical className="h-4 w-4 text-gray-600" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="z-[200] w-52">
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  setSelectedJD(requirement);
+                                  setIsJDPreviewModalOpen(true);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View JD
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  openJdVisibilityModal(requirement);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                JD Visibility
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  handleAssign(requirement);
+                                }}
+                                data-testid={`button-assign-ta-modal-${requirement.id}`}
+                              >
+                                <UserRound className="mr-2 h-4 w-4" />
+                                Assign TA
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </td>
                     </tr>
                   );
-                  })}
+                  })
+                  )}
                 </tbody>
               </table>
             </div>

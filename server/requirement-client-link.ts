@@ -1,4 +1,6 @@
+import type { Request } from "express";
 import { isClientAdminRole } from "@shared/client-roles";
+import { buildLogoServeUrl } from "./profile-media";
 import type { IStorage } from "./storage";
 
 export type AdminRequirementClientInput = {
@@ -66,4 +68,31 @@ export async function resolveAdminRequirementClientFields(
     company: client.brandName,
     spoc,
   };
+}
+
+type ClientLogoSource = {
+  id: string;
+  brandName?: string | null;
+  logo?: string | null;
+};
+
+export function resolveRequirementCompanyLogoFromClients(
+  requirement: { clientCompanyId?: string | null; company?: string | null },
+  clients: ClientLogoSource[],
+  httpReq?: Request,
+): string | null {
+  let rawLogo: string | null | undefined = null;
+
+  const clientCompanyId = String(requirement.clientCompanyId || "").trim();
+  if (clientCompanyId) {
+    rawLogo = clients.find((client) => client.id === clientCompanyId)?.logo;
+  }
+
+  if (!rawLogo?.trim() && requirement.company?.trim()) {
+    const company = requirement.company.trim();
+    rawLogo = clients.find((client) => client.brandName === company)?.logo;
+  }
+
+  if (!rawLogo?.trim()) return null;
+  return buildLogoServeUrl(rawLogo, httpReq) ?? rawLogo.trim();
 }
