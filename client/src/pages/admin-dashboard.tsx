@@ -1845,6 +1845,7 @@ export default function AdminDashboard() {
   const { data: activeSessionsData } = useQuery<{ activeEmployeeIds: string[] }>({
     queryKey: ['/api/admin/active-sessions'],
     enabled: sidebarTab === 'user-management' || activeTab === 'user-management',
+    refetchInterval: 60_000,
   });
   const activeEmployeeIds = new Set(activeSessionsData?.activeEmployeeIds || []);
 
@@ -6059,17 +6060,17 @@ export default function AdminDashboard() {
                           <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                             <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                           </div>
-                          <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Total Distribution</span>
+                          <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Total Requirements</span>
                         </div>
                         <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">{String(priorityCounts.counts.TOTAL).padStart(2, '0')}</span>
                       </div>
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                          <span className="text-xs text-gray-600 dark:text-gray-400">Pending Distribution</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Pending Assignment</span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{String(distributionCounts.pending).padStart(2, '0')}</span>
                         </div>
                         <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                          <span className="text-xs text-gray-600 dark:text-gray-400">Closed Distribution</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Assigned Requirements</span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{String(distributionCounts.closed).padStart(2, '0')}</span>
                         </div>
                       </div>
@@ -7608,17 +7609,17 @@ export default function AdminDashboard() {
                             <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                               <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                             </div>
-                            <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Total Distribution</span>
+                            <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Total Requirements</span>
                           </div>
                           <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">{String(priorityCounts.counts.TOTAL).padStart(2, '0')}</span>
                         </div>
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                            <span className="text-xs text-gray-600 dark:text-gray-400">Pending Distribution</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">Pending Assignment</span>
                             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{String(distributionCounts.pending).padStart(2, '0')}</span>
                           </div>
                           <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                            <span className="text-xs text-gray-600 dark:text-gray-400">Closed Distribution</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">Assigned Requirements</span>
                             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{String(distributionCounts.closed).padStart(2, '0')}</span>
                           </div>
                         </div>

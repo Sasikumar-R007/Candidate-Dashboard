@@ -1524,6 +1524,25 @@ const otpVerificationSchema = z.object({
 });
 
 // Authentication middleware for candidate routes
+const EMPLOYEE_ONLINE_PRESENCE_MS = 15 * 60 * 1000;
+const SESSION_ACTIVITY_TOUCH_MS = 60 * 1000;
+
+function touchEmployeeSessionActivity(req: Request): void {
+  if (!req.session.employeeId) return;
+  const now = Date.now();
+  const last =
+    typeof req.session.lastActivityAt === "number" ? req.session.lastActivityAt : 0;
+  if (now - last < SESSION_ACTIVITY_TOUCH_MS) return;
+  req.session.lastActivityAt = now;
+}
+
+function isEmployeeSessionRecentlyActive(lastActivityAt: unknown): boolean {
+  if (typeof lastActivityAt !== "number" || !Number.isFinite(lastActivityAt)) {
+    return false;
+  }
+  return Date.now() - lastActivityAt <= EMPLOYEE_ONLINE_PRESENCE_MS;
+}
+
 function requireCandidateAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.candidateId) {
     return res.status(401).json({ message: "Authentication required" });
@@ -1554,6 +1573,7 @@ function requireEmployeeAuth(req: Request, res: Response, next: NextFunction) {
         });
       }
 
+      touchEmployeeSessionActivity(req);
       next();
     } catch (error) {
       console.error("requireEmployeeAuth hold check error:", error);
@@ -1591,6 +1611,7 @@ function requireDataEntryOrAdminAuth(req: Request, res: Response, next: NextFunc
   }
   const role = req.session.employeeRole;
   if (role === DATA_ENTRY_ROLE || role === "admin") {
+    touchEmployeeSessionActivity(req);
     return next();
   }
   return res.status(403).json({ message: "Access denied." });
@@ -2552,6 +2573,7 @@ function requireClientAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.employeeId || !isClientPortalRole(req.session.employeeRole)) {
     return res.status(403).json({ message: "Access denied. Client authentication required." });
   }
+  touchEmployeeSessionActivity(req);
   next();
 }
 
@@ -2559,6 +2581,7 @@ function requireClientAdminAuth(req: Request, res: Response, next: NextFunction)
   if (!req.session.employeeId || !isClientAdminRole(req.session.employeeRole)) {
     return res.status(403).json({ message: "Access denied. Client Admin privileges required." });
   }
+  touchEmployeeSessionActivity(req);
   next();
 }
 
@@ -3590,6 +3613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.employeeId = employee.id;
         req.session.employeeRole = employee.role;
         req.session.userType = 'employee';
+        req.session.lastActivityAt = Date.now();
 
         // Save session before responding
         req.session.save(async (saveErr) => {
@@ -12297,7 +12321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const row of result.rows) {
         try {
           const sessData = typeof row.sess === 'string' ? JSON.parse(row.sess) : row.sess;
-          if (sessData?.employeeId) {
+          if (sessData?.employeeId && isEmployeeSessionRecentlyActive(sessData.lastActivityAt)) {
             // Get employee by ID to use the correct ID format
             const employee = await storage.getEmployeeById(sessData.employeeId);
             if (employee) {
